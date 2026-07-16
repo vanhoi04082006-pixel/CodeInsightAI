@@ -32,6 +32,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -54,7 +55,8 @@ server.log
 /skills/
 
 # Database (local SQLite — contains persisted analyses & chat, must never be pushed)
-/db/
+/db/*
+!/db/.gitkeep
 *.db
 *.db-journal
 
