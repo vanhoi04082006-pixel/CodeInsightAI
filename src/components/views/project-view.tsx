@@ -30,23 +30,25 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useAppStore } from "@/lib/store";
 import type { AnalysisReport, Issue } from "@/lib/types";
 import { toast } from "sonner";
+import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 type Tab = "overview" | "architecture" | "bugs" | "security" | "performance" | "dependencies" | "code" | "docs" | "roadmap";
 
-const TABS: { id: Tab; label: string; icon: typeof LayoutGrid }[] = [
-  { id: "overview", label: "Overview", icon: LayoutGrid },
-  { id: "architecture", label: "Architecture", icon: Network },
-  { id: "bugs", label: "Bugs", icon: Bug },
-  { id: "security", label: "Security", icon: ShieldCheck },
-  { id: "performance", label: "Performance", icon: Gauge },
-  { id: "dependencies", label: "Dependencies", icon: Boxes },
-  { id: "code", label: "Code", icon: FileCode },
-  { id: "docs", label: "Docs", icon: FileText },
-  { id: "roadmap", label: "Roadmap", icon: Rocket },
+const TABS: { id: Tab; labelKey: string; icon: typeof LayoutGrid }[] = [
+  { id: "overview", labelKey: "overview", icon: LayoutGrid },
+  { id: "architecture", labelKey: "architecture", icon: Network },
+  { id: "bugs", labelKey: "bugs", icon: Bug },
+  { id: "security", labelKey: "security", icon: ShieldCheck },
+  { id: "performance", labelKey: "performance", icon: Gauge },
+  { id: "dependencies", labelKey: "dependencies", icon: Boxes },
+  { id: "code", labelKey: "code", icon: FileCode },
+  { id: "docs", labelKey: "docs", icon: FileText },
+  { id: "roadmap", labelKey: "roadmap", icon: Rocket },
 ];
 
 export function ProjectView() {
+  const { t } = useT();
   const report = useAppStore((s) => s.activeReport);
   const setView = useAppStore((s) => s.setView);
   const [tab, setTab] = useState<Tab>("overview");
@@ -56,7 +58,7 @@ export function ProjectView() {
       <div className="mx-auto flex min-h-[60vh] max-w-xl flex-col items-center justify-center px-4 text-center">
         <GlassCard className="p-10">
           <FileCode className="mx-auto h-10 w-10 text-cyan-300" />
-          <h2 className="mt-4 text-xl font-bold">No report loaded</h2>
+          <h2 className="mt-4 text-xl font-bold">{t("reports", "noReport")}</h2>
           <p className="mt-2 text-sm text-muted-foreground">Analyze a repository first to view its full report.</p>
           <Button onClick={() => setView("analyze")} className="mt-4 bg-gradient-to-r from-cyan-500 to-violet-500 text-white">
             Start analysis
@@ -69,7 +71,7 @@ export function ProjectView() {
   const exportMarkdown = () => {
     const md = `# ${report.repoOwner}/${report.repoName} — AI Report\n\n${report.summary}\n\n## Scores\n- Overall: ${report.scores.overall}\n- Security: ${report.scores.security}\n- Performance: ${report.scores.performance}\n- Architecture: ${report.scores.architecture}\n- Maintainability: ${report.scores.maintainability}\n\n## Top Issues\n${[...report.issues.security, ...report.issues.bugs, ...report.issues.performance].map((i) => `- [${i.severity}] ${i.title}`).join("\n")}\n`;
     navigator.clipboard.writeText(md);
-    toast.success("Markdown copied to clipboard");
+    toast.success(t("reports", "exportMarkdown"));
   };
 
   return (
@@ -101,7 +103,7 @@ export function ProjectView() {
           <Button onClick={exportMarkdown} variant="outline" size="sm">
             <Download className="mr-1.5 h-4 w-4" /> Markdown
           </Button>
-          <Button onClick={() => toast.success("Shareable link copied")} variant="outline" size="sm">
+          <Button onClick={() => toast.success(t("reports", "shareLink"))} variant="outline" size="sm">
             <Share2 className="mr-1.5 h-4 w-4" /> Share
           </Button>
           <Button onClick={() => setView("chat")} size="sm" className="bg-gradient-to-r from-cyan-500 to-violet-500 text-white">
@@ -115,17 +117,17 @@ export function ProjectView() {
         <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)}>
           <div className="overflow-x-auto scrollbar-thin">
             <TabsList className="inline-flex h-auto gap-1 rounded-xl border border-white/10 bg-white/[0.02] p-1">
-              {TABS.map((t) => {
-                const Icon = t.icon;
-                const count = t.id === "bugs" ? report.issues.bugs.length : t.id === "security" ? report.issues.security.length : t.id === "performance" ? report.issues.performance.length : 0;
+              {TABS.map((tab) => {
+                const Icon = tab.icon;
+                const count = tab.id === "bugs" ? report.issues.bugs.length : tab.id === "security" ? report.issues.security.length : tab.id === "performance" ? report.issues.performance.length : 0;
                 return (
                   <TabsTrigger
-                    key={t.id}
-                    value={t.id}
+                    key={tab.id}
+                    value={tab.id}
                     className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-500/20 data-[state=active]:to-violet-500/20 data-[state=active]:text-cyan-300"
                   >
                     <Icon className="h-3.5 w-3.5" />
-                    {t.label}
+                    {t("reports", tab.labelKey)}
                     {count > 0 && (
                       <span className="ml-0.5 rounded-full bg-white/10 px-1.5 text-[10px] tabular-nums">{count}</span>
                     )}
@@ -173,7 +175,7 @@ function OverviewTab({ report }: { report: AnalysisReport }) {
   return (
     <div className="grid gap-4 lg:grid-cols-3">
       <GlassCard strong className="p-6 lg:col-span-1">
-        <p className="text-xs uppercase tracking-wider text-muted-foreground">Health Score</p>
+        <p className="text-xs uppercase tracking-wider text-muted-foreground">{t("reports", "healthScore")}</p>
         <div className="mt-3 flex justify-center">
           <ScoreGauge value={report.scores.overall} size={150} stroke={11} label="Overall" color="#22d3ee" />
         </div>
@@ -199,18 +201,18 @@ function OverviewTab({ report }: { report: AnalysisReport }) {
       </GlassCard>
 
       <GlassCard className="p-6 lg:col-span-2">
-        <h3 className="text-sm font-semibold">AI Summary</h3>
+        <h3 className="text-sm font-semibold">{t("reports", "aiSummary")}</h3>
         <p className="mt-2 text-sm leading-relaxed text-foreground/85">{report.summary}</p>
         <NeonDivider className="my-4" />
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <Stat label="Primary language" value={report.primaryLanguage} />
-          <Stat label="Total files" value={report.totalFiles} />
-          <Stat label="Total lines" value={report.totalLines.toLocaleString()} />
-          <Stat label="Frameworks" value={report.frameworks.length} />
+          <Stat label={t("reports", "primaryLanguage")} value={report.primaryLanguage} />
+          <Stat label={t("reports", "totalFiles")} value={report.totalFiles} />
+          <Stat label={t("reports", "totalLines")} value={report.totalLines.toLocaleString()} />
+          <Stat label={t("reports", "frameworks")} value={report.frameworks.length} />
           <Stat label="Languages" value={report.languages.length} />
-          <Stat label="Bugs found" value={report.issues.bugs.length} accent="#fbbf24" />
-          <Stat label="Security issues" value={report.issues.security.length} accent="#f472b6" />
-          <Stat label="Perf issues" value={report.issues.performance.length} accent="#34d399" />
+          <Stat label={t("reports", "bugsFound")} value={report.issues.bugs.length} accent="#fbbf24" />
+          <Stat label={t("reports", "securityIssues")} value={report.issues.security.length} accent="#f472b6" />
+          <Stat label={t("reports", "perfIssues")} value={report.issues.performance.length} accent="#34d399" />
         </div>
 
         <NeonDivider className="my-4" />
@@ -251,7 +253,7 @@ function ArchitectureTab({ report }: { report: AnalysisReport }) {
 
       <div className="grid gap-4 md:grid-cols-2">
         <GlassCard className="p-6">
-          <h4 className="text-sm font-semibold text-emerald-400">Strengths</h4>
+          <h4 className="text-sm font-semibold text-emerald-400">{t("reports", "strengths")}</h4>
           <ul className="mt-3 space-y-2">
             {a.strengths.map((s, i) => (
               <motion.li
@@ -268,7 +270,7 @@ function ArchitectureTab({ report }: { report: AnalysisReport }) {
           </ul>
         </GlassCard>
         <GlassCard className="p-6">
-          <h4 className="text-sm font-semibold text-rose-400">Weaknesses</h4>
+          <h4 className="text-sm font-semibold text-rose-400">{t("reports", "weaknesses")}</h4>
           <ul className="mt-3 space-y-2">
             {a.weaknesses.map((s, i) => (
               <motion.li
@@ -287,7 +289,7 @@ function ArchitectureTab({ report }: { report: AnalysisReport }) {
       </div>
 
       <GlassCard className="p-6">
-        <h4 className="text-sm font-semibold">Architecture Layers</h4>
+        <h4 className="text-sm font-semibold">{t("reports", "architectureLayers")}</h4>
         <div className="mt-4 space-y-2">
           {a.layers.map((l, i) => (
             <motion.div
@@ -415,7 +417,7 @@ function DependenciesTab({ report }: { report: AnalysisReport }) {
         <GlassCard className="p-5">
           <div className="flex items-center gap-2">
             <FileCode className="h-4 w-4 text-rose-400" />
-            <h4 className="text-sm font-semibold">Dead Code <span className="text-muted-foreground">({report.deadCode.length})</span></h4>
+            <h4 className="text-sm font-semibold">{t("reports", "deadCode")} <span className="text-muted-foreground">({report.deadCode.length})</span></h4>
           </div>
           <p className="mt-1 text-xs text-muted-foreground">Files with no inbound references — safe candidates for removal.</p>
           <div className="mt-3 space-y-1.5">
@@ -439,7 +441,7 @@ function DependenciesTab({ report }: { report: AnalysisReport }) {
         <GlassCard className="p-5">
           <div className="flex items-center gap-2">
             <Copy className="h-4 w-4 text-amber-400" />
-            <h4 className="text-sm font-semibold">Duplicate Code <span className="text-muted-foreground">({report.duplicates.length})</span></h4>
+            <h4 className="text-sm font-semibold">{t("reports", "duplicateCode")} <span className="text-muted-foreground">({report.duplicates.length})</span></h4>
           </div>
           <p className="mt-1 text-xs text-muted-foreground">Clusters of near-identical blocks — extract a shared helper.</p>
           <div className="mt-3 space-y-1.5">
@@ -465,7 +467,7 @@ function DependenciesTab({ report }: { report: AnalysisReport }) {
       </div>
 
       <GlassCard className="p-5">
-        <h4 className="text-sm font-semibold">All Files</h4>
+        <h4 className="text-sm font-semibold">{t("reports", "allFiles")}</h4>
         <div className="mt-3 max-h-80 space-y-1 overflow-y-auto scrollbar-thin">
           {report.files.map((f) => (
             <div key={f.path} className="flex items-center gap-2 rounded-lg border border-white/5 bg-white/[0.02] p-2.5">
@@ -491,7 +493,7 @@ function CodeTab({ report }: { report: AnalysisReport }) {
       <GlassCard className="p-5">
         <div className="flex items-center gap-2">
           <FileCode className="h-5 w-5 text-cyan-300" />
-          <h3 className="text-lg font-semibold">AI Code Explorer</h3>
+          <h3 className="text-lg font-semibold">{t("reports", "aiCodeExplorer")}</h3>
         </div>
         <p className="mt-1 text-sm text-muted-foreground">
           Representative snippets parsed from the codebase, each with syntax highlighting and an AI explanation of what it does and how to improve it.
@@ -578,7 +580,7 @@ function RoadmapTab({ report }: { report: AnalysisReport }) {
         <GlassCard className="p-5">
           <div className="flex items-center gap-2">
             <Rocket className="h-5 w-5 text-cyan-300" />
-            <h3 className="text-lg font-semibold">Feature Roadmap</h3>
+            <h3 className="text-lg font-semibold">{t("reports", "featureRoadmap")}</h3>
           </div>
           <div className="mt-3 space-y-2">
             {report.roadmap.map((r, i) => (
@@ -611,7 +613,7 @@ function RoadmapTab({ report }: { report: AnalysisReport }) {
           <GlassCard className="p-5">
             <div className="flex items-center gap-2">
               <DollarSign className="h-5 w-5 text-emerald-400" />
-              <h3 className="text-lg font-semibold">Monetization Suggestions</h3>
+              <h3 className="text-lg font-semibold">{t("reports", "monetization")}</h3>
             </div>
             <div className="mt-3 space-y-2">
               {report.monetization.map((m, i) => (

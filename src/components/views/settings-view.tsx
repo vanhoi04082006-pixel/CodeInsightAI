@@ -86,32 +86,32 @@ export function SettingsView() {
           {/* Account */}
           <TabsContent value="account" className="mt-4 space-y-4">
             <GlassCard className="p-6">
-              <h3 className="flex items-center gap-2 text-sm font-semibold"><User className="h-4 w-4 text-cyan-300" /> Profile</h3>
+              <h3 className="flex items-center gap-2 text-sm font-semibold"><User className="h-4 w-4 text-cyan-300" /> {t("settings", "profile")}</h3>
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                <Field label="Display name" defaultValue="Z.ai Developer" />
-                <Field label="Email" defaultValue="dev@codeinsight.ai" />
-                <Field label="Company" defaultValue="Independent" />
-                <Field label="Role" defaultValue="Staff Engineer" />
+                <Field label={t("settings", "displayName")} defaultValue="Z.ai Developer" />
+                <Field label={t("settings", "email")} defaultValue="dev@codeinsight.ai" />
+                <Field label={t("settings", "company")} defaultValue="Independent" />
+                <Field label={t("settings", "role")} defaultValue="Staff Engineer" />
               </div>
-              <Button onClick={() => toast.success("Profile saved")} className="mt-4 bg-gradient-to-r from-cyan-500 to-violet-500 text-white">
+              <Button onClick={() => toast.success(t("settings", "profileSaved"))} className="mt-4 bg-gradient-to-r from-cyan-500 to-violet-500 text-white">
                 Save changes
               </Button>
             </GlassCard>
 
             <GlassCard className="p-6">
-              <h3 className="flex items-center gap-2 text-sm font-semibold"><KeyRound className="h-4 w-4 text-cyan-300" /> Connected accounts</h3>
+              <h3 className="flex items-center gap-2 text-sm font-semibold"><KeyRound className="h-4 w-4 text-cyan-300" /> {t("settings", "connectedAccounts")}</h3>
               <div className="mt-4 space-y-2">
                 <ConnectRow
                   icon={Github}
                   name="GitHub"
-                  desc="Connect to analyse private repositories"
+                  desc={t("settings", "githubDesc")}
                   connected={connected.github}
                   onToggle={() => { setConnected((c) => ({ ...c, github: !c.github })); toast.success(connected.github ? "GitHub disconnected" : "GitHub connected"); }}
                 />
                 <ConnectRow
                   icon={Sparkles}
                   name="Google"
-                  desc="Sign in with Google OAuth"
+                  desc={t("settings", "googleDesc")}
                   connected={connected.google}
                   onToggle={() => { setConnected((c) => ({ ...c, google: !c.google })); toast.success(connected.google ? "Google disconnected" : "Google connected"); }}
                 />
@@ -119,10 +119,10 @@ export function SettingsView() {
             </GlassCard>
 
             <GlassCard className="p-6">
-              <h3 className="flex items-center gap-2 text-sm font-semibold"><Shield className="h-4 w-4 text-rose-400" /> Danger zone</h3>
+              <h3 className="flex items-center gap-2 text-sm font-semibold"><Shield className="h-4 w-4 text-rose-400" /> {t("settings", "dangerZone")}</h3>
               <div className="mt-3 flex items-center justify-between rounded-xl border border-rose-500/20 bg-rose-500/[0.04] p-4">
                 <div>
-                  <p className="text-sm font-medium">Delete account</p>
+                  <p className="text-sm font-medium">{t("settings", "deleteAccount")}</p>
                   <p className="text-xs text-muted-foreground">Permanently remove all your analyses and data.</p>
                 </div>
                 <Button variant="destructive" size="sm" onClick={() => toast.error("Demo only — account not deleted")}>
@@ -186,12 +186,12 @@ export function SettingsView() {
             </GlassCard>
 
             <GlassCard className="p-6">
-              <h3 className="flex items-center gap-2 text-sm font-semibold"><Zap className="h-4 w-4 text-amber-400" /> Analysis depth</h3>
+              <h3 className="flex items-center gap-2 text-sm font-semibold"><Zap className="h-4 w-4 text-amber-400" /> {t("settings", "analysisDepth")}</h3>
               <div className="mt-4 space-y-3">
-                <ToggleRow label="Deep static analysis" desc="Run full AST parsing and complexity metrics (slower)." defaultChecked />
-                <ToggleRow label="Security scanning" desc="Scan for secrets, vulnerabilities, and misconfigurations." defaultChecked />
-                <ToggleRow label="Generate embeddings" desc="Enable semantic code search and richer AI chat." defaultChecked />
-                <ToggleRow label="Auto-generate docs" desc="Produce README, API docs, and diagrams automatically." defaultChecked />
+                <ToggleRow label={t("settings", "deepStatic")} desc="Run full AST parsing and complexity metrics (slower)." defaultChecked />
+                <ToggleRow label={t("settings", "securityScanning")} desc="Scan for secrets, vulnerabilities, and misconfigurations." defaultChecked />
+                <ToggleRow label={t("settings", "generateEmbeddings")} desc="Enable semantic code search and richer AI chat." defaultChecked />
+                <ToggleRow label={t("settings", "autoDocs")} desc="Produce README, API docs, and diagrams automatically." defaultChecked />
               </div>
             </GlassCard>
           </TabsContent>

@@ -31,12 +31,14 @@ import { GlassCard, NeonDivider } from "@/components/shared/ui";
 import { Button } from "@/components/ui/button";
 import { useDeveloperModeStore, type DebugSnapshot, type AIRequestLog } from "@/lib/developer-mode-store";
 import { maskSecrets } from "@/lib/secret-mask";
+import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 /* ============================================================
    Main expandable Developer Panel
    ============================================================ */
 export function DeveloperPanel({ snapshot }: { snapshot: DebugSnapshot | null }) {
+  const { t } = useT();
   const [open, setOpen] = useState(false);
   const enabled = useDeveloperModeStore((s) => s.enabled);
   if (!enabled) return null;
@@ -51,7 +53,7 @@ export function DeveloperPanel({ snapshot }: { snapshot: DebugSnapshot | null })
           <Terminal className="h-4 w-4" />
         </div>
         <div className="flex-1">
-          <p className="text-sm font-semibold">Developer Panel</p>
+          <p className="text-sm font-semibold">{t("developer", "panel")}</p>
           <p className="text-[11px] text-muted-foreground">
             {snapshot ? `Last request · ${snapshot.totalMs}ms · ${snapshot.totalTokens} tokens` : "No requests yet"}
           </p>
@@ -85,7 +87,7 @@ export function DeveloperPanel({ snapshot }: { snapshot: DebugSnapshot | null })
             exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden border-t border-white/5 p-4 text-center text-xs text-muted-foreground"
           >
-            Send a message to populate the developer panel.
+            {t("developer", "sendToPopulate")}
           </motion.div>
         )}
       </AnimatePresence>
@@ -310,10 +312,10 @@ export function LogViewer() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <ListChecks className="h-4 w-4 text-cyan-300" />
-          <h3 className="text-sm font-semibold">Request / Response Logs</h3>
+          <h3 className="text-sm font-semibold">{t("developer", "logs.title")}</h3>
           <span className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] text-muted-foreground">{logs.length}</span>
         </div>
-        <Button size="sm" variant="ghost" onClick={clearLogs} className="h-7 text-xs">Clear</Button>
+        <Button size="sm" variant="ghost" onClick={clearLogs} className="h-7 text-xs">{t("developer", "logs.clear")}</Button>
       </div>
       <div className="mt-3 max-h-64 space-y-1 overflow-y-auto scrollbar-thin">
         {logs.length === 0 ? (
