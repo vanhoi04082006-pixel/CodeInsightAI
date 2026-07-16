@@ -1,0 +1,45 @@
+{
+  "appName": "CodeInsight AI",
+  "tagline": "Dán URL GitHub Repository. AI Hiểu Tất Cả.",
+  "nav": {
+    "home": "Trang chủ",
+    "dashboard": "Bảng điều khiển",
+    "analyze": "Phân tích",
+    "project": "Báo cáo dự án",
+    "chat": "Trò chuyện AI",
+    "history": "Lịch sử",
+    "providers": "Nhà cung cấp AI",
+    "personalities": "Tính cách AI",
+    "settings": "Cài đặt"
+  },
+  "actions": {
+    "startAnalysis": "Bắt đầu phân tích",
+    "analyzeRepo": "Phân tích repo",
+    "newAnalysis": "Phân tích mới",
+    "connectYourAI": "Kết nối AI",
+    "addAIProvider": "Thêm nhà cung cấp AI",
+    "viewFullReport": "Xem báo cáo đầy đủ",
+    "chatWithAI": "Trò chuyện với AI CTO",
+    "clear": "Xóa",
+    "copy": "Sao chép",
+    "copied": "Đã sao chép",
+    "save": "Lưu",
+    "cancel": "Hủy",
+    "delete": "Xóa",
+    "edit": "Sửa",
+    "duplicate": "Nhân đôi",
+    "export": "Xuất",
+    "import": "Nhập",
+    "search": "Tìm kiếm",
+    "quickSearch": "Tìm nhanh"
+  },
+  "status": {
+    "connected": "Đã kết nối",
+    "disconnected": "Đã ngắt kết nối",
+    "enabled": "Đã bật",
+    "disabled": "Đã tắt",
+    "testing": "Đang kiểm tra…",
+    "ready": "Sẵn sàng",
+    "loading": "Đang tải…"
+  }
+}

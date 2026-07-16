@@ -34,6 +34,7 @@ interface ChatBody {
   history?: { role: "user" | "assistant"; content: string }[];
   personality?: PersonalityConfig;
   provider?: ProviderConfig;
+  language?: string; // "en" | "vi" | ...
   debug?: boolean; // when true, return debug metadata
 }
 
@@ -107,7 +108,7 @@ export async function POST(req: NextRequest) {
   const requestId = `req_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
   try {
     const body = (await req.json()) as ChatBody;
-    const { message, history = [], personality, provider, debug } = body;
+    const { message, history = [], personality, provider, language, debug } = body;
 
     if (!message || typeof message !== "string") {
       return NextResponse.json({ error: "message is required" }, { status: 400 });
@@ -129,10 +130,14 @@ export async function POST(req: NextRequest) {
     }
 
     // ---- AI Request Pipeline ----
-    // 1. Selected Personality → system prompt (overrides default)
-    const systemPrompt = personality?.systemPrompt?.trim()
+    // 1. Selected Personality → system prompt (overrides default) + language awareness
+    const basePrompt = personality?.systemPrompt?.trim()
       ? personality.systemPrompt
       : DEFAULT_SYSTEM_PROMPT;
+    const langInstruction = language === "vi"
+      ? "\n\nIMPORTANT: Respond in Vietnamese (Tiếng Việt). Keep code, file paths, and technical terms in English, but write all prose and explanations in Vietnamese."
+      : "\n\nRespond in English.";
+    const systemPrompt = basePrompt + langInstruction;
     // 2. Repository Context
     const context = buildContext(report);
     // 3. Conversation History + 4. User Prompt

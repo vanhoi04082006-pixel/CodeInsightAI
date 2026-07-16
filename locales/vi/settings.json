@@ -1,0 +1,73 @@
+{
+  "title": "Cài đặt",
+  "subtitle": "Quản lý tài khoản, mô hình AI và tùy chọn.",
+  "tabs": {
+    "account": "Tài khoản",
+    "ai": "AI",
+    "developer": "Nhà phát triển",
+    "appearance": "Giao diện",
+    "language": "Ngôn ngữ",
+    "accessibility": "Trợ năng",
+    "notifications": "Cảnh báo",
+    "theme": "Chủ đề"
+  },
+  "appearance": {
+    "theme": "Chủ đề",
+    "themeLight": "Sáng",
+    "themeDark": "Tối",
+    "themeSystem": "Hệ thống",
+    "accentColor": "Màu nhấn",
+    "uiDensity": "Mật độ giao diện",
+    "densityComfortable": "Thoải mái",
+    "densityCompact": "Gọn gàng",
+    "animationLevel": "Mức hiệu ứng",
+    "animUltra": "Tối đa",
+    "animBalanced": "Cân bằng",
+    "animPerformance": "Hiệu suất"
+  },
+  "language": {
+    "title": "Ngôn ngữ",
+    "english": "English",
+    "vietnamese": "Tiếng Việt",
+    "autoDetect": "Tự động phát hiện khi khởi động lần đầu"
+  },
+  "accessibility": {
+    "title": "Trợ năng",
+    "fontSize": "Cỡ chữ",
+    "fontSm": "Nhỏ",
+    "fontBase": "Mặc định",
+    "fontLg": "Lớn",
+    "reducedMotion": "Gi chuyển động",
+    "highContrast": "Tương phản cao",
+    "colorBlindMode": "Chế độ mù màu",
+    "cbNone": "Không",
+    "cbProtanopia": "Protanopia",
+    "cbDeuteranopia": "Deuteranopia",
+    "cbTritanopia": "Tritanopia"
+  },
+  "developer": {
+    "title": "Chế độ nhà phát triển",
+    "subtitle": "Dành cho người dùng nâng cao. Hiển thị Bảng điều khiển Nhà phát triển trong Trò chuyện AI.",
+    "securityNote": "Khóa API, token và thông tin xác thực được tự động che giấu trong mọi đầu ra gỡ lỗi.",
+    "showTokenUsage": "Hiển thị số token",
+    "showResponseTime": "Hiển thị thời gian phản hồi API",
+    "showPromptDebug": "Hiển thị gỡ lỗi prompt",
+    "showModelDebug": "Hiển thị gỡ lỗi mô hình",
+    "showRawResponse": "Hiển thị phản hồi AI thô",
+    "showRequestLogs": "Hiển thị nhật ký yêu cầu",
+    "showResponseLogs": "Hiển thị nhật ký phản hồi",
+    "showAdvancedDebug": "Hiển thị gỡ lỗi nâng cao",
+    "clearLogs": "Xóa nhật ký yêu cầu",
+    "clearSnapshots": "Xóa ảnh chụp gỡ lỗi"
+  },
+  "ai": {
+    "providers": "Nhà cung cấp AI",
+    "personality": "Tính cách AI",
+    "configuration": "Cấu hình AI",
+    "provider": "Nhà cung cấp (cho trò chuyện)",
+    "model": "Mô hình",
+    "temperature": "Nhiệt độ",
+    "maxTokens": "Token tối đa",
+    "analysisDepth": "Độ sâu phân tích"
+  }
+}

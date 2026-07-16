@@ -25,6 +25,7 @@ import { useAppStore } from "@/lib/store";
 import { usePersonalityStore } from "@/lib/personality-store";
 import { useProvidersStore } from "@/lib/providers-store";
 import { useDeveloperModeStore } from "@/lib/developer-mode-store";
+import { useI18nStore } from "@/lib/i18n";
 import type { ChatMessage } from "@/lib/types";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -102,11 +103,12 @@ export function ChatView() {
     setInput("");
     setLoading(true);
 
-    // pull personality + provider + developer mode from their stores
+    // pull personality + provider + developer mode + language from their stores
     const personality = usePersonalityStore.getState().getActive();
     const providersState = useProvidersStore.getState();
     const providerInstance = providersState.getProviderForFeature("chat");
     const devMode = useDeveloperModeStore.getState();
+    const language = useI18nStore.getState().locale;
 
     try {
       // Ensure we have an analysisId persisted (create the analysis row if needed)
@@ -152,6 +154,7 @@ export function ChatView() {
                 apiKey: providerInstance.apiKey, // used by a real provider impl; masked in debug
               }
             : undefined,
+          language, // AI language awareness
           debug: devMode.enabled,
         }),
       });
