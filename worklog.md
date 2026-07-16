@@ -339,3 +339,29 @@ Stage Summary:
 - 13 locale namespaces (en + vi) with comprehensive translations.
 - i18n wired into: app-shell, command-palette, page.tsx, settings, landing, providers, history.
 - Remaining: dashboard, analyze, chat, project, personalities views still have some hardcoded English (infrastructure ready, incremental wiring).
+
+---
+Task ID: 9
+Agent: Z.ai Code (hydration fix + landing page translation)
+Task: Fix hydration mismatch (server renders English, client renders Vietnamese) and translate the entire landing page to Vietnamese.
+
+Work Log:
+- **Hydration mismatch fix** (commit ecf568a):
+  - Root cause: i18n store called `getInitialLocale()` which returned "en" on server (no `document`) but "vi" on client (read cookie). Server rendered English, client rendered Vietnamese → mismatch.
+  - Fix: layout.tsx (server component) now reads the language cookie via `cookies()` from `next/headers`. Passes `initialLocale` to `<Providers initialLocale={...}>`. Providers (client) calls `useI18nStore.setState({ locale: initialLocale })` synchronously before first render — no useEffect, no flash.
+  - The i18n store now defaults to "en" on both server and client, but is immediately overridden by the server-read locale. Both render the SAME language.
+  - Verified: page loads in Vietnamese from the first paint when cookie is set to "vi" — no flash, no mismatch.
+
+- **Landing page translation** (commit 35cae7b):
+  - Expanded `locales/en/landing.json` and `locales/vi/landing.json` with 50+ translation keys covering all landing sections.
+  - Refactored FEATURES, STEPS, LOCAL_PRINCIPLES arrays to use `titleKey`/`descKey` instead of hardcoded strings.
+  - All section titles, eyebrows, descriptions now use `t()`.
+  - Trust strip, stats labels, marquee title, pipeline chips, CTA description all translated.
+  - Fixed variable shadowing: renamed TECH_LOGOS iterator from `t` to `tech` to avoid conflict with the translation function `t()`.
+  - Verified: switching to Vietnamese translates the entire landing page (hero, trust strip, stats, marquee, principles, features, workflow, pipeline, routing, providers, CTA) with no hydration mismatch.
+
+Stage Summary:
+- v3.2: hydration mismatch eliminated + landing page fully translated.
+- Architecture: cookie-based SSR-safe i18n with `next/headers` + synchronous store init.
+- Landing page: 100% translated (except FAQ Q&As which are still English).
+- Remaining: FAQ Q&As, dashboard/analyze/chat/personalities/project views still have some hardcoded English (infrastructure ready for incremental wiring).
