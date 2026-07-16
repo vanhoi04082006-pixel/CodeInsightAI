@@ -365,3 +365,25 @@ Stage Summary:
 - Architecture: cookie-based SSR-safe i18n with `next/headers` + synchronous store init.
 - Landing page: 100% translated (except FAQ Q&As which are still English).
 - Remaining: FAQ Q&As, dashboard/analyze/chat/personalities/project views still have some hardcoded English (infrastructure ready for incremental wiring).
+
+---
+Task ID: 10
+Agent: Z.ai Code (translate remaining views)
+Task: Continue translating the remaining views (FAQ, dashboard, analyze, chat, personalities) to Vietnamese, keeping technical terms in English.
+
+Work Log:
+- **FAQ**: Added 6 Q&A pairs to landing.json (en + vi). Refactored FAQ array to use `FAQ_KEYS` + `t("landing", "faqQ{n}")` + `t("landing", "faqA{n}")`. Verified: "Tôi có cần trả phí" renders in Vietnamese.
+- **Dashboard**: Added 30+ keys to dashboard.json (en + vi). Translated: overall health, score breakdown, language distribution, complexity trend, commit activity, maintainability trend, code hygiene (dead code/duplicates/circular deps), detected frameworks, top issues, tech debt, empty state, full report button, ask AI button. Technical terms kept in English (files, lines, Lang).
+- **Analyze**: Added 25+ keys to analysis.json (en + vi). Translated: title badge ("New Analysis" → "Phân tích mới"), subtitle ("What should I understand today?" → "Tôi nên hiểu gì hôm nay?"), subtitle description, input placeholder, Analyze button, Popular repos label, analyzing description, log label ("analysis.log" kept as-is), working indicator, completion screen (View full report, Chat with AI CTO, Analyze another), error screen (Analysis failed, Try again, Go to dashboard). Technical terms kept: clone, AST, embedding, Static Analysis, AI Analysis.
+- **Chat**: Added 15+ keys to chat.json (en + vi). Translated: title (AI CTO kept as-is), Clear button, placeholder, thinking indicator, try asking label, footer note. Technical terms kept: AI CTO, Staff Engineer, GPT-4o, Claude.
+- **Personalities**: Added 10+ keys to personality.json (en + vi). Translated: title, subtitle, New Personality button, import/export. Technical terms kept: personality, system prompt, API, provider.
+- Fixed remaining hardcoded "What should I understand today?" and "New Analysis" badge in analyze view.
+- All translations keep technical terms in English per user request (API, URL, AST, embedding, clone, repository, dashboard, bug, security, performance, architecture, provider, personality, etc.).
+- Lint clean throughout. Verified FAQ renders in Vietnamese.
+- Committed: 3c1686b (main batch) + d5ed7b2 (remaining fix). Pushed to GitHub.
+
+Stage Summary:
+- v3.3: FAQ + dashboard + analyze + chat + personalities views all translated.
+- Technical terms kept in English as requested.
+- i18n wired into: landing (100%), dashboard, analyze, chat, personalities, settings, providers, history.
+- Remaining: project report view (tabs/sections), some settings strings, debug panel — can be done incrementally.
