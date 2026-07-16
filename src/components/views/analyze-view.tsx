@@ -138,10 +138,10 @@ export function AnalyzeView() {
           className="relative z-10 w-full max-w-2xl text-center"
         >
           <span className="inline-block rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs text-muted-foreground backdrop-blur-md">
-            New Analysis
+            {t("analysis", "title")}
           </span>
           <h1 className="mt-4 text-4xl font-bold tracking-tight md:text-5xl">
-            What should I <GradientText>understand</GradientText> today?
+            {t("analysis", "subtitle")}
           </h1>
           <p className="mt-3 text-muted-foreground">
             {t("analysis", "subtitleDesc")}
