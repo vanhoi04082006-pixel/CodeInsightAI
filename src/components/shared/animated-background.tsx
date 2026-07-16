@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePersonalizationStore, ACCENT_PALETTES } from "@/lib/personalization-store";
 
 /* Aurora + neural-network canvas background with accent color support */
@@ -8,7 +8,16 @@ export function AnimatedBackground() {
   const ref = useRef<HTMLCanvasElement>(null);
   const accentId = usePersonalizationStore((s) => s.accent);
   const animation = usePersonalizationStore((s) => s.animation);
-  const perfMode = animation === "performance";
+
+  // Mount guard — prevents hydration mismatch from perfMode being different
+  // on server (default "en"/"ultra") vs client (from localStorage).
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true);
+  }, []);
+
+  const perfMode = mounted && animation === "performance";
 
   useEffect(() => {
     const canvas = ref.current;
@@ -22,6 +31,13 @@ export function AnimatedBackground() {
     let dpr = Math.min(window.devicePixelRatio || 1, 2);
 
     const palette = ACCENT_PALETTES[accentId];
+    // Use only hex colors for canvas — glow is rgba, so use primary/accent instead
+    const bgColor1 = toRgba(palette.primary, 0.06);
+    const bgColor2 = toRgba(palette.accent, 0.05);
+    const bgColor3 = toRgba(palette.primary, 0.04);
+    const nodeColor = toRgba(palette.accent, 0.55);
+    const lineColorBase = palette.accent;
+    const particleColor = toRgba(palette.primary, 0.3);
 
     const resize = () => {
       w = canvas.clientWidth;
@@ -44,7 +60,7 @@ export function AnimatedBackground() {
       r: Math.random() * 1.6 + 0.6,
     }));
 
-    // Floating particles (new)
+    // Floating particles
     const PARTICLE_COUNT = perfMode ? 0 : 30;
     const particles = Array.from({ length: PARTICLE_COUNT }, () => ({
       x: Math.random() * w,
@@ -68,11 +84,11 @@ export function AnimatedBackground() {
       ctx.clearRect(0, 0, w, h);
 
       if (!perfMode) {
-        // Aurora blobs — adapt to accent color
+        // Aurora blobs
         const blobs = [
-          { x: w * (0.2 + Math.sin(t) * 0.05), y: h * 0.3, r: w * 0.4, c: hexToRgba(palette.primary, 0.06) },
-          { x: w * (0.8 + Math.cos(t * 0.8) * 0.05), y: h * 0.6, r: w * 0.45, c: hexToRgba(palette.accent, 0.05) },
-          { x: w * 0.5, y: h * (0.2 + Math.sin(t * 1.2) * 0.08), r: w * 0.35, c: hexToRgba(palette.glow, 0.04) },
+          { x: w * (0.2 + Math.sin(t) * 0.05), y: h * 0.3, r: w * 0.4, c: bgColor1 },
+          { x: w * (0.8 + Math.cos(t * 0.8) * 0.05), y: h * 0.6, r: w * 0.45, c: bgColor2 },
+          { x: w * 0.5, y: h * (0.2 + Math.sin(t * 1.2) * 0.08), r: w * 0.35, c: bgColor3 },
         ];
         blobs.forEach((b) => {
           const g = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, b.r);
@@ -106,7 +122,7 @@ export function AnimatedBackground() {
             const d = Math.hypot(dx, dy);
             if (d < 150) {
               const op = (1 - d / 150) * 0.22;
-              ctx.strokeStyle = hexToRgba(palette.accent, op);
+              ctx.strokeStyle = toRgba(lineColorBase, op);
               ctx.beginPath();
               ctx.moveTo(n.x, n.y);
               ctx.lineTo(m.x, m.y);
@@ -114,20 +130,20 @@ export function AnimatedBackground() {
             }
           }
 
-          ctx.fillStyle = hexToRgba(palette.accent, 0.55);
+          ctx.fillStyle = nodeColor;
           ctx.beginPath();
           ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
           ctx.fill();
         }
 
-        // Floating particles (new)
+        // Floating particles
         for (const p of particles) {
           p.x += p.vx;
           p.y += p.vy;
           if (p.y < -10) { p.y = h + 10; p.x = Math.random() * w; }
           if (p.x < 0) p.x = w; if (p.x > w) p.x = 0;
 
-          ctx.fillStyle = hexToRgba(palette.glow, p.alpha);
+          ctx.fillStyle = toRgba(palette.primary, p.alpha);
           ctx.beginPath();
           ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
           ctx.fill();
@@ -145,18 +161,36 @@ export function AnimatedBackground() {
     };
   }, [accentId, perfMode]);
 
+  // Always render the same structure on server and client to avoid hydration
+  // mismatch. The grid-bg div is always present but hidden via CSS when perfMode.
   return (
     <div className="pointer-events-none fixed inset-0 -z-10">
       <canvas ref={ref} className="h-full w-full" />
-      {!perfMode && <div className="absolute inset-0 grid-bg opacity-40" />}
+      <div className="absolute inset-0 grid-bg opacity-40" style={{ display: perfMode ? "none" : undefined }} />
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background" />
     </div>
   );
 }
 
-function hexToRgba(hex: string, alpha: number): string {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  return `rgba(${r},${g},${b},${alpha})`;
+/**
+ * Convert any color string (hex like #3b82f6 or rgba like rgba(59,130,246,0.45))
+ * to an rgba string with the specified alpha. Handles both formats safely.
+ */
+function toRgba(color: string, alpha: number): string {
+  // If it's already rgba/rgb, parse the numbers
+  const rgbaMatch = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+  if (rgbaMatch) {
+    return `rgba(${rgbaMatch[1]},${rgbaMatch[2]},${rgbaMatch[3]},${alpha})`;
+  }
+  // If it's a hex string
+  if (color.startsWith("#")) {
+    const r = parseInt(color.slice(1, 3), 16);
+    const g = parseInt(color.slice(3, 5), 16);
+    const b = parseInt(color.slice(5, 7), 16);
+    if (!isNaN(r) && !isNaN(g) && !isNaN(b)) {
+      return `rgba(${r},${g},${b},${alpha})`;
+    }
+  }
+  // Fallback: return a safe default
+  return `rgba(59,130,246,${alpha})`;
 }
