@@ -3,7 +3,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 import { ThemeManager } from "@/components/shared/theme-manager";
-import { useI18nStore, type Locale } from "@/lib/i18n";
+import { setInitialLocale, type Locale } from "@/lib/i18n";
 
 export function Providers({
   children,
@@ -21,10 +21,14 @@ export function Providers({
       })
   );
 
-  // Set the locale SYNCHRONOUSLY before first render — no useEffect, no flash.
-  // The initialLocale comes from the server-read cookie, so server and client
-  // render the SAME language. No hydration mismatch.
-  useI18nStore.setState({ locale: initialLocale });
+  // Set the module-level locale BEFORE the store is read by any component.
+  // On the server: this sets the locale from the cookie read via next/headers.
+  // On the client: the store already read document.cookie during creation,
+  // so this is a no-op (both are the same value from the same cookie).
+  //
+  // This is NOT a setState call — it's a plain module-level variable.
+  // No React state update, no re-render, no hydration mismatch.
+  setInitialLocale(initialLocale);
 
   return (
     <QueryClientProvider client={client}>
