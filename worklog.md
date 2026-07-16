@@ -233,3 +233,35 @@ Stage Summary:
 - Settings expanded: AI tab (provider/model/personality/temperature/maxTokens) + Developer tab (enable + 8 toggles + clear data).
 - Modular reusable components: DeveloperPanel, TokenUsageCard, ResponseTimeCard, PromptDebugger, ModelDebugger, LogViewer, RawResponseViewer, AdvancedDebugCard, ExportButtons.
 - Next-phase candidates: wire real provider HTTP calls (currently falls back to built-in z-ai SDK), streaming responses, real embedding/vector search, hook personality into analysis pipeline (not just chat).
+
+---
+Task ID: 5
+Agent: Z.ai Code (Advanced UX System — Personalization + i18n + AI Personality + Developer Mode + GitHub push)
+Task: Implement complete UX Customization System (theme/accent/density/animation/accessibility), Internationalization (en/vi), confirm AI Personality + Developer Mode, adapt 3D background, expand Settings, wire language into AI pipeline. Then verify, commit, and push to GitHub.
+
+Work Log:
+- Created `src/lib/personalization-store.ts`: Zustand + persist store managing theme (light/dark/system), accent (9 colors), density (comfortable/compact), animation (ultra/balanced/performance), fontSize (sm/base/lg), reducedMotion, highContrast, colorBlind (none/protanopia/deuteranopia/tritanopia). Auto-detects low-end devices to recommend Performance mode. Includes ACCENTS list + ACCENT_PALETTES (primary/accent/ring/glow per color).
+- Created `src/components/shared/theme-manager.tsx`: applies all personalization to the DOM via CSS variables + data attributes. Listens to OS theme changes in system mode. No page reload, no flicker.
+- Rewrote `src/app/globals.css`: added light theme (`html.light`), accent CSS variables (`--accent-primary/accent/ring/glow`), density vars, animation-level flags (`data-animation`), accessibility classes (`high-contrast`, `reduce-motion`), color-blind SVG filter hooks (`data-color-blind`), and performance-mode overrides (disables blur/bloom/heavy effects). All colors now use CSS variables — no hardcoding.
+- Created i18n system: `locales/en/{common,dashboard,settings,analysis,landing,reports,errors}.json` + `locales/vi/...` (7 namespaces × 2 languages = 14 files). Created `src/lib/i18n.ts`: Zustand + persist store with browser-language auto-detection, `t(namespace, key, vars)` with dot-path lookup + fallback to English, `useT()` hook, `SUPPORTED_LOCALES` (en 🇺🇸 / vi 🇻🇳).
+- Created `src/components/shared/language-switcher.tsx`: glass dropdown with flags, instant switching, no reload. Added to topbar.
+- Created `src/components/shared/theme-switcher.tsx`: Light/Dark/System segmented control with animated active indicator.
+- Adapted `src/components/3d/ai-core.tsx`: reads accent color + animation level from personalization store. CoreOrb now takes an `accent` palette prop (colors the icosahedron, inner sphere, rings, sparkles, lights). Performance mode renders a lightweight gradient placeholder instead of WebGL. Particle count scales with animation level (600/300/0). Bloom + chromatic aberration only in Ultra mode.
+- Wired `src/components/providers.tsx`: renders `<ThemeManager />` and calls `initFromBrowser()` for i18n auto-detection on first launch.
+- Expanded `src/components/views/settings-view.tsx`: 7 tabs (Account, AI, Appearance, Language, Accessibility, Developer, Alerts). New `AppearanceSettingsCard` (ThemeSwitcher, 9-color accent picker, density toggle, animation level). New `LanguageSettingsCard` (English/Tiếngng Việt with flags). New `AccessibilitySettingsCard` (font size, reduced motion, high contrast, color-blind mode).
+- Added SVG color-blind filter definitions (`feColorMatrix`) to `src/app/layout.tsx` so CSS `url(#cb-*)` references resolve. Removed hardcoded `className="dark"` from `<html>` so ThemeManager controls it.
+- Wired language into AI pipeline: `src/app/api/chat/route.ts` accepts `language` in request body, appends a language instruction to the system prompt ("Respond in Vietnamese" / "Respond in English"). `src/components/views/chat-view.tsx` sends `useI18nStore.getState().locale` with every chat request.
+- Confirmed pre-existing AI Personality System (5 built-in + custom CRUD) and Developer Mode (debug panel + secret masking) remain intact and integrated.
+- Verified: lint clean (0 errors, 0 warnings). All new files in place (personalization-store, i18n, theme-manager, language-switcher, theme-switcher, 14 locale JSONs).
+- GitHub workflow: reviewed staged files (27 changed, no secrets/.env/.db/logs), committed as `e50616e`, pushed to `https://github.com/vanhoi04082006-pixel/CodeInsightAI.git` main branch. Verified via GitHub API that commit + all new files (personalization-store.ts, i18n.ts, locales/en, locales/vi) landed on remote.
+
+Stage Summary:
+- v3.0 shipped: complete Advanced UX System.
+- Personalization: theme (light/dark/system) + 9 accents + 2 densities + 3 animation levels + 3 font sizes + reduced motion + high contrast + 4 color-blind modes — all instant, persisted, no reload.
+- i18n: full en/vi with 7 namespaces, browser auto-detection, LanguageSwitcher in topbar + Settings, AI responds in selected language.
+- AI Personality System: 5 built-in + custom CRUD/import-export, auto-injected system prompts.
+- Developer Mode: expandable debug panel (token usage, performance, prompt/model debug, raw response, logs, advanced) with secret masking + JSON/MD/TXT export.
+- 3D AI Core adapts to accent + animation level; performance mode uses lightweight gradients.
+- Settings: 7 tabs covering Account/AI/Appearance/Language/Accessibility/Developer/Alerts.
+- Pushed to GitHub: commit e50616e on main, 27 files, verified on remote.
+- Next-phase candidates: translate remaining view strings (dashboard/landing/chat currently use hardcoded English), wire real provider HTTP calls, streaming responses, real GitHub repo cloning.
