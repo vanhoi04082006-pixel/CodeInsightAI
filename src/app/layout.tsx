@@ -45,6 +45,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
+        suppressHydrationWarning
       >
         {/* SVG color-blind correction filters (referenced by CSS url(#cb-*)) */}
         <svg width="0" height="0" className="absolute" aria-hidden>
