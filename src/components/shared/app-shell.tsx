@@ -18,21 +18,22 @@ import {
 import { useAppStore } from "@/lib/store";
 import { useProvidersStore } from "@/lib/providers-store";
 import { usePersonalityStore } from "@/lib/personality-store";
+import { useT } from "@/lib/i18n";
 import type { View } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { LanguageSwitcher } from "@/components/shared/language-switcher";
 
-const NAV: { id: View; label: string; icon: typeof LayoutDashboard; hint: string }[] = [
-  { id: "landing", label: "Home", icon: Sparkles, hint: "Landing page" },
-  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, hint: "Overview & scores" },
-  { id: "analyze", label: "Analyze", icon: ScanSearch, hint: "Run a new analysis" },
-  { id: "project", label: "Project Report", icon: FolderGit2, hint: "Detailed report" },
-  { id: "chat", label: "AI Chat", icon: MessagesSquare, hint: "Ask the AI CTO" },
-  { id: "history", label: "History", icon: History, hint: "Past analyses" },
-  { id: "providers", label: "AI Providers", icon: Plug, hint: "Connect your AI APIs" },
-  { id: "personalities", label: "Personalities", icon: Bot, hint: "Customize AI behavior" },
-  { id: "settings", label: "Settings", icon: Settings, hint: "Preferences" },
+const NAV: { id: View; labelKey: string; icon: typeof LayoutDashboard }[] = [
+  { id: "landing", labelKey: "nav.home", icon: Sparkles },
+  { id: "dashboard", labelKey: "nav.dashboard", icon: LayoutDashboard },
+  { id: "analyze", labelKey: "nav.analyze", icon: ScanSearch },
+  { id: "project", labelKey: "nav.project", icon: FolderGit2 },
+  { id: "chat", labelKey: "nav.chat", icon: MessagesSquare },
+  { id: "history", labelKey: "nav.history", icon: History },
+  { id: "providers", labelKey: "nav.providers", icon: Plug },
+  { id: "personalities", labelKey: "nav.personalities", icon: Bot },
+  { id: "settings", labelKey: "nav.settings", icon: Settings },
 ];
 
 export function AppSidebar() {
@@ -41,6 +42,7 @@ export function AppSidebar() {
   const collapsed = useAppStore((s) => s.sidebarCollapsed);
   const toggle = useAppStore((s) => s.toggleSidebar);
   const activeReport = useAppStore((s) => s.activeReport);
+  const { t } = useT();
 
   return (
     <motion.aside
@@ -90,6 +92,7 @@ export function AppSidebar() {
           const active = view === item.id;
           const disabled = (item.id === "project" || item.id === "chat") && !activeReport;
           const Icon = item.icon;
+          const label = t("common", item.labelKey);
           return (
             <button
               key={item.id}
@@ -102,7 +105,7 @@ export function AppSidebar() {
                   : "text-muted-foreground hover:bg-white/5 hover:text-foreground",
                 disabled && "cursor-not-allowed opacity-40 hover:bg-transparent"
               )}
-              title={collapsed ? item.label : undefined}
+              title={collapsed ? label : undefined}
             >
               {active && (
                 <motion.span
@@ -116,7 +119,7 @@ export function AppSidebar() {
                 <span className="absolute left-0 top-1/2 h-6 -translate-y-1/2 w-1 rounded-r-full bg-cyan-400 neon-glow-cyan" />
               )}
               <Icon className={cn("h-[18px] w-[18px] shrink-0", active && "text-cyan-300")} />
-              {!collapsed && <span className="font-medium">{item.label}</span>}
+              {!collapsed && <span className="font-medium">{label}</span>}
               {!collapsed && active && (
                 <Sparkles className="ml-auto h-3.5 w-3.5 text-cyan-300" />
               )}
@@ -135,17 +138,18 @@ export function AppTopbar() {
   const view = useAppStore((s) => s.view);
   const setView = useAppStore((s) => s.setView);
   const activeReport = useAppStore((s) => s.activeReport);
+  const { t } = useT();
 
-  const titleMap: Record<View, string> = {
-    landing: "Welcome",
-    dashboard: "Dashboard",
-    analyze: "New Analysis",
-    project: "Project Report",
-    chat: "AI Chat",
-    history: "History",
-    settings: "Settings",
-    providers: "AI Providers",
-    personalities: "AI Personalities",
+  const titleKeyMap: Record<View, string> = {
+    landing: "nav.home",
+    dashboard: "nav.dashboard",
+    analyze: "actions.newAnalysis",
+    project: "nav.project",
+    chat: "nav.chat",
+    history: "nav.history",
+    settings: "nav.settings",
+    providers: "nav.providers",
+    personalities: "nav.personalities",
   };
 
   return (
@@ -162,7 +166,7 @@ export function AppTopbar() {
       </button>
 
       <div className="hidden md:block">
-        <h1 className="text-sm font-semibold">{titleMap[view]}</h1>
+        <h1 className="text-sm font-semibold">{t("common", titleKeyMap[view])}</h1>
         <p className="text-[11px] text-muted-foreground">
           {activeReport && (view === "project" || view === "chat")
             ? `${activeReport.repoOwner}/${activeReport.repoName}`
@@ -176,7 +180,7 @@ export function AppTopbar() {
           className="hidden items-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs text-muted-foreground transition hover:bg-white/5 sm:flex"
         >
           <Command className="h-3.5 w-3.5" />
-          <span>Quick search</span>
+          <span>{t("common", "actions.quickSearch")}</span>
           <kbd className="rounded bg-white/5 px-1.5 py-0.5 text-[10px]">⌘K</kbd>
         </button>
         <LanguageSwitcher compact />
@@ -186,8 +190,8 @@ export function AppTopbar() {
           className="bg-gradient-to-r from-cyan-500 to-violet-500 text-white hover:opacity-90"
         >
           <ScanSearch className="mr-1.5 h-4 w-4" />
-          <span className="hidden sm:inline">New Analysis</span>
-          <span className="sm:hidden">Analyze</span>
+          <span className="hidden sm:inline">{t("common", "actions.newAnalysis")}</span>
+          <span className="sm:hidden">{t("common", "actions.analyzeRepo")}</span>
         </Button>
         <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-cyan-400/40 to-violet-500/40 text-xs font-bold">
           ZA
@@ -201,6 +205,7 @@ export function MobileNav() {
   const view = useAppStore((s) => s.view);
   const setView = useAppStore((s) => s.setView);
   const activeReport = useAppStore((s) => s.activeReport);
+  const { t } = useT();
   const items = NAV.filter((n) => n.id !== "landing");
   return (
     <nav className="glass-strong fixed bottom-0 left-0 right-0 z-30 flex items-center justify-around border-t border-white/10 px-1 py-1.5 md:hidden">
@@ -208,6 +213,7 @@ export function MobileNav() {
         const active = view === item.id;
         const disabled = (item.id === "project" || item.id === "chat") && !activeReport;
         const Icon = item.icon;
+        const label = t("common", item.labelKey);
         return (
           <button
             key={item.id}
@@ -220,7 +226,7 @@ export function MobileNav() {
             )}
           >
             <Icon className="h-[18px] w-[18px]" />
-            {item.label.split(" ")[0]}
+            {label.split(" ")[0]}
             {active && (
               <motion.span
                 layoutId="mobile-nav-active"
