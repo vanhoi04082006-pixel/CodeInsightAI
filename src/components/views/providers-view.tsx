@@ -47,6 +47,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useProvidersStore } from "@/lib/providers-store";
+import { useT } from "@/lib/i18n";
 import { PROVIDER_PRESETS, PRESET_BY_ID, FEATURE_LABELS, FEATURE_DEFAULTS } from "@/lib/providers";
 import type { AIProvider, FeatureKind, ProviderId, ProviderPreset } from "@/lib/types";
 import { toast } from "sonner";
@@ -60,6 +61,7 @@ const STATUS_META: Record<string, { color: string; label: string; icon: typeof P
 };
 
 export function ProvidersView() {
+  const { t } = useT();
   const providers = useProvidersStore((s) => s.providers);
   const addProvider = useProvidersStore((s) => s.addProvider);
   const [adding, setAdding] = useState(false);
@@ -83,29 +85,29 @@ export function ProvidersView() {
         <div>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Plug className="h-4 w-4 text-cyan-300" />
-            <span>Local-first · Bring your own keys</span>
+            <span>{t("providers", "localFirst")}</span>
           </div>
           <h1 className="mt-1 text-2xl font-bold md:text-3xl">
-            AI <GradientText>Providers</GradientText>
+            <GradientText>{t("providers", "title")}</GradientText>
           </h1>
           <p className="text-sm text-muted-foreground">
-            Connect unlimited AI providers. Switch models freely. No subscriptions, no billing — your keys, your data.
+            {t("providers", "subtitle")}
           </p>
         </div>
         <Button
           onClick={() => setAdding(true)}
           className="bg-gradient-to-r from-cyan-500 to-violet-500 text-white hover:opacity-90"
         >
-          <Plus className="mr-1.5 h-4 w-4" /> Add AI Provider
+          <Plus className="mr-1.5 h-4 w-4" /> {t("providers", "addProvider")}
         </Button>
       </motion.div>
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <StatCard icon={Power} label="Enabled" value={enabledCount} sub={`of ${providers.length} added`} color="#22d3ee" />
-        <StatCard icon={Check} label="Connected" value={connectedCount} sub="reachable now" color="#34d399" />
-        <StatCard icon={HardDrive} label="Local models" value={localCount} sub="Ollama / LM Studio" color="#a78bfa" />
-        <StatCard icon={Clock} label="Avg latency" value={avgLatency} sub="ms (last test)" color="#fbbf24" suffix="ms" />
+        <StatCard icon={Power} label={t("providers", "statEnabled")} value={enabledCount} sub={`of ${providers.length} added`} color="#22d3ee" />
+        <StatCard icon={Check} label={t("providers", "statConnected")} value={connectedCount} sub="reachable now" color="#34d399" />
+        <StatCard icon={HardDrive} label={t("providers", "statLocalModels")} value={localCount} sub="Ollama / LM Studio" color="#a78bfa" />
+        <StatCard icon={Clock} label={t("providers", "statAvgLatency")} value={avgLatency} sub="ms (last test)" color="#fbbf24" suffix="ms" />
       </div>
 
       {/* Feature routing overview */}
@@ -135,7 +137,7 @@ export function ProvidersView() {
       )}
 
       {/* Add provider dialog */}
-      <AddProviderDialog open={adding} onOpenChange={setAdding} onPick={(pid) => { addProvider(pid); toast.success(`${PRESET_BY_ID[pid].name} provider added`); setAdding(false); }} />
+      <AddProviderDialog open={adding} onOpenChange={setAdding} onPick={(pid) => { addProvider(pid); toast.success(t("notifications", "providerAdded", { name: PRESET_BY_ID[pid].name })); setAdding(false); }} />
     </div>
   );
 }
@@ -160,6 +162,7 @@ function StatCard({ icon: Icon, label, value, sub, color, suffix }: { icon: type
 
 /* ---------- Feature routing ---------- */
 function FeatureRoutingCard() {
+  const { t } = useT();
   const providers = useProvidersStore((s) => s.providers);
   const routing = useProvidersStore((s) => s.routing);
   const setRouting = useProvidersStore((s) => s.setRouting);
@@ -170,10 +173,10 @@ function FeatureRoutingCard() {
     <GlassCard strong className="p-5">
       <div className="flex items-center gap-2">
         <Sparkles className="h-4 w-4 text-cyan-300" />
-        <h2 className="text-sm font-semibold">Feature → Model Routing</h2>
+        <h2 className="text-sm font-semibold">{t("providers", "featureRouting")}</h2>
       </div>
       <p className="mt-1 text-xs text-muted-foreground">
-        Route different tasks to different models. E.g. Bug Detection → Claude, Repository Chat → GPT-4o, Docs → DeepSeek.
+        {t("providers", "featureRoutingDesc")}
       </p>
       <NeonDivider className="my-4" />
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -226,18 +229,18 @@ function FeatureRoutingCard() {
 
 /* ---------- Empty state ---------- */
 function EmptyState({ onAdd }: { onAdd: () => void }) {
+  const { t } = useT();
   return (
     <GlassCard strong className="relative overflow-hidden p-12 text-center">
       <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-cyan-500/10 blur-3xl" />
       <div className="absolute -bottom-10 -left-10 h-40 w-40 rounded-full bg-violet-500/10 blur-3xl" />
       <Plug className="relative mx-auto h-12 w-12 text-cyan-300" />
-      <h2 className="relative mt-4 text-2xl font-bold">Connect your AI</h2>
+      <h2 className="relative mt-4 text-2xl font-bold">{t("providers", "connectYourAI")}</h2>
       <p className="relative mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-        No providers connected yet. Add OpenRouter, OpenAI, Anthropic, a local Ollama instance, or any OpenAI-compatible API.
-        Your keys stay in your browser — nothing is sent to us.
+        {t("providers", "connectYourAIDesc")}
       </p>
       <Button onClick={onAdd} className="relative mt-5 bg-gradient-to-r from-cyan-500 to-violet-500 text-white">
-        <Plus className="mr-1.5 h-4 w-4" /> Add your first provider
+        <Plus className="mr-1.5 h-4 w-4" /> {t("providers", "addFirst")}
       </Button>
     </GlassCard>
   );
