@@ -52,3 +52,17 @@ prompt
 server.log
 # Skills directory
 /skills/
+
+# Database (local SQLite — contains persisted analyses & chat, must never be pushed)
+/db/
+*.db
+*.db-journal
+
+# Server launcher logs/state
+watchdog.log
+dev.out.log
+start-dev.sh
+watch-dev.sh
+
+# Local provider config / secrets
+provider-config.json
