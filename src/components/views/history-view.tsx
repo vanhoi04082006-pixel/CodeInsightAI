@@ -75,6 +75,8 @@ export function HistoryView() {
       const d = await res.json();
       if (d.report) {
         setActiveReport(d.report as AnalysisReport);
+        useAppStore.getState().setActiveAnalysisId(item.id);
+        useAppStore.getState().clearChat();
         setView("project");
         toast.success(`Loaded ${item.repoOwner}/${item.repoName}`);
       }

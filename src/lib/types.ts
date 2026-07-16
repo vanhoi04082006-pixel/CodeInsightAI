@@ -62,6 +62,26 @@ export interface FileInsight {
   maintainability: number;
   description: string;
   issues: number;
+  snippet?: string; // representative code snippet for the viewer
+  duplicateGroup?: number; // >0 means part of a duplicate cluster
+  isDeadCode?: boolean;
+}
+
+export interface CodeSnippet {
+  file: string;
+  language: string;
+  code: string;
+  title: string;
+  explanation: string;
+}
+
+export interface DiagramSet {
+  uml: string; // SVG markup for class/UML diagram
+  sequence: string; // SVG markup for sequence diagram
+  erd: string; // SVG markup for database ER diagram
+  umlExplanation: string;
+  sequenceExplanation: string;
+  erdExplanation: string;
 }
 
 export interface ScoreBreakdown {
@@ -108,6 +128,11 @@ export interface AnalysisReport {
     performance: Issue[];
   };
   files: FileInsight[];
+  snippets: CodeSnippet[];
+  diagrams: DiagramSet;
+  deadCode: { path: string; lines: number; reason: string }[];
+  duplicates: { group: number; files: string[]; lines: number }[];
+  maintainabilityTrend: ChartPoint[];
   architecture: {
     pattern: string;
     description: string;

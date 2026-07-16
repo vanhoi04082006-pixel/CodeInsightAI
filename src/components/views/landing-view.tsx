@@ -20,9 +20,16 @@ import {
   Boxes,
   Lock,
   Rocket,
+  Code2,
+  Database,
+  Cloud,
+  Cpu,
+  Terminal,
+  Layers,
+  GitMerge,
 } from "lucide-react";
 import { AICore } from "@/components/3d/ai-core";
-import { GlassCard, SectionTitle, GradientText, NeonDivider } from "@/components/shared/ui";
+import { GlassCard, SectionTitle, GradientText, NeonDivider, AnimatedCounter } from "@/components/shared/ui";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
@@ -42,6 +49,21 @@ const FEATURES = [
   { icon: Gauge, title: "Performance Analysis", desc: "Identifies bundle bloat, N+1 queries, memory leaks, and render bottlenecks ranked by impact.", color: "#34d399" },
   { icon: Bug, title: "Bug Detection", desc: "Race conditions, null derefs, off-by-one errors and logic flaws — found automatically with severity scoring.", color: "#fbbf24" },
   { icon: FileText, title: "Auto Documentation", desc: "Generates READMEs, API docs, architecture diagrams, UML and sequence diagrams on demand.", color: "#60a5fa" },
+];
+
+const TECH_LOGOS = [
+  { name: "TypeScript", icon: Code2, color: "#3178c6" },
+  { name: "React", icon: Cpu, color: "#22d3ee" },
+  { name: "Next.js", icon: Layers, color: "#ffffff" },
+  { name: "Node.js", icon: Terminal, color: "#34d399" },
+  { name: "Python", icon: Code2, color: "#fbbf24" },
+  { name: "Go", icon: Cpu, color: "#60a5fa" },
+  { name: "Rust", icon: Boxes, color: "#fb923c" },
+  { name: "Vue", icon: Layers, color: "#34d399" },
+  { name: "PostgreSQL", icon: Database, color: "#60a5fa" },
+  { name: "Docker", icon: Boxes, color: "#22d3ee" },
+  { name: "AWS", icon: Cloud, color: "#fbbf24" },
+  { name: "GraphQL", icon: GitMerge, color: "#f472b6" },
 ];
 
 const STEPS = [
@@ -228,6 +250,61 @@ export function LandingView() {
         >
           <ChevronDown className="h-5 w-5" />
         </motion.div>
+      </section>
+
+      {/* ============ STATS BAR ============ */}
+      <section className="relative px-4 py-12">
+        <div className="mx-auto max-w-5xl">
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+            {[
+              { value: 2400, suffix: "+", label: "Developers", color: "#22d3ee" },
+              { value: 185000, suffix: "+", label: "Lines analysed", color: "#a78bfa" },
+              { value: 99.9, suffix: "%", label: "Uptime", color: "#34d399", decimals: 1 },
+              { value: 60, suffix: "s", label: "Avg. analysis", color: "#fbbf24" },
+            ].map((s, i) => (
+              <motion.div
+                key={s.label}
+                initial={{ opacity: 0, y: 16 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.08 }}
+                className="text-center"
+              >
+                <div
+                  className="text-3xl font-bold md:text-4xl"
+                  style={{ color: s.color, textShadow: `0 0 20px ${s.color}40` }}
+                >
+                  <AnimatedCounter value={s.value} suffix={s.suffix} decimals={s.decimals ?? 0} />
+                </div>
+                <p className="mt-1 text-xs uppercase tracking-wider text-muted-foreground">{s.label}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ============ TECH MARQUEE ============ */}
+      <section className="relative overflow-hidden py-8">
+        <p className="mb-5 text-center text-xs uppercase tracking-[0.25em] text-muted-foreground">
+          Understands every major stack
+        </p>
+        <div className="relative mask-fade-x">
+          <div className="flex w-max gap-4 animate-[marquee_30s_linear_infinite]">
+            {[...TECH_LOGOS, ...TECH_LOGOS].map((t, i) => {
+              const Icon = t.icon;
+              return (
+                <div
+                  key={i}
+                  className="flex shrink-0 items-center gap-2 rounded-xl border border-white/5 bg-white/[0.02] px-4 py-2.5"
+                  style={{ color: t.color }}
+                >
+                  <Icon className="h-5 w-5" />
+                  <span className="text-sm font-medium text-foreground/80">{t.name}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       </section>
 
       {/* ============ FEATURES ============ */}

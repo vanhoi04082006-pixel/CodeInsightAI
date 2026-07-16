@@ -33,6 +33,8 @@ import {
   PolarAngleAxis,
   BarChart,
   Bar,
+  LineChart,
+  Line,
   PieChart,
   Pie,
   Cell,
@@ -64,6 +66,7 @@ export function DashboardView() {
   const languageData = r.languages.slice(0, 6).map((l) => ({ name: l.name, value: l.percentage, color: l.color }));
   const complexityData = r.complexityTrend.map((c) => ({ name: c.label, value: c.value }));
   const activityData = r.activity.map((a) => ({ name: a.label, value: a.value }));
+  const maintainabilityData = (r.maintainabilityTrend ?? []).map((m) => ({ name: m.label, value: m.value }));
 
   return (
     <div className="mx-auto max-w-7xl space-y-6 px-4 py-6 md:px-6">
@@ -283,6 +286,65 @@ export function DashboardView() {
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
+          </div>
+        </GlassCard>
+      </div>
+
+      {/* Maintainability trend + dead code summary */}
+      <div className="grid gap-4 lg:grid-cols-3">
+        <GlassCard className="p-5 lg:col-span-2">
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="text-sm font-semibold">Maintainability Trend</h3>
+            <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+              <Clock className="h-3 w-3" /> last 8 months
+            </span>
+          </div>
+          <div className="h-48">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={maintainabilityData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                <XAxis dataKey="name" stroke="rgba(255,255,255,0.3)" fontSize={11} tickLine={false} axisLine={false} />
+                <YAxis domain={[0, 100]} stroke="rgba(255,255,255,0.3)" fontSize={11} tickLine={false} axisLine={false} />
+                <Tooltip
+                  contentStyle={{ background: "rgba(20,20,30,0.9)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, fontSize: 12 }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="value"
+                  stroke="#34d399"
+                  strokeWidth={2.5}
+                  dot={{ fill: "#34d399", r: 3 }}
+                  activeDot={{ r: 5, fill: "#6ee7b7" }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </GlassCard>
+
+        <GlassCard className="p-5">
+          <h3 className="text-sm font-semibold">Code Hygiene</h3>
+          <div className="mt-3 space-y-2.5">
+            <div className="flex items-center justify-between rounded-lg border border-rose-500/20 bg-rose-500/[0.04] p-3">
+              <div>
+                <p className="text-xs font-medium text-rose-300">Dead code files</p>
+                <p className="text-[10px] text-muted-foreground">{r.deadCode?.length ?? 0} removable</p>
+              </div>
+              <span className="text-2xl font-bold tabular-nums text-rose-400">{r.deadCode?.length ?? 0}</span>
+            </div>
+            <div className="flex items-center justify-between rounded-lg border border-amber-500/20 bg-amber-500/[0.04] p-3">
+              <div>
+                <p className="text-xs font-medium text-amber-300">Duplicate clusters</p>
+                <p className="text-[10px] text-muted-foreground">{r.duplicates?.length ?? 0} groups found</p>
+              </div>
+              <span className="text-2xl font-bold tabular-nums text-amber-400">{r.duplicates?.length ?? 0}</span>
+            </div>
+            <div className="flex items-center justify-between rounded-lg border border-cyan-500/20 bg-cyan-500/[0.04] p-3">
+              <div>
+                <p className="text-xs font-medium text-cyan-300">Circular deps</p>
+                <p className="text-[10px] text-muted-foreground">{r.dependencies.circular.length} detected</p>
+              </div>
+              <span className="text-2xl font-bold tabular-nums text-cyan-400">{r.dependencies.circular.length}</span>
+            </div>
           </div>
         </GlassCard>
       </div>

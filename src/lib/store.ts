@@ -11,6 +11,8 @@ interface AppState {
   // Active analysis
   activeReport: AnalysisReport | null;
   setActiveReport: (r: AnalysisReport | null) => void;
+  activeAnalysisId: string | null;
+  setActiveAnalysisId: (id: string | null) => void;
 
   // Analysis flow
   isAnalyzing: boolean;
@@ -21,6 +23,7 @@ interface AppState {
   // Chat history (per active analysis, ephemeral)
   chat: ChatMessage[];
   pushChat: (m: ChatMessage) => void;
+  setChat: (m: ChatMessage[]) => void;
   clearChat: () => void;
 
   // UI
@@ -36,6 +39,8 @@ export const useAppStore = create<AppState>((set) => ({
 
   activeReport: null,
   setActiveReport: (r) => set({ activeReport: r }),
+  activeAnalysisId: null,
+  setActiveAnalysisId: (id) => set({ activeAnalysisId: id }),
 
   isAnalyzing: false,
   currentStage: 0,
@@ -44,6 +49,7 @@ export const useAppStore = create<AppState>((set) => ({
 
   chat: [],
   pushChat: (m) => set((s) => ({ chat: [...s.chat, m] })),
+  setChat: (m) => set({ chat: m }),
   clearChat: () => set({ chat: [] }),
 
   sidebarCollapsed: false,
