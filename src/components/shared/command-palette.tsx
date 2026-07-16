@@ -11,6 +11,7 @@ import {
   Settings,
   Sparkles,
   Plug,
+  Bot,
   Home,
   Search,
 } from "lucide-react";
@@ -29,6 +30,7 @@ const COMMANDS: { id: View; label: string; hint: string; icon: typeof Home; grou
   { id: "chat", label: "Ask AI CTO", hint: "Chat about repo", icon: MessagesSquare, group: "Actions" },
   { id: "history", label: "Analysis History", hint: "Past analyses", icon: History, group: "Navigation" },
   { id: "providers", label: "AI Providers", hint: "Connect your AI APIs", icon: Plug, group: "Actions" },
+  { id: "personalities", label: "AI Personalities", hint: "Customize AI behavior", icon: Bot, group: "Actions" },
   { id: "settings", label: "Settings", hint: "Preferences", icon: Settings, group: "Navigation" },
 ];
 

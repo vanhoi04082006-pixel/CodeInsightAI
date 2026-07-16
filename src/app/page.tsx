@@ -13,6 +13,7 @@ import { ChatView } from "@/components/views/chat-view";
 import { HistoryView } from "@/components/views/history-view";
 import { SettingsView } from "@/components/views/settings-view";
 import { ProvidersView } from "@/components/views/providers-view";
+import { PersonalitiesView } from "@/components/views/personalities-view";
 import { CommandPalette } from "@/components/shared/command-palette";
 import { Github, Sparkles, Heart } from "lucide-react";
 
@@ -99,6 +100,7 @@ export default function Home() {
                   {view === "history" && <HistoryView />}
                   {view === "settings" && <SettingsView />}
                   {view === "providers" && <ProvidersView />}
+                  {view === "personalities" && <PersonalitiesView />}
                 </motion.div>
               </AnimatePresence>
             </main>
