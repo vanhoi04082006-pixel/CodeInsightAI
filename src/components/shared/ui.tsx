@@ -20,15 +20,20 @@ export function GlassCard({
 }) {
   return (
     <motion.div
-      whileHover={hover ? { y: -4, transition: { duration: 0.25 } } : undefined}
+      whileHover={hover ? { y: -6, scale: 1.01, transition: { duration: 0.3, ease: [0.16, 1, 0.3, 1] } } : undefined}
       className={cn(
         strong ? "glass-strong" : "glass-card",
-        "relative rounded-2xl",
+        "group relative overflow-hidden rounded-2xl transition-shadow duration-300",
         glow === "cyan" && "neon-glow-cyan",
         glow === "violet" && "neon-glow-violet",
+        hover && "hover:shadow-2xl",
         className
       )}
     >
+      {/* Shimmer effect on hover */}
+      {hover && (
+        <div className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/[0.04] to-transparent transition-transform duration-700 ease-out group-hover:translate-x-full" />
+      )}
       {children}
     </motion.div>
   );
@@ -53,7 +58,12 @@ export function ScoreGauge({
   const offset = circ - (value / 100) * circ;
   return (
     <div className="relative inline-flex items-center justify-center" style={{ width: size, height: size }}>
-      <svg width={size} height={size} className="-rotate-90">
+      {/* Outer glow ring */}
+      <div
+        className="absolute inset-0 rounded-full blur-xl opacity-30"
+        style={{ background: `radial-gradient(circle, ${color}, transparent 70%)` }}
+      />
+      <svg width={size} height={size} className="-rotate-90 relative">
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -73,14 +83,20 @@ export function ScoreGauge({
           strokeDasharray={circ}
           initial={{ strokeDashoffset: circ }}
           animate={{ strokeDashoffset: offset }}
-          transition={{ duration: 1.4, ease: "easeOut" }}
-          style={{ filter: `drop-shadow(0 0 6px ${color}aa)` }}
+          transition={{ duration: 1.6, ease: [0.16, 1, 0.3, 1] }}
+          style={{ filter: `drop-shadow(0 0 8px ${color}cc)` }}
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-2xl font-bold tabular-nums" style={{ color }}>
+        <motion.span
+          initial={{ opacity: 0, scale: 0.5 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.3, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+          className="text-2xl font-bold tabular-nums"
+          style={{ color, textShadow: `0 0 16px ${color}80` }}
+        >
           {value}
-        </span>
+        </motion.span>
         {label && <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</span>}
       </div>
     </div>
