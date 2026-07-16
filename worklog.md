@@ -119,3 +119,31 @@ Stage Summary:
 - Dev server persistence handled via watchdog script + 15-min cron.
 - Real LLM chat confirmed working with rich repo context.
 - See "Priority Recommendations" above for next-phase work.
+
+---
+Task ID: 2
+Agent: Z.ai Code (cron review — webDevReview)
+Task: 15-min recurring review: assess status, QA test, fix bugs, add features & styling polish.
+
+Work Log:
+- Reviewed worklog v1.0. Server was down — restarted via `watch-dev.sh`.
+- QA via agent-browser: landing renders, pipeline completes, report tabs present, chat LLM works via curl.
+- Extended `AnalysisReport` type with: `snippets` (CodeSnippet[]), `diagrams` (DiagramSet: UML/sequence/ERD SVG), `deadCode`, `duplicates`, `maintainabilityTrend`, and `FileInsight` gained `snippet`/`duplicateGroup`/`isDeadCode` fields.
+- Extended `analysis-engine.ts` generator: added `buildSnippets()` (5 curated TS/TSX code samples with explanations), `buildDiagrams()` (3 hand-crafted SVG diagrams: UML class diagram with User/Repository/Analysis entities, sequence diagram for auth flow, ER diagram for the DB schema), `buildDeadCode()`, `buildDuplicates()`, `buildMaintainabilityTrend()`.
+- Created `src/components/shared/code-viewer.tsx`: IDE-style code explorer with file list sidebar, `react-syntax-highlighter` (vscDarkPlus theme) with line numbers, macOS-style title bar, copy button, and AI explanation panel.
+- Added new "Code" tab to Project Report (9 tabs now) — renders the CodeViewer with 5 syntax-highlighted snippets.
+- Enhanced "Docs" tab: added diagram switcher (UML / Sequence / ERD) rendering SVG markup via dangerouslySetInnerHTML, plus the existing README + API docs.
+- Enhanced "Dependencies" tab: added Dead Code card (files with no inbound refs + reason) and Duplicate Code card (clusters with group ID + file list + line count).
+- Enhanced Dashboard: added Maintainability Trend line chart (8-month, recharts LineChart) + Code Hygiene card with dead code / duplicate / circular dep counts.
+- Chat restore: extended Zustand store with `activeAnalysisId` + `setChat`. Chat view now fetches persisted messages from `/api/history` on load if an analysisId exists, falling back to seeding the intro. Analyze-view stores the returned analysisId; History-view sets it when opening a past analysis.
+- Landing page styling polish: added AnimatedCounter component (IntersectionObserver-triggered, easeOutExpo) rendering 4 stats (Developers 2400+, Lines analysed 185000+, Uptime 99.9%, Avg analysis 60s) with neon glow. Added tech logo marquee (12 techs: TS/React/Next/Node/Python/Go/Rust/Vue/Postgres/Docker/AWS/GraphQL) with CSS `marquee` keyframe animation and fade-mask edges.
+- Added `marquee` keyframe + mask-fade-x utility to globals.css.
+- Verified via API (curl): report returns snippets(5), diagrams(uml/sequence/erd), deadCode(3), duplicates(2), maintainabilityTrend(8). Verified via agent-browser: Code tab active + "AI Code Explorer" + "Session Verification" snippet render + `<pre>` present; Docs tab has 49 SVGs (diagrams); Landing has stats bar + marquee in DOM.
+- Lint clean (0 errors, 0 warnings).
+
+Stage Summary:
+- v1.1 shipped: 4 major new features (Code Explorer, Diagrams, Dead Code/Duplicates, Chat Restore) + 2 styling enhancements (animated stats, tech marquee).
+- Project Report now has 9 tabs (was 8). Dashboard has 6 chart cards (was 4). Landing has stats + marquee sections.
+- All new data flows through the existing API (`/api/analyze` returns the extended report JSON) — no schema migration needed (report stored as JSON blob).
+- Dev server persistence remains the main environment constraint; watchdog + cron mitigate.
+- Next-phase candidates: real GitHub API integration for live repo metadata, PDF export wiring, NextAuth OAuth backend, Compare-two-repos view.

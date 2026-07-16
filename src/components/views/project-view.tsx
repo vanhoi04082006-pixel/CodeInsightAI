@@ -20,9 +20,11 @@ import {
   ExternalLink,
   Copy,
   Check,
+  GitBranch,
 } from "lucide-react";
 import { GlassCard, ScoreGauge, GradientText, NeonDivider, SeverityBadge } from "@/components/shared/ui";
 import { DependencyGraph } from "@/components/shared/dependency-graph";
+import { CodeViewer } from "@/components/shared/code-viewer";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useAppStore } from "@/lib/store";
@@ -30,7 +32,7 @@ import type { AnalysisReport, Issue } from "@/lib/types";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-type Tab = "overview" | "architecture" | "bugs" | "security" | "performance" | "dependencies" | "docs" | "roadmap";
+type Tab = "overview" | "architecture" | "bugs" | "security" | "performance" | "dependencies" | "code" | "docs" | "roadmap";
 
 const TABS: { id: Tab; label: string; icon: typeof LayoutGrid }[] = [
   { id: "overview", label: "Overview", icon: LayoutGrid },
@@ -39,6 +41,7 @@ const TABS: { id: Tab; label: string; icon: typeof LayoutGrid }[] = [
   { id: "security", label: "Security", icon: ShieldCheck },
   { id: "performance", label: "Performance", icon: Gauge },
   { id: "dependencies", label: "Dependencies", icon: Boxes },
+  { id: "code", label: "Code", icon: FileCode },
   { id: "docs", label: "Docs", icon: FileText },
   { id: "roadmap", label: "Roadmap", icon: Rocket },
 ];
@@ -149,6 +152,9 @@ export function ProjectView() {
           </TabsContent>
           <TabsContent value="dependencies" className="mt-4">
             <DependenciesTab report={report} />
+          </TabsContent>
+          <TabsContent value="code" className="mt-4">
+            <CodeTab report={report} />
           </TabsContent>
           <TabsContent value="docs" className="mt-4">
             <DocsTab report={report} />
@@ -404,6 +410,60 @@ function DependenciesTab({ report }: { report: AnalysisReport }) {
       </GlassCard>
       <DependencyGraph report={report} />
 
+      {/* Dead code + duplicates */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <GlassCard className="p-5">
+          <div className="flex items-center gap-2">
+            <FileCode className="h-4 w-4 text-rose-400" />
+            <h4 className="text-sm font-semibold">Dead Code <span className="text-muted-foreground">({report.deadCode.length})</span></h4>
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">Files with no inbound references — safe candidates for removal.</p>
+          <div className="mt-3 space-y-1.5">
+            {report.deadCode.length === 0 ? (
+              <p className="rounded-lg border border-emerald-400/20 bg-emerald-400/[0.04] p-3 text-xs text-emerald-300">No dead code detected — clean codebase.</p>
+            ) : (
+              report.deadCode.map((d, i) => (
+                <div key={i} className="rounded-lg border border-white/5 bg-white/[0.02] p-2.5">
+                  <div className="flex items-center gap-2">
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-rose-400" />
+                    <p className="truncate font-mono text-[11px]">{d.path}</p>
+                    <span className="ml-auto shrink-0 text-[10px] text-muted-foreground">{d.lines}L</span>
+                  </div>
+                  <p className="mt-1 pl-3.5 text-[10px] text-muted-foreground">{d.reason}</p>
+                </div>
+              ))
+            )}
+          </div>
+        </GlassCard>
+
+        <GlassCard className="p-5">
+          <div className="flex items-center gap-2">
+            <Copy className="h-4 w-4 text-amber-400" />
+            <h4 className="text-sm font-semibold">Duplicate Code <span className="text-muted-foreground">({report.duplicates.length})</span></h4>
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">Clusters of near-identical blocks — extract a shared helper.</p>
+          <div className="mt-3 space-y-1.5">
+            {report.duplicates.length === 0 ? (
+              <p className="rounded-lg border border-emerald-400/20 bg-emerald-400/[0.04] p-3 text-xs text-emerald-300">No significant duplication found.</p>
+            ) : (
+              report.duplicates.map((d, i) => (
+                <div key={i} className="rounded-lg border border-white/5 bg-white/[0.02] p-2.5">
+                  <div className="flex items-center gap-2">
+                    <span className="rounded bg-amber-400/15 px-1.5 py-0.5 text-[9px] font-bold text-amber-400">GROUP {d.group}</span>
+                    <span className="ml-auto text-[10px] text-muted-foreground">{d.lines} lines duplicated</span>
+                  </div>
+                  <div className="mt-1.5 space-y-0.5">
+                    {d.files.map((f) => (
+                      <p key={f} className="truncate pl-3 font-mono text-[10px] text-muted-foreground">{f}</p>
+                    ))}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </GlassCard>
+      </div>
+
       <GlassCard className="p-5">
         <h4 className="text-sm font-semibold">All Files</h4>
         <div className="mt-3 max-h-80 space-y-1 overflow-y-auto scrollbar-thin">
@@ -424,39 +484,88 @@ function DependenciesTab({ report }: { report: AnalysisReport }) {
   );
 }
 
+/* ---------- Code ---------- */
+function CodeTab({ report }: { report: AnalysisReport }) {
+  return (
+    <div className="space-y-4">
+      <GlassCard className="p-5">
+        <div className="flex items-center gap-2">
+          <FileCode className="h-5 w-5 text-cyan-300" />
+          <h3 className="text-lg font-semibold">AI Code Explorer</h3>
+        </div>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Representative snippets parsed from the codebase, each with syntax highlighting and an AI explanation of what it does and how to improve it.
+        </p>
+      </GlassCard>
+      <CodeViewer snippets={report.snippets} />
+    </div>
+  );
+}
+
 /* ---------- Docs ---------- */
 function DocsTab({ report }: { report: AnalysisReport }) {
   const [copied, setCopied] = useState<"readme" | "api" | null>(null);
+  const [diagram, setDiagram] = useState<"uml" | "sequence" | "erd">("uml");
   const copy = (which: "readme" | "api") => {
     navigator.clipboard.writeText(which === "readme" ? report.documentation.readme : report.documentation.apiDocs);
     setCopied(which);
     toast.success("Copied to clipboard");
     setTimeout(() => setCopied(null), 1500);
   };
+  const diagrams = report.diagrams;
+  const diagramTab = { uml: { svg: diagrams.uml, title: "UML Class Diagram", desc: diagrams.umlExplanation, icon: Network }, sequence: { svg: diagrams.sequence, title: "Sequence Diagram", desc: diagrams.sequenceExplanation, icon: GitBranch }, erd: { svg: diagrams.erd, title: "Database ER Diagram", desc: diagrams.erdExplanation, icon: Boxes } }[diagram];
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
+    <div className="space-y-4">
+      {/* Diagrams */}
       <GlassCard className="p-5">
-        <div className="flex items-center justify-between">
-          <h4 className="flex items-center gap-2 text-sm font-semibold"><FileText className="h-4 w-4 text-cyan-300" /> Generated README.md</h4>
-          <Button size="sm" variant="ghost" onClick={() => copy("readme")}>
-            {copied === "readme" ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
-          </Button>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h4 className="flex items-center gap-2 text-sm font-semibold"><Network className="h-4 w-4 text-cyan-300" /> Generated Diagrams</h4>
+          <div className="inline-flex gap-1 rounded-lg border border-white/10 bg-white/[0.03] p-1">
+            {([["uml", "UML"], ["sequence", "Sequence"], ["erd", "ERD"]] as const).map(([id, label]) => (
+              <button
+                key={id}
+                onClick={() => setDiagram(id)}
+                className={cn(
+                  "rounded-md px-2.5 py-1 text-xs transition",
+                  diagram === id ? "bg-gradient-to-r from-cyan-500/30 to-violet-500/30 text-cyan-300" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
-        <pre className="mt-3 max-h-96 overflow-y-auto whitespace-pre-wrap rounded-lg border border-white/5 bg-black/40 p-3 font-mono text-[11px] leading-relaxed text-foreground/80 scrollbar-thin">
+        <div className="mt-3 overflow-x-auto scrollbar-thin rounded-lg border border-white/5 bg-black/30 p-3">
+          <div className="mx-auto min-w-[480px]" dangerouslySetInnerHTML={{ __html: diagramTab.svg }} />
+        </div>
+        <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{diagramTab.desc}</p>
+      </GlassCard>
+
+      {/* README + API docs */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <GlassCard className="p-5">
+          <div className="flex items-center justify-between">
+            <h4 className="flex items-center gap-2 text-sm font-semibold"><FileText className="h-4 w-4 text-cyan-300" /> Generated README.md</h4>
+            <Button size="sm" variant="ghost" onClick={() => copy("readme")}>
+              {copied === "readme" ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
+            </Button>
+          </div>
+          <pre className="mt-3 max-h-96 overflow-y-auto whitespace-pre-wrap rounded-lg border border-white/5 bg-black/40 p-3 font-mono text-[11px] leading-relaxed text-foreground/80 scrollbar-thin">
 {report.documentation.readme}
-        </pre>
-      </GlassCard>
-      <GlassCard className="p-5">
-        <div className="flex items-center justify-between">
-          <h4 className="flex items-center gap-2 text-sm font-semibold"><FileText className="h-4 w-4 text-violet-300" /> API Documentation</h4>
-          <Button size="sm" variant="ghost" onClick={() => copy("api")}>
-            {copied === "api" ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
-          </Button>
-        </div>
-        <pre className="mt-3 max-h-96 overflow-y-auto whitespace-pre-wrap rounded-lg border border-white/5 bg-black/40 p-3 font-mono text-[11px] leading-relaxed text-foreground/80 scrollbar-thin">
+          </pre>
+        </GlassCard>
+        <GlassCard className="p-5">
+          <div className="flex items-center justify-between">
+            <h4 className="flex items-center gap-2 text-sm font-semibold"><FileText className="h-4 w-4 text-violet-300" /> API Documentation</h4>
+            <Button size="sm" variant="ghost" onClick={() => copy("api")}>
+              {copied === "api" ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
+            </Button>
+          </div>
+          <pre className="mt-3 max-h-96 overflow-y-auto whitespace-pre-wrap rounded-lg border border-white/5 bg-black/40 p-3 font-mono text-[11px] leading-relaxed text-foreground/80 scrollbar-thin">
 {report.documentation.apiDocs}
-        </pre>
-      </GlassCard>
+          </pre>
+        </GlassCard>
+      </div>
     </div>
   );
 }

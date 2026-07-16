@@ -51,6 +51,8 @@ export function AnalyzeView() {
 
   const setView = useAppStore((s) => s.setView);
   const setActiveReport = useAppStore((s) => s.setActiveReport);
+  const setActiveAnalysisId = useAppStore((s) => s.setActiveAnalysisId);
+  const clearChat = useAppStore((s) => s.clearChat);
 
   const clearTimers = () => {
     timers.current.forEach(clearTimeout);
@@ -98,6 +100,8 @@ export function AnalyzeView() {
           const data = await res.json();
           if (!res.ok) throw new Error(data?.error ?? "Analysis failed");
           setReport(data.report);
+          setActiveAnalysisId(data.id ?? null);
+          clearChat(); // fresh chat for a new analysis
           setPhase("done");
           toast.success(`Analysis complete — ${data.report.scores.overall}/100 overall score`);
         } catch (e) {

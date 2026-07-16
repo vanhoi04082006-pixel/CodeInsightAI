@@ -709,6 +709,298 @@ Triggers a new repository analysis. Returns a job id for polling.
   return { readme, apiDocs };
 }
 
+/* ---------- Code snippets ---------- */
+const SNIPPET_LIBRARY: { file: string; title: string; code: string; explanation: string }[] = [
+  {
+    file: "src/lib/auth.ts",
+    title: "Session Verification",
+    code: `import { cookies } from "next/headers";
+import { jwtVerify } from "jose";
+
+const SECRET = new TextEncoder().encode(process.env.JWT_SECRET!);
+
+export async function getSession() {
+  const token = cookies().get("session")?.value;
+  if (!token) return null;
+  try {
+    const { payload } = await jwtVerify(token, SECRET);
+    return payload as { userId: string; role: string };
+  } catch {
+    return null;
+  }
+}
+
+export async function requireUser() {
+  const session = await getSession();
+  if (!session) throw new Error("UNAUTHORIZED");
+  return session;
+}`,
+    explanation: "Server-side session helper using JWT in an httpOnly cookie. Note the non-null assertion on `JWT_SECRET` — if the env var is missing this throws at runtime, which is a fragility worth guarding.",
+  },
+  {
+    file: "src/server/router.ts",
+    title: "tRPC Procedure",
+    code: `export const userRouter = t.router({
+  list: t.procedure
+    .input(z.object({ page: z.number().min(1).default(1) }))
+    .query(async ({ input, ctx }) => {
+      const size = 20;
+      const users = await db.user.findMany({
+        skip: (input.page - 1) * size,
+        take: size,
+        orderBy: { createdAt: "desc" },
+      });
+      return { users, page: input.page };
+    }),
+
+  create: t.procedure
+    .input(z.object({ email: z.string().email(), name: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      if (ctx.user?.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+      return db.user.create({ data: input });
+    }),
+});`,
+    explanation: "tRPC router with Zod input validation. The list procedure uses cursor pagination; the create procedure enforces role-based access — clean and type-safe end to end.",
+  },
+  {
+    file: "src/hooks/useUser.ts",
+    title: "Data Fetching Hook",
+    code: `export function useUser() {
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["user"],
+    queryFn: async () => {
+      const res = await fetch("/api/me");
+      if (!res.ok) throw new Error("Failed");
+      return res.json() as Promise<User>;
+    },
+    staleTime: 60_000,
+  });
+  return { user: data, isLoading, error };
+}`,
+    explanation: "TanStack Query hook with a 60s stale time. Missing an AbortController and a `select` for memoised transforms — minor, but worth tightening for production.",
+  },
+  {
+    file: "src/store/index.ts",
+    title: "Zustand Store",
+    code: `interface AppState {
+  user: User | null;
+  theme: "dark" | "light";
+  setUser: (u: User | null) => void;
+  toggleTheme: () => void;
+}
+
+export const useAppStore = create<AppState>((set) => ({
+  user: null,
+  theme: "dark",
+  setUser: (user) => set({ user }),
+  toggleTheme: () =>
+    set((s) => ({ theme: s.theme === "dark" ? "light" : "dark" })),
+}));`,
+    explanation: "Minimal Zustand store with typed actions. Consider adding `persist` middleware and selectors for derived state to reduce re-renders.",
+  },
+  {
+    file: "src/components/Header.tsx",
+    title: "Navigation Component",
+    code: `export function Header() {
+  const { user } = useUser();
+  return (
+    <header className="flex items-center justify-between p-4">
+      <Logo />
+      <nav>
+        {NAV.map((item) => (
+          <Link key={item.href} href={item.href}>{item.label}</Link>
+        ))}
+      </nav>
+      {user ? <UserMenu /> : <LoginButton />}
+    </header>
+  );
+}`,
+    explanation: "Functional, composable header. The nav items array isn't memoised — fine here, but watch for re-renders if the parent updates frequently.",
+  },
+];
+
+function buildSnippets(): import("@/lib/types").CodeSnippet[] {
+  return SNIPPET_LIBRARY.map((s) => ({
+    file: s.file,
+    language: s.file.endsWith(".tsx") ? "tsx" : "ts",
+    code: s.code,
+    title: s.title,
+    explanation: s.explanation,
+  }));
+}
+
+/* ---------- Diagrams (SVG markup) ---------- */
+function buildDiagrams(name: string): import("@/lib/types").DiagramSet {
+  // UML class diagram
+  const uml = `<svg viewBox="0 0 720 420" xmlns="http://www.w3.org/2000/svg" font-family="monospace" font-size="11">
+    <defs>
+      <marker id="arr" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+        <path d="M0,0 L8,3 L0,6 z" fill="#67e8f9"/>
+      </marker>
+      <linearGradient id="cls" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="rgba(34,211,238,0.18)"/>
+        <stop offset="100%" stop-color="rgba(34,211,238,0.04)"/>
+      </linearGradient>
+    </defs>
+    <!-- User class -->
+    <rect x="40" y="30" width="180" height="120" rx="6" fill="url(#cls)" stroke="#22d3ee" stroke-width="1.5"/>
+    <rect x="40" y="30" width="180" height="24" rx="6" fill="rgba(34,211,238,0.25)"/>
+    <text x="130" y="46" text-anchor="middle" fill="#a5f3fc" font-weight="bold">User</text>
+    <text x="50" y="72" fill="#cbd5e1">- id: string</text>
+    <text x="50" y="88" fill="#cbd5e1">- email: string</text>
+    <text x="50" y="104" fill="#cbd5e1">- role: Role</text>
+    <line x1="40" y1="112" x2="220" y2="112" stroke="#22d3ee" stroke-opacity="0.4"/>
+    <text x="50" y="128" fill="#86efac">+ getSession()</text>
+    <text x="50" y="142" fill="#86efac">+ requireUser()</text>
+    <!-- Repository class -->
+    <rect x="490" y="30" width="180" height="120" rx="6" fill="url(#cls)" stroke="#a78bfa" stroke-width="1.5"/>
+    <rect x="490" y="30" width="180" height="24" rx="6" fill="rgba(167,139,250,0.25)"/>
+    <text x="580" y="46" text-anchor="middle" fill="#c4b5fd" font-weight="bold">Repository</text>
+    <text x="500" y="72" fill="#cbd5e1">- url: string</text>
+    <text x="500" y="88" fill="#cbd5e1">- owner: string</text>
+    <text x="500" y="104" fill="#cbd5e1">- scores: Scores</text>
+    <line x1="490" y1="112" x2="670" y2="112" stroke="#a78bfa" stroke-opacity="0.4"/>
+    <text x="500" y="128" fill="#86efac">+ analyze()</text>
+    <text x="500" y="142" fill="#86efac">+ export()</text>
+    <!-- Analysis class -->
+    <rect x="265" y="240" width="180" height="120" rx="6" fill="url(#cls)" stroke="#f472b6" stroke-width="1.5"/>
+    <rect x="265" y="240" width="180" height="24" rx="6" fill="rgba(244,114,182,0.25)"/>
+    <text x="355" y="256" text-anchor="middle" fill="#f9a8d4" font-weight="bold">Analysis</text>
+    <text x="275" y="282" fill="#cbd5e1">- id: string</text>
+    <text x="275" y="298" fill="#cbd5e1">- report: Report</text>
+    <text x="275" y="314" fill="#cbd5e1">- createdAt: Date</text>
+    <line x1="265" y1="322" x2="445" y2="322" stroke="#f472b6" stroke-opacity="0.4"/>
+    <text x="275" y="338" fill="#86efac">+ run()</text>
+    <text x="275" y="352" fill="#86efac">+ chat()</text>
+    <!-- relationships -->
+    <line x1="220" y1="120" x2="265" y2="270" stroke="#67e8f9" stroke-width="1.2" marker-end="url(#arr)"/>
+    <text x="228" y="190" fill="#94a3b8" font-size="9">1..*</text>
+    <line x1="490" y1="120" x2="445" y2="270" stroke="#67e8f9" stroke-width="1.2" marker-end="url(#arr)"/>
+    <text x="455" y="190" fill="#94a3b8" font-size="9">1..*</text>
+  </svg>`;
+
+  // Sequence diagram (auth flow)
+  const sequence = `<svg viewBox="0 0 720 460" xmlns="http://www.w3.org/2000/svg" font-family="monospace" font-size="11">
+    <defs>
+      <marker id="sarr" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+        <path d="M0,0 L8,3 L0,6 z" fill="#67e8f9"/>
+      </marker>
+    </defs>
+    <!-- actors -->
+    <rect x="40" y="20" width="100" height="28" rx="4" fill="rgba(34,211,238,0.2)" stroke="#22d3ee"/>
+    <text x="90" y="38" text-anchor="middle" fill="#a5f3fc">Client</text>
+    <rect x="240" y="20" width="100" height="28" rx="4" fill="rgba(167,139,250,0.2)" stroke="#a78bfa"/>
+    <text x="290" y="38" text-anchor="middle" fill="#c4b5fd">Auth API</text>
+    <rect x="440" y="20" width="100" height="28" rx="4" fill="rgba(244,114,182,0.2)" stroke="#f472b6"/>
+    <text x="490" y="38" text-anchor="middle" fill="#f9a8d4">DB</text>
+    <rect x="600" y="20" width="100" height="28" rx="4" fill="rgba(52,211,153,0.2)" stroke="#34d399"/>
+    <text x="650" y="38" text-anchor="middle" fill="#6ee7b7">JWT</text>
+    <!-- lifelines -->
+    <line x1="90" y1="48" x2="90" y2="440" stroke="#475569" stroke-dasharray="3 3"/>
+    <line x1="290" y1="48" x2="290" y2="440" stroke="#475569" stroke-dasharray="3 3"/>
+    <line x1="490" y1="48" x2="490" y2="440" stroke="#475569" stroke-dasharray="3 3"/>
+    <line x1="650" y1="48" x2="650" y2="440" stroke="#475569" stroke-dasharray="3 3"/>
+    <!-- messages -->
+    <line x1="90" y1="90" x2="290" y2="90" stroke="#67e8f9" stroke-width="1.2" marker-end="url(#sarr)"/>
+    <text x="190" y="84" text-anchor="middle" fill="#cbd5e1">POST /login {email, password}</text>
+    <line x1="290" y1="130" x2="490" y2="130" stroke="#67e8f9" stroke-width="1.2" marker-end="url(#sarr)"/>
+    <text x="390" y="124" text-anchor="middle" fill="#cbd5e1">findUser(email)</text>
+    <line x1="490" y1="170" x2="290" y2="170" stroke="#67e8f9" stroke-width="1.2" stroke-dasharray="4 2" marker-end="url(#sarr)"/>
+    <text x="390" y="164" text-anchor="middle" fill="#cbd5e1">user record</text>
+    <line x1="290" y1="210" x2="290" y2="240" stroke="#fbbf24" stroke-width="2"/>
+    <text x="300" y="228" fill="#fde68a">verify password (bcrypt)</text>
+    <line x1="290" y1="270" x2="650" y2="270" stroke="#67e8f9" stroke-width="1.2" marker-end="url(#sarr)"/>
+    <text x="470" y="264" text-anchor="middle" fill="#cbd5e1">sign({ userId, role })</text>
+    <line x1="650" y1="310" x2="290" y2="310" stroke="#67e8f9" stroke-width="1.2" stroke-dasharray="4 2" marker-end="url(#sarr)"/>
+    <text x="470" y="304" text-anchor="middle" fill="#cbd5e1">token</text>
+    <line x1="290" y1="350" x2="90" y2="350" stroke="#67e8f9" stroke-width="1.2" marker-end="url(#sarr)"/>
+    <text x="190" y="344" text-anchor="middle" fill="#cbd5e1">Set-Cookie + 200 OK</text>
+    <line x1="90" y1="400" x2="290" y2="400" stroke="#67e8f9" stroke-width="1.2" marker-end="url(#sarr)"/>
+    <text x="190" y="394" text-anchor="middle" fill="#cbd5e1">GET /me (with cookie)</text>
+  </svg>`;
+
+  // ER diagram
+  const erd = `<svg viewBox="0 0 720 400" xmlns="http://www.w3.org/2000/svg" font-family="monospace" font-size="11">
+    <defs>
+      <marker id="earr" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+        <path d="M0,0 L8,3 L0,6 z" fill="#67e8f9"/>
+      </marker>
+    </defs>
+    <!-- User entity -->
+    <rect x="40" y="40" width="180" height="160" rx="6" fill="rgba(34,211,238,0.08)" stroke="#22d3ee" stroke-width="1.5"/>
+    <rect x="40" y="40" width="180" height="26" rx="6" fill="rgba(34,211,238,0.25)"/>
+    <text x="130" y="58" text-anchor="middle" fill="#a5f3fc" font-weight="bold">users</text>
+    <text x="50" y="84" fill="#fde68a">🔑 id (uuid)</text>
+    <text x="50" y="100" fill="#cbd5e1">email (unique)</text>
+    <text x="50" y="116" fill="#cbd5e1">name</text>
+    <text x="50" y="132" fill="#cbd5e1">role (enum)</text>
+    <text x="50" y="148" fill="#cbd5e1">createdAt</text>
+    <text x="50" y="164" fill="#cbd5e1">updatedAt</text>
+    <!-- Analysis entity -->
+    <rect x="500" y="40" width="180" height="180" rx="6" fill="rgba(244,114,182,0.08)" stroke="#f472b6" stroke-width="1.5"/>
+    <rect x="500" y="40" width="180" height="26" rx="6" fill="rgba(244,114,182,0.25)"/>
+    <text x="590" y="58" text-anchor="middle" fill="#f9a8d4" font-weight="bold">analyses</text>
+    <text x="510" y="84" fill="#fde68a">🔑 id (uuid)</text>
+    <text x="510" y="100" fill="#fca5a5">🔗 userId (fk)</text>
+    <text x="510" y="116" fill="#cbd5e1">repoUrl</text>
+    <text x="510" y="132" fill="#cbd5e1">repoOwner</text>
+    <text x="510" y="148" fill="#cbd5e1">repoName</text>
+    <text x="510" y="164" fill="#cbd5e1">scores (json)</text>
+    <text x="510" y="180" fill="#cbd5e1">report (json)</text>
+    <text x="510" y="196" fill="#cbd5e1">createdAt</text>
+    <!-- ChatMessage entity -->
+    <rect x="270" y="280" width="180" height="110" rx="6" fill="rgba(167,139,250,0.08)" stroke="#a78bfa" stroke-width="1.5"/>
+    <rect x="270" y="280" width="180" height="26" rx="6" fill="rgba(167,139,250,0.25)"/>
+    <text x="360" y="298" text-anchor="middle" fill="#c4b5fd" font-weight="bold">chat_messages</text>
+    <text x="280" y="324" fill="#fde68a">🔑 id (uuid)</text>
+    <text x="280" y="340" fill="#fca5a5">🔗 analysisId (fk)</text>
+    <text x="280" y="356" fill="#cbd5e1">role (enum)</text>
+    <text x="280" y="372" fill="#cbd5e1">content (text)</text>
+    <!-- relationships -->
+    <line x1="220" y1="120" x2="500" y2="120" stroke="#67e8f9" stroke-width="1.2" marker-end="url(#earr)"/>
+    <text x="360" y="114" text-anchor="middle" fill="#94a3b8">1 ── ∞ (owns)</text>
+    <line x1="590" y1="220" x2="360" y2="280" stroke="#67e8f9" stroke-width="1.2" marker-end="url(#earr)"/>
+    <text x="475" y="254" text-anchor="middle" fill="#94a3b8">1 ── ∞ (has)</text>
+  </svg>`;
+
+  return {
+    uml,
+    sequence,
+    erd,
+    umlExplanation: `A class diagram of the core domain model for ${name}. Three entities — User, Repository, and Analysis — collaborate: a User owns many Analyses, and each Analysis targets one Repository. The diagram captures attributes, key methods, and cardinality.`,
+    sequenceExplanation: `The authentication sequence traces a login request from the Client through the Auth API, which verifies credentials against the DB, signs a JWT, and returns it as an httpOnly cookie. Subsequent authenticated requests carry the cookie implicitly.`,
+    erdExplanation: `The database schema for CodeInsight AI itself. The users table owns analyses (one-to-many), and each analysis has many chat_messages (one-to-many, cascade delete). Scores and the full report JSON are stored as JSON columns for flexibility.`,
+  };
+}
+
+/* ---------- Dead code & duplicates ---------- */
+function buildDeadCode(rng: () => number): { path: string; lines: number; reason: string }[] {
+  const candidates = [
+    { path: "src/utils/legacyFormat.ts", lines: 48, reason: "No imports found anywhere in the codebase. Likely replaced by src/utils/format.ts." },
+    { path: "src/components/OldButton.tsx", lines: 72, reason: "Only referenced in a deleted test file. Superseded by the design-system Button." },
+    { path: "src/lib/polyfills.ts", lines: 23, reason: "Polyfills for browsers already in the browserslist baseline. Safe to remove." },
+    { path: "src/server/deprecatedRouter.ts", lines: 156, reason: "Marked @deprecated 8 months ago. All callers migrated to src/server/router.ts." },
+  ];
+  return candidates.filter(() => rng() > 0.35);
+}
+
+function buildDuplicates(rng: () => number): { group: number; files: string[]; lines: number }[] {
+  return [
+    { group: 1, files: ["src/utils/format.ts", "src/lib/format.ts"], lines: 42 },
+    { group: 2, files: ["src/components/Header.tsx", "src/components/MobileHeader.tsx"], lines: 28 },
+    { group: 3, files: ["src/services/api.ts", "src/server/client.ts"], lines: 35 },
+  ].filter(() => rng() > 0.4);
+}
+
+function buildMaintainabilityTrend(rng: () => number): ChartPoint[] {
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug"];
+  let v = 82;
+  return months.map((m) => {
+    v = clamp(v + (rng() - 0.55) * 4, 60, 95);
+    return { label: m, value: v };
+  });
+}
+
 /* ---------- Main generator ---------- */
 export function generateReport(repoUrl: string): AnalysisReport {
   const parsed = parseRepoUrl(repoUrl);
@@ -734,6 +1026,11 @@ export function generateReport(repoUrl: string): AnalysisReport {
     dependencies: buildDependencyGraph(rng, parsed.name),
     issues: buildIssues(rng),
     files: buildFiles(rng, profile),
+    snippets: buildSnippets(),
+    diagrams: buildDiagrams(parsed.name),
+    deadCode: buildDeadCode(rng),
+    duplicates: buildDuplicates(rng),
+    maintainabilityTrend: buildMaintainabilityTrend(rng),
     architecture: buildArchitecture(rng, profile),
     technicalDebt: buildTechnicalDebt(scores),
     roadmap: buildRoadmap(),

@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 
 /* ---------- GlassCard ---------- */
@@ -178,5 +179,60 @@ export function NeonDivider({ className }: { className?: string }) {
           "linear-gradient(90deg, transparent, oklch(0.82 0.16 195 / 0.5), oklch(0.7 0.22 300 / 0.5), transparent)",
       }}
     />
+  );
+}
+
+/* ---------- AnimatedCounter ---------- */
+
+export function AnimatedCounter({
+  value,
+  duration = 1800,
+  suffix = "",
+  prefix = "",
+  decimals = 0,
+}: {
+  value: number;
+  duration?: number;
+  suffix?: string;
+  prefix?: string;
+  decimals?: number;
+}) {
+  const [display, setDisplay] = useState(0);
+  const ref = useRef<HTMLSpanElement>(null);
+  const started = useRef(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting && !started.current) {
+          started.current = true;
+          const start = performance.now();
+          const tick = (now: number) => {
+            const t = Math.min(1, (now - start) / duration);
+            // easeOutExpo
+            const eased = t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
+            setDisplay(value * eased);
+            if (t < 1) requestAnimationFrame(tick);
+          };
+          requestAnimationFrame(tick);
+        }
+      },
+      { threshold: 0.4 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [value, duration]);
+
+  const formatted =
+    decimals > 0
+      ? display.toFixed(decimals)
+      : Math.round(display).toLocaleString();
+
+  return (
+    <span ref={ref} className="tabular-nums">
+      {prefix}{formatted}{suffix}
+    </span>
   );
 }

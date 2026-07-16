@@ -38,29 +38,47 @@ export function ChatView() {
   const setView = useAppStore((s) => s.setView);
   const chat = useAppStore((s) => s.chat);
   const pushChat = useAppStore((s) => s.pushChat);
+  const setChat = useAppStore((s) => s.setChat);
   const clearChat = useAppStore((s) => s.clearChat);
+  const analysisId = useAppStore((s) => s.activeAnalysisId);
+  const setAnalysisId = useAppStore((s) => s.setActiveAnalysisId);
 
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [restoring, setRestoring] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [analysisId, setAnalysisId] = useState<string | null>(null);
 
-  // When a report is loaded, seed an intro message if chat empty
+  // When a report is loaded with an existing analysisId, restore persisted chat.
+  // Otherwise seed an intro message if chat is empty.
   useEffect(() => {
-    if (report && chat.length === 0) {
-      pushChat({
-        id: crypto.randomUUID(),
-        role: "assistant",
-        content: `I've finished analysing **${report.repoOwner}/${report.repoName}**.\n\nHere's the quick read:\n- Overall health: **${report.scores.overall}/100**\n- Top risk: ${report.issues.security[0]?.title ?? "none critical"}\n- Architecture: ${report.architecture.pattern}\n\nAsk me anything — security, performance, what to refactor, or what to build next.`,
-        createdAt: Date.now(),
-      });
+    if (!report) return;
+    if (analysisId) {
+      setRestoring(true);
+      fetch(`/api/history?id=${analysisId}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: analysisId }) })
+        .then((r) => r.json())
+        .then((data) => {
+          if (data?.messages?.length) {
+            setChat(data.messages);
+          } else {
+            seedIntro();
+          }
+        })
+        .catch(() => seedIntro())
+        .finally(() => setRestoring(false));
+    } else if (chat.length === 0) {
+      seedIntro();
     }
-    // Persist analysis id so we can save chat server-side
-    // We resolve/create lazily: if no id, we POST to /api/analyze once to get an id
-    // But since report already comes from analyze flow (no id persisted in store),
-    // we keep chat client-side only and persist on demand via the chat API with analysisId if available.
-    setAnalysisId(null);
-  }, [report?.repoUrl]);
+  }, [report?.repoUrl, analysisId]);
+
+  function seedIntro() {
+    if (!report || chat.length > 0) return;
+    pushChat({
+      id: crypto.randomUUID(),
+      role: "assistant",
+      content: `I've finished analysing **${report.repoOwner}/${report.repoName}**.\n\nHere's the quick read:\n- Overall health: **${report.scores.overall}/100**\n- Top risk: ${report.issues.security[0]?.title ?? "none critical"}\n- Architecture: ${report.architecture.pattern}\n\nAsk me anything — security, performance, what to refactor, or what to build next.`,
+      createdAt: Date.now(),
+    });
+  }
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -89,7 +107,7 @@ export function ChatView() {
         });
         const createData = await createRes.json();
         aid = createData.id ?? null;
-        setAnalysisId(aid);
+        if (aid) setAnalysisId(aid);
       }
 
       const history = chat.map((m) => ({ role: m.role, content: m.content }));
