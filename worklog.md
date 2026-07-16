@@ -314,3 +314,28 @@ Stage Summary:
 - Language switching now works (nav, settings, landing all use t()).
 - i18n wired into: app-shell, command-palette, page.tsx, settings-view, landing-view.
 - Remaining: dashboard/analyze/chat/history/providers/personalities views still have some hardcoded English strings (i18n infrastructure is ready, can be wired incrementally).
+
+---
+Task ID: 8
+Agent: Z.ai Code (SSR-safe i18n architecture + hydration fix)
+Task: Fix hydration mismatch from client-only language init, build complete SSR-safe i18n architecture with 13 locale namespaces, wire t() into all views.
+
+Work Log:
+- **Root cause of hydration mismatch**: i18n store used `initFromBrowser()` in a `useEffect` — server rendered English, then client switched to Vietnamese from localStorage AFTER hydration. Server HTML said "AI Providers", client said "Nhà cung cấp AI" → mismatch.
+- **SSR-safe i18n architecture**:
+  - Cookie (`codeinsight-lang`) is now the primary language store, readable by both server (via `document.cookie` in inline script) and client.
+  - Inline `<script>` in `<head>` runs BEFORE React hydrates: reads cookie, detects browser language on first visit, sets `<html lang>`, and applies theme/accent/font/accessibility from localStorage — all synchronously. This guarantees server and client render the SAME language.
+  - `i18n` store reads cookie synchronously at creation (no `useEffect`, no client-only init), so the first render already has the correct locale.
+  - `LanguageSwitcher` now sets the cookie (not just localStorage), so reloads and SSR use the correct language from the first render.
+  - Removed `initFromBrowser()` from Providers component — no longer needed.
+- **13 locale namespaces** created (en + vi): common, settings, dashboard, analysis, landing, reports, errors, providers, personality, developer, history, chat, notifications. Each with comprehensive translations.
+- **Wired t() into**: app-shell (nav labels, topbar titles, quick search), command-palette, page.tsx (landing nav + footer), settings-view (title, tabs, all section headings), landing-view (hero, CTA), providers-view (title, subtitle, stat cards, feature routing, empty state, toasts), history-view (title, subtitle, search, toasts).
+- **Verified**: landing renders without hydration errors, switching to Vietnamese translates nav ("Cài đặt"), providers ("Nhà cung cấp AI", "Kết nối không giới hạn"), and history ("Lịch sử phân tích") instantly. Cookie is set correctly.
+- Lint clean. Committed as `026c16a` (core) + `3058d6f` (providers+history wiring), pushed to GitHub.
+
+Stage Summary:
+- v3.1 shipped: complete SSR-safe i18n architecture.
+- Hydration mismatch eliminated: cookie + inline script ensure server and client render the same language.
+- 13 locale namespaces (en + vi) with comprehensive translations.
+- i18n wired into: app-shell, command-palette, page.tsx, settings, landing, providers, history.
+- Remaining: dashboard, analyze, chat, project, personalities views still have some hardcoded English (infrastructure ready, incremental wiring).
