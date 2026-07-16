@@ -35,6 +35,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { useAppStore } from "@/lib/store";
+import { useT } from "@/lib/i18n";
 import { parseRepoUrl } from "@/lib/analysis-engine";
 import { PROVIDER_PRESETS } from "@/lib/providers";
 import {
@@ -101,6 +102,7 @@ const FAQ = [
 
 export function LandingView() {
   const setView = useAppStore((s) => s.setView);
+  const { t } = useT();
   const [url, setUrl] = useState("");
   const [error, setError] = useState("");
   const { scrollYProgress } = useScroll();
@@ -109,7 +111,7 @@ export function LandingView() {
   const startAnalysis = () => {
     const parsed = parseRepoUrl(url);
     if (!parsed.valid) {
-      setError("Enter a valid GitHub URL like https://github.com/vercel/next.js");
+      setError(t("errors", "invalidUrl"));
       return;
     }
     setError("");
@@ -138,7 +140,7 @@ export function LandingView() {
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-cyan-400 opacity-75" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-cyan-400" />
             </span>
-            <span className="text-muted-foreground">Local-first · Bring your own AI · No subscriptions</span>
+            <span className="text-muted-foreground">{t("landing", "heroBadge")}</span>
           </motion.div>
 
           <motion.h1
@@ -147,9 +149,9 @@ export function LandingView() {
             transition={{ duration: 0.7, delay: 0.05 }}
             className="max-w-4xl text-balance text-5xl font-bold tracking-tight md:text-7xl"
           >
-            Paste a GitHub Repo.
+            {t("landing", "heroTitle1")}
             <br />
-            <GradientText>AI Understands Everything.</GradientText>
+            <GradientText>{t("landing", "heroTitle2")}</GradientText>
           </motion.h1>
 
           <motion.p
@@ -158,8 +160,7 @@ export function LandingView() {
             transition={{ duration: 0.7, delay: 0.15 }}
             className="mt-6 max-w-2xl text-balance text-base text-muted-foreground md:text-xl"
           >
-            A local-first AI development platform. Connect your own AI APIs, analyze any repository,
-            and chat with your code like a Senior Staff Engineer. Your keys, your data, your models.
+            {t("landing", "heroSubtitle")}
           </motion.p>
 
           {/* URL input */}
@@ -545,11 +546,11 @@ export function LandingView() {
                 size="lg"
                 className="bg-gradient-to-r from-cyan-500 to-violet-500 text-white hover:opacity-90"
               >
-                <Plug className="mr-1.5 h-4 w-4" /> Connect Your AI
+                <Plug className="mr-1.5 h-4 w-4" /> {t("landing", "ctaConnect")}
                 <ArrowRight className="ml-1.5 h-4 w-4" />
               </Button>
               <Button onClick={() => setView("analyze")} size="lg" variant="outline">
-                <Github className="mr-1.5 h-4 w-4" /> Analyze a repo
+                <Github className="mr-1.5 h-4 w-4" /> {t("landing", "ctaAnalyze")}
               </Button>
             </div>
           </GlassCard>

@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAppStore } from "@/lib/store";
+import { useT } from "@/lib/i18n";
 import { AnimatedBackground } from "@/components/shared/animated-background";
 import { AppSidebar, AppTopbar, MobileNav } from "@/components/shared/app-shell";
 import { LandingView } from "@/components/views/landing-view";
@@ -20,6 +21,7 @@ import { Github, Sparkles, Heart } from "lucide-react";
 export default function Home() {
   const view = useAppStore((s) => s.view);
   const setView = useAppStore((s) => s.setView);
+  const { t } = useT();
 
   // ⌘K to open command palette
   useEffect(() => {
@@ -55,19 +57,19 @@ export default function Home() {
               </div>
             </button>
             <nav className="hidden items-center gap-6 text-sm text-muted-foreground md:flex">
-              <button onClick={() => setView("providers")} className="hover:text-foreground">AI Providers</button>
-              <button onClick={() => setView("history")} className="hover:text-foreground">History</button>
-              <button onClick={() => setView("settings")} className="hover:text-foreground">Settings</button>
+              <button onClick={() => setView("providers")} className="hover:text-foreground">{t("common", "nav.providers")}</button>
+              <button onClick={() => setView("history")} className="hover:text-foreground">{t("common", "nav.history")}</button>
+              <button onClick={() => setView("settings")} className="hover:text-foreground">{t("common", "nav.settings")}</button>
             </nav>
             <div className="flex items-center gap-2">
               <button onClick={() => setView("dashboard")} className="hidden text-sm text-muted-foreground hover:text-foreground sm:block">
-                Dashboard
+                {t("common", "nav.dashboard")}
               </button>
               <button
                 onClick={() => setView("analyze")}
                 className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-cyan-500 to-violet-500 px-3 py-1.5 text-xs font-medium text-white transition hover:opacity-90"
               >
-                <Sparkles className="h-3.5 w-3.5" /> Analyze Repo
+                <Sparkles className="h-3.5 w-3.5" /> {t("common", "actions.analyzeRepo")}
               </button>
             </div>
           </header>
@@ -117,6 +119,7 @@ export default function Home() {
 
 function Footer() {
   const setView = useAppStore((s) => s.setView);
+  const { t } = useT();
   return (
     <footer className="mt-auto border-t border-white/5 bg-background/40 backdrop-blur-md">
       <div className="mx-auto max-w-7xl px-4 py-6 md:px-6">
@@ -130,11 +133,11 @@ function Footer() {
             <span className="text-xs">v1.0</span>
           </div>
           <nav className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1 text-xs text-muted-foreground">
-            <button onClick={() => setView("landing")} className="hover:text-foreground">Home</button>
-            <button onClick={() => setView("dashboard")} className="hover:text-foreground">Dashboard</button>
-            <button onClick={() => setView("providers")} className="hover:text-foreground">AI Providers</button>
-            <button onClick={() => setView("history")} className="hover:text-foreground">History</button>
-            <button onClick={() => setView("settings")} className="hover:text-foreground">Settings</button>
+            <button onClick={() => setView("landing")} className="hover:text-foreground">{t("common", "nav.home")}</button>
+            <button onClick={() => setView("dashboard")} className="hover:text-foreground">{t("common", "nav.dashboard")}</button>
+            <button onClick={() => setView("providers")} className="hover:text-foreground">{t("common", "nav.providers")}</button>
+            <button onClick={() => setView("history")} className="hover:text-foreground">{t("common", "nav.history")}</button>
+            <button onClick={() => setView("settings")} className="hover:text-foreground">{t("common", "nav.settings")}</button>
           </nav>
           <p className="flex items-center gap-1 text-xs text-muted-foreground">
             Built with <Heart className="h-3 w-3 fill-rose-400 text-rose-400" /> for developers

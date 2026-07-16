@@ -16,22 +16,23 @@ import {
   Search,
 } from "lucide-react";
 import { useAppStore } from "@/lib/store";
+import { useT } from "@/lib/i18n";
 import type { View } from "@/lib/types";
 import {
   Dialog,
   DialogContent,
 } from "@/components/ui/dialog";
 
-const COMMANDS: { id: View; label: string; hint: string; icon: typeof Home; group: string }[] = [
-  { id: "landing", label: "Go to Home", hint: "Landing page", icon: Home, group: "Navigation" },
-  { id: "dashboard", label: "Open Dashboard", hint: "Scores & charts", icon: LayoutDashboard, group: "Navigation" },
-  { id: "analyze", label: "New Analysis", hint: "Analyze a repo", icon: ScanSearch, group: "Actions" },
-  { id: "project", label: "View Project Report", hint: "Detailed report", icon: FolderGit2, group: "Navigation" },
-  { id: "chat", label: "Ask AI CTO", hint: "Chat about repo", icon: MessagesSquare, group: "Actions" },
-  { id: "history", label: "Analysis History", hint: "Past analyses", icon: History, group: "Navigation" },
-  { id: "providers", label: "AI Providers", hint: "Connect your AI APIs", icon: Plug, group: "Actions" },
-  { id: "personalities", label: "AI Personalities", hint: "Customize AI behavior", icon: Bot, group: "Actions" },
-  { id: "settings", label: "Settings", hint: "Preferences", icon: Settings, group: "Navigation" },
+const COMMANDS: { id: View; labelKey: string; icon: typeof Home; group: string }[] = [
+  { id: "landing", labelKey: "nav.home", icon: Home, group: "Navigation" },
+  { id: "dashboard", labelKey: "nav.dashboard", icon: LayoutDashboard, group: "Navigation" },
+  { id: "analyze", labelKey: "actions.newAnalysis", icon: ScanSearch, group: "Actions" },
+  { id: "project", labelKey: "nav.project", icon: FolderGit2, group: "Navigation" },
+  { id: "chat", labelKey: "nav.chat", icon: MessagesSquare, group: "Actions" },
+  { id: "history", labelKey: "nav.history", icon: History, group: "Navigation" },
+  { id: "providers", labelKey: "nav.providers", icon: Plug, group: "Actions" },
+  { id: "personalities", labelKey: "nav.personalities", icon: Bot, group: "Actions" },
+  { id: "settings", labelKey: "nav.settings", icon: Settings, group: "Navigation" },
 ];
 
 export function CommandPalette() {
@@ -39,6 +40,7 @@ export function CommandPalette() {
   const setOpen = useAppStore((s) => s.setCommandOpen);
   const setView = useAppStore((s) => s.setView);
   const activeReport = useAppStore((s) => s.activeReport);
+  const { t } = useT();
 
   const run = (v: View) => {
     if ((v === "project" || v === "chat") && !activeReport) {
@@ -81,8 +83,7 @@ export function CommandPalette() {
                     className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left text-sm transition hover:bg-white/5 disabled:opacity-40"
                   >
                     <Icon className="h-4 w-4 text-cyan-300" />
-                    <span className="flex-1">{c.label}</span>
-                    <span className="text-[11px] text-muted-foreground">{c.hint}</span>
+                    <span className="flex-1">{t("common", c.labelKey)}</span>
                   </button>
                 );
               })}

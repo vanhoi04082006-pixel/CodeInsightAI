@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Settings as SettingsIcon,
   User,
@@ -51,14 +51,14 @@ import { usePersonalityStore } from "@/lib/personality-store";
 import { useProvidersStore } from "@/lib/providers-store";
 import { useDeveloperModeStore } from "@/lib/developer-mode-store";
 import { usePersonalizationStore, ACCENTS, type AccentColor, type AnimationLevel, type UIDensity, type FontSize, type ColorBlindMode } from "@/lib/personalization-store";
-import { useI18nStore, SUPPORTED_LOCALES } from "@/lib/i18n";
-import { BUILTIN_PERSONALITIES } from "@/lib/personalities";
+import { useI18nStore, SUPPORTED_LOCALES, useT } from "@/lib/i18n";
+import { BUILTIN_PERSONALITIES, PERSONALITY_BY_ID } from "@/lib/personalities";
 import { PRESET_BY_ID, PROVIDER_PRESETS, FEATURE_LABELS } from "@/lib/providers";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 export function SettingsView() {
-  const [theme, setTheme] = useState("dark");
+  const { t } = useT();
   const [notifications, setNotifications] = useState({ email: true, push: false, weekly: true });
   const [connected, setConnected] = useState({ github: false, google: true });
 
@@ -66,21 +66,21 @@ export function SettingsView() {
     <div className="mx-auto max-w-4xl px-4 py-6 md:px-6">
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
         <h1 className="text-2xl font-bold md:text-3xl">
-          <GradientText>Settings</GradientText>
+          <GradientText>{t("settings", "title")}</GradientText>
         </h1>
-        <p className="text-sm text-muted-foreground">Manage your account, AI models, and preferences.</p>
+        <p className="text-sm text-muted-foreground">{t("settings", "subtitle")}</p>
       </motion.div>
 
       <div className="mt-6">
         <Tabs defaultValue="account">
           <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:grid-cols-7">
-            <TabsTrigger value="account" className="gap-1.5"><User className="h-3.5 w-3.5" /> <span className="hidden lg:inline">Account</span></TabsTrigger>
+            <TabsTrigger value="account" className="gap-1.5"><User className="h-3.5 w-3.5" /> <span className="hidden lg:inline">{t("settings", "tabs.account")}</span></TabsTrigger>
             <TabsTrigger value="ai" className="gap-1.5"><Cpu className="h-3.5 w-3.5" /> AI</TabsTrigger>
-            <TabsTrigger value="appearance" className="gap-1.5"><Palette className="h-3.5 w-3.5" /> <span className="hidden lg:inline">Appearance</span></TabsTrigger>
-            <TabsTrigger value="language" className="gap-1.5"><Globe className="h-3.5 w-3.5" /> <span className="hidden lg:inline">Language</span></TabsTrigger>
-            <TabsTrigger value="accessibility" className="gap-1.5"><Eye className="h-3.5 w-3.5" /> <span className="hidden lg:inline">Accessibility</span></TabsTrigger>
-            <TabsTrigger value="developer" className="gap-1.5"><Terminal className="h-3.5 w-3.5" /> <span className="hidden lg:inline">Developer</span></TabsTrigger>
-            <TabsTrigger value="notifications" className="gap-1.5"><Bell className="h-3.5 w-3.5" /> <span className="hidden lg:inline">Alerts</span></TabsTrigger>
+            <TabsTrigger value="appearance" className="gap-1.5"><Palette className="h-3.5 w-3.5" /> <span className="hidden lg:inline">{t("settings", "tabs.appearance")}</span></TabsTrigger>
+            <TabsTrigger value="language" className="gap-1.5"><Globe className="h-3.5 w-3.5" /> <span className="hidden lg:inline">{t("settings", "tabs.language")}</span></TabsTrigger>
+            <TabsTrigger value="accessibility" className="gap-1.5"><Eye className="h-3.5 w-3.5" /> <span className="hidden lg:inline">{t("settings", "tabs.accessibility")}</span></TabsTrigger>
+            <TabsTrigger value="developer" className="gap-1.5"><Terminal className="h-3.5 w-3.5" /> <span className="hidden lg:inline">{t("settings", "tabs.developer")}</span></TabsTrigger>
+            <TabsTrigger value="notifications" className="gap-1.5"><Bell className="h-3.5 w-3.5" /> <span className="hidden lg:inline">{t("settings", "tabs.notifications")}</span></TabsTrigger>
           </TabsList>
 
           {/* Account */}
@@ -293,13 +293,21 @@ function ToggleRow({ label, desc, defaultChecked, checked, onCheckedChange }: { 
 
 /* ---------- AI Settings Card (provider / model / personality / temperature / max tokens) ---------- */
 function AISettingsCard() {
+  const { t } = useT();
   const providers = useProvidersStore((s) => s.providers);
   const routing = useProvidersStore((s) => s.routing);
   const setRouting = useProvidersStore((s) => s.setRouting);
   const updateProvider = useProvidersStore((s) => s.updateProvider);
-  const personalities = usePersonalityStore((s) => s.all());
-  const activePersonality = usePersonalityStore((s) => s.getActive());
+  // Select raw state to avoid creating new arrays/objects in the selector (causes infinite loops)
+  const customPersonalities = usePersonalityStore((s) => s.custom);
+  const activePersonalityId = usePersonalityStore((s) => s.activeId);
   const setActivePersonality = usePersonalityStore((s) => s.setActive);
+  // Compute derived values in render (stable references from BUILTIN_PERSONALITIES + custom array)
+  const personalities = useMemo(() => [...BUILTIN_PERSONALITIES, ...customPersonalities], [customPersonalities]);
+  const activePersonality = useMemo(
+    () => PERSONALITY_BY_ID[activePersonalityId] ?? customPersonalities.find((p) => p.id === activePersonalityId) ?? PERSONALITY_BY_ID["cto"],
+    [activePersonalityId, customPersonalities]
+  );
 
   const enabledProviders = providers.filter((p) => p.enabled);
   const chatProviderId = routing.chat;
@@ -406,18 +414,22 @@ function AISettingsCard() {
 
 /* ---------- Developer Settings Card ---------- */
 function DeveloperSettingsCard() {
+  const { t } = useT();
   const enabled = useDeveloperModeStore((s) => s.enabled);
   const setEnabled = useDeveloperModeStore((s) => s.setEnabled);
-  const toggles = useDeveloperModeStore((s) => ({
-    showTokenUsage: s.showTokenUsage,
-    showResponseTime: s.showResponseTime,
-    showPromptDebug: s.showPromptDebug,
-    showModelDebug: s.showModelDebug,
-    showRawResponse: s.showRawResponse,
-    showRequestLogs: s.showRequestLogs,
-    showResponseLogs: s.showResponseLogs,
-    showAdvancedDebug: s.showAdvancedDebug,
-  }));
+  // Select each toggle individually to avoid creating a new object in the selector (infinite loop)
+  const showTokenUsage = useDeveloperModeStore((s) => s.showTokenUsage);
+  const showResponseTime = useDeveloperModeStore((s) => s.showResponseTime);
+  const showPromptDebug = useDeveloperModeStore((s) => s.showPromptDebug);
+  const showModelDebug = useDeveloperModeStore((s) => s.showModelDebug);
+  const showRawResponse = useDeveloperModeStore((s) => s.showRawResponse);
+  const showRequestLogs = useDeveloperModeStore((s) => s.showRequestLogs);
+  const showResponseLogs = useDeveloperModeStore((s) => s.showResponseLogs);
+  const showAdvancedDebug = useDeveloperModeStore((s) => s.showAdvancedDebug);
+  const toggles = {
+    showTokenUsage, showResponseTime, showPromptDebug, showModelDebug,
+    showRawResponse, showRequestLogs, showResponseLogs, showAdvancedDebug,
+  };
   const setToggle = useDeveloperModeStore((s) => s.setToggle);
   const clearLogs = useDeveloperModeStore((s) => s.clearLogs);
   const clearSnapshots = useDeveloperModeStore((s) => s.clearSnapshots);
@@ -439,20 +451,19 @@ function DeveloperSettingsCard() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Terminal className="h-4 w-4 text-violet-300" />
-            <h3 className="text-sm font-semibold">Developer Mode</h3>
+            <h3 className="text-sm font-semibold">{t("settings", "developer.title")}</h3>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-[11px] text-muted-foreground">{enabled ? "Enabled" : "Disabled"}</span>
-            <Switch checked={enabled} onCheckedChange={(v) => { setEnabled(v); toast.success(v ? "Developer Mode enabled" : "Developer Mode disabled"); }} />
+            <span className="text-[11px] text-muted-foreground">{enabled ? t("common", "status.enabled") : t("common", "status.disabled")}</span>
+            <Switch checked={enabled} onCheckedChange={(v) => { setEnabled(v); toast.success(v ? t("settings", "developer.title") : t("settings", "developer.title")); }} />
           </div>
         </div>
         <p className="mt-1 text-xs text-muted-foreground">
-          For advanced users. Displays an expandable Developer Panel in the AI Chat with token usage, performance,
-          prompt construction, model capabilities, raw responses, and request logs.
+          {t("settings", "developer.subtitle")}
         </p>
         <div className="mt-3 flex items-center gap-1.5 rounded-lg border border-emerald-400/20 bg-emerald-400/[0.04] p-2.5 text-[11px] text-emerald-300">
           <Shield className="h-3 w-3" />
-          API keys, tokens, and credentials are automatically masked in all debug output.
+          {t("settings", "developer.securityNote")}
         </div>
       </GlassCard>
 
@@ -495,12 +506,13 @@ function DeveloperSettingsCard() {
 
 /* ---------- Appearance Settings Card (theme / accent / density / animation) ---------- */
 function AppearanceSettingsCard() {
+  const { t } = useT();
   const { theme, accent, density, animation, setTheme, setAccent, setDensity, setAnimation } = usePersonalizationStore();
   return (
     <>
       <GlassCard strong className="p-6">
-        <h3 className="flex items-center gap-2 text-sm font-semibold"><Palette className="h-4 w-4 text-cyan-300" /> Theme</h3>
-        <p className="mt-1 text-xs text-muted-foreground">Light, Dark, or follow the operating system. Default: System.</p>
+        <h3 className="flex items-center gap-2 text-sm font-semibold"><Palette className="h-4 w-4 text-cyan-300" /> {t("settings", "appearance.theme")}</h3>
+        <p className="mt-1 text-xs text-muted-foreground">{t("settings", "appearance.themeLight")}, {t("settings", "appearance.themeDark")}, {t("settings", "appearance.themeSystem")}</p>
         <div className="mt-4">
           <ThemeSwitcher />
         </div>
@@ -577,13 +589,14 @@ function AppearanceSettingsCard() {
 
 /* ---------- Language Settings Card ---------- */
 function LanguageSettingsCard() {
+  const { t } = useT();
   const locale = useI18nStore((s) => s.locale);
   const setLocale = useI18nStore((s) => s.setLocale);
   return (
     <GlassCard strong className="p-6">
-      <h3 className="flex items-center gap-2 text-sm font-semibold"><Globe className="h-4 w-4 text-cyan-300" /> Language</h3>
+      <h3 className="flex items-center gap-2 text-sm font-semibold"><Globe className="h-4 w-4 text-cyan-300" /> {t("settings", "language.title")}</h3>
       <p className="mt-1 text-xs text-muted-foreground">
-        The selected language affects all UI text and AI responses. Auto-detected on first launch.
+        {t("settings", "language.autoDetect")}
       </p>
       <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
         {SUPPORTED_LOCALES.map((l) => (
@@ -610,14 +623,15 @@ function LanguageSettingsCard() {
 
 /* ---------- Accessibility Settings Card ---------- */
 function AccessibilitySettingsCard() {
+  const { t } = useT();
   const { fontSize, reducedMotion, highContrast, colorBlind, setFontSize, setReducedMotion, setHighContrast, setColorBlind } = usePersonalizationStore();
   const fontSizes: { id: FontSize; label: string }[] = [
-    { id: "sm", label: "Small" },
-    { id: "base", label: "Default" },
-    { id: "lg", label: "Large" },
+    { id: "sm", label: t("settings", "accessibility.fontSm") },
+    { id: "base", label: t("settings", "accessibility.fontBase") },
+    { id: "lg", label: t("settings", "accessibility.fontLg") },
   ];
   const cbModes: { id: ColorBlindMode; label: string }[] = [
-    { id: "none", label: "None" },
+    { id: "none", label: t("settings", "accessibility.cbNone") },
     { id: "protanopia", label: "Protanopia" },
     { id: "deuteranopia", label: "Deuteranopia" },
     { id: "tritanopia", label: "Tritanopia" },
@@ -625,12 +639,12 @@ function AccessibilitySettingsCard() {
   return (
     <>
       <GlassCard strong className="p-6">
-        <h3 className="flex items-center gap-2 text-sm font-semibold"><Eye className="h-4 w-4 text-cyan-300" /> Accessibility</h3>
-        <p className="mt-1 text-xs text-muted-foreground">Customize the app for your vision and motion preferences.</p>
+        <h3 className="flex items-center gap-2 text-sm font-semibold"><Eye className="h-4 w-4 text-cyan-300" /> {t("settings", "accessibility.title")}</h3>
+        <p className="mt-1 text-xs text-muted-foreground">{t("settings", "accessibility.title")}</p>
 
         {/* Font size */}
         <div className="mt-4">
-          <label className="text-xs font-medium text-muted-foreground">Font Size</label>
+          <label className="text-xs font-medium text-muted-foreground">{t("settings", "accessibility.fontSize")}</label>
           <div className="mt-2 grid grid-cols-3 gap-2">
             {fontSizes.map((f) => (
               <button
