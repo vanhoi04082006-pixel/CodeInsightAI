@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAppStore } from "@/lib/store";
 import type { AnalysisReport } from "@/lib/types";
+import { useT } from "@/lib/i18n";
 import { toast } from "sonner";
 
 interface HistoryItem {
@@ -48,6 +49,7 @@ interface HistoryItem {
 }
 
 export function HistoryView() {
+  const { t } = useT();
   const setView = useAppStore((s) => s.setView);
   const setActiveReport = useAppStore((s) => s.setActiveReport);
   const [filter, setFilter] = useState("");
@@ -78,10 +80,10 @@ export function HistoryView() {
         useAppStore.getState().setActiveAnalysisId(item.id);
         useAppStore.getState().clearChat();
         setView("project");
-        toast.success(`Loaded ${item.repoOwner}/${item.repoName}`);
+        toast.success(t("history", "loaded", { owner: item.repoOwner, name: item.repoName }));
       }
     } catch {
-      toast.error("Failed to load report");
+      toast.error(t("history", "loadFailed"));
     }
   };
 
@@ -90,12 +92,12 @@ export function HistoryView() {
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold md:text-3xl">
-            Analysis <GradientText>History</GradientText>
+            <GradientText>{t("history", "title")}</GradientText>
           </h1>
-          <p className="text-sm text-muted-foreground">All repositories you've analysed, ranked by recency.</p>
+          <p className="text-sm text-muted-foreground">{t("history", "subtitle")}</p>
         </div>
         <Button onClick={() => setView("analyze")} className="bg-gradient-to-r from-cyan-500 to-violet-500 text-white">
-          <Sparkles className="mr-1.5 h-4 w-4" /> New analysis
+          <Sparkles className="mr-1.5 h-4 w-4" /> {t("history", "newAnalysis")}
         </Button>
       </motion.div>
 
@@ -105,7 +107,7 @@ export function HistoryView() {
           <Input
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            placeholder="Search by repo or language…"
+            placeholder={t("history", "searchPlaceholder")}
             className="bg-white/[0.03] pl-9"
           />
         </div>
