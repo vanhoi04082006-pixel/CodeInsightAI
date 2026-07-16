@@ -1,7 +1,6 @@
 "use client";
 
 import { create } from "zustand";
-import { persist, createJSONStorage } from "zustand/middleware";
 
 export type Locale = "en" | "vi";
 
@@ -58,23 +57,42 @@ export const NAMESPACES = [
 
 export const COOKIE_NAME = "codeinsight-lang";
 
+// Module-level variable set by Providers before first render.
+// This is the ONLY way to pass the server-read locale to the store
+// without causing a hydration mismatch.
+let __initialLocale: Locale = "en";
+
+/** Called by <Providers initialLocale={...}> BEFORE the store is used. */
+export function setInitialLocale(locale: Locale) {
+  __initialLocale = locale;
+}
+
 /**
  * SSR-safe initial locale.
  *
- * The store defaults to "en" on BOTH server and client. The actual locale
- * is set synchronously by <Providers initialLocale={...}> before the first
- * render, using the cookie value read on the server via next/headers.
+ * On the server: defaults to "en" (no document.cookie). The Providers
+ * component calls setInitialLocale() with the server-read cookie value
+ * before any component reads the store.
  *
- * This guarantees server and client render the SAME language — no hydration
- * mismatch.
+ * On the client: reads document.cookie synchronously (available because
+ * the inline <script> in <head> runs before React). This gives the same
+ * locale as the server, preventing hydration mismatch.
  */
 function getInitialLocale(): Locale {
-  // Always default to "en". The Providers component will set the correct
-  // locale from the server-read cookie before the first render.
-  return "en";
+  // Client-side: read cookie synchronously
+  if (typeof document !== "undefined") {
+    const match = document.cookie.match(new RegExp(`${COOKIE_NAME}=([^;]+)`));
+    if (match) {
+      const val = match[1] as Locale;
+      if (val === "en" || val === "vi") return val;
+    }
+  }
+  // Server-side or no cookie: use the module-level variable (set by Providers)
+  // or default to "en"
+  return __initialLocale;
 }
 
-// Deep get a value by dot path: t("common","nav.home") → DICTS[locale].common.nav.home
+// Deep get a value by dot path
 function getPath(obj: unknown, path: string): unknown {
   return path.split(".").reduce<unknown>((acc, k) => {
     if (acc && typeof acc === "object" && k in (acc as Dict)) return (acc as Dict)[k];
@@ -88,53 +106,35 @@ interface I18nState {
   t: (namespace: string, key: string, vars?: Record<string, string | number>) => string;
 }
 
-export const useI18nStore = create<I18nState>()(
-  persist(
-    (set, get) => ({
-      // Initialize synchronously from cookie — no useEffect, no client-only init.
-      // This runs during store creation (both server and client), so the first
-      // render already has the correct locale.
-      locale: getInitialLocale(),
-      setLocale: (locale) => {
-        // Set cookie immediately so server-side renders (and reloads) use the
-        // new locale from the very first render — no hydration mismatch.
-        if (typeof document !== "undefined") {
-          document.cookie = `${COOKIE_NAME}=${locale};path=/;max-age=31536000;samesite=lax`;
-        }
-        set({ locale });
-      },
-      t: (namespace, key, vars) => {
-        const { locale } = get();
-        const dict = DICTS[locale]?.[namespace];
-        const val = getPath(dict, key);
-        let str = typeof val === "string"
-          ? val
-          : (getPath(DICTS.en[namespace], key) as string) ?? key;
-        if (vars) {
-          for (const [k, v] of Object.entries(vars)) {
-            str = str.replace(new RegExp(`\\{${k}\\}`, "g"), String(v));
-          }
-        }
-        return str;
-      },
-    }),
-    {
-      name: "codeinsight-ai-i18n",
-      // Only persist the locale choice; t() is derived.
-      partialize: (s) => ({ locale: s.locale }),
-      // Use localStorage as a secondary fallback (cookie is primary for SSR).
-      storage: createJSONStorage(() => {
-        if (typeof window !== "undefined") return window.localStorage;
-        // Server-side noop storage
-        return {
-          getItem: () => null,
-          setItem: () => {},
-          removeItem: () => {},
-        };
-      }),
+export const useI18nStore = create<I18nState>()((set, get) => ({
+  // Initialize from cookie (client) or module-level variable (server).
+  // NO persist middleware — the cookie is the single source of truth,
+  // readable on both server and client. This eliminates the localStorage
+  // vs cookie race condition that caused hydration mismatch.
+  locale: getInitialLocale(),
+  setLocale: (locale) => {
+    // Set cookie immediately so server-side renders (and reloads) use the
+    // new locale from the very first render — no hydration mismatch.
+    if (typeof document !== "undefined") {
+      document.cookie = `${COOKIE_NAME}=${locale};path=/;max-age=31536000;samesite=lax`;
     }
-  )
-);
+    set({ locale });
+  },
+  t: (namespace, key, vars) => {
+    const { locale } = get();
+    const dict = DICTS[locale]?.[namespace];
+    const val = getPath(dict, key);
+    let str = typeof val === "string"
+      ? val
+      : (getPath(DICTS.en[namespace], key) as string) ?? key;
+    if (vars) {
+      for (const [k, v] of Object.entries(vars)) {
+        str = str.replace(new RegExp(`\\{${k}\\}`, "g"), String(v));
+      }
+    }
+    return str;
+  },
+}));
 
 // Convenience hook — re-renders when locale changes.
 export function useT() {
