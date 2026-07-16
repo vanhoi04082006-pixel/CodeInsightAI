@@ -68,3 +68,7 @@ watch-dev.sh
 
 # Local provider config / secrets
 provider-config.json
+# Runtime/sandbox artifacts
+/.zscripts/
+/tool-results/
+*.pid
