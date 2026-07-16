@@ -25,7 +25,7 @@ import { useAppStore } from "@/lib/store";
 import { usePersonalityStore } from "@/lib/personality-store";
 import { useProvidersStore } from "@/lib/providers-store";
 import { useDeveloperModeStore } from "@/lib/developer-mode-store";
-import { useI18nStore } from "@/lib/i18n";
+import { useI18nStore, useT } from "@/lib/i18n";
 import type { ChatMessage } from "@/lib/types";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -39,6 +39,7 @@ const SUGGESTIONS = [
 ];
 
 export function ChatView() {
+  const { t } = useT();
   const report = useAppStore((s) => s.activeReport);
   const setView = useAppStore((s) => s.setView);
   const chat = useAppStore((s) => s.chat);
@@ -208,7 +209,7 @@ export function ChatView() {
             <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-background bg-emerald-400" />
           </div>
           <div>
-            <h1 className="text-sm font-semibold">AI CTO</h1>
+            <h1 className="text-sm font-semibold">{t("chat", "title")}</h1>
             <p className="text-[11px] text-muted-foreground">
               <FolderGit2 className="mr-1 inline h-3 w-3" />
               {report.repoOwner}/{report.repoName}
@@ -242,7 +243,7 @@ export function ChatView() {
             <Avatar role="assistant" />
             <div className="flex items-center gap-2 rounded-2xl rounded-tl-sm border border-white/10 bg-white/[0.04] px-4 py-3">
               <Loader2 className="h-4 w-4 animate-spin text-cyan-300" />
-              <span className="text-sm text-muted-foreground">Thinking like a Staff Engineer…</span>
+              <span className="text-sm text-muted-foreground">{t("chat", "thinking")}</span>
               <span className="flex gap-1">
                 {[0, 1, 2].map((i) => (
                   <motion.span
@@ -260,7 +261,7 @@ export function ChatView() {
         {/* suggestions when chat is short */}
         {chat.length <= 1 && !loading && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-2 pt-2">
-            <p className="px-1 text-xs uppercase tracking-wider text-muted-foreground">Try asking</p>
+            <p className="px-1 text-xs uppercase tracking-wider text-muted-foreground">{t("chat", "tryAsking")}</p>
             <div className="grid gap-2 sm:grid-cols-2">
               {SUGGESTIONS.map((s) => {
                 const Icon = s.icon;
@@ -301,7 +302,7 @@ export function ChatView() {
                   send();
                 }
               }}
-              placeholder="Ask your AI CTO anything about this codebase…"
+              placeholder={t("chat", "placeholder")}
               rows={1}
               className="max-h-32 min-h-[44px] flex-1 resize-none border-0 bg-transparent px-2 py-2 text-sm shadow-none focus-visible:ring-0"
             />
@@ -316,7 +317,7 @@ export function ChatView() {
           </div>
         </GlassCard>
         <p className="mt-1.5 text-center text-[10px] text-muted-foreground">
-          CodeInsight AI · GPT-4o + Claude · Answers are AI-generated and should be reviewed.
+          {t("chat", "footerNote")}
         </p>
       </div>
     </div>

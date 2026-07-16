@@ -19,6 +19,7 @@ import {
 import { GlassCard, ScoreGauge, GradientText, NeonDivider, StatPill } from "@/components/shared/ui";
 import { Button } from "@/components/ui/button";
 import { useAppStore } from "@/lib/store";
+import { useT } from "@/lib/i18n";
 import type { AnalysisReport } from "@/lib/types";
 import {
   ResponsiveContainer,
@@ -41,6 +42,7 @@ import {
 } from "recharts";
 
 export function DashboardView() {
+  const { t } = useT();
   const activeReport = useAppStore((s) => s.activeReport);
   const setView = useAppStore((s) => s.setView);
 
@@ -92,10 +94,10 @@ export function DashboardView() {
             onClick={() => setView("project")}
             className="bg-gradient-to-r from-cyan-500 to-violet-500 text-white hover:opacity-90"
           >
-            <Sparkles className="mr-1.5 h-4 w-4" /> Full report
+            <Sparkles className="mr-1.5 h-4 w-4" /> {t("dashboard", "fullReport")}
           </Button>
           <Button onClick={() => setView("chat")} variant="outline">
-            <Cpu className="mr-1.5 h-4 w-4" /> Ask AI
+            <Cpu className="mr-1.5 h-4 w-4" /> {t("dashboard", "askAI")}
           </Button>
         </div>
       </motion.div>
@@ -104,7 +106,7 @@ export function DashboardView() {
       <div className="grid gap-4 lg:grid-cols-3">
         <GlassCard strong className="p-6 lg:col-span-1">
           <div className="flex flex-col items-center">
-            <p className="text-xs uppercase tracking-wider text-muted-foreground">Overall Health</p>
+            <p className="text-xs uppercase tracking-wider text-muted-foreground">{t("dashboard", "overallHealth")}</p>
             <div className="mt-3">
               <ScoreGauge value={r.scores.overall} size={160} stroke={12} label="Score" color="#22d3ee" />
             </div>
@@ -162,7 +164,7 @@ export function DashboardView() {
           >
             <GlassCard className="flex h-full flex-col justify-center p-4">
               <Activity className="h-5 w-5 text-cyan-300" />
-              <p className="mt-2 text-[11px] uppercase tracking-wider text-muted-foreground">Tech Debt</p>
+              <p className="mt-2 text-[11px] uppercase tracking-wider text-muted-foreground">{t("dashboard", "techDebt")}</p>
               <p className="text-3xl font-bold tabular-nums text-amber-400">{r.technicalDebt.score}</p>
               <p className="text-[10px] text-muted-foreground">{r.technicalDebt.items.length} items logged</p>
             </GlassCard>
@@ -175,7 +177,7 @@ export function DashboardView() {
         {/* Score breakdown radar */}
         <GlassCard className="p-5">
           <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-sm font-semibold">Score Breakdown</h3>
+            <h3 className="text-sm font-semibold">{t("dashboard", "scoreBreakdown")}</h3>
             <span className="text-[11px] text-muted-foreground">weighted</span>
           </div>
           <div className="h-56">
@@ -202,7 +204,7 @@ export function DashboardView() {
         {/* Languages */}
         <GlassCard className="p-5">
           <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-sm font-semibold">Language Distribution</h3>
+            <h3 className="text-sm font-semibold">{t("dashboard", "languages")}</h3>
             <span className="text-[11px] text-muted-foreground">{r.languages.length} detected</span>
           </div>
           <div className="flex items-center gap-4">
@@ -237,7 +239,7 @@ export function DashboardView() {
         {/* Complexity trend */}
         <GlassCard className="p-5">
           <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-sm font-semibold">Complexity Trend</h3>
+            <h3 className="text-sm font-semibold">{t("dashboard", "complexityTrend")}</h3>
             <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
               <Clock className="h-3 w-3" /> last 8 months
             </span>
@@ -266,7 +268,7 @@ export function DashboardView() {
         {/* Activity */}
         <GlassCard className="p-5">
           <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-sm font-semibold">Commit Activity</h3>
+            <h3 className="text-sm font-semibold">{t("dashboard", "commitActivity")}</h3>
             <span className="text-[11px] text-muted-foreground">this week</span>
           </div>
           <div className="h-48">
@@ -294,7 +296,7 @@ export function DashboardView() {
       <div className="grid gap-4 lg:grid-cols-3">
         <GlassCard className="p-5 lg:col-span-2">
           <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-sm font-semibold">Maintainability Trend</h3>
+            <h3 className="text-sm font-semibold">{t("dashboard", "maintainabilityTrend")}</h3>
             <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
               <Clock className="h-3 w-3" /> last 8 months
             </span>
@@ -322,25 +324,25 @@ export function DashboardView() {
         </GlassCard>
 
         <GlassCard className="p-5">
-          <h3 className="text-sm font-semibold">Code Hygiene</h3>
+          <h3 className="text-sm font-semibold">{t("dashboard", "codeHygiene")}</h3>
           <div className="mt-3 space-y-2.5">
             <div className="flex items-center justify-between rounded-lg border border-rose-500/20 bg-rose-500/[0.04] p-3">
               <div>
-                <p className="text-xs font-medium text-rose-300">Dead code files</p>
+                <p className="text-xs font-medium text-rose-300">{t("dashboard", "deadCodeFiles")}</p>
                 <p className="text-[10px] text-muted-foreground">{r.deadCode?.length ?? 0} removable</p>
               </div>
               <span className="text-2xl font-bold tabular-nums text-rose-400">{r.deadCode?.length ?? 0}</span>
             </div>
             <div className="flex items-center justify-between rounded-lg border border-amber-500/20 bg-amber-500/[0.04] p-3">
               <div>
-                <p className="text-xs font-medium text-amber-300">Duplicate clusters</p>
+                <p className="text-xs font-medium text-amber-300">{t("dashboard", "duplicateClusters")}</p>
                 <p className="text-[10px] text-muted-foreground">{r.duplicates?.length ?? 0} groups found</p>
               </div>
               <span className="text-2xl font-bold tabular-nums text-amber-400">{r.duplicates?.length ?? 0}</span>
             </div>
             <div className="flex items-center justify-between rounded-lg border border-cyan-500/20 bg-cyan-500/[0.04] p-3">
               <div>
-                <p className="text-xs font-medium text-cyan-300">Circular deps</p>
+                <p className="text-xs font-medium text-cyan-300">{t("dashboard", "circularDeps")}</p>
                 <p className="text-[10px] text-muted-foreground">{r.dependencies.circular.length} detected</p>
               </div>
               <span className="text-2xl font-bold tabular-nums text-cyan-400">{r.dependencies.circular.length}</span>
@@ -352,7 +354,7 @@ export function DashboardView() {
       {/* Tags + frameworks */}
       <div className="grid gap-4 lg:grid-cols-2">
         <GlassCard className="p-5">
-          <h3 className="mb-3 text-sm font-semibold">Detected Frameworks</h3>
+          <h3 className="mb-3 text-sm font-semibold">{t("dashboard", "frameworks")}</h3>
           <div className="space-y-2">
             {r.frameworks.map((f) => (
               <div key={f.name} className="flex items-center gap-3 rounded-lg border border-white/5 bg-white/[0.02] p-3">
@@ -365,7 +367,7 @@ export function DashboardView() {
                 </div>
                 <div className="text-right">
                   <p className="text-xs font-medium text-emerald-400">{f.confidence}%</p>
-                  <p className="text-[10px] text-muted-foreground">confidence</p>
+                  <p className="text-[10px] text-muted-foreground">{t("dashboard", "confidence")}</p>
                 </div>
               </div>
             ))}
@@ -373,7 +375,7 @@ export function DashboardView() {
         </GlassCard>
 
         <GlassCard className="p-5">
-          <h3 className="mb-3 text-sm font-semibold">Top Issues</h3>
+          <h3 className="mb-3 text-sm font-semibold">{t("dashboard", "topIssues")}</h3>
           <div className="space-y-2">
             {[...r.issues.security, ...r.issues.bugs, ...r.issues.performance].slice(0, 5).map((iss) => (
               <button
@@ -411,9 +413,9 @@ function EmptyDashboard() {
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-cyan-400/10 text-cyan-300">
             <FileCode className="h-8 w-8" />
           </div>
-          <h2 className="mt-4 text-2xl font-bold">No repository loaded</h2>
+          <h2 className="mt-4 text-2xl font-bold">{t("dashboard", "noRepo")}</h2>
           <p className="mt-2 text-muted-foreground">
-            Run your first analysis to see scores, charts, issues, and chat with the AI CTO.
+            {t("dashboard", "noRepoDesc")}
           </p>
           <Button
             onClick={() => setView("analyze")}

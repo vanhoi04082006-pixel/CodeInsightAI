@@ -1,1 +1,27 @@
-{ "title": "AI CTO", "noRepo": "Chưa có repository nào", "noRepoDesc": "Phân tích repository trước, sau đó trò chuyện với AI CTO về nó.", "analyzeFirst": "Phân tích repo", "clear": "Xóa", "chatCleared": "Đã xóa trò chuyện", "placeholder": "Hỏi AI CTO bất cứ điều gì về codebase này…", "thinking": "Đang suy nghĩ như Kỹ sư Cấp cao…", "tryAsking": "Thử hỏi", "suggestions": { "security": "Rủi ro bảo mật lớn nhất là gì?", "performance": "Làm sao để cải thiện hiệu suất?", "architecture": "Kiến trúc hoạt động như thế nào?", "refactor": "Tệp nào nên tái cấu trúc trước?", "feature": "Tính năng nào nên xây tiếp theo?" }, "error": "AI không thể phản hồi. Vui lòng thử lại.", "errorReply": "Tôi gặp vấn đề khi xử lý. Bạn có thể diễn đạt lại hoặc thử lại không?", "intro": "Tôi đã phân tích xong **{owner}/{name}**.\n\nTóm tắt nhanh:\n- Sức khỏe tổng thể: **{overall}/100**\n- Rủi ro hàng đầu: {topRisk}\n- Kiến trúc: {arch}\n\nHỏi tôi bất cứ điều gì — bảo mật, hiệu suất, tái cấu trúc, hoặc xây tính năng gì tiếp theo.", "noRisk": "không có rủi ro nghiêm trọng", "footerNote": "CodeInsight AI · GPT-4o + Claude · Câu trả lời do AI tạo, nên được xem xét.", "analyzeFirstToast": "Phân tích repository trước", "chatFailedToast": "AI không thể phản hồi. Vui lòng thử lại." }
+{
+  "title": "AI CTO",
+  "noRepo": "Chưa có repository nào",
+  "noRepoDesc": "Phân tích repository trước, sau đó trò chuyện với AI CTO về nó.",
+  "analyzeFirst": "Phân tích repo",
+  "clear": "Xóa",
+  "chatCleared": "Đã xóa trò chuyện",
+  "placeholder": "Hỏi AI CTO bất cứ điều gì về codebase này…",
+  "thinking": "Đang suy nghĩ như Staff Engineer…",
+  "tryAsking": "Thử hỏi",
+  "suggestions": {
+    "security": "Rủi ro bảo mật lớn nhất là gì?",
+    "performance": "Làm sao để cải thiện hiệu suất?",
+    "architecture": "Kiến trúc hoạt động như thế nào?",
+    "refactor": "File nào nên refactor trước?",
+    "feature": "Tính năng nào nên xây tiếp theo?"
+  },
+  "error": "AI không thể phản hồi. Vui lòng thử lại.",
+  "errorReply": "Tôi gặp vấn đề khi xử lý. Bạn có thể diễn đạt lại hoặc thử lại không?",
+  "intro": "Tôi đã phân tích xong **{owner}/{name}**.\n\nTóm tắt nhanh:\n- Sức khỏe tổng thể: **{overall}/100**\n- Rủi ro hàng đầu: {topRisk}\n- Kiến trúc: {arch}\n\nHỏi tôi bất cứ điều gì — bảo mật, hiệu suất, tái cấu trúc, hoặc xây tính năng gì tiếp theo.",
+  "noRisk": "không có rủi ro nghiêm trọng",
+  "footerNote": "CodeInsight AI · GPT-4o + Claude · Câu trả lời do AI tạo, nên được xem xét.",
+  "analyzeFirstToast": "Phân tích repository trước",
+  "chatFailedToast": "AI không thể phản hồi. Vui lòng thử lại.",
+  "personalityLabel": "Tính cách",
+  "clearToast": "Đã xóa trò chuyện"
+}

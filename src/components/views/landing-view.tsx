@@ -91,14 +91,7 @@ const FEATURE_ROUTING = [
   { feature: "Security Audit", model: "Claude 3.5 Sonnet", color: "#d97706" },
 ];
 
-const FAQ = [
-  { q: "Do I need to pay for CodeInsight AI?", a: "No. CodeInsight AI is a local-first platform — there are no subscriptions, plans, or billing. You bring your own AI API keys (OpenAI, Anthropic, OpenRouter, etc.) or run a local model with Ollama. You only pay your AI provider directly for what you use." },
-  { q: "Where are my API keys stored?", a: "Keys are stored only in your browser's local storage. They are never sent to CodeInsight servers, never logged, and never shared. You can clear them at any time from Settings." },
-  { q: "Can I use a local model like Ollama or LM Studio?", a: "Yes. Add an Ollama or LM Studio provider with the local base URL (e.g. http://localhost:11434/v1). Your code is analysed entirely on your machine — nothing leaves your network." },
-  { q: "Can I use different models for different tasks?", a: "Absolutely. The Feature → Model routing panel lets you assign each feature (chat, bug detection, docs, vision, refactoring) to a different provider and model. For example: Claude for bugs, GPT-4o for chat, DeepSeek for docs." },
-  { q: "Which providers are supported?", a: "OpenRouter, OpenAI, Anthropic (Claude), Google Gemini, DeepSeek, Groq, Ollama, LM Studio, Azure OpenAI, Together AI, Fireworks AI, Mistral, xAI (Grok), and any OpenAI-compatible custom endpoint. You can connect unlimited providers." },
-  { q: "Can I analyze private repositories?", a: "Yes. Because the analysis runs through your own AI keys and runs locally, private repos never pass through a third-party SaaS. Clone the repo locally and point CodeInsight at it, or paste a URL your provider can reach." },
-];
+const FAQ_KEYS = ["faqQ1", "faqQ2", "faqQ3", "faqQ4", "faqQ5", "faqQ6"];
 
 export function LandingView() {
   const setView = useAppStore((s) => s.setView);
@@ -507,17 +500,17 @@ export function LandingView() {
       {/* ============ FAQ ============ */}
       <section className="relative px-4 py-24">
         <div className="mx-auto max-w-3xl">
-          <SectionTitle center eyebrow={t("landing", "faqEyebrow")} title="Questions, answered" />
+          <SectionTitle center eyebrow={t("landing", "faqEyebrow")} title={t("landing", "faqTitle")} />
           <div className="mt-10">
             <GlassCard className="p-2">
               <Accordion type="single" collapsible className="w-full">
-                {FAQ.map((item, i) => (
+                {FAQ_KEYS.map((qk, i) => (
                   <AccordionItem key={i} value={`item-${i}`} className="border-white/5">
                     <AccordionTrigger className="px-4 text-left hover:no-underline">
-                      <span className="text-sm font-medium">{item.q}</span>
+                      <span className="text-sm font-medium">{t("landing", qk)}</span>
                     </AccordionTrigger>
                     <AccordionContent className="px-4 text-sm text-muted-foreground">
-                      {item.a}
+                      {t("landing", `faqA${i + 1}`)}
                     </AccordionContent>
                   </AccordionItem>
                 ))}

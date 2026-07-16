@@ -26,6 +26,7 @@ import { ANALYSIS_STAGES, parseRepoUrl } from "@/lib/analysis-engine";
 import type { AnalysisReport } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useT } from "@/lib/i18n";
 
 const ICONS: Record<string, typeof GitBranch> = {
   "git-branch": GitBranch,
@@ -53,6 +54,7 @@ export function AnalyzeView() {
   const setActiveReport = useAppStore((s) => s.setActiveReport);
   const setActiveAnalysisId = useAppStore((s) => s.setActiveAnalysisId);
   const clearChat = useAppStore((s) => s.clearChat);
+  const { t } = useT();
 
   const clearTimers = () => {
     timers.current.forEach(clearTimeout);
@@ -142,8 +144,7 @@ export function AnalyzeView() {
             What should I <GradientText>understand</GradientText> today?
           </h1>
           <p className="mt-3 text-muted-foreground">
-            Paste any public GitHub repository. I'll clone it, scan every file, and give you a full
-            senior-engineer-level report.
+            {t("analysis", "subtitleDesc")}
           </p>
 
           <div className="mt-8">
@@ -155,7 +156,7 @@ export function AnalyzeView() {
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && start()}
-                  placeholder="https://github.com/owner/repo"
+                  placeholder={t("analysis", "inputPlaceholder")}
                   className="border-0 bg-transparent px-1 text-base shadow-none focus-visible:ring-0"
                 />
               </div>
@@ -165,7 +166,7 @@ export function AnalyzeView() {
                 className="bg-gradient-to-r from-cyan-500 to-violet-500 text-white hover:opacity-90"
               >
                 <Sparkles className="mr-1.5 h-4 w-4" />
-                Analyze
+                {t("analysis", "analyzeBtn")}
                 <ArrowRight className="ml-1.5 h-4 w-4" />
               </Button>
             </div>
@@ -174,7 +175,7 @@ export function AnalyzeView() {
 
           {/* quick examples */}
           <div className="mt-8">
-            <p className="mb-2 text-xs uppercase tracking-wider text-muted-foreground">Popular repos</p>
+            <p className="mb-2 text-xs uppercase tracking-wider text-muted-foreground">{t("analysis", "popularRepos")}</p>
             <div className="flex flex-wrap justify-center gap-2">
               {[
                 { label: "vercel/next.js", desc: "React framework" },
@@ -223,7 +224,7 @@ export function AnalyzeView() {
             Analyzing <GradientText>{parseRepoUrl(url).name || "repository"}</GradientText>
           </h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            The AI is reasoning over your codebase. This usually takes under a minute.
+            {t("analysis", "analyzingDesc")}
           </p>
         </motion.div>
 
@@ -303,7 +304,7 @@ export function AnalyzeView() {
             <span className="h-2 w-2 rounded-full bg-rose-400" />
             <span className="h-2 w-2 rounded-full bg-amber-400" />
             <span className="h-2 w-2 rounded-full bg-emerald-400" />
-            <span className="ml-2">analysis.log</span>
+            <span className="ml-2">{t("analysis", "logLabel")}</span>
           </div>
           <div className="space-y-1 text-foreground/70">
             {ANALYSIS_STAGES.slice(0, stageIdx + 1).map((s, i) => (
@@ -323,7 +324,7 @@ export function AnalyzeView() {
               transition={{ repeat: Infinity, duration: 1.2 }}
               className="text-cyan-300"
             >
-              ▍ working…
+              {t("analysis", "working")}
             </motion.div>
           </div>
         </GlassCard>
@@ -337,13 +338,13 @@ export function AnalyzeView() {
       <div className="mx-auto flex min-h-[60vh] max-w-xl flex-col items-center justify-center px-4 text-center">
         <GlassCard className="p-10">
           <AlertCircle className="mx-auto h-12 w-12 text-rose-400" />
-          <h2 className="mt-4 text-2xl font-bold">Analysis failed</h2>
+          <h2 className="mt-4 text-2xl font-bold">{t("analysis", "failed")}</h2>
           <p className="mt-2 text-muted-foreground">
             Something went wrong. The repository may be private or unreachable.
           </p>
           <div className="mt-6 flex gap-2">
-            <Button onClick={reset} variant="outline">Try again</Button>
-            <Button onClick={() => setView("dashboard")} variant="ghost">Go to dashboard</Button>
+            <Button onClick={reset} variant="outline">{t("analysis", "tryAgain")}</Button>
+            <Button onClick={() => setView("dashboard")} variant="ghost">{t("analysis", "goToDashboard")}</Button>
           </div>
         </GlassCard>
       </div>

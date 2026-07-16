@@ -47,6 +47,7 @@ import { usePersonalityStore } from "@/lib/personality-store";
 import { BUILTIN_PERSONALITIES, LUCIDE_ICON_NAMES } from "@/lib/personalities";
 import type { Personality } from "@/lib/types";
 import { toast } from "sonner";
+import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 // Local icon map (avoids dynamic lucide import by name)
@@ -77,6 +78,7 @@ function PersonalityIcon({ name, className, style }: { name: string; className?:
 }
 
 export function PersonalitiesView() {
+  const { t } = useT();
   const custom = usePersonalityStore((s) => s.custom);
   const activeId = usePersonalityStore((s) => s.activeId);
   const defaultId = usePersonalityStore((s) => s.defaultId);
@@ -134,13 +136,13 @@ export function PersonalitiesView() {
         <div>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Bot className="h-4 w-4 text-cyan-300" />
-            <span>AI Personality System</span>
+            <span>{t("personality", "title")}</span>
           </div>
           <h1 className="mt-1 text-2xl font-bold md:text-3xl">
             AI <GradientText>Personalities</GradientText>
           </h1>
           <p className="text-sm text-muted-foreground">
-            Customize how the AI behaves across chat, code review, bug analysis, docs, and architecture.
+            {t("personality", "subtitle")}
             The selected personality injects its system prompt before every AI request.
           </p>
         </div>
