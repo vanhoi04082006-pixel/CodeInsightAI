@@ -12,7 +12,7 @@ import { ProjectView } from "@/components/views/project-view";
 import { ChatView } from "@/components/views/chat-view";
 import { HistoryView } from "@/components/views/history-view";
 import { SettingsView } from "@/components/views/settings-view";
-import { PricingView } from "@/components/views/pricing-view";
+import { ProvidersView } from "@/components/views/providers-view";
 import { CommandPalette } from "@/components/shared/command-palette";
 import { Github, Sparkles, Heart } from "lucide-react";
 
@@ -54,7 +54,7 @@ export default function Home() {
               </div>
             </button>
             <nav className="hidden items-center gap-6 text-sm text-muted-foreground md:flex">
-              <button onClick={() => setView("pricing")} className="hover:text-foreground">Pricing</button>
+              <button onClick={() => setView("providers")} className="hover:text-foreground">AI Providers</button>
               <button onClick={() => setView("history")} className="hover:text-foreground">History</button>
               <button onClick={() => setView("settings")} className="hover:text-foreground">Settings</button>
             </nav>
@@ -66,7 +66,7 @@ export default function Home() {
                 onClick={() => setView("analyze")}
                 className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-cyan-500 to-violet-500 px-3 py-1.5 text-xs font-medium text-white transition hover:opacity-90"
               >
-                <Sparkles className="h-3.5 w-3.5" /> Start Analysis
+                <Sparkles className="h-3.5 w-3.5" /> Analyze Repo
               </button>
             </div>
           </header>
@@ -98,7 +98,7 @@ export default function Home() {
                   {view === "chat" && <ChatView />}
                   {view === "history" && <HistoryView />}
                   {view === "settings" && <SettingsView />}
-                  {view === "pricing" && <PricingView />}
+                  {view === "providers" && <ProvidersView />}
                 </motion.div>
               </AnimatePresence>
             </main>
@@ -130,7 +130,7 @@ function Footer() {
           <nav className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1 text-xs text-muted-foreground">
             <button onClick={() => setView("landing")} className="hover:text-foreground">Home</button>
             <button onClick={() => setView("dashboard")} className="hover:text-foreground">Dashboard</button>
-            <button onClick={() => setView("pricing")} className="hover:text-foreground">Pricing</button>
+            <button onClick={() => setView("providers")} className="hover:text-foreground">AI Providers</button>
             <button onClick={() => setView("history")} className="hover:text-foreground">History</button>
             <button onClick={() => setView("settings")} className="hover:text-foreground">Settings</button>
           </nav>

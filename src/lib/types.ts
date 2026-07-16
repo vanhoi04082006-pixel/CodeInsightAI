@@ -1,4 +1,5 @@
 // CodeInsight AI — Shared domain types
+// Local-first AI development platform. No SaaS, no billing.
 
 export type View =
   | "landing"
@@ -8,7 +9,67 @@ export type View =
   | "chat"
   | "history"
   | "settings"
-  | "pricing";
+  | "providers";
+
+/* ---------- AI Providers (local-first, BYO keys) ---------- */
+export type ProviderId =
+  | "openrouter"
+  | "openai"
+  | "anthropic"
+  | "gemini"
+  | "deepseek"
+  | "groq"
+  | "ollama"
+  | "lmstudio"
+  | "azure"
+  | "together"
+  | "fireworks"
+  | "mistral"
+  | "xai"
+  | "custom";
+
+export type FeatureKind =
+  | "chat"
+  | "bugs"
+  | "security"
+  | "performance"
+  | "architecture"
+  | "docs"
+  | "vision"
+  | "refactor"
+  | "summary";
+
+export interface AIProvider {
+  id: string;            // instance id (uuid)
+  providerId: ProviderId;
+  label: string;         // user-chosen display name
+  apiKey: string;
+  baseUrl: string;
+  model: string;
+  temperature: number;   // 0..2
+  maxTokens: number;     // -1 = unlimited
+  streaming: boolean;
+  timeout: number;       // seconds
+  enabled: boolean;
+  // runtime status (not persisted, but kept for the dashboard)
+  status?: "unknown" | "connected" | "error" | "testing";
+  latencyMs?: number;
+  lastCheckedAt?: number;
+  error?: string;
+}
+
+export interface ProviderPreset {
+  providerId: ProviderId;
+  name: string;
+  category: string;
+  defaultBaseUrl: string;
+  docsUrl: string;
+  defaultModel: string;
+  models: string[];
+  requiresKey: boolean;
+  accent: string;
+  local: boolean; // runs locally (ollama, lmstudio)
+}
 
 export interface LanguageStat {
   name: string;

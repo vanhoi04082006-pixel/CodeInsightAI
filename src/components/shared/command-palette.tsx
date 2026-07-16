@@ -10,7 +10,7 @@ import {
   History,
   Settings,
   Sparkles,
-  Crown,
+  Plug,
   Home,
   Search,
 } from "lucide-react";
@@ -28,7 +28,7 @@ const COMMANDS: { id: View; label: string; hint: string; icon: typeof Home; grou
   { id: "project", label: "View Project Report", hint: "Detailed report", icon: FolderGit2, group: "Navigation" },
   { id: "chat", label: "Ask AI CTO", hint: "Chat about repo", icon: MessagesSquare, group: "Actions" },
   { id: "history", label: "Analysis History", hint: "Past analyses", icon: History, group: "Navigation" },
-  { id: "pricing", label: "Pricing & Plans", hint: "Upgrade", icon: Crown, group: "Navigation" },
+  { id: "providers", label: "AI Providers", hint: "Connect your AI APIs", icon: Plug, group: "Actions" },
   { id: "settings", label: "Settings", hint: "Preferences", icon: Settings, group: "Navigation" },
 ];
 

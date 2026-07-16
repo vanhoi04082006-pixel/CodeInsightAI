@@ -14,17 +14,18 @@ import {
   Sparkles,
   Shield,
   Zap,
+  ArrowRight,
 } from "lucide-react";
 import { GlassCard, GradientText, NeonDivider } from "@/components/shared/ui";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { useAppStore } from "@/lib/store";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 export function SettingsView() {
-  const [model, setModel] = useState("gpt-4o");
   const [theme, setTheme] = useState("dark");
   const [notifications, setNotifications] = useState({ email: true, push: false, weekly: true });
   const [connected, setConnected] = useState({ github: false, google: true });
@@ -98,34 +99,26 @@ export function SettingsView() {
 
           {/* AI */}
           <TabsContent value="ai" className="mt-4 space-y-4">
-            <GlassCard className="p-6">
-              <h3 className="flex items-center gap-2 text-sm font-semibold"><Cpu className="h-4 w-4 text-cyan-300" /> Default model</h3>
-              <p className="mt-1 text-xs text-muted-foreground">Choose the AI model used for chat and report generation.</p>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                {[
-                  { id: "gpt-4o", name: "GPT-4o", desc: "Best overall reasoning", color: "#22d3ee" },
-                  { id: "claude", name: "Claude 3.5 Sonnet", desc: "Best for code review", color: "#a78bfa" },
-                  { id: "gemini", name: "Gemini 1.5 Pro", desc: "Long context windows", color: "#34d399" },
-                  { id: "deepseek", name: "DeepSeek Coder", desc: "Fast & cost-effective", color: "#fbbf24" },
-                ].map((m) => (
-                  <button
-                    key={m.id}
-                    onClick={() => { setModel(m.id); toast.success(`Default model: ${m.name}`); }}
-                    className={cn(
-                      "flex items-start gap-3 rounded-xl border p-4 text-left transition",
-                      model === m.id ? "border-cyan-400/40 bg-cyan-400/[0.06]" : "border-white/10 bg-white/[0.02] hover:border-white/20"
-                    )}
-                  >
-                    <div className="flex h-9 w-9 items-center justify-center rounded-lg" style={{ background: `${m.color}1a`, color: m.color }}>
-                      <Cpu className="h-4 w-4" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">{m.name}</p>
-                      <p className="text-[11px] text-muted-foreground">{m.desc}</p>
-                    </div>
-                    {model === m.id && <Check className="h-4 w-4 text-cyan-300" />}
-                  </button>
-                ))}
+            <GlassCard strong className="p-6">
+              <div className="flex items-center gap-2">
+                <Cpu className="h-4 w-4 text-cyan-300" />
+                <h3 className="text-sm font-semibold">AI Providers</h3>
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                CodeInsight AI is local-first. You connect your own AI providers (OpenRouter, OpenAI, Anthropic,
+                Gemini, DeepSeek, Groq, Ollama, LM Studio, and more) and route different features to different models.
+              </p>
+              <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-cyan-400/20 bg-cyan-400/[0.04] p-4">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-cyan-400/15 text-cyan-300">
+                  <Cpu className="h-5 w-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium">Manage providers & model routing</p>
+                  <p className="text-[11px] text-muted-foreground">Add API keys, test connections, assign models to features.</p>
+                </div>
+                <Button onClick={() => useAppStore.getState().setView("providers")} className="bg-gradient-to-r from-cyan-500 to-violet-500 text-white">
+                  Open Providers <ArrowRight className="ml-1.5 h-4 w-4" />
+                </Button>
               </div>
             </GlassCard>
 

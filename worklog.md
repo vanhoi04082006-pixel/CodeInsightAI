@@ -147,3 +147,58 @@ Stage Summary:
 - All new data flows through the existing API (`/api/analyze` returns the extended report JSON) — no schema migration needed (report stored as JSON blob).
 - Dev server persistence remains the main environment constraint; watchdog + cron mitigate.
 - Next-phase candidates: real GitHub API integration for live repo metadata, PDF export wiring, NextAuth OAuth backend, Compare-two-repos view.
+
+---
+Task ID: 3
+Agent: Z.ai Code (architecture refactor — SaaS → local-first)
+Task: Remove ALL SaaS functionality (pricing, subscriptions, billing, plans, upgrade buttons). Pivot to "Local-first AI Development Platform" with BYO AI provider keys. Replace Pricing page with AI Provider Dashboard supporting 14 providers.
+
+Work Log:
+- Replaced the `View` type: removed `"pricing"`, added `"providers"`. Added `AIProvider`, `ProviderPreset`, `ProviderId`, `FeatureKind` types.
+- Created `src/lib/providers.ts`: 14 provider presets (OpenRouter, OpenAI, Anthropic, Gemini, DeepSeek, Groq, Ollama, LM Studio, Azure, Together, Fireworks, Mistral, xAI, Custom) each with name, category, default base URL, docs URL, default model, model catalog, requiresKey flag, accent color, local flag. Plus `FEATURE_LABELS` (9 features) and `FEATURE_DEFAULTS` (suggested default provider per feature).
+- Created `src/lib/providers-store.ts`: Zustand store with `persist` middleware (localStorage, key `codeinsight-ai-providers`). Manages `providers: AIProvider[]` + `routing: FeatureKind → instanceId`. Actions: addProvider, updateProvider, removeProvider, setRouting, setProviderStatus, getProviderForFeature. Partializes to strip runtime status on persist.
+- Created `src/components/views/providers-view.tsx` (replaces pricing-view.tsx): full AI Provider Dashboard with:
+  • Header ("Local-first · Bring your own keys") + "Add AI Provider" button.
+  • 4 stat cards: Enabled / Connected / Local Models / Avg latency.
+  • Feature → Model Routing card: 9 features (chat, bugs, security, performance, architecture, docs, vision, refactor, summary) each with a Select to assign an enabled provider (falls back to the feature's default provider preset).
+  • Provider cards: each shows avatar, label, live status badge (unknown/testing/connected/error), category, model, masked API key, latency, enable Switch, Test connection button, expandable config (Display label, Model select, API Key, Base URL, Temperature slider, Max tokens, Timeout slider, Streaming toggle, Remove button, "Get API key" docs link).
+  • Add Provider dialog: grouped by Aggregator/Cloud/Local/Enterprise/Custom, shows all 14 presets as pickable cards.
+  • Simulated connection test (latency + status) — wired for a future real `/api/providers/test` endpoint.
+- Deleted `src/components/views/pricing-view.tsx` entirely.
+- Refactored `src/components/views/landing-view.tsx`: removed the entire Pricing section (3 plan cards) and Testimonials. Replaced marketing copy throughout:
+  • Badge: "Local-first · Bring your own AI · No subscriptions" (was "Powered by GPT-4o…").
+  • Subtitle: "A local-first AI development platform. Connect your own AI APIs…" (was SaaS-y).
+  • Trust strip: "Use your own AI APIs / Data stays with you / 60-second analysis / 14 providers supported" (was "Private repos / 4.9/5 from 2,400+ devs").
+  • Stats bar: 14 AI providers / 40+ Languages / 0 Subscriptions / 60s Avg analysis (was Developers/Lines/Uptime).
+  • New "Local-first Principles" section: 4 cards (Bring your own keys, You own your data, No subscriptions, Local models supported).
+  • New "Multi-model routing" section: 6 feature→model example cards (Bug Detection→Claude, Chat→GPT-4o, Docs→DeepSeek, Vision→Gemini, Refactoring→Qwen, Security→Claude).
+  • New "Supported providers" grid: all 14 presets as clickable cards → providers view.
+  • Rewrote FAQ (6 Q&As) for local-first: "Do I need to pay?", "Where are my API keys stored?", "Can I use Ollama/LM Studio?", "Can I use different models for different tasks?", "Which providers are supported?", "Can I analyze private repositories?".
+  • CTA: "Ready to connect your AI?" with "Connect Your AI" + "Analyze a repo" buttons (was "Analyze your first repo — free").
+  • Removed PRICING constant, TESTIMONIALS, Star/Crown/Rocket imports.
+- Updated `src/components/shared/app-shell.tsx`:
+  • Nav: replaced `{ id: "pricing", label: "Pricing", icon: Crown }` with `{ id: "providers", label: "AI Providers", icon: Plug }`.
+  • Removed the "Upgrade to Pro" sidebar card. Replaced with `AIStatusCard` showing live provider count (enabled/connected), a status dot (gray/amber/green), local-first copy ("Use your own AI APIs. No subscriptions." or "N connected · switch models freely"), and a dynamic button ("Add AI Provider" when none, else "Manage providers").
+  • Topbar titleMap: `providers: "AI Providers"` (was pricing).
+  • MobileNav filter: removed `&& n.id !== "pricing"` so providers shows on mobile.
+- Updated `src/components/shared/command-palette.tsx`: replaced Pricing command with `{ id: "providers", label: "AI Providers", hint: "Connect your AI APIs", icon: Plug }`.
+- Updated `src/app/page.tsx`: swapped `PricingView` import for `ProvidersView`. Landing top nav: "Pricing" → "AI Providers", "Start Analysis" → "Analyze Repo". Footer nav: "Pricing" → "AI Providers". View router: `view === "providers" && <ProvidersView />`.
+- Updated `src/components/views/settings-view.tsx`: replaced the inline 4-model picker (GPT-4o/Claude/Gemini/DeepSeek radio cards) with a pointer card to the new Providers page ("Manage providers & model routing" → "Open Providers" button). Removed unused `model`/`setModel` state. Kept the Analysis-depth toggles. Added `ArrowRight` + `useAppStore` imports.
+- Verified end-to-end via agent-browser + VLM:
+  • Landing: "Local-first", "Use your own AI APIs", "14 providers supported", "Connect Your AI" CTA all present. NO "Start Free"/"Upgrade to Pro"/"No credit card" anywhere.
+  • App shell: no "Pricing" or "Upgrade" text anywhere.
+  • Providers view renders: heading + local-first messaging, 4 stat cards, Feature→Model Routing card (9 features), Add AI Provider button, empty state "Connect your AI".
+  • Add Provider dialog opens with all 14 providers. Picking Anthropic adds it ("Anthropic (Claude)" appears, "of 1 added" stat updates). Test button present.
+  • VLM confirmed all 5 dashboard elements visible with "dark, modern UI with purple/navy gradient".
+- Lint clean (0 errors, 0 warnings). SaaS surface area grep returns 0 matches (only "Upgrade to TypeScript 5 strict mode" in a tech-debt item, which is legitimate).
+
+Stage Summary:
+- v2.0 shipped: complete architectural pivot from SaaS to local-first AI platform.
+- Deleted: pricing-view.tsx, all plan/billing/upgrade UI, SaaS marketing copy.
+- Added: AIProvider/ProviderPreset types, providers.ts (14 presets), providers-store.ts (persisted Zustand), providers-view.tsx (full dashboard + config + routing + connection test).
+- Replaced: Pricing page → AI Provider Dashboard. Upgrade card → AI status card. Model picker → Providers link. All nav (sidebar/topbar/mobile/command-palette/footer) updated.
+- Philosophy now: "Your keys. Your data. Your AI." — like Open WebUI / Continue.dev / VS Code AI extensions.
+- 14 providers supported: OpenRouter, OpenAI, Anthropic, Gemini, DeepSeek, Groq, Ollama, LM Studio, Azure, Together, Fireworks, Mistral, xAI, Custom.
+- Feature→model routing: 9 features each assignable to any enabled provider.
+- Keys persisted to localStorage only (never sent to servers).
+- Next-phase candidates: real `/api/providers/test` endpoint that actually pings each provider, wire the chat API to use the user's selected provider+model instead of the built-in z-ai SDK, streaming responses, import/export provider config.

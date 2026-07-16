@@ -12,13 +12,13 @@ import {
   Github,
   ChevronLeft,
   Command,
-  Crown,
+  Plug,
 } from "lucide-react";
 import { useAppStore } from "@/lib/store";
+import { useProvidersStore } from "@/lib/providers-store";
 import type { View } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 
 const NAV: { id: View; label: string; icon: typeof LayoutDashboard; hint: string }[] = [
   { id: "landing", label: "Home", icon: Sparkles, hint: "Landing page" },
@@ -27,7 +27,7 @@ const NAV: { id: View; label: string; icon: typeof LayoutDashboard; hint: string
   { id: "project", label: "Project Report", icon: FolderGit2, hint: "Detailed report" },
   { id: "chat", label: "AI Chat", icon: MessagesSquare, hint: "Ask the AI CTO" },
   { id: "history", label: "History", icon: History, hint: "Past analyses" },
-  { id: "pricing", label: "Pricing", icon: Crown, hint: "Plans & billing" },
+  { id: "providers", label: "AI Providers", icon: Plug, hint: "Connect your AI APIs" },
   { id: "settings", label: "Settings", icon: Settings, hint: "Preferences" },
 ];
 
@@ -121,26 +121,8 @@ export function AppSidebar() {
         })}
       </nav>
 
-      {/* Upgrade card */}
-      {!collapsed && (
-        <div className="p-3">
-          <div className="gradient-border relative overflow-hidden rounded-xl p-4">
-            <div className="absolute -right-6 -top-6 h-20 w-20 rounded-full bg-violet-500/20 blur-2xl" />
-            <Crown className="h-5 w-5 text-amber-300" />
-            <p className="mt-2 text-sm font-semibold">Upgrade to Pro</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Unlimited analyses, private repos & GPT-4o.
-            </p>
-            <Button
-              size="sm"
-              onClick={() => setView("pricing")}
-              className="mt-3 w-full bg-gradient-to-r from-cyan-500 to-violet-500 text-white hover:opacity-90"
-            >
-              Upgrade
-            </Button>
-          </div>
-        </div>
-      )}
+      {/* AI status card (replaces former upgrade card) */}
+      {!collapsed && <AIStatusCard onOpen={() => setView("providers")} />}
     </motion.aside>
   );
 }
@@ -158,7 +140,7 @@ export function AppTopbar() {
     chat: "AI Chat",
     history: "History",
     settings: "Settings",
-    pricing: "Pricing",
+    providers: "AI Providers",
   };
 
   return (
@@ -213,7 +195,7 @@ export function MobileNav() {
   const view = useAppStore((s) => s.view);
   const setView = useAppStore((s) => s.setView);
   const activeReport = useAppStore((s) => s.activeReport);
-  const items = NAV.filter((n) => n.id !== "landing" && n.id !== "pricing");
+  const items = NAV.filter((n) => n.id !== "landing");
   return (
     <nav className="glass-strong fixed bottom-0 left-0 right-0 z-30 flex items-center justify-around border-t border-white/10 px-1 py-1.5 md:hidden">
       {items.map((item) => {
@@ -243,5 +225,42 @@ export function MobileNav() {
         );
       })}
     </nav>
+  );
+}
+
+/* ---------- AI status card (sidebar footer) ---------- */
+function AIStatusCard({ onOpen }: { onOpen: () => void }) {
+  const providers = useProvidersStore((s) => s.providers);
+  const enabled = providers.filter((p) => p.enabled).length;
+  const connected = providers.filter((p) => p.status === "connected").length;
+  const dotColor = enabled === 0 ? "#64748b" : connected > 0 ? "#34d399" : "#fbbf24";
+  return (
+    <div className="p-3">
+      <div className="gradient-border relative overflow-hidden rounded-xl p-4">
+        <div className="absolute -right-6 -top-6 h-20 w-20 rounded-full bg-cyan-500/15 blur-2xl" />
+        <div className="flex items-center gap-2">
+          <Plug className="h-4 w-4 text-cyan-300" />
+          <span className="relative flex h-2 w-2">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75" style={{ background: dotColor }} />
+            <span className="relative inline-flex h-2 w-2 rounded-full" style={{ background: dotColor }} />
+          </span>
+        </div>
+        <p className="mt-2 text-sm font-semibold">
+          {enabled === 0 ? "Connect your AI" : `${enabled} provider${enabled === 1 ? "" : "s"} ready`}
+        </p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          {enabled === 0
+            ? "Use your own AI APIs. No subscriptions."
+            : `${connected} connected · switch models freely`}
+        </p>
+        <Button
+          size="sm"
+          onClick={onOpen}
+          className="mt-3 w-full bg-gradient-to-r from-cyan-500 to-violet-500 text-white hover:opacity-90"
+        >
+          {enabled === 0 ? "Add AI Provider" : "Manage providers"}
+        </Button>
+      </div>
+    </div>
   );
 }
