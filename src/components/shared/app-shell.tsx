@@ -13,9 +13,11 @@ import {
   ChevronLeft,
   Command,
   Plug,
+  Bot,
 } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { useProvidersStore } from "@/lib/providers-store";
+import { usePersonalityStore } from "@/lib/personality-store";
 import type { View } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -28,6 +30,7 @@ const NAV: { id: View; label: string; icon: typeof LayoutDashboard; hint: string
   { id: "chat", label: "AI Chat", icon: MessagesSquare, hint: "Ask the AI CTO" },
   { id: "history", label: "History", icon: History, hint: "Past analyses" },
   { id: "providers", label: "AI Providers", icon: Plug, hint: "Connect your AI APIs" },
+  { id: "personalities", label: "Personalities", icon: Bot, hint: "Customize AI behavior" },
   { id: "settings", label: "Settings", icon: Settings, hint: "Preferences" },
 ];
 
@@ -141,6 +144,7 @@ export function AppTopbar() {
     history: "History",
     settings: "Settings",
     providers: "AI Providers",
+    personalities: "AI Personalities",
   };
 
   return (
@@ -233,6 +237,7 @@ function AIStatusCard({ onOpen }: { onOpen: () => void }) {
   const providers = useProvidersStore((s) => s.providers);
   const enabled = providers.filter((p) => p.enabled).length;
   const connected = providers.filter((p) => p.status === "connected").length;
+  const personality = usePersonalityStore((s) => s.getActive());
   const dotColor = enabled === 0 ? "#64748b" : connected > 0 ? "#34d399" : "#fbbf24";
   return (
     <div className="p-3">
@@ -253,6 +258,15 @@ function AIStatusCard({ onOpen }: { onOpen: () => void }) {
             ? "Use your own AI APIs. No subscriptions."
             : `${connected} connected · switch models freely`}
         </p>
+        {/* active personality */}
+        <button
+          onClick={() => useAppStore.getState().setView("personalities")}
+          className="mt-2 flex w-full items-center gap-1.5 rounded-lg border border-white/5 bg-white/[0.02] px-2 py-1.5 text-[11px] transition hover:border-cyan-400/30"
+        >
+          <Bot className="h-3 w-3" style={{ color: personality.accent }} />
+          <span className="text-muted-foreground">Personality:</span>
+          <span className="ml-auto font-medium" style={{ color: personality.accent }}>{personality.name}</span>
+        </button>
         <Button
           size="sm"
           onClick={onOpen}

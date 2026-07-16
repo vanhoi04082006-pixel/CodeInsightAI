@@ -18,9 +18,13 @@ import {
   Code2,
 } from "lucide-react";
 import { GlassCard, GradientText } from "@/components/shared/ui";
+import { DeveloperPanel, LogViewer } from "@/components/shared/debug-panel";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useAppStore } from "@/lib/store";
+import { usePersonalityStore } from "@/lib/personality-store";
+import { useProvidersStore } from "@/lib/providers-store";
+import { useDeveloperModeStore } from "@/lib/developer-mode-store";
 import type { ChatMessage } from "@/lib/types";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -42,6 +46,8 @@ export function ChatView() {
   const clearChat = useAppStore((s) => s.clearChat);
   const analysisId = useAppStore((s) => s.activeAnalysisId);
   const setAnalysisId = useAppStore((s) => s.setActiveAnalysisId);
+  const activePersonality = usePersonalityStore((s) => s.getActive());
+  const latestSnapshot = useDeveloperModeStore((s) => s.snapshots[0] ?? null);
 
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -96,6 +102,12 @@ export function ChatView() {
     setInput("");
     setLoading(true);
 
+    // pull personality + provider + developer mode from their stores
+    const personality = usePersonalityStore.getState().getActive();
+    const providersState = useProvidersStore.getState();
+    const providerInstance = providersState.getProviderForFeature("chat");
+    const devMode = useDeveloperModeStore.getState();
+
     try {
       // Ensure we have an analysisId persisted (create the analysis row if needed)
       let aid = analysisId;
@@ -114,11 +126,44 @@ export function ChatView() {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ analysisId: aid, message: content, history }),
+        body: JSON.stringify({
+          analysisId: aid,
+          message: content,
+          history,
+          // AI request pipeline: personality + provider
+          personality: {
+            id: personality.id,
+            name: personality.name,
+            systemPrompt: personality.systemPrompt,
+            temperature: personality.temperature,
+            maxTokens: personality.maxTokens,
+            preferredModel: personality.preferredModel,
+          },
+          provider: providerInstance
+            ? {
+                providerId: providerInstance.providerId,
+                label: providerInstance.label,
+                model: providerInstance.model,
+                baseUrl: providerInstance.baseUrl,
+                temperature: providerInstance.temperature,
+                maxTokens: providerInstance.maxTokens,
+                streaming: providerInstance.streaming,
+                timeout: providerInstance.timeout,
+                apiKey: providerInstance.apiKey, // used by a real provider impl; masked in debug
+              }
+            : undefined,
+          debug: devMode.enabled,
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error ?? "Chat failed");
       pushChat(data.message ?? { id: crypto.randomUUID(), role: "assistant", content: data.reply, createdAt: Date.now() });
+
+      // record debug snapshot + log if developer mode is on
+      if (devMode.enabled && data.debug) {
+        devMode.addSnapshot(data.debug);
+        if (data.debug.log) devMode.addLog(data.debug.log);
+      }
     } catch (e) {
       console.error(e);
       toast.error("The AI couldn't respond. Please try again.");
@@ -166,6 +211,15 @@ export function ChatView() {
               {report.repoOwner}/{report.repoName}
             </p>
           </div>
+          {/* active personality badge */}
+          <button
+            onClick={() => useAppStore.getState().setView("personalities")}
+            className="ml-2 flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[10px] transition hover:border-cyan-400/40"
+            title="Change personality"
+          >
+            <span className="h-1.5 w-1.5 rounded-full" style={{ background: activePersonality.accent }} />
+            <span className="font-medium">{activePersonality.name}</span>
+          </button>
         </div>
         <Button variant="ghost" size="sm" onClick={() => { clearChat(); toast.success("Chat cleared"); }}>
           <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Clear
@@ -223,6 +277,12 @@ export function ChatView() {
             </div>
           </motion.div>
         )}
+      </div>
+
+      {/* Developer panel (only renders when Developer Mode is enabled) */}
+      <div className="mt-3 space-y-2">
+        <DeveloperPanel snapshot={latestSnapshot} />
+        <LogViewer />
       </div>
 
       {/* composer */}

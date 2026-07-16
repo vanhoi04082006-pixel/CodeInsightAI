@@ -9,7 +9,8 @@ export type View =
   | "chat"
   | "history"
   | "settings"
-  | "providers";
+  | "providers"
+  | "personalities";
 
 /* ---------- AI Providers (local-first, BYO keys) ---------- */
 export type ProviderId =
