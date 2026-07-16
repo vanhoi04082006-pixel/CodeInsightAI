@@ -285,3 +285,32 @@ Stage Summary:
 - Reusable `HydrationGuard` component added for future targeted use.
 - Repo cleaned: `.zscripts/`, `tool-results/`, `*.pid` untracked and gitignored.
 - Push confirmed on GitHub (commit 5ec7b54 on main).
+
+---
+Task ID: 7
+Agent: Z.ai Code (infinite loop + theme + i18n fixes)
+Task: Fix three critical bugs: (1) getSnapshot infinite loop crashes in AISettingsCard + DeveloperSettingsCard, (2) theme switching doesn't work (Light mode keeps Dark UI), (3) language switching doesn't work (Vietnamese selected but UI stays English). Then wire i18n into all major UI components.
+
+Work Log:
+- **Fix 1: Infinite loop (getSnapshot should be cached)**:
+  - `AISettingsCard`: `usePersonalityStore((s) => s.all())` created a new array `[...BUILTIN_PERSONALITIES, ...custom]` every render → Zustand's useSyncExternalStore saw a new reference → infinite re-render. Fixed by selecting `s.custom` (stable array) and computing `[...BUILTIN_PERSONALITIES, ...custom]` via `useMemo`. Same for `s.getActive()` → replaced with `s.activeId` + `useMemo` lookup.
+  - `DeveloperSettingsCard`: `useDeveloperModeStore((s) => ({...}))` created a new object every render → same infinite loop. Fixed by selecting each toggle individually (`s.showTokenUsage`, `s.showResponseTime`, etc.) and constructing the object in render.
+- **Fix 2: Theme switching broken (Light mode keeps Dark UI)**:
+  - Root cause: `body` had hardcoded dark `background-image` gradients (`oklch(0.3 0.15 290 / 0.35)`) that applied regardless of theme. Glass utilities used `oklch(1 0 0 / 0.07)` (white overlays) designed for dark backgrounds only.
+  - Fix: added `html.light body` background overrides (light oklch values), `html.light .glass/.glass-strong/.glass-card` overrides (dark overlays instead of white), `html.light .grid-bg` overrides, `html.light .gradient-border` override, and `html.light ::selection` color.
+  - Verified: clicking Light theme applies `html.light` class → body background changes → glass panels adapt.
+- **Fix 3: i18n not wired (Vietnamese selected but UI stays English)**:
+  - Root cause: locale files and `useT()` hook existed but no UI component actually called `t()` — all strings were hardcoded English.
+  - Wired `t()` into: app-shell (NAV labels → `t("common", "nav.*")`, topbar title → `t("common", titleKeyMap[view])`, quick search, New Analysis button), MobileNav (labels), command-palette (command labels), page.tsx (landing nav, footer nav), settings-view (title, subtitle, all 7 tab labels, Appearance/Language/Accessibility/Developer section headings), landing-view (hero badge, title, subtitle, CTA buttons, error message).
+  - NAV array refactored: `label` → `labelKey` (translation key), translated at render time.
+  - Fixed `Footer` component missing `useT()` (was crashing with "ReferenceError: t is not defined" because `t` was defined in `Home()` but `Footer` is a separate function).
+- Verified end-to-end via agent-browser: Settings page loads without crash, 7 tabs render, Appearance tab shows Theme/Accent/Density/Animation, clicking Light applies `html.light`, Language tab shows English + Tiếng Việt, clicking Tiếng Việt translates nav to Vietnamese ("Cài đặt" = Settings).
+- Lint clean. Committed as `345e70e`, pushed to GitHub.
+
+Stage Summary:
+- 3 critical bugs fixed: infinite loop crashes, theme switching, i18n wiring.
+- Settings page no longer crashes (selectors fixed).
+- Light theme now works (glass + body bg + grid adapt).
+- Language switching now works (nav, settings, landing all use t()).
+- i18n wired into: app-shell, command-palette, page.tsx, settings-view, landing-view.
+- Remaining: dashboard/analyze/chat/history/providers/personalities views still have some hardcoded English strings (i18n infrastructure is ready, can be wired incrementally).
