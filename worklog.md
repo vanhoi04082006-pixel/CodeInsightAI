@@ -387,3 +387,24 @@ Stage Summary:
 - Technical terms kept in English as requested.
 - i18n wired into: landing (100%), dashboard, analyze, chat, personalities, settings, providers, history.
 - Remaining: project report view (tabs/sections), some settings strings, debug panel — can be done incrementally.
+
+---
+Task ID: 11
+Agent: Z.ai Code (translate project report, settings, debug panel)
+Task: Translate the remaining views to Vietnamese, keeping technical terms in English.
+
+Work Log:
+- Expanded reports.json (en + vi) with 50+ keys covering all project report strings.
+- Expanded settings.json (en + vi) with 40+ keys covering profile, connected accounts, danger zone, AI config, analysis depth, notifications.
+- **Project report view**: tabs (Overview/Architecture/Bugs/Security/Performance/Dependencies/Code/Docs/Roadmap), health score, AI summary, key files stats, strengths/weaknesses, architecture layers, dead code, duplicates, all files, AI code explorer, generated diagrams, README/API docs, feature roadmap, monetization, technical debt, AI recommendation, no-report empty state, Markdown/Share buttons. Fixed variable shadowing (tab iterator `t` → `tab`).
+- **Settings view**: profile fields (display name, email, company, role), save changes, connected accounts (GitHub/Google descriptions, connect/disconnect), danger zone (delete account), analysis depth toggles (deep static, security scanning, embeddings, auto docs).
+- **Debug panel**: developer panel title, token usage, performance, model information, prompt debug, model capabilities, raw AI response, advanced debugging, request/response logs title + clear button.
+- All technical terms kept in English: API, URL, AST, embedding, clone, repository, dashboard, bug, security, performance, architecture, provider, personality, dead code, duplicate, dependency, graph, node, edge, etc.
+- Lint clean throughout. Verified: Vietnamese renders correctly on landing + settings with no hydration errors.
+- Committed as 19a11b1, pushed to GitHub.
+
+Stage Summary:
+- v3.4: ALL views now translated to Vietnamese.
+- i18n wired into: landing (100%), dashboard, analyze, chat, personalities, settings, providers, history, project report, debug panel.
+- Technical terms kept in English per user request.
+- SSR-safe cookie-based i18n architecture — no hydration mismatch.
