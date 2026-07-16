@@ -71,5 +71,17 @@
   "faqEyebrow": "FAQ",
   "faqTitle": "Questions, answered",
   "ctaTitle": "Ready to connect your AI?",
-  "ctaDesc": "Add your first provider and start analyzing repositories. No sign-up, no billing — just your keys."
+  "ctaDesc": "Add your first provider and start analyzing repositories. No sign-up, no billing — just your keys.",
+  "faqQ1": "Do I need to pay for CodeInsight AI?",
+  "faqA1": "No. CodeInsight AI is a local-first platform — there are no subscriptions, plans, or billing. You bring your own AI API keys (OpenAI, Anthropic, OpenRouter, etc.) or run a local model with Ollama. You only pay your AI provider directly for what you use.",
+  "faqQ2": "Where are my API keys stored?",
+  "faqA2": "Keys are stored only in your browser's local storage. They are never sent to CodeInsight servers, never logged, and never shared. You can clear them at any time from Settings.",
+  "faqQ3": "Can I use a local model like Ollama or LM Studio?",
+  "faqA3": "Yes. Add an Ollama or LM Studio provider with the local base URL (e.g. http://localhost:11434/v1). Your code is analysed entirely on your machine — nothing leaves your network.",
+  "faqQ4": "Can I use different models for different tasks?",
+  "faqA4": "Absolutely. The Feature → Model routing panel lets you assign each feature (chat, bug detection, docs, vision, refactoring) to a different provider and model. For example: Claude for bugs, GPT-4o for chat, DeepSeek for docs.",
+  "faqQ5": "Which providers are supported?",
+  "faqA5": "OpenRouter, OpenAI, Anthropic (Claude), Google Gemini, DeepSeek, Groq, Ollama, LM Studio, Azure OpenAI, Together AI, Fireworks AI, Mistral, xAI (Grok), and any OpenAI-compatible custom endpoint. You can connect unlimited providers.",
+  "faqQ6": "Can I analyze private repositories?",
+  "faqA6": "Yes. Because the analysis runs through your own AI keys and runs locally, private repos never pass through a third-party SaaS. Clone the repo locally and point CodeInsight at it, or paste a URL your provider can reach."
 }

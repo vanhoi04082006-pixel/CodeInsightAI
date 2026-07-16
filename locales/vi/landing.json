@@ -71,5 +71,17 @@
   "faqEyebrow": "Câu hỏi",
   "faqTitle": "Giải đáp thắc mắc",
   "ctaTitle": "Sẵn sàng kết nối AI?",
-  "ctaDesc": "Thêm nhà cung cấp đầu tiên và bắt đầu phân tích repository. Không đăng ký, không thanh toán — chỉ khóa của bạn."
+  "ctaDesc": "Thêm nhà cung cấp đầu tiên và bắt đầu phân tích repository. Không đăng ký, không thanh toán — chỉ khóa của bạn.",
+  "faqQ1": "Tôi có cần trả phí cho CodeInsight AI không?",
+  "faqA1": "Không. CodeInsight AI là nền tảng local-first — không có đăng ký, gói, hay thanh toán. Bạn mang API key của riêng mình (OpenAI, Anthropic, OpenRouter, v.v.) hoặc chạy mô hình local với Ollama. Bạn chỉ trả trực tiếp cho nhà cung cấp AI theo lượng sử dụng.",
+  "faqQ2": "API key được lưu ở đâu?",
+  "faqA2": "Key chỉ được lưu trong local storage của trình duyệt. Không bao giờ gửi đến server CodeInsight, không bao giờ ghi log, và không chia sẻ. Bạn có thể xóa bất cứ lúc nào từ Settings.",
+  "faqQ3": "Tôi có thể dùng mô hình local như Ollama hay LM Studio không?",
+  "faqA3": "Có. Thêm provider Ollama hoặc LM Studio với base URL local (vd: http://localhost:11434/v1). Code được phân tích hoàn toàn trên máy bạn — không gì rời khỏi mạng.",
+  "faqQ4": "Tôi có thể dùng mô hình khác cho từng tác vụ không?",
+  "faqA4": "Hoàn toàn được. Bảng Feature → Model routing cho phép gán từng feature (chat, bug detection, docs, vision, refactoring) cho provider và mô hình khác nhau. Ví dụ: Claude cho bugs, GPT-4o cho chat, DeepSeek cho docs.",
+  "faqQ5": "Những provider nào được hỗ trợ?",
+  "faqA5": "OpenRouter, OpenAI, Anthropic (Claude), Google Gemini, DeepSeek, Groq, Ollama, LM Studio, Azure OpenAI, Together AI, Fireworks AI, Mistral, xAI (Grok), và bất kỳ custom endpoint tương thích OpenAI. Bạn có thể kết nối không giới hạn provider.",
+  "faqQ6": "Tôi có thể phân tích private repository không?",
+  "faqA6": "Có. Vì phân tích chạy qua API key của riêng bạn và chạy local, private repo không bao giờ đi qua SaaS bên thứ ba. Clone repo local và trỏ CodeInsight vào, hoặc dán URL mà provider có thể truy cập."
 }
