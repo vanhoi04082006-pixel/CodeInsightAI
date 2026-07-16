@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { cookies } from "next/headers";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { Toaster as HotToaster } from "@/components/ui/toaster";
@@ -38,11 +39,17 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  // Read the language cookie on the SERVER so SSR and client render the
+  // same language — no hydration mismatch.
+  const cookieStore = await cookies();
+  const langCookie = cookieStore.get("codeinsight-lang")?.value;
+  const initialLocale: "en" | "vi" = langCookie === "vi" ? "vi" : "en";
+
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang={initialLocale} suppressHydrationWarning>
       <head>
         {/*
           SSR-safe i18n + theme initialization script.
@@ -136,7 +143,7 @@ export default function RootLayout({
             </filter>
           </defs>
         </svg>
-        <Providers>
+        <Providers initialLocale={initialLocale}>
           {children}
           <Toaster />
           <HotToaster />

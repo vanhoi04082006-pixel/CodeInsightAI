@@ -59,36 +59,18 @@ export const NAMESPACES = [
 export const COOKIE_NAME = "codeinsight-lang";
 
 /**
- * SSR-safe initial locale resolution.
+ * SSR-safe initial locale.
  *
- * Priority:
- * 1. Cookie (codeinsight-lang) — readable on both server (via document.cookie
- *    in the inline script) and client. This is the primary source of truth
- *    so server and client render the SAME language.
- * 2. Browser language (client only, first visit)
- * 3. "en" (default fallback)
+ * The store defaults to "en" on BOTH server and client. The actual locale
+ * is set synchronously by <Providers initialLocale={...}> before the first
+ * render, using the cookie value read on the server via next/headers.
  *
- * Because the inline <script> in layout.tsx sets the cookie before React
- * hydrates, document.cookie is always available when this runs on the client.
- * On the server (SSR), there's no document, so we default to "en" — but the
- * inline script will have already applied the correct locale to the store
- * via window.__CODEINSIGHT_LOCALE__ before React renders.
+ * This guarantees server and client render the SAME language — no hydration
+ * mismatch.
  */
 function getInitialLocale(): Locale {
-  // Client-side: read cookie first (works during hydration because the
-  // inline script in <head> runs before React)
-  if (typeof document !== "undefined") {
-    const match = document.cookie.match(new RegExp(`${COOKIE_NAME}=([^;]+)`));
-    if (match) {
-      const val = match[1] as Locale;
-      if (val === "en" || val === "vi") return val;
-    }
-    // No cookie yet — detect browser language (first visit only)
-    const browserLang = navigator.language.toLowerCase();
-    if (browserLang.startsWith("vi")) return "vi";
-  }
-  // Server-side: default to "en". The inline script will fix this on the
-  // client before React hydrates, preventing any mismatch.
+  // Always default to "en". The Providers component will set the correct
+  // locale from the server-read cookie before the first render.
   return "en";
 }
 
