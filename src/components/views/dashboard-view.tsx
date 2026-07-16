@@ -405,6 +405,7 @@ export function DashboardView() {
 }
 
 function EmptyDashboard() {
+  const { t } = useT();
   const setView = useAppStore((s) => s.setView);
   return (
     <div className="mx-auto flex min-h-[60vh] max-w-2xl flex-col items-center justify-center px-4 text-center">
@@ -422,7 +423,7 @@ function EmptyDashboard() {
             className="mt-6 bg-gradient-to-r from-cyan-500 to-violet-500 text-white hover:opacity-90"
           >
             <Sparkles className="mr-1.5 h-4 w-4" />
-            Analyze a repository
+            {t("dashboard", "fullReport")}
           </Button>
         </GlassCard>
       </motion.div>
