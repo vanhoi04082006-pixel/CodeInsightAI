@@ -3,7 +3,6 @@
 import { motion, useScroll, useTransform } from "framer-motion";
 import {
   ArrowRight,
-  GitBranch,
   ShieldCheck,
   Gauge,
   Network,
@@ -14,10 +13,8 @@ import {
   Zap,
   Check,
   ChevronDown,
-  Star,
   Github,
   ScanSearch,
-  Boxes,
   Lock,
   Rocket,
   Code2,
@@ -27,6 +24,10 @@ import {
   Terminal,
   Layers,
   GitMerge,
+  Plug,
+  KeyRound,
+  HardDrive,
+  Server,
 } from "lucide-react";
 import { AICore } from "@/components/3d/ai-core";
 import { GlassCard, SectionTitle, GradientText, NeonDivider, AnimatedCounter } from "@/components/shared/ui";
@@ -35,6 +36,7 @@ import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { useAppStore } from "@/lib/store";
 import { parseRepoUrl } from "@/lib/analysis-engine";
+import { PROVIDER_PRESETS } from "@/lib/providers";
 import {
   Accordion,
   AccordionContent,
@@ -58,68 +60,47 @@ const TECH_LOGOS = [
   { name: "Node.js", icon: Terminal, color: "#34d399" },
   { name: "Python", icon: Code2, color: "#fbbf24" },
   { name: "Go", icon: Cpu, color: "#60a5fa" },
-  { name: "Rust", icon: Boxes, color: "#fb923c" },
+  { name: "Rust", icon: Network, color: "#fb923c" },
   { name: "Vue", icon: Layers, color: "#34d399" },
   { name: "PostgreSQL", icon: Database, color: "#60a5fa" },
-  { name: "Docker", icon: Boxes, color: "#22d3ee" },
+  { name: "Docker", icon: Layers, color: "#22d3ee" },
   { name: "AWS", icon: Cloud, color: "#fbbf24" },
   { name: "GraphQL", icon: GitMerge, color: "#f472b6" },
 ];
 
 const STEPS = [
-  { n: "01", title: "Paste a Repo URL", desc: "Drop any public GitHub repository link. We handle the rest.", icon: Github },
-  { n: "02", title: "AI Clones & Scans", desc: "We clone, parse ASTs, build the dependency graph, and create embeddings.", icon: ScanSearch },
-  { n: "03", title: "Get a Full Report", desc: "Scores, bugs, security, architecture, performance — and an AI CTO ready to chat.", icon: Sparkles },
+  { n: "01", title: "Connect your AI", desc: "Add OpenRouter, OpenAI, Anthropic, or a local Ollama instance. Your keys stay in your browser.", icon: Plug },
+  { n: "02", title: "Paste a Repo URL", desc: "Drop any public GitHub repository link. We clone, parse ASTs, and build the dependency graph.", icon: Github },
+  { n: "03", title: "Get a Full Report", desc: "Scores, bugs, security, architecture, performance — and an AI ready to chat about your code.", icon: ScanSearch },
 ];
 
-const PRICING = [
-  {
-    name: "Hacker",
-    price: "$0",
-    period: "/mo",
-    desc: "For weekend projects and exploration.",
-    features: ["5 analyses / month", "Public repos only", "AI chat (standard model)", "Basic reports", "Community support"],
-    cta: "Start free",
-    highlight: false,
-  },
-  {
-    name: "Pro",
-    price: "$24",
-    period: "/mo",
-    desc: "For serious developers and small teams.",
-    features: ["Unlimited analyses", "Private repositories", "AI chat (GPT-4o + Claude)", "Full reports + PDF export", "Dependency graph export", "Priority support"],
-    cta: "Upgrade to Pro",
-    highlight: true,
-  },
-  {
-    name: "Team",
-    price: "$79",
-    period: "/mo",
-    desc: "For scaling engineering orgs.",
-    features: ["Everything in Pro", "Shared workspaces", "SSO & SAML", "Audit logs", "API access", "Dedicated support"],
-    cta: "Contact sales",
-    highlight: false,
-  },
+const LOCAL_PRINCIPLES = [
+  { icon: KeyRound, title: "Bring your own keys", desc: "Connect OpenRouter, OpenAI, Anthropic, Gemini, DeepSeek, Groq, Ollama, LM Studio, Azure, Together, Fireworks, Mistral, xAI, or any OpenAI-compatible API.", color: "#22d3ee" },
+  { icon: HardDrive, title: "You own your data", desc: "Analyses are stored locally in your browser. Nothing is sent to us — no telemetry, no servers in the middle.", color: "#34d399" },
+  { icon: Plug, title: "No subscriptions", desc: "No billing, no plans, no trials, no feature locks. Use whatever models and providers you already pay for.", color: "#a78bfa" },
+  { icon: Server, title: "Local models supported", desc: "Run entirely offline with Ollama or LM Studio. Your code never leaves your machine.", color: "#fbbf24" },
+];
+
+const FEATURE_ROUTING = [
+  { feature: "Bug Detection", model: "Claude 3.5 Sonnet", color: "#d97706" },
+  { feature: "Repository Chat", model: "GPT-4o", color: "#10a37f" },
+  { feature: "Documentation", model: "DeepSeek Coder", color: "#4d6bfe" },
+  { feature: "Vision / Images", model: "Gemini 1.5 Pro", color: "#4285f4" },
+  { feature: "Refactoring", model: "Qwen 2.5 72B", color: "#8b5cf6" },
+  { feature: "Security Audit", model: "Claude 3.5 Sonnet", color: "#d97706" },
 ];
 
 const FAQ = [
-  { q: "How does CodeInsight AI actually understand my code?", a: "We clone the repository, parse every file into an abstract syntax tree, build a dependency graph, and generate vector embeddings. The AI then reasons over this structured representation combined with static analysis output — the same way a senior engineer would, just faster and across the whole codebase at once." },
-  { q: "Can it analyze private repositories?", a: "Yes. On the Pro and Team plans you connect GitHub with scoped read access. We only read the repositories you authorize, never persist source code beyond the analysis, and you can revoke access at any time." },
-  { q: "Which AI models power the analysis?", a: "We route through OpenRouter so you get the best model for each task — GPT-4o and Claude for reasoning, DeepSeek for fast triage, and Gemini for long-context files. You can pick a default model in Settings." },
-  { q: "Is my source code used to train models?", a: "Never. We do not use your code for training, and our providers' enterprise agreements explicitly opt out of training on API traffic. Your code is analysed ephemerally and only the structured report is stored." },
-  { q: "What languages and frameworks are supported?", a: "All major languages including TypeScript, JavaScript, Python, Go, Rust, Java, C#, Ruby, PHP, and Swift. We auto-detect frameworks like React, Next.js, Vue, Django, Rails, Spring, and more." },
-  { q: "Can I export and share reports?", a: "Yes — reports export to PDF, Markdown, and HTML. You can also generate a shareable read-only link, perfect for code reviews and onboarding new engineers." },
-];
-
-const TESTIMONIALS = [
-  { name: "Sarah Chen", role: "Staff Engineer, Stripe", text: "It's like having a principal engineer on call. The architecture review caught coupling issues we'd been ignoring for years.", avatar: "SC", color: "#22d3ee" },
-  { name: "Marcus Rivera", role: "CTO, Linear", text: "We use CodeInsight on every acquisition diligence. 10 minutes instead of a week of code review.", avatar: "MR", color: "#a78bfa" },
-  { name: "Priya Nair", role: "Eng Lead, Vercel", text: "The AI chat is uncanny. It told me exactly which file to refactor and why. Saved my team a sprint.", avatar: "PN", color: "#f472b6" },
+  { q: "Do I need to pay for CodeInsight AI?", a: "No. CodeInsight AI is a local-first platform — there are no subscriptions, plans, or billing. You bring your own AI API keys (OpenAI, Anthropic, OpenRouter, etc.) or run a local model with Ollama. You only pay your AI provider directly for what you use." },
+  { q: "Where are my API keys stored?", a: "Keys are stored only in your browser's local storage. They are never sent to CodeInsight servers, never logged, and never shared. You can clear them at any time from Settings." },
+  { q: "Can I use a local model like Ollama or LM Studio?", a: "Yes. Add an Ollama or LM Studio provider with the local base URL (e.g. http://localhost:11434/v1). Your code is analysed entirely on your machine — nothing leaves your network." },
+  { q: "Can I use different models for different tasks?", a: "Absolutely. The Feature → Model routing panel lets you assign each feature (chat, bug detection, docs, vision, refactoring) to a different provider and model. For example: Claude for bugs, GPT-4o for chat, DeepSeek for docs." },
+  { q: "Which providers are supported?", a: "OpenRouter, OpenAI, Anthropic (Claude), Google Gemini, DeepSeek, Groq, Ollama, LM Studio, Azure OpenAI, Together AI, Fireworks AI, Mistral, xAI (Grok), and any OpenAI-compatible custom endpoint. You can connect unlimited providers." },
+  { q: "Can I analyze private repositories?", a: "Yes. Because the analysis runs through your own AI keys and runs locally, private repos never pass through a third-party SaaS. Clone the repo locally and point CodeInsight at it, or paste a URL your provider can reach." },
 ];
 
 export function LandingView() {
   const setView = useAppStore((s) => s.setView);
-  const setActiveReport = useAppStore((s) => s.setActiveReport);
   const [url, setUrl] = useState("");
   const [error, setError] = useState("");
   const { scrollYProgress } = useScroll();
@@ -139,7 +120,6 @@ export function LandingView() {
     <div className="relative">
       {/* ============ HERO ============ */}
       <section className="relative flex min-h-[calc(100vh-4rem)] flex-col items-center justify-center px-4 py-16">
-        {/* 3D AI Core */}
         <div className="pointer-events-none absolute inset-0 -z-0 flex items-center justify-center">
           <AICore className="h-[60vh] w-[60vh] max-h-[640px] max-w-[640px] opacity-90" />
         </div>
@@ -158,7 +138,7 @@ export function LandingView() {
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-cyan-400 opacity-75" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-cyan-400" />
             </span>
-            <span className="text-muted-foreground">Powered by GPT-4o · Claude · Gemini · DeepSeek</span>
+            <span className="text-muted-foreground">Local-first · Bring your own AI · No subscriptions</span>
           </motion.div>
 
           <motion.h1
@@ -178,8 +158,8 @@ export function LandingView() {
             transition={{ duration: 0.7, delay: 0.15 }}
             className="mt-6 max-w-2xl text-balance text-base text-muted-foreground md:text-xl"
           >
-            CodeInsight AI acts like your Senior Staff Engineer, Security Expert, and CTO combined.
-            Clone, scan, analyse, and chat with any codebase in seconds.
+            A local-first AI development platform. Connect your own AI APIs, analyze any repository,
+            and chat with your code like a Senior Staff Engineer. Your keys, your data, your models.
           </motion.p>
 
           {/* URL input */}
@@ -206,7 +186,7 @@ export function LandingView() {
                 className="group bg-gradient-to-r from-cyan-500 to-violet-500 text-white hover:opacity-90"
               >
                 <Sparkles className="mr-1.5 h-4 w-4" />
-                Start Analysis
+                Analyze Repo
                 <ArrowRight className="ml-1.5 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
               </Button>
             </div>
@@ -235,10 +215,10 @@ export function LandingView() {
             transition={{ duration: 0.7, delay: 0.4 }}
             className="mt-12 flex flex-wrap items-center justify-center gap-x-8 gap-y-2 text-xs text-muted-foreground"
           >
-            <span className="flex items-center gap-1.5"><Lock className="h-3.5 w-3.5" /> Private repos</span>
+            <span className="flex items-center gap-1.5"><KeyRound className="h-3.5 w-3.5" /> Use your own AI APIs</span>
+            <span className="flex items-center gap-1.5"><HardDrive className="h-3.5 w-3.5" /> Data stays with you</span>
             <span className="flex items-center gap-1.5"><Zap className="h-3.5 w-3.5" /> 60-second analysis</span>
-            <span className="flex items-center gap-1.5"><Boxes className="h-3.5 w-3.5" /> 40+ languages</span>
-            <span className="flex items-center gap-1.5"><Star className="h-3.5 w-3.5" /> 4.9/5 from 2,400+ devs</span>
+            <span className="flex items-center gap-1.5"><Plug className="h-3.5 w-3.5" /> 14 providers supported</span>
           </motion.div>
         </motion.div>
 
@@ -257,9 +237,9 @@ export function LandingView() {
         <div className="mx-auto max-w-5xl">
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
             {[
-              { value: 2400, suffix: "+", label: "Developers", color: "#22d3ee" },
-              { value: 185000, suffix: "+", label: "Lines analysed", color: "#a78bfa" },
-              { value: 99.9, suffix: "%", label: "Uptime", color: "#34d399", decimals: 1 },
+              { value: 14, suffix: "", label: "AI providers", color: "#22d3ee" },
+              { value: 40, suffix: "+", label: "Languages", color: "#a78bfa" },
+              { value: 0, suffix: "", label: "Subscriptions", color: "#34d399" },
               { value: 60, suffix: "s", label: "Avg. analysis", color: "#fbbf24" },
             ].map((s, i) => (
               <motion.div
@@ -274,7 +254,7 @@ export function LandingView() {
                   className="text-3xl font-bold md:text-4xl"
                   style={{ color: s.color, textShadow: `0 0 20px ${s.color}40` }}
                 >
-                  <AnimatedCounter value={s.value} suffix={s.suffix} decimals={s.decimals ?? 0} />
+                  <AnimatedCounter value={s.value} suffix={s.suffix} />
                 </div>
                 <p className="mt-1 text-xs uppercase tracking-wider text-muted-foreground">{s.label}</p>
               </motion.div>
@@ -301,6 +281,43 @@ export function LandingView() {
                   <Icon className="h-5 w-5" />
                   <span className="text-sm font-medium text-foreground/80">{t.name}</span>
                 </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ============ LOCAL-FIRST PRINCIPLES ============ */}
+      <section className="relative px-4 py-24">
+        <div className="mx-auto max-w-6xl">
+          <SectionTitle
+            center
+            eyebrow="Local-first"
+            title={<>Your keys. Your data. <GradientText>Your AI.</GradientText></>}
+            description="CodeInsight AI is not a SaaS. It's a self-hosted AI workspace — like Open WebUI or Continue.dev, built for repository analysis."
+          />
+          <div className="mt-14 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
+            {LOCAL_PRINCIPLES.map((p, i) => {
+              const Icon = p.icon;
+              return (
+                <motion.div
+                  key={p.title}
+                  initial={{ opacity: 0, y: 24 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: "-80px" }}
+                  transition={{ duration: 0.5, delay: i * 0.06 }}
+                >
+                  <GlassCard hover className="group h-full p-6">
+                    <div
+                      className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl"
+                      style={{ background: `${p.color}1a`, border: `1px solid ${p.color}33` }}
+                    >
+                      <Icon className="h-6 w-6" style={{ color: p.color }} />
+                    </div>
+                    <h3 className="text-base font-semibold">{p.title}</h3>
+                    <p className="mt-2 text-sm text-muted-foreground">{p.desc}</p>
+                  </GlassCard>
+                </motion.div>
               );
             })}
           </div>
@@ -354,8 +371,8 @@ export function LandingView() {
           <SectionTitle
             center
             eyebrow="Workflow"
-            title={<>From URL to <GradientText>AI CTO</GradientText> in 60 seconds</>}
-            description="A multi-stage pipeline that mirrors how a senior engineer actually onboards to a codebase."
+            title={<>From keys to <GradientText>AI CTO</GradientText> in 60 seconds</>}
+            description="A simple workflow: connect your AI, paste a repo, get a full report."
           />
           <div className="mt-14 grid gap-6 md:grid-cols-3">
             {STEPS.map((s, i) => {
@@ -389,7 +406,7 @@ export function LandingView() {
 
           {/* pipeline chips */}
           <div className="mt-12 flex flex-wrap items-center justify-center gap-2">
-            {["Clone", "Scan", "Detect Languages", "Detect Frameworks", "AST", "Dependency Graph", "Embeddings", "Static Analysis", "AI Analysis", "Reports", "Chat Ready"].map((step, i) => (
+            {["Connect AI", "Paste URL", "Clone", "Scan", "AST", "Dependency Graph", "Embeddings", "Static Analysis", "AI Analysis", "Reports", "Chat Ready"].map((step, i) => (
               <motion.span
                 key={step}
                 initial={{ opacity: 0, scale: 0.9 }}
@@ -405,105 +422,83 @@ export function LandingView() {
         </div>
       </section>
 
-      {/* ============ TESTIMONIALS ============ */}
+      {/* ============ FEATURE ROUTING ============ */}
       <section className="relative px-4 py-24">
-        <div className="mx-auto max-w-6xl">
+        <div className="mx-auto max-w-5xl">
           <SectionTitle
             center
-            eyebrow="Loved by engineers"
-            title={<>Trusted by teams that <GradientText>ship fast</GradientText></>}
+            eyebrow="Multi-model routing"
+            title={<>Different models for <GradientText>different jobs</GradientText></>}
+            description="Route each feature to the model that does it best. Switch providers freely — no lock-in."
           />
-          <div className="mt-14 grid gap-5 md:grid-cols-3">
-            {TESTIMONIALS.map((t, i) => (
+          <div className="mt-12 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {FEATURE_ROUTING.map((r, i) => (
               <motion.div
-                key={t.name}
-                initial={{ opacity: 0, y: 24 }}
+                key={r.feature}
+                initial={{ opacity: 0, y: 16 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: i * 0.08 }}
+                transition={{ delay: i * 0.05 }}
               >
-                <GlassCard className="h-full p-6">
-                  <div className="flex gap-1">
-                    {Array.from({ length: 5 }).map((_, j) => (
-                      <Star key={j} className="h-4 w-4 fill-amber-400 text-amber-400" />
-                    ))}
+                <GlassCard className="flex items-center gap-3 p-4">
+                  <div
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg font-mono text-xs font-bold"
+                    style={{ background: `${r.color}1a`, color: r.color, border: `1px solid ${r.color}33` }}
+                  >
+                    {r.feature.slice(0, 2).toUpperCase()}
                   </div>
-                  <p className="mt-4 text-sm leading-relaxed text-foreground/90">"{t.text}"</p>
-                  <div className="mt-5 flex items-center gap-3">
-                    <div
-                      className="flex h-10 w-10 items-center justify-center rounded-full text-xs font-bold"
-                      style={{ background: `${t.color}22`, color: t.color, border: `1px solid ${t.color}44` }}
-                    >
-                      {t.avatar}
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold">{t.name}</p>
-                      <p className="text-xs text-muted-foreground">{t.role}</p>
-                    </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium">{r.feature}</p>
+                    <p className="truncate text-[11px] text-muted-foreground">{r.model}</p>
                   </div>
+                  <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
                 </GlassCard>
               </motion.div>
             ))}
           </div>
+          <div className="mt-8 text-center">
+            <Button onClick={() => setView("providers")} variant="outline">
+              <Plug className="mr-1.5 h-4 w-4" /> Configure routing
+            </Button>
+          </div>
         </div>
       </section>
 
-      {/* ============ PRICING ============ */}
+      {/* ============ PROVIDERS GRID ============ */}
       <section className="relative px-4 py-24">
         <div className="mx-auto max-w-6xl">
           <SectionTitle
             center
-            eyebrow="Pricing"
-            title={<>Start free. <GradientText>Scale when ready.</GradientText></>}
-            description="No credit card required to start. Cancel anytime."
+            eyebrow="Supported providers"
+            title={<>Connect <GradientText>any AI</GradientText> you already use</>}
+            description="14 providers supported out of the box, plus any OpenAI-compatible endpoint."
           />
-          <div className="mt-14 grid gap-5 md:grid-cols-3">
-            {PRICING.map((p, i) => (
-              <motion.div
-                key={p.name}
-                initial={{ opacity: 0, y: 24 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: i * 0.08 }}
-              >
-                <GlassCard
-                  strong={p.highlight}
-                  className={p.highlight ? "relative h-full overflow-hidden p-6 neon-border-cyan" : "h-full p-6"}
+          <div className="mt-12 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+            {PROVIDER_PRESETS.map((p, i) => {
+              const Icon = p.local ? HardDrive : p.category === "Aggregator" ? Server : Cloud;
+              return (
+                <motion.button
+                  key={p.providerId}
+                  onClick={() => setView("providers")}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  whileInView={{ opacity: 1, scale: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.03 }}
+                  className="group flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.02] p-3 text-left transition hover:border-cyan-400/40 hover:bg-white/[0.04]"
                 >
-                  {p.highlight && (
-                    <div className="absolute -right-10 top-6 rotate-45 bg-gradient-to-r from-cyan-500 to-violet-500 px-10 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
-                      Popular
-                    </div>
-                  )}
-                  <h3 className="text-lg font-semibold">{p.name}</h3>
-                  <p className="mt-1 text-sm text-muted-foreground">{p.desc}</p>
-                  <div className="mt-4 flex items-baseline gap-1">
-                    <span className="text-4xl font-bold">{p.price}</span>
-                    <span className="text-sm text-muted-foreground">{p.period}</span>
-                  </div>
-                  <Button
-                    onClick={() => setView("pricing")}
-                    className={`mt-5 w-full ${
-                      p.highlight
-                        ? "bg-gradient-to-r from-cyan-500 to-violet-500 text-white hover:opacity-90"
-                        : ""
-                    }`}
-                    variant={p.highlight ? "default" : "outline"}
+                  <div
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
+                    style={{ background: `${p.accent}1a`, color: p.accent, border: `1px solid ${p.accent}33` }}
                   >
-                    {p.cta}
-                  </Button>
-                  <NeonDivider className="my-5" />
-                  <ul className="space-y-2.5">
-                    {p.features.map((f) => (
-                      <li key={f} className="flex items-start gap-2 text-sm">
-                        <Check className="mt-0.5 h-4 w-4 shrink-0 text-cyan-400" />
-                        <span className="text-foreground/85">{f}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </GlassCard>
-              </motion.div>
-            ))}
+                    <Icon className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">{p.name}</p>
+                    <p className="truncate text-[10px] text-muted-foreground">{p.category}</p>
+                  </div>
+                </motion.button>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -537,22 +532,26 @@ export function LandingView() {
           <GlassCard strong className="relative overflow-hidden p-10 text-center md:p-16">
             <div className="absolute -left-10 -top-10 h-40 w-40 rounded-full bg-cyan-500/20 blur-3xl" />
             <div className="absolute -bottom-10 -right-10 h-40 w-40 rounded-full bg-violet-500/20 blur-3xl" />
-            <Rocket className="relative mx-auto h-10 w-10 text-cyan-300" />
+            <Plug className="relative mx-auto h-10 w-10 text-cyan-300" />
             <h2 className="relative mt-4 text-3xl font-bold md:text-4xl">
-              Ready to <GradientText>understand any codebase?</GradientText>
+              Ready to <GradientText>connect your AI?</GradientText>
             </h2>
             <p className="relative mx-auto mt-3 max-w-xl text-muted-foreground">
-              Join thousands of developers using CodeInsight AI to ship better code, faster.
+              Add your first provider and start analyzing repositories. No sign-up, no billing — just your keys.
             </p>
-            <Button
-              onClick={() => setView("analyze")}
-              size="lg"
-              className="relative mt-6 bg-gradient-to-r from-cyan-500 to-violet-500 text-white hover:opacity-90"
-            >
-              <Sparkles className="mr-1.5 h-4 w-4" />
-              Analyze your first repo — free
-              <ArrowRight className="ml-1.5 h-4 w-4" />
-            </Button>
+            <div className="relative mt-6 flex flex-col items-center justify-center gap-2 sm:flex-row">
+              <Button
+                onClick={() => setView("providers")}
+                size="lg"
+                className="bg-gradient-to-r from-cyan-500 to-violet-500 text-white hover:opacity-90"
+              >
+                <Plug className="mr-1.5 h-4 w-4" /> Connect Your AI
+                <ArrowRight className="ml-1.5 h-4 w-4" />
+              </Button>
+              <Button onClick={() => setView("analyze")} size="lg" variant="outline">
+                <Github className="mr-1.5 h-4 w-4" /> Analyze a repo
+              </Button>
+            </div>
           </GlassCard>
         </div>
       </section>
