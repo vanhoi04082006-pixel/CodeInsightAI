@@ -24,8 +24,16 @@ import {
   ScrollText,
   ListChecks,
   FileSearch,
+  Globe,
+  Eye,
+  Sun,
+  Moon,
+  Monitor,
+  Gauge,
 } from "lucide-react";
 import { GlassCard, GradientText, NeonDivider } from "@/components/shared/ui";
+import { ThemeSwitcher } from "@/components/shared/theme-switcher";
+import { LanguageSwitcher } from "@/components/shared/language-switcher";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -42,6 +50,8 @@ import { useAppStore } from "@/lib/store";
 import { usePersonalityStore } from "@/lib/personality-store";
 import { useProvidersStore } from "@/lib/providers-store";
 import { useDeveloperModeStore } from "@/lib/developer-mode-store";
+import { usePersonalizationStore, ACCENTS, type AccentColor, type AnimationLevel, type UIDensity, type FontSize, type ColorBlindMode } from "@/lib/personalization-store";
+import { useI18nStore, SUPPORTED_LOCALES } from "@/lib/i18n";
 import { BUILTIN_PERSONALITIES } from "@/lib/personalities";
 import { PRESET_BY_ID, PROVIDER_PRESETS, FEATURE_LABELS } from "@/lib/providers";
 import { toast } from "sonner";
@@ -63,12 +73,14 @@ export function SettingsView() {
 
       <div className="mt-6">
         <Tabs defaultValue="account">
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5">
-            <TabsTrigger value="account" className="gap-1.5"><User className="h-3.5 w-3.5" /> Account</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:grid-cols-7">
+            <TabsTrigger value="account" className="gap-1.5"><User className="h-3.5 w-3.5" /> <span className="hidden lg:inline">Account</span></TabsTrigger>
             <TabsTrigger value="ai" className="gap-1.5"><Cpu className="h-3.5 w-3.5" /> AI</TabsTrigger>
-            <TabsTrigger value="developer" className="gap-1.5"><Terminal className="h-3.5 w-3.5" /> Developer</TabsTrigger>
-            <TabsTrigger value="notifications" className="gap-1.5"><Bell className="h-3.5 w-3.5" /> Alerts</TabsTrigger>
-            <TabsTrigger value="appearance" className="gap-1.5"><Palette className="h-3.5 w-3.5" /> Theme</TabsTrigger>
+            <TabsTrigger value="appearance" className="gap-1.5"><Palette className="h-3.5 w-3.5" /> <span className="hidden lg:inline">Appearance</span></TabsTrigger>
+            <TabsTrigger value="language" className="gap-1.5"><Globe className="h-3.5 w-3.5" /> <span className="hidden lg:inline">Language</span></TabsTrigger>
+            <TabsTrigger value="accessibility" className="gap-1.5"><Eye className="h-3.5 w-3.5" /> <span className="hidden lg:inline">Accessibility</span></TabsTrigger>
+            <TabsTrigger value="developer" className="gap-1.5"><Terminal className="h-3.5 w-3.5" /> <span className="hidden lg:inline">Developer</span></TabsTrigger>
+            <TabsTrigger value="notifications" className="gap-1.5"><Bell className="h-3.5 w-3.5" /> <span className="hidden lg:inline">Alerts</span></TabsTrigger>
           </TabsList>
 
           {/* Account */}
@@ -217,37 +229,18 @@ export function SettingsView() {
           </TabsContent>
 
           {/* Appearance */}
-          <TabsContent value="appearance" className="mt-4">
-            <GlassCard className="p-6">
-              <h3 className="flex items-center gap-2 text-sm font-semibold"><Palette className="h-4 w-4 text-cyan-300" /> Theme</h3>
-              <div className="mt-4 grid grid-cols-3 gap-3">
-                {[
-                  { id: "dark", name: "Cyber Dark", preview: "from-slate-900 to-violet-950" },
-                  { id: "midnight", name: "Midnight", preview: "from-slate-950 to-cyan-950" },
-                  { id: "aurora", name: "Aurora", preview: "from-violet-900 to-cyan-900" },
-                ].map((t) => (
-                  <button
-                    key={t.id}
-                    onClick={() => { setTheme(t.id); toast.success(`Theme: ${t.name}`); }}
-                    className={cn(
-                      "overflow-hidden rounded-xl border-2 transition",
-                      theme === t.id ? "border-cyan-400" : "border-white/10 hover:border-white/20"
-                    )}
-                  >
-                    <div className={cn("h-20 bg-gradient-to-br", t.preview)} />
-                    <div className="p-2 text-center">
-                      <p className="text-xs font-medium">{t.name}</p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-              <NeonDivider className="my-4" />
-              <div className="space-y-3">
-                <ToggleRow label="Reduced motion" desc="Minimise animations for accessibility." />
-                <ToggleRow label="Compact mode" desc="Denser spacing for power users." />
-                <ToggleRow label="Show grid background" desc="Display the neural-network background." defaultChecked />
-              </div>
-            </GlassCard>
+          <TabsContent value="appearance" className="mt-4 space-y-4">
+            <AppearanceSettingsCard />
+          </TabsContent>
+
+          {/* Language */}
+          <TabsContent value="language" className="mt-4 space-y-4">
+            <LanguageSettingsCard />
+          </TabsContent>
+
+          {/* Accessibility */}
+          <TabsContent value="accessibility" className="mt-4 space-y-4">
+            <AccessibilitySettingsCard />
           </TabsContent>
         </Tabs>
       </div>
@@ -496,6 +489,205 @@ function DeveloperSettingsCard() {
           </GlassCard>
         </>
       )}
+    </>
+  );
+}
+
+/* ---------- Appearance Settings Card (theme / accent / density / animation) ---------- */
+function AppearanceSettingsCard() {
+  const { theme, accent, density, animation, setTheme, setAccent, setDensity, setAnimation } = usePersonalizationStore();
+  return (
+    <>
+      <GlassCard strong className="p-6">
+        <h3 className="flex items-center gap-2 text-sm font-semibold"><Palette className="h-4 w-4 text-cyan-300" /> Theme</h3>
+        <p className="mt-1 text-xs text-muted-foreground">Light, Dark, or follow the operating system. Default: System.</p>
+        <div className="mt-4">
+          <ThemeSwitcher />
+        </div>
+      </GlassCard>
+
+      <GlassCard className="p-6">
+        <h3 className="flex items-center gap-2 text-sm font-semibold"><Sparkles className="h-4 w-4 text-violet-300" /> Accent Color</h3>
+        <p className="mt-1 text-xs text-muted-foreground">Updates buttons, links, icons, charts, AI Core glow, and focus states instantly.</p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          {ACCENTS.map((a) => (
+            <button
+              key={a.id}
+              onClick={() => { setAccent(a.id); toast.success(`Accent: ${a.name}`); }}
+              className={cn(
+                "group relative flex h-12 w-12 items-center justify-center rounded-xl border-2 transition",
+                accent === a.id ? "border-foreground" : "border-white/10 hover:border-white/30"
+              )}
+              style={{ background: a.color }}
+              title={a.name}
+            >
+              {accent === a.id && <Check className="h-4 w-4 text-white drop-shadow" />}
+            </button>
+          ))}
+        </div>
+      </GlassCard>
+
+      <GlassCard className="p-6">
+        <h3 className="flex items-center gap-2 text-sm font-semibold"><Gauge className="h-4 w-4 text-emerald-400" /> UI Density</h3>
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          {([
+            { id: "comfortable", name: "Comfortable", desc: "Larger spacing, better readability" },
+            { id: "compact", name: "Compact", desc: "Denser, more information visible" },
+          ] as const).map((d) => (
+            <button
+              key={d.id}
+              onClick={() => { setDensity(d.id); toast.success(`Density: ${d.name}`); }}
+              className={cn(
+                "rounded-xl border p-4 text-left transition",
+                density === d.id ? "border-cyan-400/40 bg-cyan-400/[0.06]" : "border-white/10 bg-white/[0.02] hover:border-white/20"
+              )}
+            >
+              <p className="text-sm font-medium">{d.name}</p>
+              <p className="mt-1 text-[11px] text-muted-foreground">{d.desc}</p>
+            </button>
+          ))}
+        </div>
+      </GlassCard>
+
+      <GlassCard className="p-6">
+        <h3 className="flex items-center gap-2 text-sm font-semibold"><Zap className="h-4 w-4 text-amber-400" /> Animation Level</h3>
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+          {([
+            { id: "ultra", name: "Ultra", desc: "Full 3D, particles, bloom, blur" },
+            { id: "balanced", name: "Balanced", desc: "Reduced particles, better perf" },
+            { id: "performance", name: "Performance", desc: "No shaders, static background" },
+          ] as const).map((a) => (
+            <button
+              key={a.id}
+              onClick={() => { setAnimation(a.id); toast.success(`Animation: ${a.name}`); }}
+              className={cn(
+                "rounded-xl border p-4 text-left transition",
+                animation === a.id ? "border-cyan-400/40 bg-cyan-400/[0.06]" : "border-white/10 bg-white/[0.02] hover:border-white/20"
+              )}
+            >
+              <p className="text-sm font-medium">{a.name}</p>
+              <p className="mt-1 text-[11px] text-muted-foreground">{a.desc}</p>
+            </button>
+          ))}
+        </div>
+      </GlassCard>
+    </>
+  );
+}
+
+/* ---------- Language Settings Card ---------- */
+function LanguageSettingsCard() {
+  const locale = useI18nStore((s) => s.locale);
+  const setLocale = useI18nStore((s) => s.setLocale);
+  return (
+    <GlassCard strong className="p-6">
+      <h3 className="flex items-center gap-2 text-sm font-semibold"><Globe className="h-4 w-4 text-cyan-300" /> Language</h3>
+      <p className="mt-1 text-xs text-muted-foreground">
+        The selected language affects all UI text and AI responses. Auto-detected on first launch.
+      </p>
+      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {SUPPORTED_LOCALES.map((l) => (
+          <button
+            key={l.id}
+            onClick={() => { setLocale(l.id); toast.success(`Language: ${l.label}`); }}
+            className={cn(
+              "flex items-center gap-3 rounded-xl border p-4 transition",
+              locale === l.id ? "border-cyan-400/40 bg-cyan-400/[0.06]" : "border-white/10 bg-white/[0.02] hover:border-white/20"
+            )}
+          >
+            <span className="text-3xl">{l.flag}</span>
+            <div className="flex-1">
+              <p className="text-sm font-medium">{l.label}</p>
+              <p className="text-[11px] text-muted-foreground">{l.id === "en" ? "English" : "Tiếng Việt"}</p>
+            </div>
+            {locale === l.id && <Check className="h-4 w-4 text-emerald-400" />}
+          </button>
+        ))}
+      </div>
+    </GlassCard>
+  );
+}
+
+/* ---------- Accessibility Settings Card ---------- */
+function AccessibilitySettingsCard() {
+  const { fontSize, reducedMotion, highContrast, colorBlind, setFontSize, setReducedMotion, setHighContrast, setColorBlind } = usePersonalizationStore();
+  const fontSizes: { id: FontSize; label: string }[] = [
+    { id: "sm", label: "Small" },
+    { id: "base", label: "Default" },
+    { id: "lg", label: "Large" },
+  ];
+  const cbModes: { id: ColorBlindMode; label: string }[] = [
+    { id: "none", label: "None" },
+    { id: "protanopia", label: "Protanopia" },
+    { id: "deuteranopia", label: "Deuteranopia" },
+    { id: "tritanopia", label: "Tritanopia" },
+  ];
+  return (
+    <>
+      <GlassCard strong className="p-6">
+        <h3 className="flex items-center gap-2 text-sm font-semibold"><Eye className="h-4 w-4 text-cyan-300" /> Accessibility</h3>
+        <p className="mt-1 text-xs text-muted-foreground">Customize the app for your vision and motion preferences.</p>
+
+        {/* Font size */}
+        <div className="mt-4">
+          <label className="text-xs font-medium text-muted-foreground">Font Size</label>
+          <div className="mt-2 grid grid-cols-3 gap-2">
+            {fontSizes.map((f) => (
+              <button
+                key={f.id}
+                onClick={() => { setFontSize(f.id); toast.success(`Font size: ${f.label}`); }}
+                className={cn(
+                  "rounded-lg border py-2 text-sm transition",
+                  fontSize === f.id ? "border-cyan-400/40 bg-cyan-400/[0.06] text-foreground" : "border-white/10 bg-white/[0.02] text-muted-foreground hover:text-foreground"
+                )}
+                style={{ fontSize: f.id === "sm" ? "13px" : f.id === "lg" ? "18px" : "16px" }}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <NeonDivider className="my-4" />
+
+        {/* Toggles */}
+        <div className="space-y-3">
+          <ToggleRow
+            label="Reduced Motion"
+            desc="Minimise animations and transitions."
+            checked={reducedMotion}
+            onCheckedChange={(v) => { setReducedMotion(v); toast.success(v ? "Reduced motion on" : "Reduced motion off"); }}
+          />
+          <ToggleRow
+            label="High Contrast"
+            desc="Stronger borders and text contrast."
+            checked={highContrast}
+            onCheckedChange={(v) => { setHighContrast(v); toast.success(v ? "High contrast on" : "High contrast off"); }}
+          />
+        </div>
+
+        <NeonDivider className="my-4" />
+
+        {/* Color blind mode */}
+        <div>
+          <label className="text-xs font-medium text-muted-foreground">Color Blind Mode</label>
+          <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {cbModes.map((c) => (
+              <button
+                key={c.id}
+                onClick={() => { setColorBlind(c.id); toast.success(`Color blind: ${c.label}`); }}
+                className={cn(
+                  "rounded-lg border py-2 text-xs transition",
+                  colorBlind === c.id ? "border-cyan-400/40 bg-cyan-400/[0.06] text-foreground" : "border-white/10 bg-white/[0.02] text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {c.label}
+              </button>
+            ))}
+          </div>
+          <p className="mt-2 text-[10px] text-muted-foreground">Applies an SVG color-correction filter to the whole app.</p>
+        </div>
+      </GlassCard>
     </>
   );
 }

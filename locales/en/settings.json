@@ -1,0 +1,73 @@
+{
+  "title": "Settings",
+  "subtitle": "Manage your account, AI models, and preferences.",
+  "tabs": {
+    "account": "Account",
+    "ai": "AI",
+    "developer": "Developer",
+    "appearance": "Appearance",
+    "language": "Language",
+    "accessibility": "Accessibility",
+    "notifications": "Alerts",
+    "theme": "Theme"
+  },
+  "appearance": {
+    "theme": "Theme",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "themeSystem": "System",
+    "accentColor": "Accent Color",
+    "uiDensity": "UI Density",
+    "densityComfortable": "Comfortable",
+    "densityCompact": "Compact",
+    "animationLevel": "Animation Level",
+    "animUltra": "Ultra",
+    "animBalanced": "Balanced",
+    "animPerformance": "Performance"
+  },
+  "language": {
+    "title": "Language",
+    "english": "English",
+    "vietnamese": "Tiếng Việt",
+    "autoDetect": "Auto-detect on first launch"
+  },
+  "accessibility": {
+    "title": "Accessibility",
+    "fontSize": "Font Size",
+    "fontSm": "Small",
+    "fontBase": "Default",
+    "fontLg": "Large",
+    "reducedMotion": "Reduced Motion",
+    "highContrast": "High Contrast",
+    "colorBlindMode": "Color Blind Mode",
+    "cbNone": "None",
+    "cbProtanopia": "Protanopia",
+    "cbDeuteranopia": "Deuteranopia",
+    "cbTritanopia": "Tritanopia"
+  },
+  "developer": {
+    "title": "Developer Mode",
+    "subtitle": "For advanced users. Displays an expandable Developer Panel in the AI Chat.",
+    "securityNote": "API keys, tokens, and credentials are automatically masked in all debug output.",
+    "showTokenUsage": "Show Token Usage",
+    "showResponseTime": "Show API Response Time",
+    "showPromptDebug": "Show Prompt Debug",
+    "showModelDebug": "Show Model Debug",
+    "showRawResponse": "Show Raw AI Response",
+    "showRequestLogs": "Show Request Logs",
+    "showResponseLogs": "Show Response Logs",
+    "showAdvancedDebug": "Show Advanced Debug",
+    "clearLogs": "Clear request logs",
+    "clearSnapshots": "Clear debug snapshots"
+  },
+  "ai": {
+    "providers": "AI Providers",
+    "personality": "AI Personality",
+    "configuration": "AI Configuration",
+    "provider": "Provider (for chat)",
+    "model": "Model",
+    "temperature": "Temperature",
+    "maxTokens": "Max tokens",
+    "analysisDepth": "Analysis depth"
+  }
+}

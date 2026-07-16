@@ -1,0 +1,1 @@
+{ "invalidUrl": "Enter a valid GitHub URL", "chatFailed": "The AI couldn't respond. Please try again.", "noRepo": "Analyze a repository first", "providerKeyShort": "API key looks too short", "connectionFailed": "Connection test failed", "importFailed": "Invalid JSON file" }

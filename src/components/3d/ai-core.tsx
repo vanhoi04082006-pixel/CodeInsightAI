@@ -6,9 +6,12 @@ import { EffectComposer, Bloom, ChromaticAberration } from "@react-three/postpro
 import { BlendFunction } from "postprocessing";
 import { useMemo, useRef, useState, useEffect } from "react";
 import * as THREE from "three";
+import { usePersonalizationStore, ACCENT_PALETTES } from "@/lib/personalization-store";
+
+type AccentPalette = { primary: string; accent: string; ring: string; glow: string };
 
 /* ---------- Core orb ---------- */
-function CoreOrb({ active }: { active: boolean }) {
+function CoreOrb({ active, accent }: { active: boolean; accent: AccentPalette }) {
   const mesh = useRef<THREE.Mesh>(null!);
   const inner = useRef<THREE.Mesh>(null!);
   const ring1 = useRef<THREE.Mesh>(null!);
@@ -42,8 +45,8 @@ function CoreOrb({ active }: { active: boolean }) {
       {/* Outer distorted shell */}
       <Icosahedron ref={mesh} args={[1.35, 4]}>
         <MeshDistortMaterial
-          color={active ? "#22d3ee" : "#7c3aed"}
-          emissive={active ? "#06b6d4" : "#6d28d9"}
+          color={accent.primary}
+          emissive={accent.primary}
           emissiveIntensity={active ? 0.9 : 0.5}
           roughness={0.15}
           metalness={0.6}
@@ -56,15 +59,15 @@ function CoreOrb({ active }: { active: boolean }) {
 
       {/* Inner glowing core */}
       <Sphere ref={inner} args={[0.55, 32, 32]}>
-        <meshBasicMaterial color={active ? "#67e8f9" : "#c4b5fd"} toneMapped={false} />
+        <meshBasicMaterial color={accent.accent} toneMapped={false} />
       </Sphere>
 
       {/* Orbiting rings */}
       <Torus ref={ring1} args={[2.1, 0.012, 16, 100]}>
-        <meshBasicMaterial color="#22d3ee" transparent opacity={0.6} toneMapped={false} />
+        <meshBasicMaterial color={accent.primary} transparent opacity={0.6} toneMapped={false} />
       </Torus>
       <Torus ref={ring2} args={[2.6, 0.008, 16, 100]} rotation={[Math.PI / 3, 0, 0]}>
-        <meshBasicMaterial color="#d946ef" transparent opacity={0.5} toneMapped={false} />
+        <meshBasicMaterial color={accent.accent} transparent opacity={0.5} toneMapped={false} />
       </Torus>
 
       {/* Sparkle field */}
@@ -74,7 +77,7 @@ function CoreOrb({ active }: { active: boolean }) {
         size={2}
         speed={active ? 0.6 : 0.2}
         opacity={0.7}
-        color={active ? "#67e8f9" : "#a78bfa"}
+        color={accent.accent}
       />
     </group>
   );
@@ -155,8 +158,32 @@ export function AICore({
     setMounted(true);
   }, []);
 
+  // Read personalization: accent color + animation level
+  const accent = usePersonalizationStore((s) => s.accent);
+  const animation = usePersonalizationStore((s) => s.animation);
+  const palette = ACCENT_PALETTES[accent];
+  const perfMode = animation === "performance";
+  const particleCount = perfMode ? 0 : animation === "balanced" ? 300 : 600;
+
   if (!mounted) {
     return <div className={className} />;
+  }
+
+  // Performance mode: render a static gradient placeholder instead of WebGL
+  if (perfMode) {
+    return (
+      <div
+        className={className}
+        style={{
+          background: `radial-gradient(circle at 50% 50%, ${palette.glow}, transparent 60%)`,
+        }}
+      >
+        <div
+          className="absolute left-1/2 top-1/2 h-32 w-32 -translate-x-1/2 -translate-y-1/2 rounded-full"
+          style={{ background: palette.primary, opacity: 0.3, filter: "blur(40px)" }}
+        />
+      </div>
+    );
   }
 
   return (
@@ -167,30 +194,32 @@ export function AICore({
         gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
       >
         <ambientLight intensity={0.4} />
-        <pointLight position={[5, 5, 5]} intensity={1.2} color="#22d3ee" />
-        <pointLight position={[-5, -3, 2]} intensity={0.8} color="#d946ef" />
-        <pointLight position={[0, 0, 4]} intensity={0.6} color="#a78bfa" />
+        <pointLight position={[5, 5, 5]} intensity={1.2} color={palette.primary} />
+        <pointLight position={[-5, -3, 2]} intensity={0.8} color={palette.accent} />
+        <pointLight position={[0, 0, 4]} intensity={0.6} color={palette.accent} />
 
         <ParallaxRig />
         <Float speed={1.4} rotationIntensity={0.4} floatIntensity={0.6}>
-          <CoreOrb active={active} />
+          <CoreOrb active={active} accent={palette} />
         </Float>
-        <Particles count={600} />
+        {particleCount > 0 && <Particles count={particleCount} />}
 
-        <EffectComposer>
-          <Bloom
-            intensity={active ? 1.6 : 1.0}
-            luminanceThreshold={0.2}
-            luminanceSmoothing={0.9}
-            mipmapBlur
-          />
-          <ChromaticAberration
-            blendFunction={BlendFunction.NORMAL}
-            offset={[0.0006, 0.0008]}
-            radialModulation={false}
-            modulationOffset={0}
-          />
-        </EffectComposer>
+        {animation === "ultra" && (
+          <EffectComposer>
+            <Bloom
+              intensity={active ? 1.6 : 1.0}
+              luminanceThreshold={0.2}
+              luminanceSmoothing={0.9}
+              mipmapBlur
+            />
+            <ChromaticAberration
+              blendFunction={BlendFunction.NORMAL}
+              offset={[0.0006, 0.0008]}
+              radialModulation={false}
+              modulationOffset={0}
+            />
+          </EffectComposer>
+        )}
       </Canvas>
     </div>
   );

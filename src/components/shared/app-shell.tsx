@@ -21,6 +21,7 @@ import { usePersonalityStore } from "@/lib/personality-store";
 import type { View } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { LanguageSwitcher } from "@/components/shared/language-switcher";
 
 const NAV: { id: View; label: string; icon: typeof LayoutDashboard; hint: string }[] = [
   { id: "landing", label: "Home", icon: Sparkles, hint: "Landing page" },
@@ -178,6 +179,7 @@ export function AppTopbar() {
           <span>Quick search</span>
           <kbd className="rounded bg-white/5 px-1.5 py-0.5 text-[10px]">⌘K</kbd>
         </button>
+        <LanguageSwitcher compact />
         <Button
           size="sm"
           onClick={() => setView("analyze")}

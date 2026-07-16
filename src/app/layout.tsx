@@ -42,10 +42,24 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" suppressHydrationWarning className="dark">
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
       >
+        {/* SVG color-blind correction filters (referenced by CSS url(#cb-*)) */}
+        <svg width="0" height="0" className="absolute" aria-hidden>
+          <defs>
+            <filter id="cb-protanopia">
+              <feColorMatrix type="matrix" values="0.567 0.433 0 0 0 0.558 0.442 0 0 0 0 0.242 0.758 0 0 0 0 0 1 0" />
+            </filter>
+            <filter id="cb-deuteranopia">
+              <feColorMatrix type="matrix" values="0.625 0.375 0 0 0 0.7 0.3 0 0 0 0 0.3 0.7 0 0 0 0 0 1 0" />
+            </filter>
+            <filter id="cb-tritanopia">
+              <feColorMatrix type="matrix" values="0.95 0.05 0 0 0 0 0.433 0.567 0 0 0 0.475 0.525 0 0 0 0 0 1 0" />
+            </filter>
+          </defs>
+        </svg>
         <Providers>
           {children}
           <Toaster />

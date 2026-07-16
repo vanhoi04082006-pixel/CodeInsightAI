@@ -1,0 +1,45 @@
+{
+  "appName": "CodeInsight AI",
+  "tagline": "Paste a GitHub Repository. AI Understands Everything.",
+  "nav": {
+    "home": "Home",
+    "dashboard": "Dashboard",
+    "analyze": "Analyze",
+    "project": "Project Report",
+    "chat": "AI Chat",
+    "history": "History",
+    "providers": "AI Providers",
+    "personalities": "Personalities",
+    "settings": "Settings"
+  },
+  "actions": {
+    "startAnalysis": "Start Analysis",
+    "analyzeRepo": "Analyze Repo",
+    "newAnalysis": "New Analysis",
+    "connectYourAI": "Connect Your AI",
+    "addAIProvider": "Add AI Provider",
+    "viewFullReport": "View full report",
+    "chatWithAI": "Chat with AI CTO",
+    "clear": "Clear",
+    "copy": "Copy",
+    "copied": "Copied",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "duplicate": "Duplicate",
+    "export": "Export",
+    "import": "Import",
+    "search": "Search",
+    "quickSearch": "Quick search"
+  },
+  "status": {
+    "connected": "Connected",
+    "disconnected": "Disconnected",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "testing": "Testing…",
+    "ready": "Ready",
+    "loading": "Loading…"
+  }
+}
