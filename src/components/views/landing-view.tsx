@@ -46,12 +46,12 @@ import {
 } from "@/components/ui/accordion";
 
 const FEATURES = [
-  { icon: Brain, title: "Deep Code Understanding", desc: "AI parses every file, builds embeddings, and understands your architecture like a senior engineer reading it for the first time.", color: "#22d3ee" },
-  { icon: Network, title: "Dependency Graph", desc: "Interactive visualisation of module relationships with circular-dependency and dead-code detection baked in.", color: "#a78bfa" },
-  { icon: ShieldCheck, title: "Security Audit", desc: "Catches vulnerabilities from hardcoded secrets to weak hashing and XSS — with concrete remediation steps.", color: "#f472b6" },
-  { icon: Gauge, title: "Performance Analysis", desc: "Identifies bundle bloat, N+1 queries, memory leaks, and render bottlenecks ranked by impact.", color: "#34d399" },
-  { icon: Bug, title: "Bug Detection", desc: "Race conditions, null derefs, off-by-one errors and logic flaws — found automatically with severity scoring.", color: "#fbbf24" },
-  { icon: FileText, title: "Auto Documentation", desc: "Generates READMEs, API docs, architecture diagrams, UML and sequence diagrams on demand.", color: "#60a5fa" },
+  { icon: Brain, titleKey: "feature1Title", descKey: "feature1Desc", color: "#22d3ee" },
+  { icon: Network, titleKey: "feature2Title", descKey: "feature2Desc", color: "#a78bfa" },
+  { icon: ShieldCheck, titleKey: "feature3Title", descKey: "feature3Desc", color: "#f472b6" },
+  { icon: Gauge, titleKey: "feature4Title", descKey: "feature4Desc", color: "#34d399" },
+  { icon: Bug, titleKey: "feature5Title", descKey: "feature5Desc", color: "#fbbf24" },
+  { icon: FileText, titleKey: "feature6Title", descKey: "feature6Desc", color: "#60a5fa" },
 ];
 
 const TECH_LOGOS = [
@@ -70,16 +70,16 @@ const TECH_LOGOS = [
 ];
 
 const STEPS = [
-  { n: "01", title: "Connect your AI", desc: "Add OpenRouter, OpenAI, Anthropic, or a local Ollama instance. Your keys stay in your browser.", icon: Plug },
-  { n: "02", title: "Paste a Repo URL", desc: "Drop any public GitHub repository link. We clone, parse ASTs, and build the dependency graph.", icon: Github },
-  { n: "03", title: "Get a Full Report", desc: "Scores, bugs, security, architecture, performance — and an AI ready to chat about your code.", icon: ScanSearch },
+  { n: "01", titleKey: "step1Title", descKey: "step1Desc", icon: Plug },
+  { n: "02", titleKey: "step2Title", descKey: "step2Desc", icon: Github },
+  { n: "03", titleKey: "step3Title", descKey: "step3Desc", icon: ScanSearch },
 ];
 
 const LOCAL_PRINCIPLES = [
-  { icon: KeyRound, title: "Bring your own keys", desc: "Connect OpenRouter, OpenAI, Anthropic, Gemini, DeepSeek, Groq, Ollama, LM Studio, Azure, Together, Fireworks, Mistral, xAI, or any OpenAI-compatible API.", color: "#22d3ee" },
-  { icon: HardDrive, title: "You own your data", desc: "Analyses are stored locally in your browser. Nothing is sent to us — no telemetry, no servers in the middle.", color: "#34d399" },
-  { icon: Plug, title: "No subscriptions", desc: "No billing, no plans, no trials, no feature locks. Use whatever models and providers you already pay for.", color: "#a78bfa" },
-  { icon: Server, title: "Local models supported", desc: "Run entirely offline with Ollama or LM Studio. Your code never leaves your machine.", color: "#fbbf24" },
+  { icon: KeyRound, titleKey: "principleKeys", descKey: "principleKeysDesc", color: "#22d3ee" },
+  { icon: HardDrive, titleKey: "principleData", descKey: "principleDataDesc", color: "#34d399" },
+  { icon: Plug, titleKey: "principleNoSub", descKey: "principleNoSubDesc", color: "#a78bfa" },
+  { icon: Server, titleKey: "principleLocal", descKey: "principleLocalDesc", color: "#fbbf24" },
 ];
 
 const FEATURE_ROUTING = [
@@ -193,7 +193,7 @@ export function LandingView() {
             </div>
             {error && <p className="mt-2 text-sm text-rose-400">{error}</p>}
             <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-xs text-muted-foreground">
-              <span>Try:</span>
+              <span>{t("landing", "tryLabel")}</span>
               {["vercel/next.js", "facebook/react", "vuejs/core"].map((r) => (
                 <button
                   key={r}
@@ -216,10 +216,10 @@ export function LandingView() {
             transition={{ duration: 0.7, delay: 0.4 }}
             className="mt-12 flex flex-wrap items-center justify-center gap-x-8 gap-y-2 text-xs text-muted-foreground"
           >
-            <span className="flex items-center gap-1.5"><KeyRound className="h-3.5 w-3.5" /> Use your own AI APIs</span>
-            <span className="flex items-center gap-1.5"><HardDrive className="h-3.5 w-3.5" /> Data stays with you</span>
-            <span className="flex items-center gap-1.5"><Zap className="h-3.5 w-3.5" /> 60-second analysis</span>
-            <span className="flex items-center gap-1.5"><Plug className="h-3.5 w-3.5" /> 14 providers supported</span>
+            <span className="flex items-center gap-1.5"><KeyRound className="h-3.5 w-3.5" /> {t("landing", "trustPrivate")}</span>
+            <span className="flex items-center gap-1.5"><HardDrive className="h-3.5 w-3.5" /> {t("landing", "trustData")}</span>
+            <span className="flex items-center gap-1.5"><Zap className="h-3.5 w-3.5" /> {t("landing", "trustFast")}</span>
+            <span className="flex items-center gap-1.5"><Plug className="h-3.5 w-3.5" /> {t("landing", "trustProviders")}</span>
           </motion.div>
         </motion.div>
 
@@ -238,10 +238,10 @@ export function LandingView() {
         <div className="mx-auto max-w-5xl">
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
             {[
-              { value: 14, suffix: "", label: "AI providers", color: "#22d3ee" },
-              { value: 40, suffix: "+", label: "Languages", color: "#a78bfa" },
-              { value: 0, suffix: "", label: "Subscriptions", color: "#34d399" },
-              { value: 60, suffix: "s", label: "Avg. analysis", color: "#fbbf24" },
+              { value: 14, suffix: "", label: t("landing", "statsProviders"), color: "#22d3ee" },
+              { value: 40, suffix: "+", label: t("landing", "statsLanguages"), color: "#a78bfa" },
+              { value: 0, suffix: "", label: t("landing", "statsSubscriptions"), color: "#34d399" },
+              { value: 60, suffix: "s", label: t("landing", "statsAvg"), color: "#fbbf24" },
             ].map((s, i) => (
               <motion.div
                 key={s.label}
@@ -267,20 +267,20 @@ export function LandingView() {
       {/* ============ TECH MARQUEE ============ */}
       <section className="relative overflow-hidden py-8">
         <p className="mb-5 text-center text-xs uppercase tracking-[0.25em] text-muted-foreground">
-          Understands every major stack
+          {t("landing", "marqueeTitle")}
         </p>
         <div className="relative mask-fade-x">
           <div className="flex w-max gap-4 animate-[marquee_30s_linear_infinite]">
-            {[...TECH_LOGOS, ...TECH_LOGOS].map((t, i) => {
-              const Icon = t.icon;
+            {[...TECH_LOGOS, ...TECH_LOGOS].map((tech, i) => {
+              const Icon = tech.icon;
               return (
                 <div
                   key={i}
                   className="flex shrink-0 items-center gap-2 rounded-xl border border-white/5 bg-white/[0.02] px-4 py-2.5"
-                  style={{ color: t.color }}
+                  style={{ color: tech.color }}
                 >
                   <Icon className="h-5 w-5" />
-                  <span className="text-sm font-medium text-foreground/80">{t.name}</span>
+                  <span className="text-sm font-medium text-foreground/80">{tech.name}</span>
                 </div>
               );
             })}
@@ -293,16 +293,16 @@ export function LandingView() {
         <div className="mx-auto max-w-6xl">
           <SectionTitle
             center
-            eyebrow="Local-first"
+            eyebrow={t("landing", "principlesEyebrow")}
             title={<>Your keys. Your data. <GradientText>Your AI.</GradientText></>}
-            description="CodeInsight AI is not a SaaS. It's a self-hosted AI workspace — like Open WebUI or Continue.dev, built for repository analysis."
+            description={t("landing", "principlesDesc")}
           />
           <div className="mt-14 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
             {LOCAL_PRINCIPLES.map((p, i) => {
               const Icon = p.icon;
               return (
                 <motion.div
-                  key={p.title}
+                  key={p.titleKey}
                   initial={{ opacity: 0, y: 24 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, margin: "-80px" }}
@@ -315,8 +315,8 @@ export function LandingView() {
                     >
                       <Icon className="h-6 w-6" style={{ color: p.color }} />
                     </div>
-                    <h3 className="text-base font-semibold">{p.title}</h3>
-                    <p className="mt-2 text-sm text-muted-foreground">{p.desc}</p>
+                    <h3 className="text-base font-semibold">{t("landing", p.titleKey)}</h3>
+                    <p className="mt-2 text-sm text-muted-foreground">{t("landing", p.descKey)}</p>
                   </GlassCard>
                 </motion.div>
               );
@@ -330,16 +330,16 @@ export function LandingView() {
         <div className="mx-auto max-w-6xl">
           <SectionTitle
             center
-            eyebrow="Capabilities"
+            eyebrow={t("landing", "featuresEyebrow")}
             title={<>Everything a <GradientText>Staff Engineer</GradientText> would tell you</>}
-            description="CodeInsight doesn't summarise your README. It reads your code, understands your architecture, and reports like a senior engineer doing a deep-dive review."
+            description={t("landing", "featuresDesc")}
           />
           <div className="mt-14 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
             {FEATURES.map((f, i) => {
               const Icon = f.icon;
               return (
                 <motion.div
-                  key={f.title}
+                  key={f.titleKey}
                   initial={{ opacity: 0, y: 24 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, margin: "-80px" }}
@@ -352,8 +352,8 @@ export function LandingView() {
                     >
                       <Icon className="h-6 w-6" style={{ color: f.color }} />
                     </div>
-                    <h3 className="text-lg font-semibold">{f.title}</h3>
-                    <p className="mt-2 text-sm text-muted-foreground">{f.desc}</p>
+                    <h3 className="text-lg font-semibold">{t("landing", f.titleKey)}</h3>
+                    <p className="mt-2 text-sm text-muted-foreground">{t("landing", f.descKey)}</p>
                     <div
                       className="mt-4 h-px w-full opacity-0 transition-opacity group-hover:opacity-100"
                       style={{ background: `linear-gradient(90deg, ${f.color}, transparent)` }}
@@ -371,9 +371,9 @@ export function LandingView() {
         <div className="mx-auto max-w-6xl">
           <SectionTitle
             center
-            eyebrow="Workflow"
+            eyebrow={t("landing", "workflowEyebrow")}
             title={<>From keys to <GradientText>AI CTO</GradientText> in 60 seconds</>}
-            description="A simple workflow: connect your AI, paste a repo, get a full report."
+            description={t("landing", "workflowDesc")}
           />
           <div className="mt-14 grid gap-6 md:grid-cols-3">
             {STEPS.map((s, i) => {
@@ -394,8 +394,8 @@ export function LandingView() {
                         <Icon className="h-5 w-5" />
                       </div>
                     </div>
-                    <h3 className="mt-4 text-lg font-semibold">{s.title}</h3>
-                    <p className="mt-2 text-sm text-muted-foreground">{s.desc}</p>
+                    <h3 className="mt-4 text-lg font-semibold">{t("landing", s.titleKey)}</h3>
+                    <p className="mt-2 text-sm text-muted-foreground">{t("landing", s.descKey)}</p>
                   </GlassCard>
                   {i < STEPS.length - 1 && (
                     <ArrowRight className="absolute -right-4 top-1/2 hidden h-5 w-5 -translate-y-1/2 text-cyan-400/40 md:block" />
@@ -407,7 +407,7 @@ export function LandingView() {
 
           {/* pipeline chips */}
           <div className="mt-12 flex flex-wrap items-center justify-center gap-2">
-            {["Connect AI", "Paste URL", "Clone", "Scan", "AST", "Dependency Graph", "Embeddings", "Static Analysis", "AI Analysis", "Reports", "Chat Ready"].map((step, i) => (
+            {[t("landing","pipelineConnect"), t("landing","pipelinePaste"), t("landing","pipelineClone"), t("landing","pipelineScan"), "AST", t("landing","pipelineDeps"), t("landing","pipelineEmbed"), t("landing","pipelineStatic"), t("landing","pipelineAI"), t("landing","pipelineReports"), t("landing","pipelineChat")].map((step, i) => (
               <motion.span
                 key={step}
                 initial={{ opacity: 0, scale: 0.9 }}
@@ -428,9 +428,9 @@ export function LandingView() {
         <div className="mx-auto max-w-5xl">
           <SectionTitle
             center
-            eyebrow="Multi-model routing"
+            eyebrow={t("landing", "routingEyebrow")}
             title={<>Different models for <GradientText>different jobs</GradientText></>}
-            description="Route each feature to the model that does it best. Switch providers freely — no lock-in."
+            description={t("landing", "routingDesc")}
           />
           <div className="mt-12 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {FEATURE_ROUTING.map((r, i) => (
@@ -459,7 +459,7 @@ export function LandingView() {
           </div>
           <div className="mt-8 text-center">
             <Button onClick={() => setView("providers")} variant="outline">
-              <Plug className="mr-1.5 h-4 w-4" /> Configure routing
+              <Plug className="mr-1.5 h-4 w-4" /> {t("landing", "routingConfigure")}
             </Button>
           </div>
         </div>
@@ -470,9 +470,9 @@ export function LandingView() {
         <div className="mx-auto max-w-6xl">
           <SectionTitle
             center
-            eyebrow="Supported providers"
+            eyebrow={t("landing", "providersEyebrow")}
             title={<>Connect <GradientText>any AI</GradientText> you already use</>}
-            description="14 providers supported out of the box, plus any OpenAI-compatible endpoint."
+            description={t("landing", "providersDesc")}
           />
           <div className="mt-12 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
             {PROVIDER_PRESETS.map((p, i) => {
@@ -507,7 +507,7 @@ export function LandingView() {
       {/* ============ FAQ ============ */}
       <section className="relative px-4 py-24">
         <div className="mx-auto max-w-3xl">
-          <SectionTitle center eyebrow="FAQ" title="Questions, answered" />
+          <SectionTitle center eyebrow={t("landing", "faqEyebrow")} title="Questions, answered" />
           <div className="mt-10">
             <GlassCard className="p-2">
               <Accordion type="single" collapsible className="w-full">
@@ -538,7 +538,7 @@ export function LandingView() {
               Ready to <GradientText>connect your AI?</GradientText>
             </h2>
             <p className="relative mx-auto mt-3 max-w-xl text-muted-foreground">
-              Add your first provider and start analyzing repositories. No sign-up, no billing — just your keys.
+              {t("landing", "ctaDesc")}
             </p>
             <div className="relative mt-6 flex flex-col items-center justify-center gap-2 sm:flex-row">
               <Button
