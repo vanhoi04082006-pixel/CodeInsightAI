@@ -130,16 +130,42 @@ export async function POST(req: NextRequest) {
     }
 
     // ---- AI Request Pipeline ----
-    // 1. Selected Personality → system prompt (overrides default) + language awareness
-    const basePrompt = personality?.systemPrompt?.trim()
-      ? personality.systemPrompt
-      : DEFAULT_SYSTEM_PROMPT;
-    const langInstruction = language === "vi"
-      ? "\n\nIMPORTANT: Respond in Vietnamese (Tiếng Việt). Keep code, file paths, and technical terms in English, but write all prose and explanations in Vietnamese."
-      : "\n\nRespond in English.";
-    const systemPrompt = basePrompt + langInstruction;
-    // 2. Repository Context
-    const context = buildContext(report);
+    // Check if we have real parsed repository data
+    let parsedRepo: any = null;
+    try {
+      const reportData = report ? JSON.parse(JSON.stringify(report)) : null;
+      if (reportData && reportData.parsed) parsedRepo = reportData;
+    } catch { /* not parsed */ }
+
+    let systemPrompt: string;
+    let context: string;
+    let retrievedChunks: { path: string; score: number; snippet: string }[] = [];
+    let estimatedTokens = 0;
+
+    if (parsedRepo) {
+      // Use real prompt engine with parsed repository data
+      const { buildPromptContext } = await import("@/lib/prompt-engine");
+      const promptCtx = buildPromptContext(
+        parsedRepo,
+        message,
+        personality?.systemPrompt?.trim() || DEFAULT_SYSTEM_PROMPT,
+        language || "en"
+      );
+      systemPrompt = promptCtx.systemPrompt;
+      context = promptCtx.repositoryContext;
+      retrievedChunks = promptCtx.retrievedChunks;
+      estimatedTokens = promptCtx.estimatedTokens;
+    } else {
+      // Fallback to simulated report context
+      const basePrompt = personality?.systemPrompt?.trim()
+        ? personality.systemPrompt
+        : DEFAULT_SYSTEM_PROMPT;
+      const langInstruction = language === "vi"
+        ? "\n\nIMPORTANT: Respond in Vietnamese (Tiếng Việt). Keep code, file paths, and technical terms in English, but write all prose and explanations in Vietnamese."
+        : "\n\nRespond in English.";
+      systemPrompt = basePrompt + langInstruction;
+      context = buildContext(report);
+    }
     // 3. Conversation History + 4. User Prompt
     const llmMessages = [
       { role: "assistant" as const, content: systemPrompt },
@@ -213,7 +239,7 @@ export async function POST(req: NextRequest) {
           systemPrompt,
           userPrompt: message,
           repositoryContext: context,
-          retrievedChunks: [] as { path: string; score: number; snippet: string }[],
+          retrievedChunks,
           finalPrompt,
           inputTokens,
           outputTokens,
