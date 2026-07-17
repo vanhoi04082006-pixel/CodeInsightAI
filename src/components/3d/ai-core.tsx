@@ -3,8 +3,7 @@
 
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Float, Sparkles } from "@react-three/drei";
-import { EffectComposer, Bloom, ChromaticAberration } from "@react-three/postprocessing";
-import { BlendFunction } from "postprocessing";
+import { EffectComposer, Bloom } from "@react-three/postprocessing";
 import { useMemo, useRef, useState, useEffect } from "react";
 import * as THREE from "three";
 import { usePersonalizationStore, ACCENT_PALETTES } from "@/lib/personalization-store";
@@ -89,7 +88,11 @@ function CoreOrb({ active, accent }: { active: boolean; accent: AccentPalette })
 
   const primary = useMemo(() => new THREE.Color(accent.primary), [accent.primary]);
   const accentColor = useMemo(() => new THREE.Color(accent.accent), [accent.accent]);
-  const glowColor = useMemo(() => new THREE.Color(accent.glow), [accent.glow]);
+  // glow is rgba() string — extract just the rgb part for THREE.Color
+  const glowColor = useMemo(() => {
+    const m = accent.glow.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+    return m ? new THREE.Color(parseInt(m[1])/255, parseInt(m[2])/255, parseInt(m[3])/255) : new THREE.Color(accent.primary);
+  }, [accent.glow]);
 
   const uniforms = useMemo(() => ({
     uTime: { value: 0 },
@@ -549,11 +552,14 @@ export function AICore({ active = false, className }: { active?: boolean; classN
     <div className={className}>
       <Canvas
         camera={{ position: [0, 0, 7], fov: 45 }}
-        dpr={[1, 2]}
-        gl={{ antialias: true, alpha: false, powerPreference: "high-performance", stencil: false }}
-        onCreated={({ gl }) => { gl.toneMapping = THREE.ACESFilmicToneMapping; gl.toneMappingExposure = 1.2; }}
+        dpr={[1, 1.5]}
+        gl={{ antialias: true, alpha: true, powerPreference: "high-performance", stencil: false, preserveDrawingBuffer: false }}
+        onCreated={({ gl }) => {
+          gl.toneMapping = THREE.ACESFilmicToneMapping;
+          gl.toneMappingExposure = 1.2;
+          gl.setClearColor(0x000000, 0); // transparent background — blends with AnimatedBackground
+        }}
       >
-        <color attach="background" args={["#020210"]} />
         <ambientLight intensity={1.3} color={"#1a1a40"} />
         <pointLight position={[6, 5, 6]} intensity={2.8} color={palette.primary} />
         <pointLight position={[-6, -4, 3]} intensity={2.5} color={palette.accent} />
@@ -575,8 +581,7 @@ export function AICore({ active = false, className }: { active?: boolean; classN
 
         {animation === "ultra" && (
           <EffectComposer>
-            <Bloom intensity={active ? 1.6 : 1.0} luminanceThreshold={0.2} luminanceSmoothing={0.9} mipmapBlur />
-            <ChromaticAberration blendFunction={BlendFunction.NORMAL} offset={[0.0006, 0.0008]} radialModulation={false} modulationOffset={0} />
+            <Bloom intensity={active ? 1.2 : 0.8} luminanceThreshold={0.35} luminanceSmoothing={0.9} mipmapBlur />
           </EffectComposer>
         )}
       </Canvas>
