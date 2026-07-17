@@ -53,6 +53,9 @@ export function HistoryView() {
   const setView = useAppStore((s) => s.setView);
   const setActiveReport = useAppStore((s) => s.setActiveReport);
   const [filter, setFilter] = useState("");
+  
+  // State quản lý item đang bị xóa
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["history"],
@@ -84,6 +87,38 @@ export function HistoryView() {
       }
     } catch {
       toast.error(t("history", "loadFailed"));
+    }
+  };
+
+  // Hàm xử lý xóa lịch sử
+  const deleteItem = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation(); // Ngăn sự kiện click kích hoạt hàm `open` ở thẻ cha
+    
+    if (!window.confirm("Bạn có chắc chắn muốn xóa bản phân tích này khỏi lịch sử không?")) return;
+
+    setIsDeleting(id);
+    try {
+      const res = await fetch(`/api/analyze?id=${id}`, {
+        method: "DELETE",
+      });
+
+      if (res.ok) {
+        toast.success("Đã xóa bản phân tích thành công");
+        refetch(); // Tải lại danh sách
+        
+        // Nếu project bị xóa đang được mở, clear project đó đi
+        if (useAppStore.getState().activeAnalysisId === id) {
+           useAppStore.getState().setActiveReport(null);
+           useAppStore.getState().setActiveAnalysisId(null);
+        }
+      } else {
+        const errorData = await res.json();
+        toast.error(errorData.error || "Có lỗi xảy ra khi xóa");
+      }
+    } catch (err) {
+      toast.error("Lỗi kết nối mạng");
+    } finally {
+      setIsDeleting(null);
     }
   };
 
@@ -126,16 +161,30 @@ export function HistoryView() {
       ) : (
         <div className="mt-5 grid gap-3">
           {items.map((item, i) => (
-            <motion.button
+            <motion.div
               key={item.id}
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.03 }}
-              onClick={() => open(item)}
-              className="group text-left"
+              className="group relative text-left"
             >
-              <GlassCard hover className="p-4">
-                <div className="flex flex-wrap items-center gap-3">
+              <GlassCard hover className="p-4 cursor-pointer relative">
+                
+                {/* NÚT XÓA (Hiện ra khi hover thẻ cha) */}
+                <div className="absolute right-4 top-4 z-10">
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={(e) => deleteItem(e, item.id)}
+                    disabled={isDeleting === item.id}
+                    className="h-8 w-8 text-muted-foreground opacity-0 transition-all hover:bg-rose-500/20 hover:text-rose-400 group-hover:opacity-100"
+                    title="Xóa phân tích này"
+                  >
+                    {isDeleting === item.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                  </Button>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3 pr-10"> {/* pr-10 để chữ không chèn lên nút xóa */}
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-cyan-400/10 text-cyan-300">
                     <FolderGit2 className="h-5 w-5" />
                   </div>
@@ -192,7 +241,7 @@ export function HistoryView() {
                   </>
                 )}
               </GlassCard>
-            </motion.button>
+            </motion.div>
           ))}
         </div>
       )}

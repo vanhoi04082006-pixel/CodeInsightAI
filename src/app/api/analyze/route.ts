@@ -14,9 +14,6 @@ const CACHE_TTL_MS = 60 * 60 * 1000;
 const repoCache = new Map<string, { files: { path: string; content: string }[]; timestamp: number }>();
 
 // POST /api/analyze — starts analysis
-// Body: { repoUrl, force?, async? }
-// If async=true: creates a background job and returns jobId immediately
-// If async=false (default): runs synchronously and returns result
 export async function POST(req: NextRequest) {
   const requestStart = Date.now();
   const jobId = `job_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
@@ -349,3 +346,25 @@ export async function GET(req: NextRequest) {
 }
 
 function safeParse<T>(s: string, fallback: T): T { try { return JSON.parse(s) as T; } catch { return fallback; } }
+
+// ── ĐOẠN MỚI THÊM: HÀM XỬ LÝ XÓA LỊCH SỬ ──
+export async function DELETE(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
+
+    if (!id) {
+      return NextResponse.json({ error: "Missing analysis ID" }, { status: 400 });
+    }
+
+    // Xóa record trong DB. Note: Nếu bạn có liên kết bảng (Cascade), Prisma sẽ tự xử lý xóa các fileSummaries.
+    await db.analysis.delete({
+      where: { id },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Delete Error:", error);
+    return NextResponse.json({ error: "Failed to delete analysis" }, { status: 500 });
+  }
+}
