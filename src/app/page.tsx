@@ -49,7 +49,7 @@ export default function Home() {
             <button onClick={() => setView("landing")} className="flex items-center gap-2">
               <div className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-400/30 to-violet-500/30 neon-border-cyan">
                 <div className="absolute inset-0 rounded-xl bg-cyan-400/20 blur-md animate-pulse-glow" />
-                <Github className="relative h-4 w-4 text-cyan-300" />
+                <img src="/logo.png" alt="CodeInsight AI" className="relative h-7 w-7 rounded-lg object-contain" />
               </div>
               <div className="leading-tight">
                 <span className="text-sm font-bold">CodeInsight</span>
@@ -126,7 +126,7 @@ function Footer() {
         <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <div className="relative flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-400/30 to-violet-500/30">
-              <Github className="h-3.5 w-3.5 text-cyan-300" />
+              <img src="/logo.png" alt="CodeInsight AI" className="h-5 w-5 rounded-lg object-contain" />
             </div>
             <span>CodeInsight <span className="text-neon-cyan">AI</span></span>
             <span className="text-muted-foreground/50">·</span>

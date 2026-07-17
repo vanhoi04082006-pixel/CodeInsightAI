@@ -58,7 +58,7 @@ export function AppSidebar() {
           className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-400/30 to-violet-500/30 neon-border-cyan"
         >
           <div className="absolute inset-0 rounded-xl bg-cyan-400/20 blur-md animate-pulse-glow" />
-          <Github className="relative h-5 w-5 text-cyan-300" />
+          <img src="/logo.png" alt="CodeInsight AI" className="relative h-8 w-8 rounded-lg object-contain" />
         </button>
         <AnimatePresence>
           {!collapsed && (
@@ -160,7 +160,7 @@ export function AppTopbar() {
         className="flex items-center gap-2 md:hidden"
       >
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-400/30 to-violet-500/30">
-          <Github className="h-4 w-4 text-cyan-300" />
+          <img src="/logo.png" alt="CodeInsight AI" className="h-6 w-6 rounded-lg object-contain" />
         </div>
         <span className="text-sm font-bold">CodeInsight</span>
       </button>
