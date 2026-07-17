@@ -17,7 +17,6 @@ import {
   Check,
   Loader2,
   AlertCircle,
-  X,
   ArrowRight,
   Activity,
   Sparkles,
@@ -53,13 +52,6 @@ import type { AIProvider, FeatureKind, ProviderId, ProviderPreset } from "@/lib/
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-const STATUS_META: Record<string, { color: string; label: string; icon: typeof Power }> = {
-  unknown: { color: "#94a3b8", label: "Not tested", icon: Activity },
-  testing: { color: "#fbbf24", label: "Testing…", icon: Loader2 },
-  connected: { color: "#34d399", label: "Connected", icon: Check },
-  error: { color: "#fb7185", label: "Error", icon: AlertCircle },
-};
-
 export function ProvidersView() {
   const { t } = useT();
   const providers = useProvidersStore((s) => s.providers);
@@ -69,6 +61,7 @@ export function ProvidersView() {
   const enabledCount = providers.filter((p) => p.enabled).length;
   const localCount = providers.filter((p) => PRESET_BY_ID[p.providerId]?.local).length;
   const connectedCount = providers.filter((p) => p.status === "connected").length;
+  
   const avgLatency = (() => {
     const lat = providers.filter((p) => p.latencyMs).map((p) => p.latencyMs!);
     return lat.length ? Math.round(lat.reduce((a, b) => a + b, 0) / lat.length) : 0;
@@ -76,7 +69,6 @@ export function ProvidersView() {
 
   return (
     <div className="mx-auto max-w-7xl space-y-6 px-4 py-6 md:px-6">
-      {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -102,7 +94,6 @@ export function ProvidersView() {
         </Button>
       </motion.div>
 
-      {/* Stat cards */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <StatCard icon={Power} label={t("providers", "statEnabled")} value={enabledCount} sub={`of ${providers.length} added`} color="#22d3ee" />
         <StatCard icon={Check} label={t("providers", "statConnected")} value={connectedCount} sub="reachable now" color="#34d399" />
@@ -110,17 +101,15 @@ export function ProvidersView() {
         <StatCard icon={Clock} label={t("providers", "statAvgLatency")} value={avgLatency} sub="ms (last test)" color="#fbbf24" suffix="ms" />
       </div>
 
-      {/* Feature routing overview */}
       <FeatureRoutingCard />
 
-      {/* Provider list / empty state */}
       {providers.length === 0 ? (
         <EmptyState onAdd={() => setAdding(true)} />
       ) : (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-              Connected Providers ({providers.length})
+              {t("providers", "connectedProviders")} ({providers.length})
             </h2>
           </div>
           {providers.map((p, i) => (
@@ -136,13 +125,11 @@ export function ProvidersView() {
         </div>
       )}
 
-      {/* Add provider dialog */}
       <AddProviderDialog open={adding} onOpenChange={setAdding} onPick={(pid) => { addProvider(pid); toast.success(t("notifications", "providerAdded", { name: PRESET_BY_ID[pid].name })); setAdding(false); }} />
     </div>
   );
 }
 
-/* ---------- Stat card ---------- */
 function StatCard({ icon: Icon, label, value, sub, color, suffix }: { icon: typeof Power; label: string; value: number; sub: string; color: string; suffix?: string }) {
   return (
     <GlassCard className="p-4">
@@ -160,12 +147,12 @@ function StatCard({ icon: Icon, label, value, sub, color, suffix }: { icon: type
   );
 }
 
-/* ---------- Feature routing ---------- */
 function FeatureRoutingCard() {
   const { t } = useT();
   const providers = useProvidersStore((s) => s.providers);
   const routing = useProvidersStore((s) => s.routing);
   const setRouting = useProvidersStore((s) => s.setRouting);
+
   const enabledProviders = providers.filter((p) => p.enabled);
   const features = Object.keys(FEATURE_LABELS) as FeatureKind[];
 
@@ -178,6 +165,7 @@ function FeatureRoutingCard() {
       <p className="mt-1 text-xs text-muted-foreground">
         {t("providers", "featureRoutingDesc")}
       </p>
+
       <NeonDivider className="my-4" />
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {features.map((f) => {
@@ -185,6 +173,7 @@ function FeatureRoutingCard() {
           const defaultPid = FEATURE_DEFAULTS[f];
           const preset = PRESET_BY_ID[defaultPid];
           const assigned = providers.find((p) => p.id === current);
+
           return (
             <div key={f} className="rounded-xl border border-white/5 bg-white/[0.02] p-3">
               <div className="flex items-center justify-between">
@@ -198,20 +187,20 @@ function FeatureRoutingCard() {
                 onValueChange={(v) => setRouting(f, v === "__default__" ? undefined : v)}
               >
                 <SelectTrigger className="mt-2 h-8 border-white/10 bg-white/[0.03] text-xs">
-                  <SelectValue placeholder="Use default" />
+                  <SelectValue placeholder={t("providers", "useDefault")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__default__">Use default ({preset.name})</SelectItem>
+                  <SelectItem value="__default__">{t("providers", "useDefault")} ({preset.name})</SelectItem>
                   {enabledProviders.map((p) => (
                     <SelectItem key={p.id} value={p.id}>
-                      {p.label} · {p.model}
+                      {p.label} — {p.model}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
               {assigned && (
                 <p className="mt-1.5 truncate text-[10px] text-cyan-300">
-                  → {assigned.label} · {assigned.model}
+                  {assigned.label} — {assigned.model}
                 </p>
               )}
             </div>
@@ -227,7 +216,6 @@ function FeatureRoutingCard() {
   );
 }
 
-/* ---------- Empty state ---------- */
 function EmptyState({ onAdd }: { onAdd: () => void }) {
   const { t } = useT();
   return (
@@ -246,18 +234,26 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
   );
 }
 
-/* ---------- Provider card ---------- */
 function ProviderCard({ provider }: { provider: AIProvider }) {
+  const { t } = useT();
   const update = useProvidersStore((s) => s.updateProvider);
   const remove = useProvidersStore((s) => s.removeProvider);
   const setStatus = useProvidersStore((s) => s.setProviderStatus);
   const [expanded, setExpanded] = useState(false);
+
+  const STATUS_META: Record<string, { color: string; label: string; icon: typeof Power }> = {
+    unknown: { color: "#94a3b8", label: t("providers", "status.unknown"), icon: Activity },
+    testing: { color: "#fbbf24", label: t("providers", "status.testing"), icon: Loader2 },
+    connected: { color: "#34d399", label: t("providers", "status.connected"), icon: Check },
+    error: { color: "#fb7185", label: t("providers", "status.error"), icon: AlertCircle },
+  };
+
   const preset = PRESET_BY_ID[provider.providerId];
   const status = STATUS_META[provider.status ?? "unknown"];
   const SIcon = status.icon;
   const isLocal = preset.local;
   const maskedKey = provider.apiKey
-    ? `${provider.apiKey.slice(0, 4)}…${provider.apiKey.slice(-4)}`
+    ? `${provider.apiKey.slice(0, 4)}...${provider.apiKey.slice(-4)}`
     : "Not set";
 
   const testConnection = async () => {
@@ -277,11 +273,10 @@ function ProviderCard({ provider }: { provider: AIProvider }) {
         signal: controller.signal,
       });
       clearTimeout(timeout);
-      // Handle non-JSON responses (HTML error pages from gateway, etc.)
+
       const contentType = res.headers.get("content-type") || "";
       if (!contentType.includes("application/json")) {
         const text = await res.text().catch(() => "");
-        // Gateway returns Z.ai loading page (HTML) when server is starting/restarting
         if (text.includes("logo") || text.includes("setTimeout")) {
           setStatus(provider.id, "error", 0, "Server is starting up. Please wait 10 seconds and try again.");
           toast.error("Server is starting up. Please retry in 10s.");
@@ -291,13 +286,14 @@ function ProviderCard({ provider }: { provider: AIProvider }) {
         }
         return;
       }
+
       const data = await res.json();
       if (data.status === "connected") {
         setStatus(provider.id, "connected", data.latencyMs);
-        toast.success(`${preset.name} connected · ${data.latencyMs}ms`);
+        toast.success(t("notifications", "providerConnected", { name: preset.name, latency: data.latencyMs }));
       } else {
         setStatus(provider.id, "error", data.latencyMs, data.error);
-        toast.error(data.error || "Connection failed");
+        toast.error(data.error || t("notifications", "connectionFailed"));
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -311,7 +307,6 @@ function ProviderCard({ provider }: { provider: AIProvider }) {
 
   return (
     <GlassCard className="overflow-hidden">
-      {/* Header row */}
       <div className="flex flex-wrap items-center gap-3 p-4">
         <div
           className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-sm font-bold"
@@ -342,7 +337,6 @@ function ProviderCard({ provider }: { provider: AIProvider }) {
             )}
           </div>
         </div>
-
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-2 py-1">
             <Power className="h-3.5 w-3.5 text-muted-foreground" />
@@ -353,7 +347,7 @@ function ProviderCard({ provider }: { provider: AIProvider }) {
           </div>
           <Button size="sm" variant="outline" onClick={testConnection} disabled={provider.status === "testing"}>
             {provider.status === "testing" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
-            Test
+            {t("providers", "test")}
           </Button>
           <Button size="sm" variant="ghost" onClick={() => setExpanded((e) => !e)}>
             <Settings2 className="h-3.5 w-3.5" />
@@ -362,7 +356,6 @@ function ProviderCard({ provider }: { provider: AIProvider }) {
         </div>
       </div>
 
-      {/* Expanded config */}
       <AnimatePresence>
         {expanded && (
           <motion.div
@@ -372,10 +365,10 @@ function ProviderCard({ provider }: { provider: AIProvider }) {
             className="overflow-hidden border-t border-white/5"
           >
             <div className="grid gap-4 p-4 md:grid-cols-2">
-              <Field icon={Hash} label="Display label">
+              <Field icon={Hash} label={t("providers", "displayLabel")}>
                 <Input value={provider.label} onChange={(e) => update(provider.id, { label: e.target.value })} className="bg-white/[0.03]" />
               </Field>
-              <Field icon={Cpu} label="Model">
+              <Field icon={Cpu} label={t("providers", "model")}>
                 <Select value={provider.model} onValueChange={(v) => update(provider.id, { model: v })}>
                   <SelectTrigger className="bg-white/[0.03]"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -386,19 +379,19 @@ function ProviderCard({ provider }: { provider: AIProvider }) {
                   </SelectContent>
                 </Select>
               </Field>
-              <Field icon={KeyRound} label="API Key" hint="stored locally only">
+              <Field icon={KeyRound} label={t("providers", "apiKey")} hint={t("providers", "apiKeyHint")}>
                 <Input
                   type="password"
                   value={provider.apiKey}
                   onChange={(e) => update(provider.id, { apiKey: e.target.value })}
-                  placeholder={preset.requiresKey ? "sk-…" : "Optional for local"}
+                  placeholder={preset.requiresKey ? "sk-..." : "Optional for local"}
                   className="bg-white/[0.03] font-mono"
                 />
               </Field>
-              <Field icon={Globe} label="Base URL">
+              <Field icon={Globe} label={t("providers", "baseUrl")}>
                 <Input value={provider.baseUrl} onChange={(e) => update(provider.id, { baseUrl: e.target.value })} className="bg-white/[0.03] font-mono text-xs" />
               </Field>
-              <Field icon={Thermometer} label={`Temperature · ${provider.temperature.toFixed(2)}`} hint="0 = deterministic, 2 = creative">
+              <Field icon={Thermometer} label={`${t("providers", "temperature")} — ${provider.temperature.toFixed(2)}`}>
                 <Slider
                   value={[provider.temperature]}
                   min={0}
@@ -407,7 +400,7 @@ function ProviderCard({ provider }: { provider: AIProvider }) {
                   onValueChange={([v]) => update(provider.id, { temperature: v })}
                 />
               </Field>
-              <Field icon={Hash} label="Max tokens" hint="-1 = unlimited">
+              <Field icon={Hash} label={t("providers", "maxTokens")}>
                 <Input
                   type="number"
                   value={provider.maxTokens}
@@ -415,7 +408,7 @@ function ProviderCard({ provider }: { provider: AIProvider }) {
                   className="bg-white/[0.03]"
                 />
               </Field>
-              <Field icon={Clock} label={`Timeout · ${provider.timeout}s`}>
+              <Field icon={Clock} label={`${t("providers", "timeout")} — ${provider.timeout}s`}>
                 <Slider
                   value={[provider.timeout]}
                   min={5}
@@ -424,27 +417,26 @@ function ProviderCard({ provider }: { provider: AIProvider }) {
                   onValueChange={([v]) => update(provider.id, { timeout: v })}
                 />
               </Field>
-              <Field icon={Zap} label="Streaming" hint="stream tokens as they generate">
+              <Field icon={Zap} label={t("providers", "streaming")}>
                 <div className="flex h-9 items-center gap-2">
                   <Switch checked={provider.streaming} onCheckedChange={(v) => update(provider.id, { streaming: v })} />
-                  <span className="text-xs text-muted-foreground">{provider.streaming ? "Enabled" : "Disabled"}</span>
+                  <span className="text-xs text-muted-foreground">{provider.streaming ? t("providers", "streamingEnabled") : t("providers", "streamingDisabled")}</span>
                 </div>
               </Field>
             </div>
             <div className="flex items-center justify-between border-t border-white/5 px-4 py-3">
               {preset.docsUrl ? (
                 <a href={preset.docsUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-xs text-cyan-300 hover:underline">
-                  Get API key <ArrowRight className="h-3 w-3" />
+                  {t("providers", "getApiKey")} <ArrowRight className="h-3 w-3" />
                 </a>
               ) : <span />}
-              <Button size="sm" variant="destructive" onClick={() => { remove(provider.id); toast.success("Provider removed"); }}>
-                <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Remove
+              <Button size="sm" variant="destructive" onClick={() => { remove(provider.id); toast.success(t("notifications", "providerRemoved")); }}>
+                <Trash2 className="mr-1.5 h-3.5 w-3.5" /> {t("providers", "remove")}
               </Button>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
-
       {provider.error && (
         <div className="border-t border-rose-500/20 bg-rose-500/[0.04] px-4 py-2 text-xs text-rose-300">
           {provider.error}
@@ -459,37 +451,38 @@ function Field({ icon: Icon, label, hint, children }: { icon: typeof Hash; label
     <div className="space-y-1.5">
       <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
         <Icon className="h-3 w-3" /> {label}
-        {hint && <span className="text-[10px] text-muted-foreground/70">· {hint}</span>}
+        {hint && <span className="text-[10px] text-muted-foreground/70">— {hint}</span>}
       </label>
       {children}
     </div>
   );
 }
 
-/* ---------- Add provider dialog ---------- */
 function AddProviderDialog({ open, onOpenChange, onPick }: { open: boolean; onOpenChange: (b: boolean) => void; onPick: (pid: ProviderId) => void }) {
+  const { t } = useT();
   const grouped = {
-    Aggregator: PROVIDER_PRESETS.filter((p) => p.category === "Aggregator"),
-    Cloud: PROVIDER_PRESETS.filter((p) => p.category.startsWith("Cloud")),
-    Local: PROVIDER_PRESETS.filter((p) => p.local),
-    Enterprise: PROVIDER_PRESETS.filter((p) => p.category === "Enterprise"),
-    Custom: PROVIDER_PRESETS.filter((p) => p.category === "Custom"),
+    [t("providers", "groups.aggregator")]: PROVIDER_PRESETS.filter((p) => p.category === "Aggregator"),
+    [t("providers", "groups.cloud")]: PROVIDER_PRESETS.filter((p) => p.category.startsWith("Cloud")),
+    [t("providers", "groups.local")]: PROVIDER_PRESETS.filter((p) => p.local),
+    [t("providers", "groups.enterprise")]: PROVIDER_PRESETS.filter((p) => p.category === "Enterprise"),
+    [t("providers", "groups.custom")]: PROVIDER_PRESETS.filter((p) => p.category === "Custom"),
   };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto border-white/10 bg-popover/95 backdrop-blur-2xl scrollbar-thin">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Plus className="h-4 w-4 text-cyan-300" /> Add AI Provider
+            <Plus className="h-4 w-4 text-cyan-300" /> {t("providers", "addProviderTitle")}
           </DialogTitle>
           <p className="text-sm text-muted-foreground">
-            Choose a provider. Configure API key, base URL, and model after adding. Keys are stored only in your browser.
+            {t("providers", "addProviderDesc")}
           </p>
         </DialogHeader>
         <div className="space-y-5">
-          {Object.entries(grouped).map(([group, items]) => (
-            <div key={group}>
-              <p className="mb-2 text-[10px] uppercase tracking-wider text-muted-foreground">{group}</p>
+          {Object.entries(grouped).map(([groupName, items]) => (
+            <div key={groupName}>
+              <p className="mb-2 text-[10px] uppercase tracking-wider text-muted-foreground">{groupName}</p>
               <div className="grid gap-2 sm:grid-cols-2">
                 {items.map((p) => (
                   <ProviderPick key={p.providerId} preset={p} onPick={() => onPick(p.providerId)} />

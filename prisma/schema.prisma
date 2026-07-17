@@ -9,35 +9,40 @@ datasource db {
 }
 
 model Analysis {
-  id            String   @id @default(cuid())
-  repoUrl       String
-  repoOwner     String
-  repoName      String
-  repoBranch    String   @default("main")
-  status        String   @default("completed") // completed | analyzing | failed
+  id                 String   @id @default(cuid())
+  repoUrl            String
+  repoOwner          String
+  repoName           String
+  repoBranch         String   @default("main")
+  status             String   @default("completed") // completed | analyzing | failed
+  
   // Scores
-  overallScore  Int      @default(0)
-  securityScore Int      @default(0)
-  performanceScore Int   @default(0)
-  architectureScore Int  @default(0)
-  maintainabilityScore Int @default(0)
-  codeQualityScore Int   @default(0)
+  overallScore       Int      @default(0)
+  securityScore      Int      @default(0)
+  performanceScore   Int      @default(0)
+  architectureScore  Int      @default(0)
+  maintainabilityScore Int    @default(0)
+  codeQualityScore   Int      @default(0)
+  
   // Metadata
-  primaryLanguage String?
-  totalFiles      Int    @default(0)
-  totalLines      Int    @default(0)
-  languages       String @default("[]") // JSON array
-  frameworks      String @default("[]") // JSON array
+  primaryLanguage    String?
+  totalFiles         Int      @default(0)
+  totalLines         Int      @default(0)
+  languages          String   @default("[]") // JSON array
+  frameworks         String   @default("[]") // JSON array
+  
   // Full report JSON
-  report          String @default("{}") // JSON blob of full analysis
+  report             String   @default("{}") // JSON blob of full analysis
+  
   // Parsed repo data (structured memory)
-  parsedData      String? // JSON of ParsedRepository
+  parsedData         String? // JSON of ParsedRepository
+  
   // Timestamps
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
-  messages       ChatMessage[]
-  fileSummaries  FileSummary[]
+  messages           ChatMessage[]
+  fileSummaries      FileSummary[]
 
   @@index([repoUrl])
   @@index([createdAt])
@@ -86,4 +91,53 @@ model UserSettings {
   key         String   @unique
   value       String   // JSON
   updatedAt   DateTime @updatedAt
+}
+
+// ==========================================
+// THÊM: NEXTAUTH MODELS (Dùng để quản lý User & Token đăng nhập)
+// ==========================================
+
+model Account {
+  id                 String  @id @default(cuid())
+  userId             String
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String?
+  access_token       String?
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String?
+  session_state      String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
 }

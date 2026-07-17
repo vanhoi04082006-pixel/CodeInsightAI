@@ -1,7 +1,8 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
+import { signIn, signOut, useSession } from "next-auth/react";
 import {
   Settings as SettingsIcon,
   User,
@@ -60,7 +61,32 @@ import { cn } from "@/lib/utils";
 export function SettingsView() {
   const { t } = useT();
   const [notifications, setNotifications] = useState({ email: true, push: false, weekly: true });
-  const [connected, setConnected] = useState({ github: false, google: true });
+  
+  const { data: session, status } = useSession();
+  
+  // Đọc danh sách mảng (array) các tài khoản đã liên kết từ backend
+  const connectedProviders = (session as any)?.providers || []; 
+  const isGithubConnected = connectedProviders.includes("github");
+  const isGoogleConnected = connectedProviders.includes("google");
+
+  const prevStatus = useRef(status);
+
+  useEffect(() => {
+    // Xử lý thông báo lỗi (Nếu user bấm hủy trên trang Github/Google)
+    const params = new URLSearchParams(window.location.search);
+    const error = params.get("error");
+    if (error) {
+      toast.error(`Xác thực thất bại: ${error}`);
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
+    // Bắt sự kiện đăng nhập thành công (từ loading -> authenticated)
+    if (prevStatus.current === "loading" && status === "authenticated") {
+      toast.success(t("common", "status.connected") || "Đăng nhập thành công!");
+    }
+    
+    prevStatus.current = status;
+  }, [status, t]);
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-6 md:px-6">
@@ -88,8 +114,8 @@ export function SettingsView() {
             <GlassCard className="p-6">
               <h3 className="flex items-center gap-2 text-sm font-semibold"><User className="h-4 w-4 text-cyan-300" /> {t("settings", "profile")}</h3>
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                <Field label={t("settings", "displayName")} defaultValue="Z.ai Developer" />
-                <Field label={t("settings", "email")} defaultValue="dev@codeinsight.ai" />
+                <Field label={t("settings", "displayName")} defaultValue={session?.user?.name || "Z.ai Developer"} />
+                <Field label={t("settings", "email")} defaultValue={session?.user?.email || "dev@codeinsight.ai"} />
                 <Field label={t("settings", "company")} defaultValue="Independent" />
                 <Field label={t("settings", "role")} defaultValue="Staff Engineer" />
               </div>
@@ -105,15 +131,23 @@ export function SettingsView() {
                   icon={Github}
                   name="GitHub"
                   desc={t("settings", "githubDesc")}
-                  connected={connected.github}
-                  onToggle={() => { setConnected((c) => ({ ...c, github: !c.github })); toast.success(connected.github ? t("common", "status.disconnected") : t("common", "status.connected")); }}
+                  connected={isGithubConnected}
+                  loading={status === "loading"}
+                  onToggle={() => { 
+                    if (isGithubConnected) { signOut(); toast.success(t("common", "status.disconnected")); }
+                    else signIn("github"); 
+                  }}
                 />
                 <ConnectRow
                   icon={Sparkles}
                   name="Google"
                   desc={t("settings", "googleDesc")}
-                  connected={connected.google}
-                  onToggle={() => { setConnected((c) => ({ ...c, google: !c.google })); toast.success(connected.google ? t("common", "status.disconnected") : t("common", "status.connected")); }}
+                  connected={isGoogleConnected}
+                  loading={status === "loading"}
+                  onToggle={() => { 
+                    if (isGoogleConnected) { signOut(); toast.success(t("common", "status.disconnected")); }
+                    else signIn("google"); 
+                  }}
                 />
               </div>
             </GlassCard>
@@ -279,7 +313,8 @@ function Field({ label, defaultValue }: { label: string; defaultValue: string })
   );
 }
 
-function ConnectRow({ icon: Icon, name, desc, connected, onToggle }: { icon: typeof Github; name: string; desc: string; connected: boolean; onToggle: () => void }) {
+// Cập nhật Component ConnectRow
+function ConnectRow({ icon: Icon, name, desc, connected, loading, onToggle }: { icon: typeof Github; name: string; desc: string; connected: boolean; loading?: boolean; onToggle: () => void }) {
   const { t } = useT();
   return (
     <div className="flex items-center gap-3 rounded-xl border border-white/5 bg-white/[0.02] p-3">
@@ -295,8 +330,8 @@ function ConnectRow({ icon: Icon, name, desc, connected, onToggle }: { icon: typ
           <Check className="h-3 w-3" /> {t("common", "status.connected")}
         </span>
       ) : null}
-      <Button size="sm" variant={connected ? "outline" : "default"} onClick={onToggle} className={connected ? "" : "bg-gradient-to-r from-cyan-500 to-violet-500 text-white"}>
-        {connected ? t("settings", "disconnect") : t("settings", "connect")}
+      <Button size="sm" variant={connected ? "outline" : "default"} onClick={onToggle} disabled={loading} className={connected ? "" : "bg-gradient-to-r from-cyan-500 to-violet-500 text-white"}>
+        {loading ? t("common", "status.loading") : connected ? t("settings", "disconnect") : t("settings", "connect")}
       </Button>
     </div>
   );
@@ -342,7 +377,6 @@ function AISettingsCard() {
       <p className="mt-1 text-xs text-muted-foreground">{t("settings", "aiConfigDesc")}</p>
 
       <div className="mt-4 space-y-4">
-        {/* Provider */}
         <div className="space-y-1.5">
           <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground"><Cpu className="h-3 w-3" /> {t("settings", "providerChat")}</label>
           <Select value={chatProviderId ?? "__default__"} onValueChange={(v) => setRouting("chat", v === "__default__" ? undefined : v)}>
@@ -359,7 +393,6 @@ function AISettingsCard() {
           )}
         </div>
 
-        {/* Model */}
         {chatProvider && (
           <div className="space-y-1.5">
             <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground"><Cpu className="h-3 w-3" /> {t("settings", "ai.model")}</label>
@@ -374,7 +407,6 @@ function AISettingsCard() {
           </div>
         )}
 
-        {/* Personality */}
         <div className="space-y-1.5">
           <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground"><Bot className="h-3 w-3" /> {t("settings", "personality")}</label>
           <Select value={activePersonality.id} onValueChange={(v) => { setActivePersonality(v); }}>
@@ -393,7 +425,6 @@ function AISettingsCard() {
           <p className="text-[10px] text-muted-foreground">{activePersonality.description}</p>
         </div>
 
-        {/* Temperature */}
         <div className="space-y-1.5">
           <label className="flex items-center justify-between text-xs font-medium text-muted-foreground">
             <span className="flex items-center gap-1.5"><Zap className="h-3 w-3" /> {t("settings", "temperature")}</span>
@@ -413,7 +444,6 @@ function AISettingsCard() {
           <p className="text-[10px] text-muted-foreground">{t("settings", "tempHint")}</p>
         </div>
 
-        {/* Max tokens */}
         <div className="space-y-1.5">
           <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground"><Hash className="h-3 w-3" /> {t("settings", "maxTokens")}</label>
           <Input
@@ -701,7 +731,7 @@ function AccessibilitySettingsCard() {
           />
           <ToggleRow
             label={t("settings", "accessibility.highContrast")}
-            desc="Cải thiện độ tương phản đường viền và chữ." // Technical UI term
+            desc="Cải thiện độ tương phản đường viền và chữ." 
             checked={highContrast}
             onCheckedChange={(v) => { setHighContrast(v); toast.success(v ? t("notifications", "highContrastOn") : t("notifications", "highContrastOff")); }}
           />
