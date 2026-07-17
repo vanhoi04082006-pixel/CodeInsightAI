@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { ThemeManager } from "@/components/shared/theme-manager";
 import { useI18nStore, type Locale } from "@/lib/i18n";
+import { SessionProvider } from "next-auth/react"; // <-- Import SessionProvider
 
 export function Providers({
   children,
@@ -30,9 +31,11 @@ export function Providers({
   }, [initialLocale]);
 
   return (
-    <QueryClientProvider client={client}>
-      <ThemeManager />
-      {children}
-    </QueryClientProvider>
+    <SessionProvider>
+      <QueryClientProvider client={client}>
+        <ThemeManager />
+        {children}
+      </QueryClientProvider>
+    </SessionProvider>
   );
 }

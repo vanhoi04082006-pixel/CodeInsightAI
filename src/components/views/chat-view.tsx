@@ -30,14 +30,6 @@ import type { ChatMessage } from "@/lib/types";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-const SUGGESTIONS = [
-  { icon: Shield, text: "What are the biggest security risks?", color: "#f472b6" },
-  { icon: Gauge, text: "How can I improve performance?", color: "#34d399" },
-  { icon: Network, text: "How does the architecture work?", color: "#a78bfa" },
-  { icon: Code2, text: "Which files should I refactor first?", color: "#22d3ee" },
-  { icon: Lightbulb, text: "What feature should I build next?", color: "#fbbf24" },
-];
-
 export function ChatView() {
   const { t } = useT();
   const report = useAppStore((s) => s.activeReport);
@@ -56,8 +48,14 @@ export function ChatView() {
   const [restoring, setRestoring] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // When a report is loaded with an existing analysisId, restore persisted chat.
-  // Otherwise seed an intro message if chat is empty.
+  const SUGGESTIONS = [
+    { icon: Shield, text: t("chat", "suggestions.security"), color: "#f472b6" },
+    { icon: Gauge, text: t("chat", "suggestions.performance"), color: "#34d399" },
+    { icon: Network, text: t("chat", "suggestions.architecture"), color: "#a78bfa" },
+    { icon: Code2, text: t("chat", "suggestions.refactor"), color: "#22d3ee" },
+    { icon: Lightbulb, text: t("chat", "suggestions.feature"), color: "#fbbf24" },
+  ];
+
   useEffect(() => {
     if (!report) return;
     if (analysisId) {
@@ -80,10 +78,20 @@ export function ChatView() {
 
   function seedIntro() {
     if (!report || chat.length > 0) return;
+    const topRisk = report.issues.security[0]?.title ?? t("chat", "noRisk");
+    
+    // Dynamic text replacement for the intro
+    let introText = t("chat", "intro")
+      .replace("{owner}", report.repoOwner)
+      .replace("{name}", report.repoName)
+      .replace("{overall}", String(report.scores.overall))
+      .replace("{topRisk}", topRisk)
+      .replace("{arch}", report.architecture.pattern);
+
     pushChat({
       id: crypto.randomUUID(),
       role: "assistant",
-      content: `I've finished analysing **${report.repoOwner}/${report.repoName}**.\n\nHere's the quick read:\n- Overall health: **${report.scores.overall}/100**\n- Top risk: ${report.issues.security[0]?.title ?? "none critical"}\n- Architecture: ${report.architecture.pattern}\n\nAsk me anything — security, performance, what to refactor, or what to build next.`,
+      content: introText,
       createdAt: Date.now(),
     });
   }
@@ -95,16 +103,17 @@ export function ChatView() {
   const send = async (text?: string) => {
     const content = (text ?? input).trim();
     if (!content || loading) return;
+
     if (!report) {
-      toast.error("Analyze a repository first");
+      toast.error(t("chat", "analyzeFirstToast"));
       return;
     }
+
     const userMsg: ChatMessage = { id: crypto.randomUUID(), role: "user", content, createdAt: Date.now() };
     pushChat(userMsg);
     setInput("");
     setLoading(true);
 
-    // pull personality + provider + developer mode + language from their stores
     const personality = usePersonalityStore.getState().getActive();
     const providersState = useProvidersStore.getState();
     const providerInstance = providersState.getProviderForFeature("chat");
@@ -112,7 +121,6 @@ export function ChatView() {
     const language = useI18nStore.getState().locale;
 
     try {
-      // Ensure we have an analysisId persisted (create the analysis row if needed)
       let aid = analysisId;
       if (!aid) {
         const createRes = await fetch("/api/analyze", {
@@ -126,6 +134,7 @@ export function ChatView() {
       }
 
       const history = chat.map((m) => ({ role: m.role, content: m.content }));
+
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -133,7 +142,6 @@ export function ChatView() {
           analysisId: aid,
           message: content,
           history,
-          // AI request pipeline: personality + provider
           personality: {
             id: personality.id,
             name: personality.name,
@@ -152,29 +160,30 @@ export function ChatView() {
                 maxTokens: providerInstance.maxTokens,
                 streaming: providerInstance.streaming,
                 timeout: providerInstance.timeout,
-                apiKey: providerInstance.apiKey, // used by a real provider impl; masked in debug
+                apiKey: providerInstance.apiKey,
               }
             : undefined,
-          language, // AI language awareness
+          language,
           debug: devMode.enabled,
         }),
       });
+
       const data = await res.json();
-      if (!res.ok) throw new Error(data?.error ?? "Chat failed");
+      if (!res.ok) throw new Error(data?.error ?? t("chat", "error"));
+
       pushChat(data.message ?? { id: crypto.randomUUID(), role: "assistant", content: data.reply, createdAt: Date.now() });
 
-      // record debug snapshot + log if developer mode is on
       if (devMode.enabled && data.debug) {
         devMode.addSnapshot(data.debug);
         if (data.debug.log) devMode.addLog(data.debug.log);
       }
     } catch (e) {
       console.error(e);
-      toast.error("The AI couldn't respond. Please try again.");
+      toast.error(t("chat", "chatFailedToast"));
       pushChat({
         id: crypto.randomUUID(),
         role: "assistant",
-        content: "I ran into an issue processing that. Could you rephrase or try again?",
+        content: t("chat", "errorReply"),
         createdAt: Date.now(),
       });
     } finally {
@@ -187,12 +196,12 @@ export function ChatView() {
       <div className="mx-auto flex min-h-[60vh] max-w-xl flex-col items-center justify-center px-4 text-center">
         <GlassCard className="p-10">
           <Cpu className="mx-auto h-10 w-10 text-cyan-300" />
-          <h2 className="mt-4 text-xl font-bold">No repository loaded</h2>
+          <h2 className="mt-4 text-xl font-bold">{t("chat", "noRepo")}</h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            Analyze a repository first, then chat with your AI CTO about it.
+            {t("chat", "noRepoDesc")}
           </p>
           <Button onClick={() => setView("analyze")} className="mt-4 bg-gradient-to-r from-cyan-500 to-violet-500 text-white">
-            <Sparkles className="mr-1.5 h-4 w-4" /> Analyze a repo
+            <Sparkles className="mr-1.5 h-4 w-4" /> {t("chat", "analyzeFirst")}
           </Button>
         </GlassCard>
       </div>
@@ -215,18 +224,17 @@ export function ChatView() {
               {report.repoOwner}/{report.repoName}
             </p>
           </div>
-          {/* active personality badge */}
           <button
             onClick={() => useAppStore.getState().setView("personalities")}
             className="ml-2 flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[10px] transition hover:border-cyan-400/40"
-            title="Change personality"
+            title={t("chat", "personalityLabel")}
           >
             <span className="h-1.5 w-1.5 rounded-full" style={{ background: activePersonality.accent }} />
             <span className="font-medium">{activePersonality.name}</span>
           </button>
         </div>
-        <Button variant="ghost" size="sm" onClick={() => { clearChat(); toast.success("Chat cleared"); }}>
-          <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Clear
+        <Button variant="ghost" size="sm" onClick={() => { clearChat(); toast.success(t("chat", "clearToast")); }}>
+          <Trash2 className="mr-1.5 h-3.5 w-3.5" /> {t("chat", "clear")}
         </Button>
       </div>
 
@@ -283,7 +291,6 @@ export function ChatView() {
         )}
       </div>
 
-      {/* Developer panel (only renders when Developer Mode is enabled) */}
       <div className="mt-3 space-y-2">
         <DeveloperPanel snapshot={latestSnapshot} />
         <LogViewer />
@@ -362,7 +369,7 @@ function Avatar({ role }: { role: "user" | "assistant" }) {
   );
 }
 
-/* Lightweight markdown renderer (headings, bold, code, lists) */
+/* Lightweight markdown renderer */
 function MarkdownLite({ content }: { content: string }) {
   const lines = content.split("\n");
   return (
@@ -388,12 +395,12 @@ function MarkdownLite({ content }: { content: string }) {
 }
 
 function renderInline(text: string): React.ReactNode {
-  // bold **x** and inline code `x`
   const parts: React.ReactNode[] = [];
   const regex = /(\*\*[^*]+\*\*|`[^`]+`)/g;
   let last = 0;
   let m: RegExpExecArray | null;
   let key = 0;
+
   while ((m = regex.exec(text)) !== null) {
     if (m.index > last) parts.push(text.slice(last, m.index));
     const tok = m[0];

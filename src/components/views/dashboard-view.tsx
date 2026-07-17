@@ -16,11 +16,10 @@ import {
   FileCode,
   Cpu,
 } from "lucide-react";
-import { GlassCard, ScoreGauge, GradientText, NeonDivider, StatPill } from "@/components/shared/ui";
+import { GlassCard, ScoreGauge, GradientText, StatPill } from "@/components/shared/ui";
 import { Button } from "@/components/ui/button";
 import { useAppStore } from "@/lib/store";
 import { useT } from "@/lib/i18n";
-import type { AnalysisReport } from "@/lib/types";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -51,6 +50,7 @@ export function DashboardView() {
   }
 
   const r = activeReport;
+
   const scoreCards = [
     { label: "Security", value: r.scores.security, icon: ShieldCheck, color: "#f472b6", delta: "+4" },
     { label: "Performance", value: r.scores.performance, icon: Gauge, color: "#34d399", delta: "+2" },
@@ -108,12 +108,12 @@ export function DashboardView() {
           <div className="flex flex-col items-center">
             <p className="text-xs uppercase tracking-wider text-muted-foreground">{t("dashboard", "overallHealth")}</p>
             <div className="mt-3">
-              <ScoreGauge value={r.scores.overall} size={160} stroke={12} label="Score" color="#22d3ee" />
+              <ScoreGauge value={r.scores.overall} size={160} stroke={12} label={t("dashboard", "score")} color="#22d3ee" />
             </div>
             <div className="mt-4 flex gap-2">
-              <StatPill label="Files" value={r.totalFiles} />
-              <StatPill label="Lines" value={r.totalLines.toLocaleString()} />
-              <StatPill label="Lang" value={r.primaryLanguage} accent="#22d3ee" />
+              <StatPill label={t("dashboard", "files")} value={r.totalFiles} />
+              <StatPill label={t("dashboard", "lines")} value={r.totalLines.toLocaleString()} />
+              <StatPill label={t("dashboard", "lang")} value={r.primaryLanguage} accent="#22d3ee" />
             </div>
           </div>
         </GlassCard>
@@ -166,7 +166,7 @@ export function DashboardView() {
               <Activity className="h-5 w-5 text-cyan-300" />
               <p className="mt-2 text-[11px] uppercase tracking-wider text-muted-foreground">{t("dashboard", "techDebt")}</p>
               <p className="text-3xl font-bold tabular-nums text-amber-400">{r.technicalDebt.score}</p>
-              <p className="text-[10px] text-muted-foreground">{r.technicalDebt.items.length} items logged</p>
+              <p className="text-[10px] text-muted-foreground">{r.technicalDebt.items.length} {t("dashboard", "itemsLogged")}</p>
             </GlassCard>
           </motion.div>
         </div>
@@ -178,7 +178,7 @@ export function DashboardView() {
         <GlassCard className="p-5">
           <div className="mb-3 flex items-center justify-between">
             <h3 className="text-sm font-semibold">{t("dashboard", "scoreBreakdown")}</h3>
-            <span className="text-[11px] text-muted-foreground">weighted</span>
+            <span className="text-[11px] text-muted-foreground">{t("dashboard", "weighted")}</span>
           </div>
           <div className="h-56">
             <ResponsiveContainer width="100%" height="100%">
@@ -205,7 +205,7 @@ export function DashboardView() {
         <GlassCard className="p-5">
           <div className="mb-3 flex items-center justify-between">
             <h3 className="text-sm font-semibold">{t("dashboard", "languages")}</h3>
-            <span className="text-[11px] text-muted-foreground">{r.languages.length} detected</span>
+            <span className="text-[11px] text-muted-foreground">{r.languages.length} {t("dashboard", "detected")}</span>
           </div>
           <div className="flex items-center gap-4">
             <div className="h-44 w-44">
@@ -241,7 +241,7 @@ export function DashboardView() {
           <div className="mb-3 flex items-center justify-between">
             <h3 className="text-sm font-semibold">{t("dashboard", "complexityTrend")}</h3>
             <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-              <Clock className="h-3 w-3" /> last 8 months
+              <Clock className="h-3 w-3" /> {t("dashboard", "last8months")}
             </span>
           </div>
           <div className="h-48">
@@ -269,7 +269,7 @@ export function DashboardView() {
         <GlassCard className="p-5">
           <div className="mb-3 flex items-center justify-between">
             <h3 className="text-sm font-semibold">{t("dashboard", "commitActivity")}</h3>
-            <span className="text-[11px] text-muted-foreground">this week</span>
+            <span className="text-[11px] text-muted-foreground">{t("dashboard", "thisWeek")}</span>
           </div>
           <div className="h-48">
             <ResponsiveContainer width="100%" height="100%">
@@ -298,7 +298,7 @@ export function DashboardView() {
           <div className="mb-3 flex items-center justify-between">
             <h3 className="text-sm font-semibold">{t("dashboard", "maintainabilityTrend")}</h3>
             <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-              <Clock className="h-3 w-3" /> last 8 months
+              <Clock className="h-3 w-3" /> {t("dashboard", "last8months")}
             </span>
           </div>
           <div className="h-48">
@@ -329,21 +329,21 @@ export function DashboardView() {
             <div className="flex items-center justify-between rounded-lg border border-rose-500/20 bg-rose-500/[0.04] p-3">
               <div>
                 <p className="text-xs font-medium text-rose-300">{t("dashboard", "deadCodeFiles")}</p>
-                <p className="text-[10px] text-muted-foreground">{r.deadCode?.length ?? 0} removable</p>
+                <p className="text-[10px] text-muted-foreground">{r.deadCode?.length ?? 0} {t("dashboard", "removable")}</p>
               </div>
               <span className="text-2xl font-bold tabular-nums text-rose-400">{r.deadCode?.length ?? 0}</span>
             </div>
             <div className="flex items-center justify-between rounded-lg border border-amber-500/20 bg-amber-500/[0.04] p-3">
               <div>
                 <p className="text-xs font-medium text-amber-300">{t("dashboard", "duplicateClusters")}</p>
-                <p className="text-[10px] text-muted-foreground">{r.duplicates?.length ?? 0} groups found</p>
+                <p className="text-[10px] text-muted-foreground">{r.duplicates?.length ?? 0} {t("dashboard", "groupsFound")}</p>
               </div>
               <span className="text-2xl font-bold tabular-nums text-amber-400">{r.duplicates?.length ?? 0}</span>
             </div>
             <div className="flex items-center justify-between rounded-lg border border-cyan-500/20 bg-cyan-500/[0.04] p-3">
               <div>
                 <p className="text-xs font-medium text-cyan-300">{t("dashboard", "circularDeps")}</p>
-                <p className="text-[10px] text-muted-foreground">{r.dependencies.circular.length} detected</p>
+                <p className="text-[10px] text-muted-foreground">{r.dependencies.circular.length} {t("dashboard", "detected")}</p>
               </div>
               <span className="text-2xl font-bold tabular-nums text-cyan-400">{r.dependencies.circular.length}</span>
             </div>
@@ -407,6 +407,7 @@ export function DashboardView() {
 function EmptyDashboard() {
   const { t } = useT();
   const setView = useAppStore((s) => s.setView);
+
   return (
     <div className="mx-auto flex min-h-[60vh] max-w-2xl flex-col items-center justify-center px-4 text-center">
       <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}>

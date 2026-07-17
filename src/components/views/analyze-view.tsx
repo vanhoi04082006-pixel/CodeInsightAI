@@ -54,10 +54,10 @@ export function AnalyzeView() {
   const [phase, setPhase] = useState<Phase>("input");
   const [report, setReport] = useState<AnalysisReport | null>(null);
 
-  // State điều khiển nội suy tiến độ UI
-  const [visualProgress, setVisualProgress] = useState(0); 
-  const [targetProgress, setTargetProgress] = useState(0); 
-  const [isJobComplete, setIsJobComplete] = useState(false); 
+  // State điều khiển nội suy tiến độ
+  const [visualProgress, setVisualProgress] = useState(0);
+  const [targetProgress, setTargetProgress] = useState(0);
+  const [isJobComplete, setIsJobComplete] = useState(false);
 
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
@@ -74,30 +74,26 @@ export function AnalyzeView() {
 
   useEffect(() => () => clearTimers(), []);
 
-  // --- BỘ ĐIỀU KHIỂN TỐC ĐỘ CHẬM VÀ MƯỢT ---
+  // --- BỘ ĐIỀU KHIỂN TIẾN ĐỘ ---
   useEffect(() => {
     if (phase !== "running") return;
 
     const interval = setInterval(() => {
       setVisualProgress((prev) => {
-        // 1. Nếu chưa tới 100% và (chưa đuổi kịp backend HOẶC backend đã xong nhưng UI chưa chạy hết)
-        // -> Luôn nhích ĐÚNG 1%, tuyệt đối không nhảy cóc để đảm bảo thời gian tối thiểu
         if (prev < targetProgress || (isJobComplete && prev < 100)) {
           return Math.min(prev + 1, 100);
         }
 
-        // 2. Nếu Backend chạy lâu hơn dự kiến và UI đã đuổi kịp -> Tự động nhích cực chậm (+0.5%) để chờ API (tối đa đến 92%)
         if (!isJobComplete && prev >= targetProgress && prev < 92) {
           return prev + 0.5;
         }
 
-        // 3. Khi đạt 100% và Backend đã có kết quả -> Dừng 800ms để người dùng nhìn thấy full icon Check xanh rồi mới chuyển
         if (isJobComplete && prev >= 100) {
           clearInterval(interval);
           setTimeout(() => {
             setPhase("done");
             if (report) {
-              toast.success(`Analysis complete — ${report.scores?.overall ?? 0}/100`);
+              toast.success(t("analysis", "completeDesc", { score: report.scores?.overall ?? 0 }));
             }
           }, 800);
         }
@@ -107,9 +103,8 @@ export function AnalyzeView() {
     }, PROGRESS_SPEED_MS);
 
     return () => clearInterval(interval);
-  }, [phase, targetProgress, isJobComplete, report]);
+  }, [phase, targetProgress, isJobComplete, report, t]);
 
-  // Tính toán giai đoạn (stage) dựa trên visualProgress
   const totalStages = ANALYSIS_STAGES.length;
   const stageIdx = Math.min(
     Math.floor((visualProgress / 100) * totalStages),
@@ -125,10 +120,9 @@ export function AnalyzeView() {
     }
     setError("");
     setPhase("running");
-    
-    // Reset toàn bộ tiến độ về 0
+
     setVisualProgress(0);
-    setTargetProgress(5); 
+    setTargetProgress(5);
     setIsJobComplete(false);
     clearTimers();
 
@@ -140,7 +134,6 @@ export function AnalyzeView() {
       });
       const startData = await startRes.json();
 
-      // Trường hợp trả về kết quả ngay lập tức (cache)
       if (startData.report) {
         setReport(startData.report);
         setActiveAnalysisId(startData.id ?? null);
@@ -150,7 +143,6 @@ export function AnalyzeView() {
         return;
       }
 
-      // Trường hợp có jobId, bắt đầu polling
       if (startData.jobId) {
         const jobId = startData.jobId;
         let pollCount = 0;
@@ -160,7 +152,7 @@ export function AnalyzeView() {
           pollCount++;
           if (pollCount > maxPolls) {
             setPhase("error");
-            toast.error("Analysis timed out. Please try again.");
+            toast.error(t("analysis", "failed"));
             return;
           }
 
@@ -171,7 +163,7 @@ export function AnalyzeView() {
 
             if (!job) {
               setPhase("error");
-              toast.error("Job not found");
+              toast.error(t("analysis", "failed"));
               return;
             }
 
@@ -187,10 +179,10 @@ export function AnalyzeView() {
               setIsJobComplete(true);
             } else if (job.status === "failed") {
               setPhase("error");
-              toast.error(job.error || "Analysis failed");
+              toast.error(job.error || t("analysis", "failed"));
             } else if (job.status === "cancelled") {
               setPhase("error");
-              toast.error("Analysis cancelled");
+              toast.error(t("analysis", "failed"));
             } else {
               timers.current.push(setTimeout(poll, 1000));
             }
@@ -204,15 +196,14 @@ export function AnalyzeView() {
         return;
       }
 
-      // Fallback: sync API call
       const res = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ repoUrl: parsed.url }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data?.error ?? "Analysis failed");
-      
+      if (!res.ok) throw new Error(data?.error ?? t("analysis", "failed"));
+
       setReport(data.report);
       setActiveAnalysisId(data.id ?? null);
       clearChat();
@@ -221,7 +212,7 @@ export function AnalyzeView() {
     } catch (e) {
       console.error(e);
       setPhase("error");
-      toast.error("Analysis failed. Please try again.");
+      toast.error(t("analysis", "failed"));
     }
   };
 
@@ -325,7 +316,7 @@ export function AnalyzeView() {
           className="relative z-10 text-center"
         >
           <h2 className="text-2xl font-bold md:text-3xl">
-            Analyzing <GradientText>{parseRepoUrl(url).name || "repository"}</GradientText>
+            {t("analysis", "analyzing")} <GradientText>{parseRepoUrl(url).name || "repository"}</GradientText>
           </h2>
           <p className="mt-2 text-sm text-muted-foreground">
             {t("analysis", "analyzingDesc")}
@@ -337,9 +328,9 @@ export function AnalyzeView() {
           <div className="flex items-center justify-between text-sm">
             <span className="flex items-center gap-2 font-medium">
               <Loader2 className="h-4 w-4 animate-spin text-cyan-300" />
-              {current.label}
+              {t("analysis", `stages.${current.id}` as any) || current.label}
             </span>
-            <span className="tabular-nums text-muted-foreground">{Math.round(overallProgress)}%</span>
+            <span className="tabular-nums text-muted-foreground">{Math.round(overallProgress)}{t("analysis", "overallProgress")}</span>
           </div>
           <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/5">
             <motion.div
@@ -348,7 +339,7 @@ export function AnalyzeView() {
               transition={{ ease: "linear", duration: 0.1 }}
             />
           </div>
-          <p className="mt-2 text-xs text-muted-foreground">{current.description}</p>
+          <p className="mt-2 text-xs text-muted-foreground">{t("analysis", `${current.id}Desc` as any) || current.description}</p>
         </GlassCard>
 
         {/* Stage list */}
@@ -386,8 +377,8 @@ export function AnalyzeView() {
                   )}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium">{stage.label}</p>
-                  <p className="truncate text-[11px] text-muted-foreground">{stage.description}</p>
+                  <p className="text-sm font-medium">{t("analysis", stage.id as any) || stage.label}</p>
+                  <p className="truncate text-[11px] text-muted-foreground">{t("analysis", `${stage.id}Desc` as any) || stage.description}</p>
                 </div>
                 {status === "active" && (
                   <div className="h-1.5 w-16 overflow-hidden rounded-full bg-white/10">
@@ -420,7 +411,7 @@ export function AnalyzeView() {
               >
                 <span className="text-cyan-400">[{String(i + 1).padStart(2, "0")}]</span>
                 <span className="text-emerald-300">OK</span>
-                <span className="truncate">{s.description}…</span>
+                <span className="truncate">{t("analysis", `${s.id}Desc` as any) || s.description}…</span>
               </motion.div>
             ))}
             <motion.div
@@ -444,7 +435,7 @@ export function AnalyzeView() {
           <AlertCircle className="mx-auto h-12 w-12 text-rose-400" />
           <h2 className="mt-4 text-2xl font-bold">{t("analysis", "failed")}</h2>
           <p className="mt-2 text-muted-foreground">
-            Something went wrong. The repository may be private or unreachable.
+            {t("analysis", "failedDesc")}
           </p>
           <div className="mt-6 flex gap-2">
             <Button onClick={reset} variant="outline">{t("analysis", "tryAgain")}</Button>
@@ -472,7 +463,7 @@ export function AnalyzeView() {
           <Check className="h-8 w-8" />
         </motion.div>
         <h2 className="mt-4 text-3xl font-bold md:text-4xl">
-          Analysis <GradientText>complete</GradientText>
+          <GradientText>{t("analysis", "complete")}</GradientText>
         </h2>
         <p className="mt-2 text-muted-foreground">
           {report?.repoOwner}/{report?.repoName} · {report?.totalFiles} files · {report?.totalLines.toLocaleString()} lines
@@ -499,7 +490,7 @@ export function AnalyzeView() {
               className="flex-1 bg-gradient-to-r from-cyan-500 to-violet-500 text-white hover:opacity-90"
             >
               <FileText className="mr-1.5 h-4 w-4" />
-              View full report
+              {t("analysis", "viewFullReport")}
             </Button>
             <Button
               onClick={() => {
@@ -510,10 +501,10 @@ export function AnalyzeView() {
               className="flex-1"
             >
               <Sparkles className="mr-1.5 h-4 w-4" />
-              Chat with AI CTO
+              {t("analysis", "chatWithAI")}
             </Button>
             <Button onClick={reset} variant="ghost">
-              Analyze another
+              {t("analysis", "analyzeAnother")}
             </Button>
           </div>
         </GlassCard>
