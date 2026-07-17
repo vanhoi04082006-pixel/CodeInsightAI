@@ -263,6 +263,8 @@ function ProviderCard({ provider }: { provider: AIProvider }) {
   const testConnection = async () => {
     setStatus(provider.id, "testing");
     try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30000);
       const res = await fetch("/api/providers/test", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -272,7 +274,18 @@ function ProviderCard({ provider }: { provider: AIProvider }) {
           baseUrl: provider.baseUrl,
           model: provider.model,
         }),
+        signal: controller.signal,
       });
+      clearTimeout(timeout);
+      // Handle non-JSON responses (HTML error pages from gateway, etc.)
+      const contentType = res.headers.get("content-type") || "";
+      if (!contentType.includes("application/json")) {
+        const text = await res.text().catch(() => "");
+        const shortErr = text.substring(0, 150) || `HTTP ${res.status}`;
+        setStatus(provider.id, "error", 0, shortErr);
+        toast.error(`Server returned ${res.status}`);
+        return;
+      }
       const data = await res.json();
       if (data.status === "connected") {
         setStatus(provider.id, "connected", data.latencyMs);
@@ -282,8 +295,12 @@ function ProviderCard({ provider }: { provider: AIProvider }) {
         toast.error(data.error || "Connection failed");
       }
     } catch (e) {
-      setStatus(provider.id, "error", undefined, String(e));
-      toast.error("Connection test failed");
+      const msg = e instanceof Error ? e.message : String(e);
+      const display = msg.includes("aborted") ? "Request timed out (30s)"
+        : msg.includes("JSON") ? "Network error — server returned HTML instead of JSON"
+        : msg;
+      setStatus(provider.id, "error", undefined, display);
+      toast.error(display);
     }
   };
 
