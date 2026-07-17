@@ -21,6 +21,7 @@ import type { View } from "@/lib/types";
 import {
   Dialog,
   DialogContent,
+  DialogTitle,
 } from "@/components/ui/dialog";
 
 const COMMANDS: { id: View; labelKey: string; icon: typeof Home; group: string }[] = [
@@ -54,6 +55,7 @@ export function CommandPalette() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="max-w-xl gap-0 overflow-hidden border-white/10 bg-popover/90 p-0 backdrop-blur-2xl">
+        <DialogTitle className="sr-only">Command Palette</DialogTitle>
         <div className="flex items-center gap-2 border-b border-white/10 px-4 py-3">
           <Search className="h-4 w-4 text-muted-foreground" />
           <input
