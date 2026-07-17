@@ -20,6 +20,10 @@ export async function POST(req: NextRequest) {
       const { parseRepository } = await import("@/lib/repo-parser");
       const result = parseRepository(parsedUrl.url, parsedUrl.owner, parsedUrl.name, parsedUrl.branch, files);
 
+      // Run real analyzers to generate full report
+      const { analyzeParsedRepository } = await import("@/lib/analysis-engine-v2");
+      const report = analyzeParsedRepository(result, files);
+
       const created = await db.analysis.create({
         data: {
           repoUrl: result.url,
@@ -27,22 +31,22 @@ export async function POST(req: NextRequest) {
           repoName: result.name,
           repoBranch: result.branch,
           status: "completed",
-          overallScore: 0,
-          securityScore: 0,
-          performanceScore: 0,
-          architectureScore: 0,
-          maintainabilityScore: 0,
-          codeQualityScore: 0,
+          overallScore: report.scores.overall,
+          securityScore: report.scores.security,
+          performanceScore: report.scores.performance,
+          architectureScore: report.scores.architecture,
+          maintainabilityScore: report.scores.maintainability,
+          codeQualityScore: report.scores.codeQuality,
           primaryLanguage: result.languages[0]?.name ?? null,
           totalFiles: result.totalFiles,
           totalLines: result.totalLines,
           languages: JSON.stringify(result.languages),
           frameworks: JSON.stringify(result.frameworks),
-          report: JSON.stringify({ parsed: true, ...result }),
+          report: JSON.stringify({ ...report, parsed: true, _parsedRepo: result }),
         },
       });
 
-      return NextResponse.json({ id: created.id, parsed: result, createdAt: created.createdAt });
+      return NextResponse.json({ id: created.id, parsed: result, report, createdAt: created.createdAt });
     }
 
     return NextResponse.json({
