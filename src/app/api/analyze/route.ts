@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { parseRepoUrl } from "@/lib/analysis-engine";
+import type { AnalysisReport } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -31,7 +32,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Try to fetch real files from GitHub API
-    let realReport = null;
+    let realReport: AnalysisReport | null = null;
     try {
       realReport = await fetchAndAnalyzeFromGitHub(parsed.owner, parsed.name);
     } catch (e) {
