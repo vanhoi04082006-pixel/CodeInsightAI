@@ -262,20 +262,24 @@ function ProviderCard({ provider }: { provider: AIProvider }) {
 
   const testConnection = async () => {
     setStatus(provider.id, "testing");
-    const start = performance.now();
     try {
-      // Simulated connection test (no real outbound call in sandbox).
-      // A real impl would POST /api/providers/test with the config.
-      await new Promise((r) => setTimeout(r, 600 + Math.random() * 800));
-      // local providers without a key still "connect" if reachable
-      const ok = preset.local || provider.apiKey.length >= 8;
-      const latency = Math.round(performance.now() - start);
-      if (ok) {
-        setStatus(provider.id, "connected", latency);
-        toast.success(`${preset.name} connected · ${latency}ms`);
+      const res = await fetch("/api/providers/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          providerId: provider.providerId,
+          apiKey: provider.apiKey,
+          baseUrl: provider.baseUrl,
+          model: provider.model,
+        }),
+      });
+      const data = await res.json();
+      if (data.status === "connected") {
+        setStatus(provider.id, "connected", data.latencyMs);
+        toast.success(`${preset.name} connected · ${data.latencyMs}ms`);
       } else {
-        setStatus(provider.id, "error", latency, "API key looks too short");
-        toast.error("API key looks too short");
+        setStatus(provider.id, "error", data.latencyMs, data.error);
+        toast.error(data.error || "Connection failed");
       }
     } catch (e) {
       setStatus(provider.id, "error", undefined, String(e));
