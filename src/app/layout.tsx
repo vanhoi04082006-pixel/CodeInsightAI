@@ -30,7 +30,7 @@ export const metadata: Metadata = {
     "performance analysis",
   ],
   authors: [{ name: "CodeInsight AI" }],
-  icons: { icon: "https://z-cdn.chatglm.cn/z-ai/static/logo.svg" },
+  icons: { icon: "/logo.png" },
   openGraph: {
     title: "CodeInsight AI",
     description: "Paste a GitHub Repository. AI Understands Everything.",
