@@ -94,8 +94,8 @@ export function ProjectView() {
           </h1>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{report.summary}</p>
           <div className="mt-2 flex flex-wrap gap-1.5">
-            {report.tags.map((t) => (
-              <span key={t} className="rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-0.5 text-[10px] text-muted-foreground">{t}</span>
+            {Array.from(new Set(report.tags)).map((t, i) => (
+              <span key={`${t}-${i}`} className="rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-0.5 text-[10px] text-muted-foreground">{t}</span>
             ))}
           </div>
         </div>
