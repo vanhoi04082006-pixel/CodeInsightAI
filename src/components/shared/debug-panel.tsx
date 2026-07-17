@@ -99,6 +99,7 @@ export function DeveloperPanel({ snapshot }: { snapshot: DebugSnapshot | null })
    Token Usage Card
    ============================================================ */
 export function TokenUsageCard({ snapshot }: { snapshot: DebugSnapshot }) {
+  const { t } = useT();
   const show = useDeveloperModeStore((s) => s.showTokenUsage);
   if (!show) return null;
   return (
@@ -122,6 +123,7 @@ export function TokenUsageCard({ snapshot }: { snapshot: DebugSnapshot }) {
    Response Time Card
    ============================================================ */
 export function ResponseTimeCard({ snapshot }: { snapshot: DebugSnapshot }) {
+  const { t } = useT();
   const show = useDeveloperModeStore((s) => s.showResponseTime);
   if (!show) return null;
   return (
@@ -140,6 +142,7 @@ export function ResponseTimeCard({ snapshot }: { snapshot: DebugSnapshot }) {
    Model Info Card
    ============================================================ */
 export function ModelInfoCard({ snapshot }: { snapshot: DebugSnapshot }) {
+  const { t } = useT();
   const show = useDeveloperModeStore((s) => s.showModelDebug);
   if (!show) return null;
   return (
@@ -161,6 +164,7 @@ export function ModelInfoCard({ snapshot }: { snapshot: DebugSnapshot }) {
    Prompt Debugger
    ============================================================ */
 export function PromptDebugger({ snapshot }: { snapshot: DebugSnapshot }) {
+  const { t } = useT();
   const show = useDeveloperModeStore((s) => s.showPromptDebug);
   if (!show) return null;
   return (
@@ -193,6 +197,7 @@ export function PromptDebugger({ snapshot }: { snapshot: DebugSnapshot }) {
    Model Debugger
    ============================================================ */
 export function ModelDebugger({ snapshot }: { snapshot: DebugSnapshot }) {
+  const { t } = useT();
   const show = useDeveloperModeStore((s) => s.showModelDebug);
   if (!show) return null;
   const caps = snapshot.capabilities;
@@ -212,6 +217,7 @@ export function ModelDebugger({ snapshot }: { snapshot: DebugSnapshot }) {
    Raw Response Viewer
    ============================================================ */
 export function RawResponseViewer({ snapshot }: { snapshot: DebugSnapshot }) {
+  const { t } = useT();
   const show = useDeveloperModeStore((s) => s.showRawResponse);
   const [open, setOpen] = useState(false);
   if (!show) return null;
@@ -234,6 +240,7 @@ export function RawResponseViewer({ snapshot }: { snapshot: DebugSnapshot }) {
    Advanced Debug (embeddings, vector search, chunk ranking, etc.)
    ============================================================ */
 export function AdvancedDebugCard({ snapshot }: { snapshot: DebugSnapshot }) {
+  const { t } = useT();
   const show = useDeveloperModeStore((s) => s.showAdvancedDebug);
   if (!show) return null;
   return (
@@ -303,6 +310,7 @@ export function AdvancedDebugCard({ snapshot }: { snapshot: DebugSnapshot }) {
    Request / Response Log Viewer
    ============================================================ */
 export function LogViewer() {
+  const { t } = useT();
   const show = useDeveloperModeStore((s) => s.showRequestLogs || s.showResponseLogs);
   const logs = useDeveloperModeStore((s) => s.logs);
   const clearLogs = useDeveloperModeStore((s) => s.clearLogs);
@@ -354,6 +362,7 @@ function LogRow({ log }: { log: AIRequestLog }) {
    Export buttons
    ============================================================ */
 function ExportButtons({ snapshot }: { snapshot: DebugSnapshot }) {
+  const { t } = useT();
   const exportAs = (format: "json" | "markdown" | "txt") => {
     let content: string;
     let mime: string;
