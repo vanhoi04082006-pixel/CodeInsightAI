@@ -220,6 +220,10 @@ export interface AnalysisReport {
   documentation: {
     readme: string;
     apiDocs: string;
+    architectureMd: string;
+    folderGuide: string;
+    componentGuide: string;
+    deploymentGuide: string;
   };
   activity: ChartPoint[];
   complexityTrend: ChartPoint[];

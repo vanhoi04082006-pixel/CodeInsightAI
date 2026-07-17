@@ -6,18 +6,19 @@ import type { AnalysisReport } from "@/lib/types";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// Directories to ignore when fetching from GitHub
 const IGNORE_DIRS = ["node_modules", "dist", "build", "coverage", "vendor", ".cache", ".git", ".next", ".turbo", ".vercel", "__pycache__", ".pytest_cache", "target", "bin", "obj", "packages", ".idea", ".vscode"];
-// File extensions to fetch (skip binaries)
 const FETCH_EXTS = [".ts", ".tsx", ".js", ".jsx", ".py", ".go", ".rs", ".java", ".cs", ".cpp", ".c", ".php", ".vue", ".svelte", ".css", ".scss", ".html", ".json", ".yml", ".yaml", ".md", ".sh", ".sql", ".rb", ".swift", ".kt", ".toml", ".env", ".config"];
-const MAX_FILES = 200; // limit to avoid timeout
+const MAX_FILES = 200;
+// Cache TTL: 1 hour (re-analyze if older than this)
+const CACHE_TTL_MS = 60 * 60 * 1000;
 
-// POST /api/analyze { repoUrl }
-// Fetches REAL files from GitHub, parses them, runs real analyzers.
+// In-memory cache for parsed repos (avoids re-fetch within same session)
+const repoCache = new Map<string, { files: { path: string; content: string }[]; timestamp: number }>();
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
-    const { repoUrl } = body as { repoUrl?: string };
+    const { repoUrl, force } = body as { repoUrl?: string; force?: boolean };
 
     if (!repoUrl || typeof repoUrl !== "string") {
       return NextResponse.json({ error: "repoUrl is required" }, { status: 400 });
@@ -25,25 +26,54 @@ export async function POST(req: NextRequest) {
 
     const parsed = parseRepoUrl(repoUrl);
     if (!parsed.valid) {
-      return NextResponse.json(
-        { error: "Invalid GitHub URL. Use https://github.com/owner/repo or owner/repo." },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Invalid GitHub URL" }, { status: 400 });
     }
 
-    // Try to fetch real files from GitHub API
-    let realReport: AnalysisReport | null = null;
+    // ── CACHE CHECK ──
+    // If not forced, check DB for existing analysis of same repo+branch
+    if (!force) {
+      const existing = await db.analysis.findFirst({
+        where: { repoOwner: parsed.owner, repoName: parsed.name },
+        orderBy: { createdAt: "desc" },
+      });
+
+      if (existing) {
+        const age = Date.now() - existing.createdAt.getTime();
+        if (age < CACHE_TTL_MS) {
+          // Return cached result
+          let cachedReport: AnalysisReport;
+          try {
+            cachedReport = JSON.parse(existing.report);
+          } catch {
+            cachedReport = JSON.parse(existing.report); // fallback
+          }
+          console.log(`[cache] HIT: ${parsed.owner}/${parsed.name} (${Math.round(age / 1000)}s old)`);
+          return NextResponse.json({
+            id: existing.id,
+            report: cachedReport,
+            createdAt: existing.createdAt,
+            cached: true,
+            real: true,
+          });
+        }
+      }
+    }
+
+    // ── REAL ANALYSIS ──
+    let report: AnalysisReport | null = null;
+    let parsedRepoData: any = null;
     try {
-      realReport = await fetchAndAnalyzeFromGitHub(parsed.owner, parsed.name);
+      const result = await fetchAndAnalyzeFromGitHub(parsed.owner, parsed.name);
+      report = result.report;
+      parsedRepoData = result.parsedRepo;
     } catch (e) {
       console.error("[/api/analyze] GitHub fetch failed, falling back to simulated:", e);
     }
 
-    let report;
-    if (realReport) {
-      report = realReport;
-    } else {
-      // Fallback: simulated report (if GitHub API fails — private repo, rate limit, etc.)
+    // Helper to get parsed file data by path
+    const getParsedFile = (path: string) => parsedRepoData?.files?.find((f: any) => f.path === path);
+
+    if (!report) {
       const { generateReport } = await import("@/lib/analysis-engine");
       report = generateReport(parsed.url);
     }
@@ -67,6 +97,23 @@ export async function POST(req: NextRequest) {
         languages: JSON.stringify(report.languages),
         frameworks: JSON.stringify(report.frameworks),
         report: JSON.stringify(report),
+        parsedData: parsedRepoData ? JSON.stringify(parsedRepoData) : null,
+        fileSummaries: {
+          create: report.files.map(f => ({
+            path: f.path,
+            language: f.language,
+            lines: f.lines,
+            complexity: f.complexity,
+            description: f.description,
+            imports: JSON.stringify(getParsedFile(f.path)?.imports || []),
+            exports: JSON.stringify(getParsedFile(f.path)?.exports || []),
+            functions: JSON.stringify(getParsedFile(f.path)?.functions || []),
+            classes: JSON.stringify(getParsedFile(f.path)?.classes || []),
+            components: JSON.stringify(getParsedFile(f.path)?.components || []),
+            routes: JSON.stringify(getParsedFile(f.path)?.routes || []),
+            issues: f.issues,
+          })),
+        },
       },
     });
 
@@ -74,7 +121,8 @@ export async function POST(req: NextRequest) {
       id: created.id,
       report,
       createdAt: created.createdAt,
-      real: !!realReport, // indicates whether real files were analyzed
+      cached: false,
+      real: !!report,
     });
   } catch (e) {
     console.error("[/api/analyze] error", e);
@@ -82,93 +130,83 @@ export async function POST(req: NextRequest) {
   }
 }
 
-/**
- * Fetch real files from GitHub and analyze them.
- * Uses GitHub's public API (no auth needed for public repos).
- */
 async function fetchAndAnalyzeFromGitHub(owner: string, repo: string) {
-  // 1. Get repo info to find the default branch
-  const repoRes = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
-    headers: { "User-Agent": "CodeInsight-AI", "Accept": "application/vnd.github.v3+json" },
-  });
-  if (!repoRes.ok) throw new Error(`GitHub API: repo not found (${repoRes.status})`);
-  const repoData = await repoRes.json();
-  const branch = repoData.default_branch || "main";
+  const cacheKey = `${owner}/${repo}`;
 
-  // 2. Get file tree
-  const treeUrl = `https://api.github.com/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`;
-  const treeRes = await fetch(treeUrl, {
-    headers: { "User-Agent": "CodeInsight-AI", "Accept": "application/vnd.github.v3+json" },
-  });
+  // ── IN-MEMORY CACHE ── (avoids re-fetching files within same server session)
+  const memCached = repoCache.get(cacheKey);
+  let fileContents: { path: string; content: string }[] = [];
+  let branch = "main";
 
-  if (!treeRes.ok) {
-    throw new Error(`GitHub API returned ${treeRes.status}`);
-  }
+  if (memCached && Date.now() - memCached.timestamp < CACHE_TTL_MS) {
+    fileContents = memCached.files;
+    console.log(`[cache] IN-MEMORY HIT: ${cacheKey} (${fileContents.length} files)`);
+  } else {
+    // 1. Get repo info → default branch
+    const repoRes = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
+      headers: { "User-Agent": "CodeInsight-AI", "Accept": "application/vnd.github.v3+json" },
+    });
+    if (!repoRes.ok) throw new Error(`GitHub API: repo not found (${repoRes.status})`);
+    const repoData = await repoRes.json();
+    branch = repoData.default_branch || "main";
 
-  const treeData = await treeRes.json();
-  const tree: { path: string; type: string; size: number }[] = treeData.tree || [];
-
-  // 2. Filter files: code files only, skip ignored dirs, limit count
-  const codeFiles = tree
-    .filter((f) => f.type === "blob")
-    .filter((f) => !IGNORE_DIRS.some((d) => f.path.startsWith(d + "/") || f.path.startsWith(d)))
-    .filter((f) => {
-      const ext = f.path.substring(f.path.lastIndexOf("."));
-      return FETCH_EXTS.includes(ext) || f.path === "package.json" || f.path === "tsconfig.json" || f.path.endsWith(".config.ts") || f.path.endsWith(".config.js");
-    })
-    .slice(0, MAX_FILES);
-
-  if (codeFiles.length === 0) {
-    throw new Error("No analyzable code files found in repository");
-  }
-
-  // 3. Fetch file contents (batch — use raw.githubusercontent.com)
-  const fileContents: { path: string; content: string }[] = [];
-  const batchSize = 10;
-
-  for (let i = 0; i < codeFiles.length && fileContents.length < MAX_FILES; i += batchSize) {
-    const batch = codeFiles.slice(i, i + batchSize);
-    const results = await Promise.allSettled(
-      batch.map(async (f) => {
-        const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${f.path}`;
-        const res = await fetch(rawUrl, {
-          headers: { "User-Agent": "CodeInsight-AI" },
-        });
-        if (!res.ok) return null;
-        const content = await res.text();
-        // Skip if too large (> 100KB)
-        if (content.length > 100000) return null;
-        return { path: f.path, content };
-      })
+    // 2. Get file tree
+    const treeRes = await fetch(
+      `https://api.github.com/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`,
+      { headers: { "User-Agent": "CodeInsight-AI", "Accept": "application/vnd.github.v3+json" } }
     );
-    for (const r of results) {
-      if (r.status === "fulfilled" && r.value) {
-        fileContents.push(r.value);
+    if (!treeRes.ok) throw new Error(`GitHub API: tree not found (${treeRes.status})`);
+    const treeData = await treeRes.json();
+    const tree: { path: string; type: string; size: number }[] = treeData.tree || [];
+
+    // 3. Filter code files
+    const codeFiles = tree
+      .filter((f) => f.type === "blob")
+      .filter((f) => !IGNORE_DIRS.some((d) => f.path.startsWith(d + "/") || f.path.startsWith(d)))
+      .filter((f) => {
+        const ext = f.path.substring(f.path.lastIndexOf("."));
+        return FETCH_EXTS.includes(ext) || f.path === "package.json" || f.path === "tsconfig.json" || f.path.endsWith(".config.ts") || f.path.endsWith(".config.js");
+      })
+      .slice(0, MAX_FILES);
+
+    if (codeFiles.length === 0) throw new Error("No analyzable code files found");
+
+    // 4. Fetch file contents (batched)
+    const batchSize = 10;
+    for (let i = 0; i < codeFiles.length && fileContents.length < MAX_FILES; i += batchSize) {
+      const batch = codeFiles.slice(i, i + batchSize);
+      const results = await Promise.allSettled(
+        batch.map(async (f) => {
+          const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${f.path}`;
+          const res = await fetch(rawUrl, { headers: { "User-Agent": "CodeInsight-AI" } });
+          if (!res.ok) return null;
+          const content = await res.text();
+          if (content.length > 100000) return null;
+          return { path: f.path, content };
+        })
+      );
+      for (const r of results) {
+        if (r.status === "fulfilled" && r.value) fileContents.push(r.value);
       }
     }
+
+    if (fileContents.length === 0) throw new Error("Could not fetch any file contents");
+
+    // Store in memory cache
+    repoCache.set(cacheKey, { files: fileContents, timestamp: Date.now() });
+    console.log(`[cache] IN-MEMORY SET: ${cacheKey} (${fileContents.length} files)`);
   }
 
-  if (fileContents.length === 0) {
-    throw new Error("Could not fetch any file contents from GitHub");
-  }
-
-  // 4. Parse repository + run real analyzers
+  // 5. Parse + analyze
   const { parseRepository } = await import("@/lib/repo-parser");
   const { analyzeParsedRepository } = await import("@/lib/analysis-engine-v2");
 
-  const parsedRepo = parseRepository(
-    `https://github.com/${owner}/${repo}`,
-    owner,
-    repo,
-    branch,
-    fileContents
-  );
-
+  const parsedRepo = parseRepository(`https://github.com/${owner}/${repo}`, owner, repo, branch, fileContents);
   const report = analyzeParsedRepository(parsedRepo, fileContents);
-  return report;
+  return { report, parsedRepo };
 }
 
-// GET /api/analyze?limit=12 → recent analyses
+// GET /api/analyze?limit=12
 export async function GET(req: NextRequest) {
   try {
     const limit = Math.min(Number(req.nextUrl.searchParams.get("limit") ?? "12"), 50);
