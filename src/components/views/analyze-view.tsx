@@ -17,7 +17,6 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { AICore } from "@/components/3d/ai-core";
 import { GlassCard, GradientText } from "@/components/shared/ui";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -129,7 +128,7 @@ export function AnalyzeView() {
     return (
       <div className="relative mx-auto flex min-h-[calc(100vh-8rem)] max-w-5xl flex-col items-center justify-center px-4 py-12">
         <div className="pointer-events-none absolute inset-0 -z-0 flex items-center justify-center opacity-70">
-          <AICore className="h-[50vh] w-[50vh] max-h-[520px] max-w-[520px]" />
+          {/* 3D AI Core removed */}
         </div>
 
         <motion.div
@@ -212,7 +211,7 @@ export function AnalyzeView() {
       <div className="relative mx-auto max-w-5xl px-4 py-10">
         {/* Active core */}
         <div className="pointer-events-none absolute inset-x-0 top-0 -z-0 flex justify-center opacity-60">
-          <AICore active className="h-[40vh] w-[40vh] max-h-[420px] max-w-[420px]" />
+          {/* 3D AI Core removed */}
         </div>
 
         <motion.div

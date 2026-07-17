@@ -29,7 +29,6 @@ import {
   HardDrive,
   Server,
 } from "lucide-react";
-import { AICore } from "@/components/3d/ai-core";
 import { GlassCard, SectionTitle, GradientText, NeonDivider, AnimatedCounter } from "@/components/shared/ui";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -116,7 +115,7 @@ export function LandingView() {
       {/* ============ HERO ============ */}
       <section className="relative flex min-h-[calc(100vh-4rem)] flex-col items-center justify-center px-4 py-16">
         <div className="pointer-events-none absolute inset-0 -z-0 flex items-center justify-center">
-          <AICore className="h-[60vh] w-[60vh] max-h-[640px] max-w-[640px] opacity-90" />
+          {/* 3D AI Core removed */}
         </div>
 
         <motion.div
