@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { parseRepoUrl } from "@/lib/analysis-engine";
 import type { AnalysisReport } from "@/lib/types";
@@ -6,6 +8,38 @@ import { createJob, startJob, setJobProgress, completeJob, failJob, isCancelled 
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+/**
+ * Lấy GitHub access token của user hiện tại (từ session hoặc DB Account).
+ * Token này cho phép gọi GitHub API tới repo PRIVATE của user.
+ * Trả về null nếu user chưa đăng nhập GitHub (chỉ phân tích được repo public).
+ */
+async function getGithubAccessToken(): Promise<string | null> {
+  const session = await getServerSession(authOptions);
+  const userId = (session as any)?.user ? (session as any).user.id : null;
+  const tokenFromSession = (session as any)?.accessToken as string | undefined;
+
+  // Ưu tiên token có sẵn trong session JWT
+  if (tokenFromSession) return tokenFromSession;
+
+  // Fallback: đọc trực tiếp từ bảng Account theo userId
+  if (userId) {
+    const account = await db.account.findFirst({
+      where: { userId, provider: "github" },
+      select: { access_token: true },
+    });
+    return account?.access_token ?? null;
+  }
+  return null;
+}
+
+/** Tạo header cho GitHub API, kèm Authorization nếu có token. */
+function githubHeaders(token: string | null, acceptJson = true) {
+  const headers: Record<string, string> = { "User-Agent": "CodeInsight-AI" };
+  if (acceptJson) headers["Accept"] = "application/vnd.github.v3+json";
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  return headers;
+}
 
 const IGNORE_DIRS = ["node_modules", "dist", "build", "coverage", "vendor", ".cache", ".git", ".next", ".turbo", ".vercel", "__pycache__", ".pytest_cache", "target", "bin", "obj", "packages", ".idea", ".vscode"];
 const FETCH_EXTS = [".ts", ".tsx", ".js", ".jsx", ".py", ".go", ".rs", ".java", ".cs", ".cpp", ".c", ".php", ".vue", ".svelte", ".css", ".scss", ".html", ".json", ".yml", ".yaml", ".md", ".sh", ".sql", ".rb", ".swift", ".kt", ".toml", ".env", ".config"];
@@ -53,8 +87,12 @@ export async function POST(req: NextRequest) {
     // ── ASYNC MODE: create background job ──
     if (asyncMode) {
       const job = createJob("analyze");
+      const ghToken = await getGithubAccessToken();
+      if (!ghToken) {
+        console.warn(`[${jobId}] No GitHub token — private repos will fail with 404. User should sign in with GitHub.`);
+      }
       // Run analysis in background (non-blocking)
-      runAnalysisInBackground(job.id, parsed.owner, parsed.name, parsed.url, !!force).catch(e => {
+      runAnalysisInBackground(job.id, parsed.owner, parsed.name, parsed.url, !!force, ghToken).catch(e => {
         console.error(`[job ${job.id}] background error:`, e);
         failJob(job.id, e.message || "Unknown error");
       });
@@ -70,7 +108,8 @@ export async function POST(req: NextRequest) {
     let parsedRepoData: any = null;
 
     try {
-      const result = await fetchAndAnalyzeFromGitHub(parsed.owner, parsed.name);
+      const ghToken = await getGithubAccessToken();
+      const result = await fetchAndAnalyzeFromGitHub(parsed.owner, parsed.name, ghToken);
       report = result.report;
       parsedRepoData = result.parsedRepo;
     } catch (e) {
@@ -124,7 +163,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-async function fetchAndAnalyzeFromGitHub(owner: string, repo: string) {
+async function fetchAndAnalyzeFromGitHub(owner: string, repo: string, ghToken: string | null = null) {
   const cacheKey = `${owner}/${repo}`;
   const memCached = repoCache.get(cacheKey);
   let fileContents: { path: string; content: string }[] = [];
@@ -135,14 +174,24 @@ async function fetchAndAnalyzeFromGitHub(owner: string, repo: string) {
     console.log(`[cache] IN-MEMORY HIT: ${cacheKey} (${fileContents.length} files)`);
   } else {
     const repoRes = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
-      headers: { "User-Agent": "CodeInsight-AI", "Accept": "application/vnd.github.v3+json" },
+      headers: githubHeaders(ghToken),
     });
-    if (!repoRes.ok) throw new Error(`GitHub API: repo not found (${repoRes.status})`);
+    if (!repoRes.ok) {
+      throw new Error(
+        repoRes.status === 404
+          ? `GitHub API: repo not found (404). ${
+              ghToken
+                ? "Token không có quyền truy cập repo này hoặc repo không tồn tại."
+                : "Repo có thể là PRIVATE — hãy đăng nhập bằng GitHub để phân tích."
+            }`
+          : `GitHub API: repo not found (${repoRes.status})`
+      );
+    }
     const repoData = await repoRes.json();
     branch = repoData.default_branch || "main";
 
     const treeRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`,
-      { headers: { "User-Agent": "CodeInsight-AI", "Accept": "application/vnd.github.v3+json" } });
+      { headers: githubHeaders(ghToken) });
     if (!treeRes.ok) throw new Error(`GitHub API: tree not found (${treeRes.status})`);
     const treeData = await treeRes.json();
     const tree: { path: string; type: string; size: number }[] = treeData.tree || [];
@@ -159,7 +208,7 @@ async function fetchAndAnalyzeFromGitHub(owner: string, repo: string) {
     for (let i = 0; i < codeFiles.length && fileContents.length < MAX_FILES; i += batchSize) {
       const batch = codeFiles.slice(i, i + batchSize);
       const results = await Promise.allSettled(batch.map(async f => {
-        const res = await fetch(`https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${f.path}`, { headers: { "User-Agent": "CodeInsight-AI" } });
+        const res = await fetch(`https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${f.path}`, { headers: githubHeaders(ghToken, false) });
         if (!res.ok) return null;
         const content = await res.text();
         if (content.length > 100000) return null;
@@ -187,7 +236,8 @@ async function runAnalysisInBackground(
   owner: string,
   repo: string,
   repoUrl: string,
-  force: boolean
+  force: boolean,
+  ghToken: string | null = null
 ) {
   startJob(jobId);
 
@@ -224,9 +274,19 @@ async function runAnalysisInBackground(
     } else {
       // Fetch repo info
       const repoRes = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
-        headers: { "User-Agent": "CodeInsight-AI", "Accept": "application/vnd.github.v3+json" },
+        headers: githubHeaders(ghToken),
       });
-      if (!repoRes.ok) throw new Error(`GitHub API: repo not found (${repoRes.status})`);
+      if (!repoRes.ok) {
+        throw new Error(
+          repoRes.status === 404
+            ? `GitHub API: repo not found (404). ${
+                ghToken
+                  ? "Token không có quyền truy cập repo này hoặc repo không tồn tại."
+                  : "Repo có thể là PRIVATE — hãy đăng nhập bằng GitHub để phân tích."
+              }`
+            : `GitHub API: repo not found (${repoRes.status})`
+        );
+      }
       const repoData = await repoRes.json();
       branch = repoData.default_branch || "main";
 
@@ -235,7 +295,7 @@ async function runAnalysisInBackground(
       // Stage 2: Fetch file tree
       setJobProgress(jobId, 20, "Fetching file tree...");
       const treeRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`,
-        { headers: { "User-Agent": "CodeInsight-AI", "Accept": "application/vnd.github.v3+json" } });
+        { headers: githubHeaders(ghToken) });
       if (!treeRes.ok) throw new Error(`GitHub API: tree not found (${treeRes.status})`);
       const treeData = await treeRes.json();
       const tree: { path: string; type: string; size: number }[] = treeData.tree || [];
@@ -258,7 +318,7 @@ async function runAnalysisInBackground(
         const batch = codeFiles.slice(i, i + batchSize);
         const results = await Promise.allSettled(
           batch.map(async f => {
-            const res = await fetch(`https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${f.path}`, { headers: { "User-Agent": "CodeInsight-AI" } });
+            const res = await fetch(`https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${f.path}`, { headers: githubHeaders(ghToken, false) });
             if (!res.ok) return null;
             const content = await res.text();
             if (content.length > 100000) return null;
