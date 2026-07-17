@@ -123,10 +123,36 @@ export function SettingsView() {
               <div className="mt-3 flex items-center justify-between rounded-xl border border-rose-500/20 bg-rose-500/[0.04] p-4">
                 <div>
                   <p className="text-sm font-medium">{t("settings", "deleteAccount")}</p>
-                  <p className="text-xs text-muted-foreground">Permanently remove all your analyses and data.</p>
+                  <p className="text-xs text-muted-foreground">{t("settings", "deleteAccountDesc")}</p>
                 </div>
-                <Button variant="destructive" size="sm" onClick={() => toast.error("Demo only — account not deleted")}>
-                  Delete
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={async () => {
+                    if (!confirm("⚠️ This will permanently delete ALL analyses, chat messages, and history. This cannot be undone. Are you sure?")) return;
+                    try {
+                      const res = await fetch("/api/reset", { method: "POST" });
+                      const data = await res.json();
+                      if (data.success) {
+                        // Clear all client-side stores
+                        useAppStore.getState().setActiveReport(null);
+                        useAppStore.getState().setActiveAnalysisId(null);
+                        useAppStore.getState().clearChat();
+                        usePersonalityStore.getState().custom.forEach((p) => usePersonalityStore.getState().removeCustom(p.id));
+                        useProvidersStore.getState().providers.forEach((p) => useProvidersStore.getState().removeProvider(p.id));
+                        useDeveloperModeStore.getState().clearLogs();
+                        useDeveloperModeStore.getState().clearSnapshots();
+                        toast.success(`Deleted ${data.deleted.analyses} analyses and ${data.deleted.chatMessages} chat messages. All data reset.`);
+                        setTimeout(() => window.location.reload(), 1500);
+                      } else {
+                        toast.error(data.error || "Reset failed");
+                      }
+                    } catch (e) {
+                      toast.error("Network error — please try again");
+                    }
+                  }}
+                >
+                  {t("settings", "delete")}
                 </Button>
               </div>
             </GlassCard>
