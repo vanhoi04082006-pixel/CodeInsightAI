@@ -172,6 +172,7 @@ export function ProjectView() {
 
 /* ---------- Overview ---------- */
 function OverviewTab({ report }: { report: AnalysisReport }) {
+  const { t } = useT();
   return (
     <div className="grid gap-4 lg:grid-cols-3">
       <GlassCard strong className="p-6 lg:col-span-1">
@@ -240,6 +241,7 @@ function OverviewTab({ report }: { report: AnalysisReport }) {
 
 /* ---------- Architecture ---------- */
 function ArchitectureTab({ report }: { report: AnalysisReport }) {
+  const { t } = useT();
   const a = report.architecture;
   return (
     <div className="space-y-4">
@@ -320,6 +322,7 @@ function ArchitectureTab({ report }: { report: AnalysisReport }) {
 
 /* ---------- Issues (shared for bugs/security/performance) ---------- */
 function IssuesTab({ issues, title, color, report }: { issues: Issue[]; title: string; color: string; report: AnalysisReport }) {
+  const { t } = useT();
   const [expanded, setExpanded] = useState<string | null>(issues[0]?.id ?? null);
   return (
     <div className="space-y-4">
@@ -399,6 +402,7 @@ function IssuesTab({ issues, title, color, report }: { issues: Issue[]; title: s
 
 /* ---------- Dependencies ---------- */
 function DependenciesTab({ report }: { report: AnalysisReport }) {
+  const { t } = useT();
   return (
     <div className="space-y-4">
       <GlassCard className="p-5">
@@ -488,6 +492,7 @@ function DependenciesTab({ report }: { report: AnalysisReport }) {
 
 /* ---------- Code ---------- */
 function CodeTab({ report }: { report: AnalysisReport }) {
+  const { t } = useT();
   return (
     <div className="space-y-4">
       <GlassCard className="p-5">
@@ -506,6 +511,7 @@ function CodeTab({ report }: { report: AnalysisReport }) {
 
 /* ---------- Docs ---------- */
 function DocsTab({ report }: { report: AnalysisReport }) {
+  const { t } = useT();
   const [copied, setCopied] = useState<"readme" | "api" | null>(null);
   const [diagram, setDiagram] = useState<"uml" | "sequence" | "erd">("uml");
   const copy = (which: "readme" | "api") => {
@@ -574,6 +580,7 @@ function DocsTab({ report }: { report: AnalysisReport }) {
 
 /* ---------- Roadmap ---------- */
 function RoadmapTab({ report }: { report: AnalysisReport }) {
+  const { t } = useT();
   return (
     <div className="space-y-4">
       <div className="grid gap-4 lg:grid-cols-2">
