@@ -14,7 +14,6 @@ import {
   Copy,
   Pencil,
   Check,
-  X,
   Download,
   Upload,
   Sparkles,
@@ -44,13 +43,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { usePersonalityStore } from "@/lib/personality-store";
-import { BUILTIN_PERSONALITIES, LUCIDE_ICON_NAMES } from "@/lib/personalities";
-import type { Personality } from "@/lib/types";
+import { BUILTIN_PERSONALITIES, LUCIDE_ICON_NAMES, type Personality } from "@/lib/personalities";
 import { toast } from "sonner";
 import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
-// Local icon map (avoids dynamic lucide import by name)
+// Local icon map
 const ICONS: Record<string, typeof Bot> = {
   briefcase: Briefcase,
   smile: Smile,
@@ -64,7 +62,6 @@ function iconFor(name: string): typeof Bot {
   return ICONS[name] ?? Bot;
 }
 
-// Render an icon by name without creating a component during render.
 function PersonalityIcon({ name, className, style }: { name: string; className?: string; style?: React.CSSProperties }) {
   switch (name) {
     case "briefcase": return <Briefcase className={className} style={style} />;
@@ -104,21 +101,22 @@ export function PersonalitiesView() {
     a.download = "codeinsight-personalities.json";
     a.click();
     URL.revokeObjectURL(url);
-    toast.success("Personalities exported");
+    toast.success(t("notifications", "personalitiesExported"));
   };
 
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
     const reader = new FileReader();
     reader.onload = () => {
       try {
         const data = JSON.parse(reader.result as string);
         const list = (data.personalities ?? data) as Personality[];
         const n = importPersonalities(list);
-        toast.success(`Imported ${n} custom ${n === 1 ? "personality" : "personalities"}`);
+        toast.success(t("personality", "imported", { n }));
       } catch {
-        toast.error("Invalid JSON file");
+        toast.error(t("personality", "invalidJson"));
       }
     };
     reader.readAsText(file);
@@ -143,22 +141,21 @@ export function PersonalitiesView() {
           </h1>
           <p className="text-sm text-muted-foreground">
             {t("personality", "subtitle")}
-            The selected personality injects its system prompt before every AI request.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <input ref={fileRef} type="file" accept="application/json" className="hidden" onChange={handleImport} />
           <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()}>
-            <Upload className="mr-1.5 h-4 w-4" /> Import
+            <Upload className="mr-1.5 h-4 w-4" /> {t("personality", "import")}
           </Button>
           <Button variant="outline" size="sm" onClick={handleExport} disabled={custom.length === 0}>
-            <Download className="mr-1.5 h-4 w-4" /> Export
+            <Download className="mr-1.5 h-4 w-4" /> {t("personality", "export")}
           </Button>
           <Button
             onClick={() => setEditing(makeBlankCustom())}
             className="bg-gradient-to-r from-cyan-500 to-violet-500 text-white hover:opacity-90"
           >
-            <Plus className="mr-1.5 h-4 w-4" /> New Personality
+            <Plus className="mr-1.5 h-4 w-4" /> {t("personality", "newPersonality")}
           </Button>
         </div>
       </motion.div>
@@ -170,8 +167,8 @@ export function PersonalitiesView() {
             <Sparkles className="h-5 w-5" />
           </div>
           <div>
-            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Active personality</p>
-            <p className="text-sm font-semibold">{all.find((p) => p.id === activeId)?.name ?? "—"}</p>
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("personality", "active")}</p>
+            <p className="text-sm font-semibold">{all.find((p) => p.id === activeId)?.name ?? " "}</p>
           </div>
         </GlassCard>
         <GlassCard className="flex items-center gap-3 p-4">
@@ -179,8 +176,8 @@ export function PersonalitiesView() {
             <Star className="h-5 w-5" />
           </div>
           <div>
-            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Default for new chats</p>
-            <p className="text-sm font-semibold">{all.find((p) => p.id === defaultId)?.name ?? "—"}</p>
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("personality", "defaultForChats")}</p>
+            <p className="text-sm font-semibold">{all.find((p) => p.id === defaultId)?.name ?? " "}</p>
           </div>
         </GlassCard>
       </div>
@@ -191,6 +188,7 @@ export function PersonalitiesView() {
           const Icon = iconFor(p.icon);
           const isActive = p.id === activeId;
           const isDefault = p.id === defaultId;
+
           return (
             <motion.div
               key={p.id}
@@ -221,9 +219,9 @@ export function PersonalitiesView() {
                     <div className="flex items-center gap-2">
                       <h3 className="truncate text-base font-semibold">{p.name}</h3>
                       {p.builtin ? (
-                        <Badge variant="outline" className="h-4 text-[9px]">built-in</Badge>
+                        <Badge variant="outline" className="h-4 text-[9px]">{t("personality", "builtin")}</Badge>
                       ) : (
-                        <Badge variant="outline" className="h-4 text-[9px] border-violet-400/40 text-violet-300">custom</Badge>
+                        <Badge variant="outline" className="h-4 text-[9px] border-violet-400/40 text-violet-300">{t("personality", "custom")}</Badge>
                       )}
                     </div>
                     <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{p.description}</p>
@@ -232,15 +230,15 @@ export function PersonalitiesView() {
 
                 {/* tags */}
                 <div className="mt-3 flex flex-wrap gap-1">
-                  {p.tags.map((t, i) => (
-                    <span key={`${t}-${i}`} className="rounded-full border border-white/10 bg-white/[0.03] px-2 py-0.5 text-[9px] text-muted-foreground">{t}</span>
+                  {p.tags.map((t, idx) => (
+                    <span key={`${t}-${idx}`} className="rounded-full border border-white/10 bg-white/[0.03] px-2 py-0.5 text-[9px] text-muted-foreground">{t}</span>
                   ))}
                 </div>
 
                 {/* params */}
                 <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-muted-foreground">
-                  <span className="flex items-center gap-1"><Thermometer className="h-3 w-3" />temp {p.temperature.toFixed(2)}</span>
-                  <span className="flex items-center gap-1"><Hash className="h-3 w-3" />tokens {p.maxTokens === -1 ? "∞" : p.maxTokens}</span>
+                  <span className="flex items-center gap-1"><Thermometer className="h-3 w-3" />{t("personality", "editor.temp")} {p.temperature.toFixed(2)}</span>
+                  <span className="flex items-center gap-1"><Hash className="h-3 w-3" />{t("personality", "editor.maxTokens")} {p.maxTokens === -1 ? " " : p.maxTokens}</span>
                   {p.preferredModel && <span className="flex items-center gap-1"><Cpu className="h-3 w-3" />{p.preferredModel}</span>}
                 </div>
 
@@ -250,26 +248,27 @@ export function PersonalitiesView() {
                 <div className="flex flex-wrap items-center gap-1.5">
                   {!isActive && (
                     <Button size="sm" variant="default" className="h-7 bg-gradient-to-r from-cyan-500 to-violet-500 px-2.5 text-xs text-white" onClick={() => setActive(p.id)}>
-                      <Check className="mr-1 h-3 w-3" /> Use
+                      <Check className="mr-1 h-3 w-3" /> {t("personality", "use")}
                     </Button>
                   )}
                   {!isDefault && (
-                    <Button size="sm" variant="outline" className="h-7 px-2.5 text-xs" onClick={() => { setDefault(p.id); toast.success(`${p.name} set as default`); }}>
-                      <Star className="mr-1 h-3 w-3" /> Default
+                    <Button size="sm" variant="outline" className="h-7 px-2.5 text-xs" onClick={() => { setDefault(p.id); toast.success(t("notifications", "personalityDefault", { name: p.name })); }}>
+                      <Star className="mr-1 h-3 w-3" /> {t("personality", "default")}
                     </Button>
                   )}
                   <Button size="sm" variant="ghost" className="h-7 px-2.5 text-xs" onClick={() => setPreview(p)}>
-                    <FileText className="h-3 w-3" /> Preview
+                    <FileText className="h-3 w-3" /> {t("personality", "preview")}
                   </Button>
+
                   {!p.builtin && (
                     <>
                       <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setEditing(p)}>
                         <Pencil className="h-3 w-3" />
                       </Button>
-                      <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => { duplicateCustom(p.id); toast.success("Duplicated"); }}>
+                      <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => { duplicateCustom(p.id); toast.success(t("notifications", "personalityDuplicated")); }}>
                         <Copy className="h-3 w-3" />
                       </Button>
-                      <Button size="sm" variant="ghost" className="h-7 px-2 text-xs text-rose-400 hover:text-rose-300" onClick={() => { removeCustom(p.id); toast.success("Deleted"); }}>
+                      <Button size="sm" variant="ghost" className="h-7 px-2 text-xs text-rose-400 hover:text-rose-300" onClick={() => { removeCustom(p.id); toast.success(t("notifications", "personalityDeleted")); }}>
                         <Trash2 className="h-3 w-3" />
                       </Button>
                     </>
@@ -321,23 +320,25 @@ function makeBlankCustom(): Personality {
 }
 
 function PersonalityEditor({ personality, onClose }: { personality: Personality; onClose: () => void }) {
+  const { t } = useT();
   const addCustom = usePersonalityStore((s) => s.addCustom);
   const updateCustom = usePersonalityStore((s) => s.updateCustom);
   const [draft, setDraft] = useState<Personality>(personality);
+
   const isEdit = !!personality.id;
 
   const save = () => {
     if (!draft.name.trim() || !draft.systemPrompt.trim()) {
-      toast.error("Name and system prompt are required");
+      toast.error(t("personality", "editor.nameRequired"));
       return;
     }
     const tags = draft.tags.length ? draft.tags : ["custom"];
     if (isEdit) {
       updateCustom(draft.id, draft);
-      toast.success("Personality updated");
+      toast.success(t("notifications", "personalityUpdated"));
     } else {
       addCustom({ ...draft, tags });
-      toast.success("Personality created");
+      toast.success(t("notifications", "personalityCreated"));
     }
     onClose();
   };
@@ -348,15 +349,16 @@ function PersonalityEditor({ personality, onClose }: { personality: Personality;
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Pencil className="h-4 w-4 text-cyan-300" />
-            {isEdit ? "Edit personality" : "New custom personality"}
+            {isEdit ? t("personality", "editor.edit") : t("personality", "editor.new")}
           </DialogTitle>
         </DialogHeader>
+
         <div className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Name">
+            <Field label={t("personality", "editor.name")}>
               <Input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="e.g. Code Reviewer" className="bg-white/[0.03]" />
             </Field>
-            <Field label="Icon">
+            <Field label={t("personality", "editor.icon")}>
               <Select value={draft.icon} onValueChange={(v) => setDraft({ ...draft, icon: v })}>
                 <SelectTrigger className="bg-white/[0.03]"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -372,10 +374,12 @@ function PersonalityEditor({ personality, onClose }: { personality: Personality;
               </Select>
             </Field>
           </div>
-          <Field label="Description">
+
+          <Field label={t("personality", "editor.description")}>
             <Input value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} placeholder="Short summary of how this personality behaves" className="bg-white/[0.03]" />
           </Field>
-          <Field label="System Prompt" hint="injected before every AI request">
+
+          <Field label={t("personality", "editor.systemPrompt")} hint={t("personality", "editor.systemPromptHint")}>
             <Textarea
               value={draft.systemPrompt}
               onChange={(e) => setDraft({ ...draft, systemPrompt: e.target.value })}
@@ -384,26 +388,29 @@ function PersonalityEditor({ personality, onClose }: { personality: Personality;
               className="bg-white/[0.03] font-mono text-xs"
             />
           </Field>
+
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field label={`Temperature · ${draft.temperature.toFixed(2)}`} hint="0 = deterministic, 2 = creative">
+            <Field label={`${t("personality", "editor.temp")} — ${draft.temperature.toFixed(2)}`} hint={t("personality", "editor.tempHint")}>
               <Slider value={[draft.temperature]} min={0} max={2} step={0.05} onValueChange={([v]) => setDraft({ ...draft, temperature: v })} />
             </Field>
-            <Field label="Max tokens" hint="-1 = unlimited">
+            <Field label={t("personality", "editor.maxTokens")} hint={t("personality", "editor.maxTokensHint")}>
               <Input type="number" value={draft.maxTokens} onChange={(e) => setDraft({ ...draft, maxTokens: Number(e.target.value) })} className="bg-white/[0.03]" />
             </Field>
           </div>
+
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Preferred model (optional)">
+            <Field label={t("personality", "editor.preferredModel")}>
               <Input value={draft.preferredModel ?? ""} onChange={(e) => setDraft({ ...draft, preferredModel: e.target.value })} placeholder="gpt-4o" className="bg-white/[0.03]" />
             </Field>
-            <Field label="Accent color">
+            <Field label={t("personality", "editor.accent")}>
               <div className="flex items-center gap-2">
                 <input type="color" value={draft.accent} onChange={(e) => setDraft({ ...draft, accent: e.target.value })} className="h-9 w-12 rounded border border-white/10 bg-transparent" />
                 <Input value={draft.accent} onChange={(e) => setDraft({ ...draft, accent: e.target.value })} className="bg-white/[0.03]" />
               </div>
             </Field>
           </div>
-          <Field label="Tags (comma-separated)">
+
+          <Field label={t("personality", "editor.tags")}>
             <Input
               value={draft.tags.join(", ")}
               onChange={(e) => setDraft({ ...draft, tags: e.target.value.split(",").map((t) => t.trim()).filter(Boolean) })}
@@ -412,10 +419,11 @@ function PersonalityEditor({ personality, onClose }: { personality: Personality;
             />
           </Field>
         </div>
+
         <div className="mt-4 flex justify-end gap-2">
-          <Button variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button variant="ghost" onClick={onClose}>{t("personality", "editor.cancel")}</Button>
           <Button onClick={save} className="bg-gradient-to-r from-cyan-500 to-violet-500 text-white">
-            <Check className="mr-1.5 h-4 w-4" /> {isEdit ? "Save changes" : "Create"}
+            <Check className="mr-1.5 h-4 w-4" /> {isEdit ? t("personality", "editor.save") : t("personality", "editor.create")}
           </Button>
         </div>
       </DialogContent>
@@ -425,35 +433,38 @@ function PersonalityEditor({ personality, onClose }: { personality: Personality;
 
 /* ---------- Preview ---------- */
 function PreviewDialog({ personality, onClose }: { personality: Personality; onClose: () => void }) {
+  const { t } = useT();
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-h-[88vh] max-w-2xl overflow-y-auto border-white/10 bg-popover/95 backdrop-blur-2xl scrollbar-thin">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <PersonalityIcon name={personality.icon} className="h-4 w-4" style={{ color: personality.accent }} />
-            {personality.name} — Preview
+            {personality.name} — {t("personality", "previewDialog.title")}
           </DialogTitle>
         </DialogHeader>
+
         <div className="space-y-4">
           <div>
-            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Description</p>
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("personality", "previewDialog.description")}</p>
             <p className="mt-1 text-sm">{personality.description}</p>
           </div>
           <div>
-            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Sample response</p>
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("personality", "previewDialog.sample")}</p>
             <div className="mt-1 rounded-lg border border-white/10 bg-black/40 p-3">
-              <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground/85">{personality.preview || "No preview available."}</p>
+              <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground/85">{personality.preview || t("personality", "previewDialog.noPreview")}</p>
             </div>
           </div>
           <div>
-            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">System prompt</p>
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("personality", "previewDialog.systemPrompt")}</p>
             <pre className="mt-1 max-h-64 overflow-y-auto whitespace-pre-wrap rounded-lg border border-white/5 bg-black/40 p-3 font-mono text-[11px] leading-relaxed text-foreground/80 scrollbar-thin">
-{personality.systemPrompt}
+              {personality.systemPrompt}
             </pre>
           </div>
         </div>
+
         <div className="mt-4 flex justify-end">
-          <Button variant="ghost" onClick={onClose}>Close</Button>
+          <Button variant="ghost" onClick={onClose}>{t("personality", "previewDialog.close")}</Button>
         </div>
       </DialogContent>
     </Dialog>
@@ -465,7 +476,7 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
     <div className="space-y-1.5">
       <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
         {label}
-        {hint && <span className="text-[10px] text-muted-foreground/70">· {hint}</span>}
+        {hint && <span className="text-[10px] text-muted-foreground/70">— {hint}</span>}
       </label>
       {children}
     </div>
