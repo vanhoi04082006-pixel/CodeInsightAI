@@ -504,7 +504,18 @@ function CodeTab({ report }: { report: AnalysisReport }) {
           Representative snippets parsed from the codebase, each with syntax highlighting and an AI explanation of what it does and how to improve it.
         </p>
       </GlassCard>
-      <CodeViewer snippets={report.snippets} />
+      
+      {report.snippets && report.snippets.length > 0 ? (
+        <CodeViewer snippets={report.snippets} />
+      ) : (
+        <GlassCard className="p-10 text-center flex flex-col items-center justify-center border-dashed border-white/10">
+          <FileCode className="h-10 w-10 text-muted-foreground mb-3 opacity-40" />
+          <p className="text-sm font-medium text-foreground/80">No significant code snippets found</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            The analysis engine did not extract any complex logic blocks from this repository.
+          </p>
+        </GlassCard>
+      )}
     </div>
   );
 }
