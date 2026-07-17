@@ -281,9 +281,14 @@ function ProviderCard({ provider }: { provider: AIProvider }) {
       const contentType = res.headers.get("content-type") || "";
       if (!contentType.includes("application/json")) {
         const text = await res.text().catch(() => "");
-        const shortErr = text.substring(0, 150) || `HTTP ${res.status}`;
-        setStatus(provider.id, "error", 0, shortErr);
-        toast.error(`Server returned ${res.status}`);
+        // Gateway returns Z.ai loading page (HTML) when server is starting/restarting
+        if (text.includes("logo") || text.includes("setTimeout")) {
+          setStatus(provider.id, "error", 0, "Server is starting up. Please wait 10 seconds and try again.");
+          toast.error("Server is starting up. Please retry in 10s.");
+        } else {
+          setStatus(provider.id, "error", 0, `Server error ${res.status}`);
+          toast.error(`Server error ${res.status}`);
+        }
         return;
       }
       const data = await res.json();
