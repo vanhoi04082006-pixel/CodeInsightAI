@@ -81,7 +81,11 @@ export function analyzeParsedRepository(parsed: ParsedRepository, rawFiles?: { p
     repoName: parsed.name,
     repoBranch: parsed.branch,
     summary: `${parsed.totalFiles} files, ${parsed.totalLines.toLocaleString()} lines. ${parsed.languages[0]?.name ?? "Unknown"} (${parsed.languages[0]?.percentage ?? 0}%). Frameworks: ${parsed.frameworks.map(f=>f.name).join(", ")||"none"}. Architecture: ${arch.pattern}. ${securityIssues.length} security issues, ${bugIssues.length} bugs, ${perfIssues.length} performance issues found.`,
-    tags: [...(parsed.languages[0]?.name ? [parsed.languages[0].name] : []), ...(parsed.frameworks[0]?.name ? [parsed.frameworks[0].name] : []), arch.pattern.split(" ")[0]],
+    tags: Array.from(new Set([
+      ...(parsed.languages[0]?.name ? [parsed.languages[0].name] : []),
+      ...(parsed.frameworks[0]?.name ? [parsed.frameworks[0].name] : []),
+      arch.pattern.split(" ")[0],
+    ].filter(Boolean))),
     scores: { overall, security: securityScore, performance: performanceScore, architecture: architectureScore, maintainability: maintainabilityScore, codeQuality: codeQualityScore },
     scoreBreakdown: [
       { label: "Security", score: securityScore, max: 100, weight: 25 },

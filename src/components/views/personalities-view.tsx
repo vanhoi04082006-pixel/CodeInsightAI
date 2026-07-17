@@ -232,8 +232,8 @@ export function PersonalitiesView() {
 
                 {/* tags */}
                 <div className="mt-3 flex flex-wrap gap-1">
-                  {p.tags.map((t) => (
-                    <span key={t} className="rounded-full border border-white/10 bg-white/[0.03] px-2 py-0.5 text-[9px] text-muted-foreground">{t}</span>
+                  {p.tags.map((t, i) => (
+                    <span key={`${t}-${i}`} className="rounded-full border border-white/10 bg-white/[0.03] px-2 py-0.5 text-[9px] text-muted-foreground">{t}</span>
                   ))}
                 </div>
 
