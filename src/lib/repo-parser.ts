@@ -307,22 +307,35 @@ export function buildDependencyGraph(files: ParsedFile[]): { nodes: DependencyNo
   const edges: DependencyEdge[] = [];
   const nodeMap = new Map<string, number>();
 
-  // Create nodes
-  files.forEach((f, i) => {
+  // CHỈ lấy các file code thực sự để vẽ đồ thị, loại bỏ .md, .json, .lock để đỡ rác
+  const codeFiles = files.filter(f => {
+    const ext = f.path.substring(f.path.lastIndexOf(".")).toLowerCase();
+    return !['.md', '.txt', '.json', '.lock', '.csv', '.yml', '.yaml'].includes(ext);
+  });
+
+  // Create nodes using Golden Spiral distribution for better layout
+  const golden_ratio = (Math.sqrt(5) + 1) / 2 - 1;
+  const golden_angle = golden_ratio * 2 * Math.PI;
+
+  codeFiles.forEach((f, i) => {
     const parts = f.path.split("/");
     const label = parts[parts.length - 1];
-    const dir = parts.length > 1 ? parts[0] : "root";
-    const types: DependencyNode["type"][] = ["entry", "core", "service", "util", "component", "config", "entry"];
+    
     const type: DependencyNode["type"] =
       f.routes.length > 0 ? "entry" :
       f.components.length > 0 ? "component" :
       f.functions.length > 5 ? "service" :
       f.functions.length > 0 ? "core" :
-      f.path.includes("config") || f.path.endsWith(".json") ? "config" : "util";
+      f.path.includes("config") ? "config" : "util";
 
     const group = Math.min(i % 4 + 1, 4);
-    const angle = (group / 4) * Math.PI * 2;
-    const radius = 20 + (i % 5) * 6;
+    
+    // Thuật toán Golden Spiral (toạ độ x, y rải đều từ tâm ra ngoài, không bị đè)
+    const ratio = i / codeFiles.length;
+    const angle = i * golden_angle;
+    // Bán kính từ 10 đến 45 (để không bị tràn ra ngoài viền viewBox 100x100)
+    const radius = 10 + Math.sqrt(ratio) * 35; 
+
     nodes.push({
       id: f.path,
       label,
@@ -336,10 +349,9 @@ export function buildDependencyGraph(files: ParsedFile[]): { nodes: DependencyNo
   });
 
   // Create edges from imports
-  files.forEach((f) => {
+  codeFiles.forEach((f) => {
     for (const imp of f.imports) {
-      // Try to resolve import to a file
-      const resolved = files.find(
+      const resolved = codeFiles.find(
         (other) =>
           other.path === imp ||
           other.path.endsWith(imp) ||
@@ -359,7 +371,7 @@ export function buildDependencyGraph(files: ParsedFile[]): { nodes: DependencyNo
     }
   });
 
-  // Detect circular dependencies (simple: A imports B, B imports A)
+  // Detect circular dependencies
   const circular: { nodes: string[] }[] = [];
   for (let i = 0; i < edges.length; i++) {
     for (let j = i + 1; j < edges.length; j++) {
@@ -415,7 +427,8 @@ export function parseRepository(
   // Aggregate languages
   const langMap = new Map<string, { name: string; color: string; files: number; lines: number }>();
   for (const f of parsedFiles) {
-    const existing = langMap.get(f.language) ?? { name: f.language, color: EXT_LANGUAGES[ext2(f.path)]?.color ?? "#ccc", files: 0, lines: 0 };
+    const ext = ext2(f.path);
+    const existing = langMap.get(f.language) ?? { name: f.language, color: EXT_LANGUAGES[ext]?.color ?? "#ccc", files: 0, lines: 0 };
     existing.files++;
     existing.lines += f.lines;
     langMap.set(f.language, existing);

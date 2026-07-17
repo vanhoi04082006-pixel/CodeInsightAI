@@ -27,14 +27,6 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useT } from "@/lib/i18n";
 
-// ==========================================
-// CẤU HÌNH TỐC ĐỘ CHẠY UI (Millisecond cho mỗi 1%):
-// 60ms  = Tổng thời gian chạy khoảng 6 giây
-// 90ms  = Tổng thời gian chạy khoảng 9 giây (Khuyên dùng - Rất mượt và vừa mắt)
-// 120ms = Tổng thời gian chạy khoảng 12 giây
-const PROGRESS_SPEED_MS = 90;
-// ==========================================
-
 const ICONS: Record<string, typeof GitBranch> = {
   "git-branch": GitBranch,
   scan: ScanLine,
@@ -54,10 +46,10 @@ export function AnalyzeView() {
   const [phase, setPhase] = useState<Phase>("input");
   const [report, setReport] = useState<AnalysisReport | null>(null);
 
-  // State điều khiển nội suy tiến độ
-  const [visualProgress, setVisualProgress] = useState(0);
-  const [targetProgress, setTargetProgress] = useState(0);
-  const [isJobComplete, setIsJobComplete] = useState(false);
+  // State điều khiển tiến độ
+  const [visualProgress, setVisualProgress] = useState(0); 
+  const [targetProgress, setTargetProgress] = useState(0); 
+  const [isJobComplete, setIsJobComplete] = useState(false); 
 
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
@@ -74,43 +66,59 @@ export function AnalyzeView() {
 
   useEffect(() => () => clearTimers(), []);
 
-  // --- BỘ ĐIỀU KHIỂN TIẾN ĐỘ ---
+  // --- THUẬT TOÁN 60FPS: Nội suy tiến độ siêu mượt bằng requestAnimationFrame ---
   useEffect(() => {
     if (phase !== "running") return;
+    let animationFrameId: number;
+    let lastTime = performance.now();
 
-    const interval = setInterval(() => {
+    const tick = (time: number) => {
+      const deltaTime = time - lastTime;
+      lastTime = time;
+
       setVisualProgress((prev) => {
-        if (prev < targetProgress || (isJobComplete && prev < 100)) {
-          return Math.min(prev + 1, 100);
-        }
+        if (isJobComplete && prev >= 100) return 100;
 
-        if (!isJobComplete && prev >= targetProgress && prev < 92) {
-          return prev + 0.5;
+        let next = prev;
+        if (prev < targetProgress) {
+          // Tính toán gia tốc: Càng cách xa target thì chạy càng nhanh để đuổi kịp, gần thì chậm lại
+          const distance = targetProgress - prev;
+          const speed = distance > 30 ? 40 : distance > 10 ? 20 : 8; // % tiến độ mỗi giây
+          next = prev + (speed * deltaTime) / 1000;
+          if (next > targetProgress) next = targetProgress;
+        } else if (!isJobComplete && prev >= targetProgress && prev < 95) {
+          // Khi API chưa trả về kịp, tự động nhích vi phân (0.5% / giây) để tạo cảm giác AI đang suy nghĩ
+          next = prev + (0.5 * deltaTime) / 1000;
         }
-
-        if (isJobComplete && prev >= 100) {
-          clearInterval(interval);
-          setTimeout(() => {
-            setPhase("done");
-            if (report) {
-              toast.success(t("analysis", "completeDesc", { score: report.scores?.overall ?? 0 }));
-            }
-          }, 800);
-        }
-
-        return prev;
+        
+        animationFrameId = requestAnimationFrame(tick);
+        return Math.min(next, 100);
       });
-    }, PROGRESS_SPEED_MS);
+    };
 
-    return () => clearInterval(interval);
-  }, [phase, targetProgress, isJobComplete, report, t]);
+    animationFrameId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(animationFrameId);
+  }, [phase, targetProgress, isJobComplete]);
+
+  // Hook riêng để xử lý khi tiến độ đạt 100% (Tạo độ trễ 600ms trước khi chuyển sang Done)
+  useEffect(() => {
+    if (isJobComplete && visualProgress >= 100 && phase === "running") {
+      const tId = setTimeout(() => {
+        setPhase("done");
+        if (report) {
+          toast.success(t("analysis", "completeDesc", { score: report.scores?.overall ?? 0 }));
+        }
+      }, 600);
+      return () => clearTimeout(tId);
+    }
+  }, [isJobComplete, visualProgress, phase, report, t]);
+  // -------------------------------------------------------------------------
 
   const totalStages = ANALYSIS_STAGES.length;
-  const stageIdx = Math.min(
-    Math.floor((visualProgress / 100) * totalStages),
-    totalStages - 1
-  );
-  const stageProgress = ((visualProgress * totalStages) % 100);
+  const stageSize = 100 / totalStages;
+  
+  // Xác định Stage hiện tại dựa trên toán học chuẩn
+  const stageIdx = Math.min(Math.floor(visualProgress / stageSize), totalStages - 1);
 
   const start = async () => {
     const parsed = parseRepoUrl(url);
@@ -120,9 +128,9 @@ export function AnalyzeView() {
     }
     setError("");
     setPhase("running");
-
+    
     setVisualProgress(0);
-    setTargetProgress(5);
+    setTargetProgress(5); 
     setIsJobComplete(false);
     clearTimers();
 
@@ -203,7 +211,7 @@ export function AnalyzeView() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error ?? t("analysis", "failed"));
-
+      
       setReport(data.report);
       setActiveAnalysisId(data.id ?? null);
       clearChat();
@@ -304,7 +312,6 @@ export function AnalyzeView() {
   /* ---------- RUNNING PHASE ---------- */
   if (phase === "running") {
     const current = ANALYSIS_STAGES[stageIdx] || ANALYSIS_STAGES[0];
-    const overallProgress = visualProgress;
 
     return (
       <div className="relative mx-auto max-w-5xl px-4 py-10">
@@ -330,13 +337,13 @@ export function AnalyzeView() {
               <Loader2 className="h-4 w-4 animate-spin text-cyan-300" />
               {t("analysis", `stages.${current.id}` as any) || current.label}
             </span>
-            <span className="tabular-nums text-muted-foreground">{Math.round(overallProgress)}{t("analysis", "overallProgress")}</span>
+            <span className="tabular-nums text-muted-foreground">{Math.round(visualProgress)}{t("analysis", "overallProgress")}</span>
           </div>
           <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/5">
-            <motion.div
+            {/* LƯU Ý: Không dùng transition CSS nữa để Framer tự render theo frame */}
+            <div
               className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-violet-500"
-              style={{ width: `${overallProgress}%` }}
-              transition={{ ease: "linear", duration: 0.1 }}
+              style={{ width: `${visualProgress}%` }}
             />
           </div>
           <p className="mt-2 text-xs text-muted-foreground">{t("analysis", `${current.id}Desc` as any) || current.description}</p>
@@ -345,7 +352,16 @@ export function AnalyzeView() {
         {/* Stage list */}
         <div className="relative z-10 mt-6 grid gap-2 sm:grid-cols-2">
           {ANALYSIS_STAGES.map((stage, i) => {
-            const status = i < stageIdx ? "done" : i === stageIdx ? "active" : "pending";
+            const stageStart = i * stageSize;
+            const stageEnd = (i + 1) * stageSize;
+            
+            let status = "pending";
+            if (visualProgress >= stageEnd) status = "done";
+            else if (visualProgress >= stageStart) status = "active";
+
+            // Tính localProgress chính xác cho từng thanh nhỏ (Hết nhảy cóc)
+            const localProgress = Math.max(0, Math.min(100, ((visualProgress - stageStart) / stageSize) * 100));
+
             const SIcon = ICONS[stage.icon] ?? Sparkles;
             return (
               <motion.div
@@ -383,8 +399,8 @@ export function AnalyzeView() {
                 {status === "active" && (
                   <div className="h-1.5 w-16 overflow-hidden rounded-full bg-white/10">
                     <div
-                      className="h-full rounded-full bg-cyan-400 transition-all duration-100"
-                      style={{ width: `${stageProgress}%` }}
+                      className="h-full rounded-full bg-cyan-400"
+                      style={{ width: `${localProgress}%` }}
                     />
                   </div>
                 )}
