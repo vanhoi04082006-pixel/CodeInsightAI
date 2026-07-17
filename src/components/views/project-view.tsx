@@ -59,9 +59,9 @@ export function ProjectView() {
         <GlassCard className="p-10">
           <FileCode className="mx-auto h-10 w-10 text-cyan-300" />
           <h2 className="mt-4 text-xl font-bold">{t("reports", "noReport")}</h2>
-          <p className="mt-2 text-sm text-muted-foreground">{t("reports", "noReportDesc")}</p>
+          <p className="mt-2 text-sm text-muted-foreground">Analyze a repository first to view its full report.</p>
           <Button onClick={() => setView("analyze")} className="mt-4 bg-gradient-to-r from-cyan-500 to-violet-500 text-white">
-            {t("reports", "startAnalysis")}
+            Start analysis
           </Button>
         </GlassCard>
       </div>
@@ -69,13 +69,14 @@ export function ProjectView() {
   }
 
   const exportMarkdown = () => {
-    const md = `# ${report.repoOwner}/${report.repoName} — AI Report\n\n${report.summary}\n\n## Scores\n- Overall: ${report.scores.overall}\n- Security: ${report.scores.security}\n- Performance: ${report.scores.performance}\n- Architecture: ${report.scores.architecture}\n- Maintainability: ${report.scores.maintainability}\n\n## Top Issues\n${[...report.issues.security, ...report.issues.bugs, ...report.issues.performance].map((i) => `- [${i.severity}]${i.title}`).join("\n")}\n`;
+    const md = `# ${report.repoOwner}/${report.repoName} — AI Report\n\n${report.summary}\n\n## Scores\n- Overall: ${report.scores.overall}\n- Security: ${report.scores.security}\n- Performance: ${report.scores.performance}\n- Architecture: ${report.scores.architecture}\n- Maintainability: ${report.scores.maintainability}\n\n## Top Issues\n${[...report.issues.security, ...report.issues.bugs, ...report.issues.performance].map((i) => `- [${i.severity}] ${i.title}`).join("\n")}\n`;
     navigator.clipboard.writeText(md);
     toast.success(t("reports", "exportMarkdown"));
   };
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 md:px-6">
+      {/* header */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -89,43 +90,44 @@ export function ProjectView() {
             <span className="rounded-full bg-white/5 px-2 py-0.5 text-[10px]">{report.repoBranch}</span>
           </div>
           <h1 className="mt-1 text-2xl font-bold md:text-3xl">
-            <GradientText>{t("reports", "projectReport")}</GradientText>
+            Project <GradientText>Report</GradientText>
           </h1>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{report.summary}</p>
           <div className="mt-2 flex flex-wrap gap-1.5">
-            {Array.from(new Set(report.tags)).map((tg, i) => (
-              <span key={`${tg}-${i}`} className="rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-0.5 text-[10px] text-muted-foreground">{tg}</span>
+            {Array.from(new Set(report.tags)).map((t, i) => (
+              <span key={`${t}-${i}`} className="rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-0.5 text-[10px] text-muted-foreground">{t}</span>
             ))}
           </div>
         </div>
         <div className="flex gap-2">
           <Button onClick={exportMarkdown} variant="outline" size="sm">
-            <Download className="mr-1.5 h-4 w-4" /> {t("reports", "markdown")}
+            <Download className="mr-1.5 h-4 w-4" /> Markdown
           </Button>
           <Button onClick={() => toast.success(t("reports", "shareLink"))} variant="outline" size="sm">
-            <Share2 className="mr-1.5 h-4 w-4" /> {t("reports", "share")}
+            <Share2 className="mr-1.5 h-4 w-4" /> Share
           </Button>
           <Button onClick={() => setView("chat")} size="sm" className="bg-gradient-to-r from-cyan-500 to-violet-500 text-white">
-            <Sparkles className="mr-1.5 h-4 w-4" /> {t("reports", "askAI")}
+            <Sparkles className="mr-1.5 h-4 w-4" /> Ask AI
           </Button>
         </div>
       </motion.div>
 
+      {/* tabs */}
       <div className="mt-6">
         <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)}>
           <div className="overflow-x-auto scrollbar-thin">
             <TabsList className="inline-flex h-auto gap-1 rounded-xl border border-white/10 bg-white/[0.02] p-1">
-              {TABS.map((tItem) => {
-                const Icon = tItem.icon;
-                const count = tItem.id === "bugs" ? report.issues.bugs.length : tItem.id === "security" ? report.issues.security.length : tItem.id === "performance" ? report.issues.performance.length : 0;
+              {TABS.map((tab) => {
+                const Icon = tab.icon;
+                const count = tab.id === "bugs" ? report.issues.bugs.length : tab.id === "security" ? report.issues.security.length : tab.id === "performance" ? report.issues.performance.length : 0;
                 return (
                   <TabsTrigger
-                    key={tItem.id}
-                    value={tItem.id}
+                    key={tab.id}
+                    value={tab.id}
                     className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-500/20 data-[state=active]:to-violet-500/20 data-[state=active]:text-cyan-300"
                   >
                     <Icon className="h-3.5 w-3.5" />
-                    {t("reports", tItem.labelKey)}
+                    {t("reports", tab.labelKey)}
                     {count > 0 && (
                       <span className="ml-0.5 rounded-full bg-white/10 px-1.5 text-[10px] tabular-nums">{count}</span>
                     )}
@@ -135,21 +137,40 @@ export function ProjectView() {
             </TabsList>
           </div>
 
-          <TabsContent value="overview" className="mt-4"><OverviewTab report={report} /></TabsContent>
-          <TabsContent value="architecture" className="mt-4"><ArchitectureTab report={report} /></TabsContent>
-          <TabsContent value="bugs" className="mt-4"><IssuesTab issues={report.issues.bugs} title={t("reports", "bugs")} color="#fbbf24" /></TabsContent>
-          <TabsContent value="security" className="mt-4"><IssuesTab issues={report.issues.security} title={t("reports", "security")} color="#f472b6" /></TabsContent>
-          <TabsContent value="performance" className="mt-4"><IssuesTab issues={report.issues.performance} title={t("reports", "performance")} color="#34d399" /></TabsContent>
-          <TabsContent value="dependencies" className="mt-4"><DependenciesTab report={report} /></TabsContent>
-          <TabsContent value="code" className="mt-4"><CodeTab report={report} /></TabsContent>
-          <TabsContent value="docs" className="mt-4"><DocsTab report={report} /></TabsContent>
-          <TabsContent value="roadmap" className="mt-4"><RoadmapTab report={report} /></TabsContent>
+          <TabsContent value="overview" className="mt-4">
+            <OverviewTab report={report} />
+          </TabsContent>
+          <TabsContent value="architecture" className="mt-4">
+            <ArchitectureTab report={report} />
+          </TabsContent>
+          <TabsContent value="bugs" className="mt-4">
+            <IssuesTab issues={report.issues.bugs} title="Bug Detection" color="#fbbf24" report={report} />
+          </TabsContent>
+          <TabsContent value="security" className="mt-4">
+            <IssuesTab issues={report.issues.security} title="Security Audit" color="#f472b6" report={report} />
+          </TabsContent>
+          <TabsContent value="performance" className="mt-4">
+            <IssuesTab issues={report.issues.performance} title="Performance Analysis" color="#34d399" report={report} />
+          </TabsContent>
+          <TabsContent value="dependencies" className="mt-4">
+            <DependenciesTab report={report} />
+          </TabsContent>
+          <TabsContent value="code" className="mt-4">
+            <CodeTab report={report} />
+          </TabsContent>
+          <TabsContent value="docs" className="mt-4">
+            <DocsTab report={report} />
+          </TabsContent>
+          <TabsContent value="roadmap" className="mt-4">
+            <RoadmapTab report={report} />
+          </TabsContent>
         </Tabs>
       </div>
     </div>
   );
 }
 
+/* ---------- Overview ---------- */
 function OverviewTab({ report }: { report: AnalysisReport }) {
   const { t } = useT();
   return (
@@ -189,14 +210,14 @@ function OverviewTab({ report }: { report: AnalysisReport }) {
           <Stat label={t("reports", "totalFiles")} value={report.totalFiles} />
           <Stat label={t("reports", "totalLines")} value={report.totalLines.toLocaleString()} />
           <Stat label={t("reports", "frameworks")} value={report.frameworks.length} />
-          <Stat label={t("reports", "languages")} value={report.languages.length} />
+          <Stat label="Languages" value={report.languages.length} />
           <Stat label={t("reports", "bugsFound")} value={report.issues.bugs.length} accent="#fbbf24" />
           <Stat label={t("reports", "securityIssues")} value={report.issues.security.length} accent="#f472b6" />
           <Stat label={t("reports", "perfIssues")} value={report.issues.performance.length} accent="#34d399" />
         </div>
 
         <NeonDivider className="my-4" />
-        <h4 className="text-sm font-semibold">{t("reports", "keyFiles")}</h4>
+        <h4 className="text-sm font-semibold">Key files</h4>
         <div className="mt-2 max-h-64 space-y-1.5 overflow-y-auto scrollbar-thin pr-1">
           {report.files.slice(0, 8).map((f) => (
             <div key={f.path} className="flex items-center gap-2 rounded-lg border border-white/5 bg-white/[0.02] p-2.5">
@@ -218,6 +239,7 @@ function OverviewTab({ report }: { report: AnalysisReport }) {
   );
 }
 
+/* ---------- Architecture ---------- */
 function ArchitectureTab({ report }: { report: AnalysisReport }) {
   const { t } = useT();
   const a = report.architecture;
@@ -226,7 +248,7 @@ function ArchitectureTab({ report }: { report: AnalysisReport }) {
       <GlassCard className="p-6">
         <div className="flex flex-wrap items-center gap-2">
           <Network className="h-5 w-5 text-cyan-300" />
-          <h3 className="text-lg font-semibold">{t("reports", "pattern")}: <GradientText>{a.pattern}</GradientText></h3>
+          <h3 className="text-lg font-semibold">Pattern: <GradientText>{a.pattern}</GradientText></h3>
         </div>
         <p className="mt-2 text-sm leading-relaxed text-foreground/85">{a.description}</p>
       </GlassCard>
@@ -236,7 +258,13 @@ function ArchitectureTab({ report }: { report: AnalysisReport }) {
           <h4 className="text-sm font-semibold text-emerald-400">{t("reports", "strengths")}</h4>
           <ul className="mt-3 space-y-2">
             {a.strengths.map((s, i) => (
-              <motion.li key={i} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }} className="flex items-start gap-2 text-sm">
+              <motion.li
+                key={i}
+                initial={{ opacity: 0, x: -8 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.05 }}
+                className="flex items-start gap-2 text-sm"
+              >
                 <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
                 <span className="text-foreground/85">{s}</span>
               </motion.li>
@@ -247,7 +275,13 @@ function ArchitectureTab({ report }: { report: AnalysisReport }) {
           <h4 className="text-sm font-semibold text-rose-400">{t("reports", "weaknesses")}</h4>
           <ul className="mt-3 space-y-2">
             {a.weaknesses.map((s, i) => (
-              <motion.li key={i} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }} className="flex items-start gap-2 text-sm">
+              <motion.li
+                key={i}
+                initial={{ opacity: 0, x: -8 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.05 }}
+                className="flex items-start gap-2 text-sm"
+              >
                 <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-rose-400" />
                 <span className="text-foreground/85">{s}</span>
               </motion.li>
@@ -260,15 +294,24 @@ function ArchitectureTab({ report }: { report: AnalysisReport }) {
         <h4 className="text-sm font-semibold">{t("reports", "architectureLayers")}</h4>
         <div className="mt-4 space-y-2">
           {a.layers.map((l, i) => (
-            <motion.div key={l.name} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }} className="flex items-center gap-3 rounded-xl border border-white/5 bg-white/[0.02] p-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-xs font-bold" style={{ background: ["#22d3ee", "#a78bfa", "#f472b6", "#34d399"][i % 4] + "1a", color: ["#22d3ee", "#a78bfa", "#f472b6", "#34d399"][i % 4] }}>
+            <motion.div
+              key={l.name}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.06 }}
+              className="flex items-center gap-3 rounded-xl border border-white/5 bg-white/[0.02] p-3"
+            >
+              <div
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-xs font-bold"
+                style={{ background: ["#22d3ee", "#a78bfa", "#f472b6", "#34d399"][i % 4] + "1a", color: ["#22d3ee", "#a78bfa", "#f472b6", "#34d399"][i % 4] }}
+              >
                 L{i + 1}
               </div>
               <div className="flex-1">
                 <p className="text-sm font-medium">{l.name}</p>
                 <p className="text-[11px] text-muted-foreground">{l.responsibility}</p>
               </div>
-              <span className="text-xs tabular-nums text-muted-foreground">{l.files} {t("reports", "files")}</span>
+              <span className="text-xs tabular-nums text-muted-foreground">{l.files} files</span>
             </motion.div>
           ))}
         </div>
@@ -277,7 +320,8 @@ function ArchitectureTab({ report }: { report: AnalysisReport }) {
   );
 }
 
-function IssuesTab({ issues, title, color }: { issues: Issue[]; title: string; color: string }) {
+/* ---------- Issues (shared for bugs/security/performance) ---------- */
+function IssuesTab({ issues, title, color, report }: { issues: Issue[]; title: string; color: string; report: AnalysisReport }) {
   const { t } = useT();
   const [expanded, setExpanded] = useState<string | null>(issues[0]?.id ?? null);
   return (
@@ -286,7 +330,7 @@ function IssuesTab({ issues, title, color }: { issues: Issue[]; title: string; c
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ background: `${color}1a`, color }}>
-              {title.includes("Security") || title.includes("Bảo mật") ? <ShieldCheck className="h-4 w-4" /> : title.includes("Performance") || title.includes("Hiệu suất") ? <Gauge className="h-4 w-4" /> : <Bug className="h-4 w-4" />}
+              {title.includes("Security") ? <ShieldCheck className="h-4 w-4" /> : title.includes("Performance") ? <Gauge className="h-4 w-4" /> : <Bug className="h-4 w-4" />}
             </div>
             <h3 className="text-lg font-semibold">{title}</h3>
           </div>
@@ -308,9 +352,17 @@ function IssuesTab({ issues, title, color }: { issues: Issue[]; title: string; c
         {issues.map((iss, i) => {
           const open = expanded === iss.id;
           return (
-            <motion.div key={iss.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}>
+            <motion.div
+              key={iss.id}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.04 }}
+            >
               <GlassCard className="overflow-hidden">
-                <button onClick={() => setExpanded(open ? null : iss.id)} className="flex w-full items-center gap-3 p-4 text-left">
+                <button
+                  onClick={() => setExpanded(open ? null : iss.id)}
+                  className="flex w-full items-center gap-3 p-4 text-left"
+                >
                   <SeverityBadge severity={iss.severity} />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">{iss.title}</p>
@@ -321,12 +373,17 @@ function IssuesTab({ issues, title, color }: { issues: Issue[]; title: string; c
                 </button>
                 <AnimatePresence>
                   {open && (
-                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="overflow-hidden"
+                    >
                       <div className="border-t border-white/5 p-4">
                         <p className="text-sm leading-relaxed text-foreground/85">{iss.description}</p>
                         <div className="mt-3 rounded-lg border border-cyan-400/20 bg-cyan-400/[0.04] p-3">
                           <p className="flex items-center gap-1.5 text-xs font-semibold text-cyan-300">
-                            <Sparkles className="h-3.5 w-3.5" /> {t("reports", "aiRecommendation")}
+                            <Sparkles className="h-3.5 w-3.5" /> AI Recommendation
                           </p>
                           <p className="mt-1 text-sm text-foreground/85">{iss.recommendation}</p>
                         </div>
@@ -343,6 +400,7 @@ function IssuesTab({ issues, title, color }: { issues: Issue[]; title: string; c
   );
 }
 
+/* ---------- Dependencies ---------- */
 function DependenciesTab({ report }: { report: AnalysisReport }) {
   const { t } = useT();
   return (
@@ -350,24 +408,25 @@ function DependenciesTab({ report }: { report: AnalysisReport }) {
       <GlassCard className="p-5">
         <div className="flex items-center gap-2">
           <Boxes className="h-5 w-5 text-cyan-300" />
-          <h3 className="text-lg font-semibold">{t("reports", "dependencies")}</h3>
+          <h3 className="text-lg font-semibold">Interactive Dependency Graph</h3>
         </div>
         <p className="mt-1 text-sm text-muted-foreground">
-          {t("reports", "clickNode")}
+          Drag to pan · scroll-click a node to inspect · circular dependencies highlighted in red.
         </p>
       </GlassCard>
       <DependencyGraph report={report} />
 
+      {/* Dead code + duplicates */}
       <div className="grid gap-4 lg:grid-cols-2">
         <GlassCard className="p-5">
           <div className="flex items-center gap-2">
             <FileCode className="h-4 w-4 text-rose-400" />
             <h4 className="text-sm font-semibold">{t("reports", "deadCode")} <span className="text-muted-foreground">({report.deadCode.length})</span></h4>
           </div>
-          <p className="mt-1 text-xs text-muted-foreground">{t("reports", "deadCodeDesc")}</p>
+          <p className="mt-1 text-xs text-muted-foreground">Files with no inbound references — safe candidates for removal.</p>
           <div className="mt-3 space-y-1.5">
             {report.deadCode.length === 0 ? (
-              <p className="rounded-lg border border-emerald-400/20 bg-emerald-400/[0.04] p-3 text-xs text-emerald-300">{t("reports", "noDeadCode")}</p>
+              <p className="rounded-lg border border-emerald-400/20 bg-emerald-400/[0.04] p-3 text-xs text-emerald-300">No dead code detected — clean codebase.</p>
             ) : (
               report.deadCode.map((d, i) => (
                 <div key={i} className="rounded-lg border border-white/5 bg-white/[0.02] p-2.5">
@@ -388,16 +447,16 @@ function DependenciesTab({ report }: { report: AnalysisReport }) {
             <Copy className="h-4 w-4 text-amber-400" />
             <h4 className="text-sm font-semibold">{t("reports", "duplicateCode")} <span className="text-muted-foreground">({report.duplicates.length})</span></h4>
           </div>
-          <p className="mt-1 text-xs text-muted-foreground">{t("reports", "duplicateCodeDesc")}</p>
+          <p className="mt-1 text-xs text-muted-foreground">Clusters of near-identical blocks — extract a shared helper.</p>
           <div className="mt-3 space-y-1.5">
             {report.duplicates.length === 0 ? (
-              <p className="rounded-lg border border-emerald-400/20 bg-emerald-400/[0.04] p-3 text-xs text-emerald-300">{t("reports", "noDuplicates")}</p>
+              <p className="rounded-lg border border-emerald-400/20 bg-emerald-400/[0.04] p-3 text-xs text-emerald-300">No significant duplication found.</p>
             ) : (
               report.duplicates.map((d, i) => (
                 <div key={i} className="rounded-lg border border-white/5 bg-white/[0.02] p-2.5">
                   <div className="flex items-center gap-2">
                     <span className="rounded bg-amber-400/15 px-1.5 py-0.5 text-[9px] font-bold text-amber-400">GROUP {d.group}</span>
-                    <span className="ml-auto text-[10px] text-muted-foreground">{d.lines} {t("reports", "lines")}</span>
+                    <span className="ml-auto text-[10px] text-muted-foreground">{d.lines} lines duplicated</span>
                   </div>
                   <div className="mt-1.5 space-y-0.5">
                     {d.files.map((f) => (
@@ -431,6 +490,7 @@ function DependenciesTab({ report }: { report: AnalysisReport }) {
   );
 }
 
+/* ---------- Code ---------- */
 function CodeTab({ report }: { report: AnalysisReport }) {
   const { t } = useT();
   return (
@@ -441,25 +501,15 @@ function CodeTab({ report }: { report: AnalysisReport }) {
           <h3 className="text-lg font-semibold">{t("reports", "aiCodeExplorer")}</h3>
         </div>
         <p className="mt-1 text-sm text-muted-foreground">
-          {t("reports", "aiCodeExplorerDesc")}
+          Representative snippets parsed from the codebase, each with syntax highlighting and an AI explanation of what it does and how to improve it.
         </p>
       </GlassCard>
-
-      {report.snippets && report.snippets.length > 0 ? (
-        <CodeViewer snippets={report.snippets} />
-      ) : (
-        <GlassCard className="p-10 text-center flex flex-col items-center justify-center border-dashed border-white/10">
-          <FileCode className="h-10 w-10 text-muted-foreground mb-3 opacity-40" />
-          <p className="text-sm font-medium text-foreground/80">{t("reports", "noReport")}</p>
-          <p className="text-xs text-muted-foreground mt-1">
-            {t("reports", "noReportDesc")}
-          </p>
-        </GlassCard>
-      )}
+      <CodeViewer snippets={report.snippets} />
     </div>
   );
 }
 
+/* ---------- Docs ---------- */
 function DocsTab({ report }: { report: AnalysisReport }) {
   const { t } = useT();
   const [copied, setCopied] = useState<string | null>(null);
@@ -469,7 +519,7 @@ function DocsTab({ report }: { report: AnalysisReport }) {
   const copy = (which: string, content: string) => {
     navigator.clipboard.writeText(content);
     setCopied(which);
-    toast.success(t("reports", "copied"));
+    toast.success("Copied to clipboard");
     setTimeout(() => setCopied(null), 1500);
   };
 
@@ -488,9 +538,10 @@ function DocsTab({ report }: { report: AnalysisReport }) {
 
   return (
     <div className="space-y-4">
+      {/* Diagrams */}
       <GlassCard className="p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h4 className="flex items-center gap-2 text-sm font-semibold"><Network className="h-4 w-4 text-cyan-300" /> {t("reports", "generatedDiagrams")}</h4>
+          <h4 className="flex items-center gap-2 text-sm font-semibold"><Network className="h-4 w-4 text-cyan-300" /> Generated Diagrams</h4>
           <div className="inline-flex gap-1 rounded-lg border border-white/10 bg-white/[0.03] p-1">
             {([["uml", "UML"], ["sequence", "Sequence"], ["erd", "ERD"]] as const).map(([id, label]) => (
               <button
@@ -512,9 +563,10 @@ function DocsTab({ report }: { report: AnalysisReport }) {
         <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{diagramTab.desc}</p>
       </GlassCard>
 
+      {/* Documentation tabs */}
       <GlassCard className="p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h4 className="flex items-center gap-2 text-sm font-semibold"><FileText className="h-4 w-4 text-cyan-300" /> {t("reports", "docs")}</h4>
+          <h4 className="flex items-center gap-2 text-sm font-semibold"><FileText className="h-4 w-4 text-cyan-300" /> Auto-Generated Documentation</h4>
           <div className="flex flex-wrap gap-1">
             {docs.map((d) => (
               <button
@@ -541,7 +593,7 @@ function DocsTab({ report }: { report: AnalysisReport }) {
               </Button>
             </div>
             <pre className="max-h-[500px] overflow-y-auto whitespace-pre-wrap rounded-lg border border-white/5 bg-black/40 p-3 font-mono text-[11px] leading-relaxed text-foreground/80 scrollbar-thin">
-              {activeDoc.content}
+{activeDoc.content}
             </pre>
           </div>
         )}
@@ -550,6 +602,7 @@ function DocsTab({ report }: { report: AnalysisReport }) {
   );
 }
 
+/* ---------- Roadmap ---------- */
 function RoadmapTab({ report }: { report: AnalysisReport }) {
   const { t } = useT();
   return (
@@ -622,15 +675,15 @@ function RoadmapTab({ report }: { report: AnalysisReport }) {
           <GlassCard className="p-5">
             <div className="flex items-center gap-2">
               <TrendingUp className="h-5 w-5 text-amber-400" />
-              <h3 className="text-lg font-semibold">{t("reports", "techDebt")} — {report.technicalDebt.score}/100</h3>
+              <h3 className="text-lg font-semibold">Technical Debt — {report.technicalDebt.score}/100</h3>
             </div>
             <div className="mt-3 space-y-1.5">
-              {report.technicalDebt.items.map((tItem, i) => (
+              {report.technicalDebt.items.map((t, i) => (
                 <div key={i} className="flex items-center gap-2 rounded-lg border border-white/5 bg-white/[0.02] p-2.5 text-xs">
                   <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400" />
-                  <span className="flex-1">{tItem.title}</span>
-                  <span className="text-muted-foreground">{tItem.impact}</span>
-                  <span className="rounded bg-white/5 px-1.5 py-0.5 text-[10px]">{tItem.estimate}</span>
+                  <span className="flex-1">{t.title}</span>
+                  <span className="text-muted-foreground">{t.impact}</span>
+                  <span className="rounded bg-white/5 px-1.5 py-0.5 text-[10px]">{t.estimate}</span>
                 </div>
               ))}
             </div>
