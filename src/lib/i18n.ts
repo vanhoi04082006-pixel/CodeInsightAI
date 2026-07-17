@@ -70,26 +70,13 @@ export function setInitialLocale(locale: Locale) {
 /**
  * SSR-safe initial locale.
  *
- * On the server: defaults to "en" (no document.cookie). The Providers
- * component calls setInitialLocale() with the server-read cookie value
- * before any component reads the store.
- *
- * On the client: reads document.cookie synchronously (available because
- * the inline <script> in <head> runs before React). This gives the same
- * locale as the server, preventing hydration mismatch.
+ * Always returns "en" at store creation time (both server and client).
+ * The Providers component overrides this synchronously via setState()
+ * with the server-read cookie value BEFORE any child component reads
+ * the store. This guarantees server and client render the SAME language.
  */
 function getInitialLocale(): Locale {
-  // Client-side: read cookie synchronously
-  if (typeof document !== "undefined") {
-    const match = document.cookie.match(new RegExp(`${COOKIE_NAME}=([^;]+)`));
-    if (match) {
-      const val = match[1] as Locale;
-      if (val === "en" || val === "vi") return val;
-    }
-  }
-  // Server-side or no cookie: use the module-level variable (set by Providers)
-  // or default to "en"
-  return __initialLocale;
+  return "en";
 }
 
 // Deep get a value by dot path
