@@ -75,6 +75,40 @@ export function analyzeParsedRepository(parsed: ParsedRepository, rawFiles?: { p
     }
   }
 
+  // --- ADDED SNIPPET GENERATION ---
+  const generatedSnippets: import("./types").CodeSnippet[] = [];
+
+  if (rawFiles && rawFiles.length > 0) {
+    // Lấy top 4 file có độ phức tạp cao nhất làm ví dụ
+    const complexFiles = [...parsed.files].sort((a, b) => b.complexity - a.complexity).slice(0, 4);
+
+    for (const cf of complexFiles) {
+      const raw = rawFiles.find(r => r.path === cf.path);
+      if (!raw || !raw.content.trim()) continue;
+
+      // Lấy tối đa 60 dòng code đầu tiên để tránh snippet quá dài
+      const lines = raw.content.split("\n");
+      const codePreview = lines.slice(0, 60).join("\n") + (lines.length > 60 ? "\n\n// ... (truncated for preview)" : "");
+
+      // Lọc các issue thuộc về file này
+      const issuesInFile = [...securityIssues, ...bugIssues, ...perfIssues].filter(i => i.file === cf.path);
+
+      // Tạo lời giải thích dựa trên metadata
+      let exp = cf.description || `Module xử lý cho ${cf.path.split('/').pop()}.`;
+      if (cf.complexity > 10) exp += ` File này có độ phức tạp khá cao (Điểm: ${cf.complexity}). AI khuyến nghị nên chia nhỏ các hàm để dễ bảo trì hơn.`;
+      if (issuesInFile.length > 0) exp += ` Lưu ý: Đã phát hiện ${issuesInFile.length} vấn đề tiềm ẩn tại đây (VD: ${issuesInFile[0].title}).`;
+
+      generatedSnippets.push({
+        file: cf.path,
+        language: cf.language.toLowerCase() === "typescript" ? "tsx" : cf.language.toLowerCase(),
+        title: cf.path.split('/').pop() || "Code Snippet",
+        code: codePreview,
+        explanation: exp
+      });
+    }
+  }
+  // --------------------------------
+
   return {
     repoUrl: parsed.url,
     repoOwner: parsed.owner,
@@ -102,7 +136,7 @@ export function analyzeParsedRepository(parsed: ParsedRepository, rawFiles?: { p
     dependencies: parsed.dependencies,
     issues: { bugs: bugIssues, security: securityIssues, performance: perfIssues },
     files: fileInsights,
-    snippets: [],
+    snippets: generatedSnippets, // MODIFIED
     diagrams: { uml: "", sequence: "", erd: "", umlExplanation: "", sequenceExplanation: "", erdExplanation: "" },
     deadCode,
     duplicates,
