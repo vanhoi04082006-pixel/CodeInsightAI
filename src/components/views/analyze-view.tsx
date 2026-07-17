@@ -64,7 +64,7 @@ export function AnalyzeView() {
   const start = async () => {
     const parsed = parseRepoUrl(url);
     if (!parsed.valid) {
-      setError("Enter a valid GitHub URL, e.g. https://github.com/vercel/next.js");
+      setError(t("errors", "invalidUrl"));
       return;
     }
     setError("");
@@ -73,45 +73,101 @@ export function AnalyzeView() {
     setStageProgress(0);
     clearTimers();
 
-    // Run through each stage with a progress sub-tick
-    let elapsed = 0;
-    ANALYSIS_STAGES.forEach((stage, i) => {
-      const ticks = 20;
-      const tickMs = stage.duration / ticks;
-      for (let t = 0; t < ticks; t++) {
-        timers.current.push(
-          setTimeout(() => {
-            setStageIdx(i);
-            setStageProgress(((t + 1) / ticks) * 100);
-          }, elapsed + t * tickMs)
-        );
-      }
-      elapsed += stage.duration;
-    });
+    // Start real async analysis with job polling
+    try {
+      const startRes = await fetch("/api/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ repoUrl: parsed.url, async: true, force: true }),
+      });
+      const startData = await startRes.json();
 
-    // After all stages, call the API
-    timers.current.push(
-      setTimeout(async () => {
-        try {
-          const res = await fetch("/api/analyze", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ repoUrl: parsed.url }),
-          });
-          const data = await res.json();
-          if (!res.ok) throw new Error(data?.error ?? "Analysis failed");
-          setReport(data.report);
-          setActiveAnalysisId(data.id ?? null);
-          clearChat(); // fresh chat for a new analysis
-          setPhase("done");
-          toast.success(`Analysis complete — ${data.report.scores.overall}/100 overall score`);
-        } catch (e) {
-          console.error(e);
-          setPhase("error");
-          toast.error("Analysis failed. Please try again.");
-        }
-      }, elapsed + 200)
-    );
+      // If cached result returned immediately
+      if (startData.report) {
+        setReport(startData.report);
+        setActiveAnalysisId(startData.id ?? null);
+        clearChat();
+        setPhase("done");
+        toast.success(`Analysis complete — ${startData.report.scores.overall}/100`);
+        return;
+      }
+
+      // If we got a jobId, poll for progress
+      if (startData.jobId) {
+        const jobId = startData.jobId;
+        let pollCount = 0;
+        const maxPolls = 120;
+
+        const poll = async () => {
+          pollCount++;
+          if (pollCount > maxPolls) {
+            setPhase("error");
+            toast.error("Analysis timed out. Please try again.");
+            return;
+          }
+
+          try {
+            const res = await fetch(`/api/jobs/${jobId}`);
+            const data = await res.json();
+            const job = data.job;
+
+            if (!job) {
+              setPhase("error");
+              toast.error("Job not found");
+              return;
+            }
+
+            // Map job progress to visual stages
+            const progress = job.progress || 0;
+            const sIdx = Math.min(Math.floor((progress / 100) * ANALYSIS_STAGES.length), ANALYSIS_STAGES.length - 1);
+            setStageIdx(sIdx);
+            setStageProgress(((progress * ANALYSIS_STAGES.length) % 100));
+
+            if (job.status === "completed" && job.result) {
+              setReport(job.result.report);
+              setActiveAnalysisId(job.result.id ?? null);
+              clearChat();
+              setPhase("done");
+              const score = job.result.report?.scores?.overall ?? 0;
+              toast.success(`Analysis complete — ${score}/100`);
+            } else if (job.status === "failed") {
+              setPhase("error");
+              toast.error(job.error || "Analysis failed");
+            } else if (job.status === "cancelled") {
+              setPhase("error");
+              toast.error("Analysis cancelled");
+            } else {
+              // Still running — poll again after 1s
+              timers.current.push(setTimeout(poll, 1000));
+            }
+          } catch (e) {
+            console.error("Poll error:", e);
+            timers.current.push(setTimeout(poll, 2000));
+          }
+        };
+
+        timers.current.push(setTimeout(poll, 500));
+        return;
+      }
+
+      // Fallback: sync API call
+      const res = await fetch("/api/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ repoUrl: parsed.url }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error ?? "Analysis failed");
+      setReport(data.report);
+      setActiveAnalysisId(data.id ?? null);
+      clearChat();
+      setPhase("done");
+      toast.success(`Analysis complete — ${data.report.scores.overall}/100`);
+    } catch (e) {
+      console.error(e);
+      setPhase("error");
+      toast.error("Analysis failed. Please try again.");
+    }
   };
 
   const reset = () => {

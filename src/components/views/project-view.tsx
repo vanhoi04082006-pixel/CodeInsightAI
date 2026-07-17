@@ -512,16 +512,30 @@ function CodeTab({ report }: { report: AnalysisReport }) {
 /* ---------- Docs ---------- */
 function DocsTab({ report }: { report: AnalysisReport }) {
   const { t } = useT();
-  const [copied, setCopied] = useState<"readme" | "api" | null>(null);
+  const [copied, setCopied] = useState<string | null>(null);
   const [diagram, setDiagram] = useState<"uml" | "sequence" | "erd">("uml");
-  const copy = (which: "readme" | "api") => {
-    navigator.clipboard.writeText(which === "readme" ? report.documentation.readme : report.documentation.apiDocs);
+  const [docTab, setDocTab] = useState<string>("readme");
+
+  const copy = (which: string, content: string) => {
+    navigator.clipboard.writeText(content);
     setCopied(which);
     toast.success("Copied to clipboard");
     setTimeout(() => setCopied(null), 1500);
   };
+
+  const docs = [
+    { id: "readme", label: "README.md", content: report.documentation.readme, color: "#22d3ee" },
+    { id: "apiDocs", label: "API.md", content: report.documentation.apiDocs, color: "#a78bfa" },
+    { id: "architectureMd", label: "Architecture.md", content: report.documentation.architectureMd || "", color: "#f472b6" },
+    { id: "folderGuide", label: "Folder Guide", content: report.documentation.folderGuide || "", color: "#34d399" },
+    { id: "componentGuide", label: "Component Guide", content: report.documentation.componentGuide || "", color: "#fbbf24" },
+    { id: "deploymentGuide", label: "Deployment Guide", content: report.documentation.deploymentGuide || "", color: "#60a5fa" },
+  ].filter(d => d.content);
+
   const diagrams = report.diagrams;
   const diagramTab = { uml: { svg: diagrams.uml, title: "UML Class Diagram", desc: diagrams.umlExplanation, icon: Network }, sequence: { svg: diagrams.sequence, title: "Sequence Diagram", desc: diagrams.sequenceExplanation, icon: GitBranch }, erd: { svg: diagrams.erd, title: "Database ER Diagram", desc: diagrams.erdExplanation, icon: Boxes } }[diagram];
+  const activeDoc = docs.find(d => d.id === docTab) || docs[0];
+
   return (
     <div className="space-y-4">
       {/* Diagrams */}
@@ -549,31 +563,41 @@ function DocsTab({ report }: { report: AnalysisReport }) {
         <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{diagramTab.desc}</p>
       </GlassCard>
 
-      {/* README + API docs */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        <GlassCard className="p-5">
-          <div className="flex items-center justify-between">
-            <h4 className="flex items-center gap-2 text-sm font-semibold"><FileText className="h-4 w-4 text-cyan-300" /> Generated README.md</h4>
-            <Button size="sm" variant="ghost" onClick={() => copy("readme")}>
-              {copied === "readme" ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
-            </Button>
+      {/* Documentation tabs */}
+      <GlassCard className="p-5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h4 className="flex items-center gap-2 text-sm font-semibold"><FileText className="h-4 w-4 text-cyan-300" /> Auto-Generated Documentation</h4>
+          <div className="flex flex-wrap gap-1">
+            {docs.map((d) => (
+              <button
+                key={d.id}
+                onClick={() => setDocTab(d.id)}
+                className={cn(
+                  "rounded-md px-2.5 py-1 text-xs transition",
+                  docTab === d.id ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+                )}
+                style={docTab === d.id ? { background: `${d.color}20`, color: d.color } : {}}
+              >
+                {d.label}
+              </button>
+            ))}
           </div>
-          <pre className="mt-3 max-h-96 overflow-y-auto whitespace-pre-wrap rounded-lg border border-white/5 bg-black/40 p-3 font-mono text-[11px] leading-relaxed text-foreground/80 scrollbar-thin">
-{report.documentation.readme}
-          </pre>
-        </GlassCard>
-        <GlassCard className="p-5">
-          <div className="flex items-center justify-between">
-            <h4 className="flex items-center gap-2 text-sm font-semibold"><FileText className="h-4 w-4 text-violet-300" /> API Documentation</h4>
-            <Button size="sm" variant="ghost" onClick={() => copy("api")}>
-              {copied === "api" ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
-            </Button>
+        </div>
+
+        {activeDoc && (
+          <div className="mt-3">
+            <div className="mb-2 flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">{activeDoc.label}</span>
+              <Button size="sm" variant="ghost" onClick={() => copy(activeDoc.id, activeDoc.content)}>
+                {copied === activeDoc.id ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
+              </Button>
+            </div>
+            <pre className="max-h-[500px] overflow-y-auto whitespace-pre-wrap rounded-lg border border-white/5 bg-black/40 p-3 font-mono text-[11px] leading-relaxed text-foreground/80 scrollbar-thin">
+{activeDoc.content}
+            </pre>
           </div>
-          <pre className="mt-3 max-h-96 overflow-y-auto whitespace-pre-wrap rounded-lg border border-white/5 bg-black/40 p-3 font-mono text-[11px] leading-relaxed text-foreground/80 scrollbar-thin">
-{report.documentation.apiDocs}
-          </pre>
-        </GlassCard>
-      </div>
+        )}
+      </GlassCard>
     </div>
   );
 }
