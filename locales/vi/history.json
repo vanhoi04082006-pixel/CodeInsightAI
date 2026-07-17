@@ -1,1 +1,18 @@
-{ "title": "Lịch sử phân tích", "subtitle": "Tất cả repository bạn đã phân tích, xếp theo thời gian.", "searchPlaceholder": "Tìm theo repo hoặc ngôn ngữ…", "newAnalysis": "Phân tích mới", "empty": "Chưa có phân tích nào", "emptyDesc": "Chạy phân tích đầu tiên để xem tại đây.", "loaded": "Đã tải {owner}/{name}", "loadFailed": "Tải báo cáo thất bại", "chats": "trò chuyện", "files": "tệp", "overall": "Tổng thể" }
+{
+    "title": "Lịch sử phân tích",
+    "subtitle": "Tất cả repository bạn đã phân tích, xếp theo thời gian.",
+    "searchPlaceholder": "Tìm theo repo hoặc ngôn ngữ…",
+    "newAnalysis": "Phân tích mới",
+    "empty": "Chưa có phân tích nào",
+    "emptyDesc": "Chạy phân tích đầu tiên để xem tại đây.",
+    "loaded": "Đã tải {owner}/{name}",
+    "loadFailed": "Tải báo cáo thất bại",
+    "chats": "trò chuyện",
+    "files": "tệp",
+    "overall": "Tổng thể",
+    "deleteConfirm": "Bạn có chắc chắn muốn xóa bản phân tích này khỏi lịch sử không?",
+    "deleteSuccess": "Đã xóa bản phân tích thành công",
+    "deleteError": "Có lỗi xảy ra khi xóa",
+    "deleteNetwork": "Lỗi kết nối mạng",
+    "deleteTooltip": "Xóa phân tích này"
+}

@@ -75,7 +75,7 @@ export function SettingsView() {
         <Tabs defaultValue="account">
           <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:grid-cols-7">
             <TabsTrigger value="account" className="gap-1.5"><User className="h-3.5 w-3.5" /> <span className="hidden lg:inline">{t("settings", "tabs.account")}</span></TabsTrigger>
-            <TabsTrigger value="ai" className="gap-1.5"><Cpu className="h-3.5 w-3.5" /> AI</TabsTrigger>
+            <TabsTrigger value="ai" className="gap-1.5"><Cpu className="h-3.5 w-3.5" /> {t("settings", "tabs.ai")}</TabsTrigger>
             <TabsTrigger value="appearance" className="gap-1.5"><Palette className="h-3.5 w-3.5" /> <span className="hidden lg:inline">{t("settings", "tabs.appearance")}</span></TabsTrigger>
             <TabsTrigger value="language" className="gap-1.5"><Globe className="h-3.5 w-3.5" /> <span className="hidden lg:inline">{t("settings", "tabs.language")}</span></TabsTrigger>
             <TabsTrigger value="accessibility" className="gap-1.5"><Eye className="h-3.5 w-3.5" /> <span className="hidden lg:inline">{t("settings", "tabs.accessibility")}</span></TabsTrigger>
@@ -94,7 +94,7 @@ export function SettingsView() {
                 <Field label={t("settings", "role")} defaultValue="Staff Engineer" />
               </div>
               <Button onClick={() => toast.success(t("settings", "profileSaved"))} className="mt-4 bg-gradient-to-r from-cyan-500 to-violet-500 text-white">
-                Save changes
+                {t("settings", "saveChanges")}
               </Button>
             </GlassCard>
 
@@ -106,14 +106,14 @@ export function SettingsView() {
                   name="GitHub"
                   desc={t("settings", "githubDesc")}
                   connected={connected.github}
-                  onToggle={() => { setConnected((c) => ({ ...c, github: !c.github })); toast.success(connected.github ? "GitHub disconnected" : "GitHub connected"); }}
+                  onToggle={() => { setConnected((c) => ({ ...c, github: !c.github })); toast.success(connected.github ? t("common", "status.disconnected") : t("common", "status.connected")); }}
                 />
                 <ConnectRow
                   icon={Sparkles}
                   name="Google"
                   desc={t("settings", "googleDesc")}
                   connected={connected.google}
-                  onToggle={() => { setConnected((c) => ({ ...c, google: !c.google })); toast.success(connected.google ? "Google disconnected" : "Google connected"); }}
+                  onToggle={() => { setConnected((c) => ({ ...c, google: !c.google })); toast.success(connected.google ? t("common", "status.disconnected") : t("common", "status.connected")); }}
                 />
               </div>
             </GlassCard>
@@ -134,7 +134,6 @@ export function SettingsView() {
                       const res = await fetch("/api/reset", { method: "POST" });
                       const data = await res.json();
                       if (data.success) {
-                        // Clear all client-side stores
                         useAppStore.getState().setActiveReport(null);
                         useAppStore.getState().setActiveAnalysisId(null);
                         useAppStore.getState().clearChat();
@@ -160,53 +159,50 @@ export function SettingsView() {
 
           {/* AI */}
           <TabsContent value="ai" className="mt-4 space-y-4">
-            {/* Providers pointer */}
             <GlassCard strong className="p-6">
               <div className="flex items-center gap-2">
                 <Cpu className="h-4 w-4 text-cyan-300" />
-                <h3 className="text-sm font-semibold">AI Providers</h3>
+                <h3 className="text-sm font-semibold">{t("settings", "aiProviders")}</h3>
               </div>
               <p className="mt-1 text-xs text-muted-foreground">
-                CodeInsight AI is local-first. You connect your own AI providers (OpenRouter, OpenAI, Anthropic,
-                Gemini, DeepSeek, Groq, Ollama, LM Studio, and more) and route different features to different models.
+                {t("settings", "aiProvidersDesc")}
               </p>
+
               <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-cyan-400/20 bg-cyan-400/[0.04] p-4">
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-cyan-400/15 text-cyan-300">
                   <Cpu className="h-5 w-5" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium">Manage providers & model routing</p>
-                  <p className="text-[11px] text-muted-foreground">Add API keys, test connections, assign models to features.</p>
+                  <p className="text-sm font-medium">{t("settings", "manageProviders")}</p>
+                  <p className="text-[11px] text-muted-foreground">{t("settings", "manageProvidersDesc")}</p>
                 </div>
                 <Button onClick={() => useAppStore.getState().setView("providers")} className="bg-gradient-to-r from-cyan-500 to-violet-500 text-white">
-                  Open Providers <ArrowRight className="ml-1.5 h-4 w-4" />
+                  {t("settings", "openProviders")} <ArrowRight className="ml-1.5 h-4 w-4" />
                 </Button>
               </div>
             </GlassCard>
 
-            {/* AI config: provider, model, personality, temperature, max tokens */}
             <AISettingsCard />
 
-            {/* Personalities pointer */}
             <GlassCard className="p-6">
               <div className="flex items-center gap-2">
                 <Bot className="h-4 w-4 text-violet-300" />
-                <h3 className="text-sm font-semibold">AI Personality</h3>
+                <h3 className="text-sm font-semibold">{t("settings", "aiPersonality")}</h3>
               </div>
               <p className="mt-1 text-xs text-muted-foreground">
-                Customize how the AI behaves across chat, code review, bug analysis, docs, and architecture.
-                The selected personality injects its system prompt before every AI request.
+                {t("settings", "aiPersonalityDesc")}
               </p>
+
               <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-violet-400/20 bg-violet-400/[0.04] p-4">
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-violet-400/15 text-violet-300">
                   <Bot className="h-5 w-5" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium">Manage personalities</p>
-                  <p className="text-[11px] text-muted-foreground">5 built-in (Professional, Friendly, Technical, CTO, Teacher) + custom.</p>
+                  <p className="text-sm font-medium">{t("settings", "managePersonalities")}</p>
+                  <p className="text-[11px] text-muted-foreground">{t("settings", "managePersonalitiesDesc")}</p>
                 </div>
                 <Button onClick={() => useAppStore.getState().setView("personalities")} className="bg-gradient-to-r from-cyan-500 to-violet-500 text-white">
-                  Open Personalities <ArrowRight className="ml-1.5 h-4 w-4" />
+                  {t("settings", "openPersonalities")} <ArrowRight className="ml-1.5 h-4 w-4" />
                 </Button>
               </div>
             </GlassCard>
@@ -214,10 +210,10 @@ export function SettingsView() {
             <GlassCard className="p-6">
               <h3 className="flex items-center gap-2 text-sm font-semibold"><Zap className="h-4 w-4 text-amber-400" /> {t("settings", "analysisDepth")}</h3>
               <div className="mt-4 space-y-3">
-                <ToggleRow label={t("settings", "deepStatic")} desc="Run full AST parsing and complexity metrics (slower)." defaultChecked />
-                <ToggleRow label={t("settings", "securityScanning")} desc="Scan for secrets, vulnerabilities, and misconfigurations." defaultChecked />
-                <ToggleRow label={t("settings", "generateEmbeddings")} desc="Enable semantic code search and richer AI chat." defaultChecked />
-                <ToggleRow label={t("settings", "autoDocs")} desc="Produce README, API docs, and diagrams automatically." defaultChecked />
+                <ToggleRow label={t("settings", "deepStatic")} desc={t("settings", "deepStaticDesc")} defaultChecked />
+                <ToggleRow label={t("settings", "securityScanning")} desc={t("settings", "securityScanningDesc")} defaultChecked />
+                <ToggleRow label={t("settings", "generateEmbeddings")} desc={t("settings", "generateEmbeddingsDesc")} defaultChecked />
+                <ToggleRow label={t("settings", "autoDocs")} desc={t("settings", "autoDocsDesc")} defaultChecked />
               </div>
             </GlassCard>
           </TabsContent>
@@ -230,23 +226,23 @@ export function SettingsView() {
           {/* Notifications */}
           <TabsContent value="notifications" className="mt-4">
             <GlassCard className="p-6">
-              <h3 className="flex items-center gap-2 text-sm font-semibold"><Bell className="h-4 w-4 text-cyan-300" /> Notifications</h3>
+              <h3 className="flex items-center gap-2 text-sm font-semibold"><Bell className="h-4 w-4 text-cyan-300" /> {t("settings", "notifications")}</h3>
               <div className="mt-4 space-y-3">
                 <ToggleRow
-                  label="Email alerts"
-                  desc="Get notified when an analysis completes."
+                  label={t("settings", "emailAlerts")}
+                  desc={t("settings", "emailAlertsDesc")}
                   checked={notifications.email}
                   onCheckedChange={(v) => setNotifications((n) => ({ ...n, email: v }))}
                 />
                 <ToggleRow
-                  label="Push notifications"
-                  desc="Real-time browser push for critical findings."
+                  label={t("settings", "pushNotifications")}
+                  desc={t("settings", "pushNotificationsDesc")}
                   checked={notifications.push}
                   onCheckedChange={(v) => setNotifications((n) => ({ ...n, push: v }))}
                 />
                 <ToggleRow
-                  label="Weekly digest"
-                  desc="A summary of your analyses every Monday."
+                  label={t("settings", "weeklyDigest")}
+                  desc={t("settings", "weeklyDigestDesc")}
                   checked={notifications.weekly}
                   onCheckedChange={(v) => setNotifications((n) => ({ ...n, weekly: v }))}
                 />
@@ -284,6 +280,7 @@ function Field({ label, defaultValue }: { label: string; defaultValue: string })
 }
 
 function ConnectRow({ icon: Icon, name, desc, connected, onToggle }: { icon: typeof Github; name: string; desc: string; connected: boolean; onToggle: () => void }) {
+  const { t } = useT();
   return (
     <div className="flex items-center gap-3 rounded-xl border border-white/5 bg-white/[0.02] p-3">
       <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/5">
@@ -295,11 +292,11 @@ function ConnectRow({ icon: Icon, name, desc, connected, onToggle }: { icon: typ
       </div>
       {connected ? (
         <span className="flex items-center gap-1 rounded-full bg-emerald-400/15 px-2.5 py-0.5 text-[11px] font-medium text-emerald-400">
-          <Check className="h-3 w-3" /> Connected
+          <Check className="h-3 w-3" /> {t("common", "status.connected")}
         </span>
       ) : null}
       <Button size="sm" variant={connected ? "outline" : "default"} onClick={onToggle} className={connected ? "" : "bg-gradient-to-r from-cyan-500 to-violet-500 text-white"}>
-        {connected ? "Disconnect" : "Connect"}
+        {connected ? t("settings", "disconnect") : t("settings", "connect")}
       </Button>
     </div>
   );
@@ -317,18 +314,18 @@ function ToggleRow({ label, desc, defaultChecked, checked, onCheckedChange }: { 
   );
 }
 
-/* ---------- AI Settings Card (provider / model / personality / temperature / max tokens) ---------- */
+/* ---------- AI Settings Card ---------- */
 function AISettingsCard() {
   const { t } = useT();
   const providers = useProvidersStore((s) => s.providers);
   const routing = useProvidersStore((s) => s.routing);
   const setRouting = useProvidersStore((s) => s.setRouting);
   const updateProvider = useProvidersStore((s) => s.updateProvider);
-  // Select raw state to avoid creating new arrays/objects in the selector (causes infinite loops)
+
   const customPersonalities = usePersonalityStore((s) => s.custom);
   const activePersonalityId = usePersonalityStore((s) => s.activeId);
   const setActivePersonality = usePersonalityStore((s) => s.setActive);
-  // Compute derived values in render (stable references from BUILTIN_PERSONALITIES + custom array)
+
   const personalities = useMemo(() => [...BUILTIN_PERSONALITIES, ...customPersonalities], [customPersonalities]);
   const activePersonality = useMemo(
     () => PERSONALITY_BY_ID[activePersonalityId] ?? customPersonalities.find((p) => p.id === activePersonalityId) ?? PERSONALITY_BY_ID["cto"],
@@ -341,30 +338,31 @@ function AISettingsCard() {
 
   return (
     <GlassCard className="p-6">
-      <h3 className="flex items-center gap-2 text-sm font-semibold"><Cpu className="h-4 w-4 text-cyan-300" /> AI Configuration</h3>
-      <p className="mt-1 text-xs text-muted-foreground">Defaults applied to the AI Chat. Override per-feature in the Providers view.</p>
+      <h3 className="flex items-center gap-2 text-sm font-semibold"><Cpu className="h-4 w-4 text-cyan-300" /> {t("settings", "aiConfig")}</h3>
+      <p className="mt-1 text-xs text-muted-foreground">{t("settings", "aiConfigDesc")}</p>
+
       <div className="mt-4 space-y-4">
         {/* Provider */}
         <div className="space-y-1.5">
-          <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground"><Cpu className="h-3 w-3" /> Provider (for chat)</label>
+          <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground"><Cpu className="h-3 w-3" /> {t("settings", "providerChat")}</label>
           <Select value={chatProviderId ?? "__default__"} onValueChange={(v) => setRouting("chat", v === "__default__" ? undefined : v)}>
-            <SelectTrigger className="bg-white/[0.03]"><SelectValue placeholder="Use built-in AI" /></SelectTrigger>
+            <SelectTrigger className="bg-white/[0.03]"><SelectValue placeholder={t("settings", "builtInAI")} /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="__default__">Built-in AI (no provider)</SelectItem>
+              <SelectItem value="__default__">{t("settings", "builtInAI")}</SelectItem>
               {enabledProviders.map((p) => (
-                <SelectItem key={p.id} value={p.id}>{p.label} · {p.model}</SelectItem>
+                <SelectItem key={p.id} value={p.id}>{p.label} — {p.model}</SelectItem>
               ))}
             </SelectContent>
           </Select>
           {enabledProviders.length === 0 && (
-            <p className="text-[10px] text-amber-400">No enabled providers — using the built-in AI. Enable one in the Providers view.</p>
+            <p className="text-[10px] text-amber-400">{t("settings", "noEnabledProviders")}</p>
           )}
         </div>
 
-        {/* Model (editable if a provider is selected) */}
+        {/* Model */}
         {chatProvider && (
           <div className="space-y-1.5">
-            <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground"><Cpu className="h-3 w-3" /> Model</label>
+            <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground"><Cpu className="h-3 w-3" /> {t("settings", "ai.model")}</label>
             <Select value={chatProvider.model} onValueChange={(v) => updateProvider(chatProvider.id, { model: v })}>
               <SelectTrigger className="bg-white/[0.03]"><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -378,15 +376,15 @@ function AISettingsCard() {
 
         {/* Personality */}
         <div className="space-y-1.5">
-          <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground"><Bot className="h-3 w-3" /> Personality</label>
-          <Select value={activePersonality.id} onValueChange={(v) => { setActivePersonality(v); toast.success(`Personality: ${personalities.find((p) => p.id === v)?.name}`); }}>
+          <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground"><Bot className="h-3 w-3" /> {t("settings", "personality")}</label>
+          <Select value={activePersonality.id} onValueChange={(v) => { setActivePersonality(v); }}>
             <SelectTrigger className="bg-white/[0.03]"><SelectValue /></SelectTrigger>
             <SelectContent>
               {personalities.map((p) => (
                 <SelectItem key={p.id} value={p.id}>
                   <span className="flex items-center gap-2">
                     <span className="h-2 w-2 rounded-full" style={{ background: p.accent }} />
-                    {p.name} {p.builtin ? "(built-in)" : "(custom)"}
+                    {p.name} {p.builtin ? `(${t("personality", "builtin")})` : `(${t("personality", "custom")})`}
                   </span>
                 </SelectItem>
               ))}
@@ -398,7 +396,7 @@ function AISettingsCard() {
         {/* Temperature */}
         <div className="space-y-1.5">
           <label className="flex items-center justify-between text-xs font-medium text-muted-foreground">
-            <span className="flex items-center gap-1.5"><Zap className="h-3 w-3" /> Temperature</span>
+            <span className="flex items-center gap-1.5"><Zap className="h-3 w-3" /> {t("settings", "temperature")}</span>
             <span className="tabular-nums text-cyan-300">{activePersonality.temperature.toFixed(2)}</span>
           </label>
           <Slider
@@ -407,20 +405,17 @@ function AISettingsCard() {
             max={2}
             step={0.05}
             onValueChange={([v]) => {
-              // live-update the active personality's temperature (only meaningful for custom; built-ins ignore on next reload)
               if (!activePersonality.builtin) {
                 usePersonalityStore.getState().updateCustom(activePersonality.id, { temperature: v });
-              } else {
-                toast.info("Built-in personalities are read-only. Duplicate to customise.");
               }
             }}
           />
-          <p className="text-[10px] text-muted-foreground">0 = deterministic · 2 = creative</p>
+          <p className="text-[10px] text-muted-foreground">{t("settings", "tempHint")}</p>
         </div>
 
         {/* Max tokens */}
         <div className="space-y-1.5">
-          <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground"><Hash className="h-3 w-3" /> Max tokens</label>
+          <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground"><Hash className="h-3 w-3" /> {t("settings", "maxTokens")}</label>
           <Input
             type="number"
             value={activePersonality.maxTokens}
@@ -431,7 +426,7 @@ function AISettingsCard() {
             }}
             className="bg-white/[0.03]"
           />
-          <p className="text-[10px] text-muted-foreground">-1 = unlimited</p>
+          <p className="text-[10px] text-muted-foreground">{t("settings", "maxTokensHint")}</p>
         </div>
       </div>
     </GlassCard>
@@ -443,7 +438,7 @@ function DeveloperSettingsCard() {
   const { t } = useT();
   const enabled = useDeveloperModeStore((s) => s.enabled);
   const setEnabled = useDeveloperModeStore((s) => s.setEnabled);
-  // Select each toggle individually to avoid creating a new object in the selector (infinite loop)
+
   const showTokenUsage = useDeveloperModeStore((s) => s.showTokenUsage);
   const showResponseTime = useDeveloperModeStore((s) => s.showResponseTime);
   const showPromptDebug = useDeveloperModeStore((s) => s.showPromptDebug);
@@ -452,23 +447,25 @@ function DeveloperSettingsCard() {
   const showRequestLogs = useDeveloperModeStore((s) => s.showRequestLogs);
   const showResponseLogs = useDeveloperModeStore((s) => s.showResponseLogs);
   const showAdvancedDebug = useDeveloperModeStore((s) => s.showAdvancedDebug);
+
   const toggles = {
     showTokenUsage, showResponseTime, showPromptDebug, showModelDebug,
     showRawResponse, showRequestLogs, showResponseLogs, showAdvancedDebug,
   };
+
   const setToggle = useDeveloperModeStore((s) => s.setToggle);
   const clearLogs = useDeveloperModeStore((s) => s.clearLogs);
   const clearSnapshots = useDeveloperModeStore((s) => s.clearSnapshots);
 
   const debugToggles: { key: keyof typeof toggles; label: string; desc: string; icon: typeof Hash }[] = [
-    { key: "showTokenUsage", label: "Show Token Usage", desc: "Input / output / total tokens per request.", icon: Hash },
-    { key: "showResponseTime", label: "Show API Response Time", desc: "Queue, generation, and total latency.", icon: Clock },
-    { key: "showPromptDebug", label: "Show Prompt Debug", desc: "System prompt, user prompt, repo context, final prompt.", icon: Quote },
-    { key: "showModelDebug", label: "Show Model Debug", desc: "Provider, model, context window, capabilities.", icon: Brain },
-    { key: "showRawResponse", label: "Show Raw AI Response", desc: "Original response before formatting.", icon: ScrollText },
-    { key: "showRequestLogs", label: "Show Request Logs", desc: "Timestamp, request ID, duration, status.", icon: ListChecks },
-    { key: "showResponseLogs", label: "Show Response Logs", desc: "Detailed response log entries.", icon: ListChecks },
-    { key: "showAdvancedDebug", label: "Show Advanced Debug", desc: "Embeddings, vector search, chunk ranking, repo index.", icon: FileSearch },
+    { key: "showTokenUsage", label: t("settings", "developer.showTokenUsage"), desc: t("developer", "sections.tokenUsage"), icon: Hash },
+    { key: "showResponseTime", label: t("settings", "developer.showResponseTime"), desc: t("developer", "sections.performance"), icon: Clock },
+    { key: "showPromptDebug", label: t("settings", "developer.showPromptDebug"), desc: t("developer", "sections.promptDebug"), icon: Quote },
+    { key: "showModelDebug", label: t("settings", "developer.showModelDebug"), desc: t("developer", "sections.modelInfo"), icon: Brain },
+    { key: "showRawResponse", label: t("settings", "developer.showRawResponse"), desc: t("developer", "sections.rawResponse"), icon: ScrollText },
+    { key: "showRequestLogs", label: t("settings", "developer.showRequestLogs"), desc: t("developer", "logs.title"), icon: ListChecks },
+    { key: "showResponseLogs", label: t("settings", "developer.showResponseLogs"), desc: t("developer", "logs.title"), icon: ListChecks },
+    { key: "showAdvancedDebug", label: t("settings", "developer.showAdvancedDebug"), desc: t("developer", "sections.advancedDebug"), icon: FileSearch },
   ];
 
   return (
@@ -481,7 +478,7 @@ function DeveloperSettingsCard() {
           </div>
           <div className="flex items-center gap-2">
             <span className="text-[11px] text-muted-foreground">{enabled ? t("common", "status.enabled") : t("common", "status.disabled")}</span>
-            <Switch checked={enabled} onCheckedChange={(v) => { setEnabled(v); toast.success(v ? t("settings", "developer.title") : t("settings", "developer.title")); }} />
+            <Switch checked={enabled} onCheckedChange={(v) => { setEnabled(v); }} />
           </div>
         </div>
         <p className="mt-1 text-xs text-muted-foreground">
@@ -496,21 +493,21 @@ function DeveloperSettingsCard() {
       {enabled && (
         <>
           <GlassCard className="p-6">
-            <h3 className="flex items-center gap-2 text-sm font-semibold"><Terminal className="h-4 w-4 text-cyan-300" /> Debug Panels</h3>
-            <p className="mt-1 text-xs text-muted-foreground">Choose which sections appear in the Developer Panel.</p>
+            <h3 className="flex items-center gap-2 text-sm font-semibold"><Terminal className="h-4 w-4 text-cyan-300" /> {t("settings", "debugPanels")}</h3>
+            <p className="mt-1 text-xs text-muted-foreground">{t("settings", "debugPanelsDesc")}</p>
             <div className="mt-4 space-y-2">
-              {debugToggles.map((t) => {
-                const Icon = t.icon;
+              {debugToggles.map((tItem) => {
+                const Icon = tItem.icon;
                 return (
-                  <div key={t.key} className="flex items-center justify-between rounded-xl border border-white/5 bg-white/[0.02] p-3">
+                  <div key={tItem.key} className="flex items-center justify-between rounded-xl border border-white/5 bg-white/[0.02] p-3">
                     <div className="flex items-center gap-2">
                       <Icon className="h-3.5 w-3.5 text-muted-foreground" />
                       <div>
-                        <p className="text-sm font-medium">{t.label}</p>
-                        <p className="text-[11px] text-muted-foreground">{t.desc}</p>
+                        <p className="text-sm font-medium">{tItem.label}</p>
+                        <p className="text-[11px] text-muted-foreground">{tItem.desc}</p>
                       </div>
                     </div>
-                    <Switch checked={toggles[t.key]} onCheckedChange={(v) => setToggle(t.key, v)} />
+                    <Switch checked={toggles[tItem.key]} onCheckedChange={(v) => setToggle(tItem.key, v)} />
                   </div>
                 );
               })}
@@ -518,10 +515,10 @@ function DeveloperSettingsCard() {
           </GlassCard>
 
           <GlassCard className="p-6">
-            <h3 className="flex items-center gap-2 text-sm font-semibold"><ListChecks className="h-4 w-4 text-amber-400" /> Debug Data</h3>
+            <h3 className="flex items-center gap-2 text-sm font-semibold"><ListChecks className="h-4 w-4 text-amber-400" /> {t("settings", "debugData")}</h3>
             <div className="mt-3 flex flex-wrap gap-2">
-              <Button size="sm" variant="outline" onClick={() => { clearLogs(); toast.success("Logs cleared"); }}>Clear request logs</Button>
-              <Button size="sm" variant="outline" onClick={() => { clearSnapshots(); toast.success("Snapshots cleared"); }}>Clear debug snapshots</Button>
+              <Button size="sm" variant="outline" onClick={() => { clearLogs(); toast.success(t("notifications", "logsCleared")); }}>{t("settings", "clearRequestLogs")}</Button>
+              <Button size="sm" variant="outline" onClick={() => { clearSnapshots(); toast.success(t("notifications", "snapshotsCleared")); }}>{t("settings", "clearSnapshots")}</Button>
             </div>
           </GlassCard>
         </>
@@ -530,10 +527,11 @@ function DeveloperSettingsCard() {
   );
 }
 
-/* ---------- Appearance Settings Card (theme / accent / density / animation) ---------- */
+/* ---------- Appearance Settings Card ---------- */
 function AppearanceSettingsCard() {
   const { t } = useT();
   const { theme, accent, density, animation, setTheme, setAccent, setDensity, setAnimation } = usePersonalizationStore();
+
   return (
     <>
       <GlassCard strong className="p-6">
@@ -545,13 +543,13 @@ function AppearanceSettingsCard() {
       </GlassCard>
 
       <GlassCard className="p-6">
-        <h3 className="flex items-center gap-2 text-sm font-semibold"><Sparkles className="h-4 w-4 text-violet-300" /> Accent Color</h3>
-        <p className="mt-1 text-xs text-muted-foreground">Updates buttons, links, icons, charts, AI Core glow, and focus states instantly.</p>
+        <h3 className="flex items-center gap-2 text-sm font-semibold"><Sparkles className="h-4 w-4 text-violet-300" /> {t("settings", "appearance.accentColor")}</h3>
+        <p className="mt-1 text-xs text-muted-foreground">{t("settings", "accentColorDesc")}</p>
         <div className="mt-4 flex flex-wrap gap-2">
           {ACCENTS.map((a) => (
             <button
               key={a.id}
-              onClick={() => { setAccent(a.id); toast.success(`Accent: ${a.name}`); }}
+              onClick={() => { setAccent(a.id); }}
               className={cn(
                 "group relative flex h-12 w-12 items-center justify-center rounded-xl border-2 transition",
                 accent === a.id ? "border-foreground" : "border-white/10 hover:border-white/30"
@@ -566,48 +564,48 @@ function AppearanceSettingsCard() {
       </GlassCard>
 
       <GlassCard className="p-6">
-        <h3 className="flex items-center gap-2 text-sm font-semibold"><Gauge className="h-4 w-4 text-emerald-400" /> UI Density</h3>
+        <h3 className="flex items-center gap-2 text-sm font-semibold"><Gauge className="h-4 w-4 text-emerald-400" /> {t("settings", "appearance.uiDensity")}</h3>
         <div className="mt-4 grid grid-cols-2 gap-3">
           {([
-            { id: "comfortable", name: "Comfortable", desc: "Larger spacing, better readability" },
-            { id: "compact", name: "Compact", desc: "Denser, more information visible" },
+            { id: "comfortable", name: t("settings", "appearance.densityComfortable") },
+            { id: "compact", name: t("settings", "appearance.densityCompact") },
           ] as const).map((d) => (
             <button
               key={d.id}
-              onClick={() => { setDensity(d.id); toast.success(`Density: ${d.name}`); }}
+              onClick={() => { setDensity(d.id); }}
               className={cn(
                 "rounded-xl border p-4 text-left transition",
                 density === d.id ? "border-cyan-400/40 bg-cyan-400/[0.06]" : "border-white/10 bg-white/[0.02] hover:border-white/20"
               )}
             >
               <p className="text-sm font-medium">{d.name}</p>
-              <p className="mt-1 text-[11px] text-muted-foreground">{d.desc}</p>
             </button>
           ))}
         </div>
+        <p className="mt-2 text-[11px] text-muted-foreground">{t("settings", "uiDensityDesc")}</p>
       </GlassCard>
 
       <GlassCard className="p-6">
-        <h3 className="flex items-center gap-2 text-sm font-semibold"><Zap className="h-4 w-4 text-amber-400" /> Animation Level</h3>
+        <h3 className="flex items-center gap-2 text-sm font-semibold"><Zap className="h-4 w-4 text-amber-400" /> {t("settings", "appearance.animationLevel")}</h3>
         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
           {([
-            { id: "ultra", name: "Ultra", desc: "Full 3D, particles, bloom, blur" },
-            { id: "balanced", name: "Balanced", desc: "Reduced particles, better perf" },
-            { id: "performance", name: "Performance", desc: "No shaders, static background" },
+            { id: "ultra", name: t("settings", "appearance.animUltra") },
+            { id: "balanced", name: t("settings", "appearance.animBalanced") },
+            { id: "performance", name: t("settings", "appearance.animPerformance") },
           ] as const).map((a) => (
             <button
               key={a.id}
-              onClick={() => { setAnimation(a.id); toast.success(`Animation: ${a.name}`); }}
+              onClick={() => { setAnimation(a.id); }}
               className={cn(
                 "rounded-xl border p-4 text-left transition",
                 animation === a.id ? "border-cyan-400/40 bg-cyan-400/[0.06]" : "border-white/10 bg-white/[0.02] hover:border-white/20"
               )}
             >
               <p className="text-sm font-medium">{a.name}</p>
-              <p className="mt-1 text-[11px] text-muted-foreground">{a.desc}</p>
             </button>
           ))}
         </div>
+        <p className="mt-2 text-[11px] text-muted-foreground">{t("settings", "animationDesc")}</p>
       </GlassCard>
     </>
   );
@@ -618,6 +616,7 @@ function LanguageSettingsCard() {
   const { t } = useT();
   const locale = useI18nStore((s) => s.locale);
   const setLocale = useI18nStore((s) => s.setLocale);
+
   return (
     <GlassCard strong className="p-6">
       <h3 className="flex items-center gap-2 text-sm font-semibold"><Globe className="h-4 w-4 text-cyan-300" /> {t("settings", "language.title")}</h3>
@@ -628,7 +627,7 @@ function LanguageSettingsCard() {
         {SUPPORTED_LOCALES.map((l) => (
           <button
             key={l.id}
-            onClick={() => { setLocale(l.id); toast.success(`Language: ${l.label}`); }}
+            onClick={() => { setLocale(l.id); }}
             className={cn(
               "flex items-center gap-3 rounded-xl border p-4 transition",
               locale === l.id ? "border-cyan-400/40 bg-cyan-400/[0.06]" : "border-white/10 bg-white/[0.02] hover:border-white/20"
@@ -651,23 +650,25 @@ function LanguageSettingsCard() {
 function AccessibilitySettingsCard() {
   const { t } = useT();
   const { fontSize, reducedMotion, highContrast, colorBlind, setFontSize, setReducedMotion, setHighContrast, setColorBlind } = usePersonalizationStore();
+
   const fontSizes: { id: FontSize; label: string }[] = [
     { id: "sm", label: t("settings", "accessibility.fontSm") },
     { id: "base", label: t("settings", "accessibility.fontBase") },
     { id: "lg", label: t("settings", "accessibility.fontLg") },
   ];
+
   const cbModes: { id: ColorBlindMode; label: string }[] = [
     { id: "none", label: t("settings", "accessibility.cbNone") },
-    { id: "protanopia", label: "Protanopia" },
-    { id: "deuteranopia", label: "Deuteranopia" },
-    { id: "tritanopia", label: "Tritanopia" },
+    { id: "protanopia", label: t("settings", "accessibility.cbProtanopia") },
+    { id: "deuteranopia", label: t("settings", "accessibility.cbDeuteranopia") },
+    { id: "tritanopia", label: t("settings", "accessibility.cbTritanopia") },
   ];
+
   return (
     <>
       <GlassCard strong className="p-6">
         <h3 className="flex items-center gap-2 text-sm font-semibold"><Eye className="h-4 w-4 text-cyan-300" /> {t("settings", "accessibility.title")}</h3>
-        <p className="mt-1 text-xs text-muted-foreground">{t("settings", "accessibility.title")}</p>
-
+        
         {/* Font size */}
         <div className="mt-4">
           <label className="text-xs font-medium text-muted-foreground">{t("settings", "accessibility.fontSize")}</label>
@@ -675,7 +676,7 @@ function AccessibilitySettingsCard() {
             {fontSizes.map((f) => (
               <button
                 key={f.id}
-                onClick={() => { setFontSize(f.id); toast.success(`Font size: ${f.label}`); }}
+                onClick={() => { setFontSize(f.id); }}
                 className={cn(
                   "rounded-lg border py-2 text-sm transition",
                   fontSize === f.id ? "border-cyan-400/40 bg-cyan-400/[0.06] text-foreground" : "border-white/10 bg-white/[0.02] text-muted-foreground hover:text-foreground"
@@ -693,16 +694,16 @@ function AccessibilitySettingsCard() {
         {/* Toggles */}
         <div className="space-y-3">
           <ToggleRow
-            label="Reduced Motion"
-            desc="Minimise animations and transitions."
+            label={t("settings", "accessibility.reducedMotion")}
+            desc={t("settings", "reducedMotionDesc")}
             checked={reducedMotion}
-            onCheckedChange={(v) => { setReducedMotion(v); toast.success(v ? "Reduced motion on" : "Reduced motion off"); }}
+            onCheckedChange={(v) => { setReducedMotion(v); toast.success(v ? t("notifications", "reducedMotionOn") : t("notifications", "reducedMotionOff")); }}
           />
           <ToggleRow
-            label="High Contrast"
-            desc="Stronger borders and text contrast."
+            label={t("settings", "accessibility.highContrast")}
+            desc="Cải thiện độ tương phản đường viền và chữ." // Technical UI term
             checked={highContrast}
-            onCheckedChange={(v) => { setHighContrast(v); toast.success(v ? "High contrast on" : "High contrast off"); }}
+            onCheckedChange={(v) => { setHighContrast(v); toast.success(v ? t("notifications", "highContrastOn") : t("notifications", "highContrastOff")); }}
           />
         </div>
 
@@ -710,12 +711,12 @@ function AccessibilitySettingsCard() {
 
         {/* Color blind mode */}
         <div>
-          <label className="text-xs font-medium text-muted-foreground">Color Blind Mode</label>
+          <label className="text-xs font-medium text-muted-foreground">{t("settings", "accessibility.colorBlindMode")}</label>
           <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
             {cbModes.map((c) => (
               <button
                 key={c.id}
-                onClick={() => { setColorBlind(c.id); toast.success(`Color blind: ${c.label}`); }}
+                onClick={() => { setColorBlind(c.id); }}
                 className={cn(
                   "rounded-lg border py-2 text-xs transition",
                   colorBlind === c.id ? "border-cyan-400/40 bg-cyan-400/[0.06] text-foreground" : "border-white/10 bg-white/[0.02] text-muted-foreground hover:text-foreground"

@@ -1,1 +1,18 @@
-{ "title": "Analysis History", "subtitle": "All repositories you've analysed, ranked by recency.", "searchPlaceholder": "Search by repo or language…", "newAnalysis": "New Analysis", "empty": "No analyses yet", "emptyDesc": "Run your first analysis to see it here.", "loaded": "Loaded {owner}/{name}", "loadFailed": "Failed to load report", "chats": "chats", "files": "files", "overall": "Overall" }
+{
+    "title": "Analysis History",
+    "subtitle": "All repositories you've analysed, ranked by recency.",
+    "searchPlaceholder": "Search by repo or language…",
+    "newAnalysis": "New Analysis",
+    "empty": "No analyses yet",
+    "emptyDesc": "Run your first analysis to see it here.",
+    "loaded": "Loaded {owner}/{name}",
+    "loadFailed": "Failed to load report",
+    "chats": "chats",
+    "files": "files",
+    "overall": "Overall",
+    "deleteConfirm": "Are you sure you want to delete this analysis from history?",
+    "deleteSuccess": "Analysis deleted successfully",
+    "deleteError": "Failed to delete analysis",
+    "deleteNetwork": "Network connection error",
+    "deleteTooltip": "Delete this analysis"
+}

@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   History as HistoryIcon,
   FolderGit2,
@@ -14,7 +14,6 @@ import {
   ShieldCheck,
   Gauge,
   Network,
-  Wrench,
   Code2,
   Loader2,
 } from "lucide-react";
@@ -53,8 +52,6 @@ export function HistoryView() {
   const setView = useAppStore((s) => s.setView);
   const setActiveReport = useAppStore((s) => s.setActiveReport);
   const [filter, setFilter] = useState("");
-  
-  // State quản lý item đang bị xóa
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
   const { data, isLoading, refetch } = useQuery({
@@ -74,7 +71,6 @@ export function HistoryView() {
   );
 
   const open = async (item: HistoryItem) => {
-    // fetch full report then load into project view
     try {
       const res = await fetch(`/api/report?id=${item.id}`);
       const d = await res.json();
@@ -90,11 +86,11 @@ export function HistoryView() {
     }
   };
 
-  // Hàm xử lý xóa lịch sử
   const deleteItem = async (e: React.MouseEvent, id: string) => {
-    e.stopPropagation(); // Ngăn sự kiện click kích hoạt hàm `open` ở thẻ cha
-    
-    if (!window.confirm("Bạn có chắc chắn muốn xóa bản phân tích này khỏi lịch sử không?")) return;
+    e.stopPropagation();
+
+    // Sử dụng i18n cho câu hỏi xác nhận
+    if (!window.confirm(t("history", "deleteConfirm"))) return;
 
     setIsDeleting(id);
     try {
@@ -103,20 +99,19 @@ export function HistoryView() {
       });
 
       if (res.ok) {
-        toast.success("Đã xóa bản phân tích thành công");
-        refetch(); // Tải lại danh sách
-        
-        // Nếu project bị xóa đang được mở, clear project đó đi
+        toast.success(t("history", "deleteSuccess")); // Sử dụng i18n
+        refetch();
+
         if (useAppStore.getState().activeAnalysisId === id) {
-           useAppStore.getState().setActiveReport(null);
-           useAppStore.getState().setActiveAnalysisId(null);
+          useAppStore.getState().setActiveReport(null);
+          useAppStore.getState().setActiveAnalysisId(null);
         }
       } else {
         const errorData = await res.json();
-        toast.error(errorData.error || "Có lỗi xảy ra khi xóa");
+        toast.error(errorData.error || t("history", "deleteError")); // Sử dụng i18n
       }
     } catch (err) {
-      toast.error("Lỗi kết nối mạng");
+      toast.error(t("history", "deleteNetwork")); // Sử dụng i18n
     } finally {
       setIsDeleting(null);
     }
@@ -155,8 +150,9 @@ export function HistoryView() {
       ) : items.length === 0 ? (
         <GlassCard className="mt-10 p-12 text-center">
           <HistoryIcon className="mx-auto h-10 w-10 text-muted-foreground" />
-          <h3 className="mt-3 text-lg font-semibold">No analyses yet</h3>
-          <p className="mt-1 text-sm text-muted-foreground">Run your first analysis to see it here.</p>
+          {/* Cập nhật i18n cho Empty State */}
+          <h3 className="mt-3 text-lg font-semibold">{t("history", "empty")}</h3>
+          <p className="mt-1 text-sm text-muted-foreground">{t("history", "emptyDesc")}</p>
         </GlassCard>
       ) : (
         <div className="mt-5 grid gap-3">
@@ -166,11 +162,11 @@ export function HistoryView() {
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.03 }}
-              className="group relative text-left"
+              className="group relative text-left cursor-pointer"
+              onClick={() => open(item)}
             >
-              <GlassCard hover className="p-4 cursor-pointer relative">
-                
-                {/* NÚT XÓA (Hiện ra khi hover thẻ cha) */}
+              <GlassCard hover className="p-4 relative">
+
                 <div className="absolute right-4 top-4 z-10">
                   <Button
                     size="icon"
@@ -178,13 +174,13 @@ export function HistoryView() {
                     onClick={(e) => deleteItem(e, item.id)}
                     disabled={isDeleting === item.id}
                     className="h-8 w-8 text-muted-foreground opacity-0 transition-all hover:bg-rose-500/20 hover:text-rose-400 group-hover:opacity-100"
-                    title="Xóa phân tích này"
+                    title={t("history", "deleteTooltip")} // Sử dụng i18n
                   >
                     {isDeleting === item.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                   </Button>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-3 pr-10"> {/* pr-10 để chữ không chèn lên nút xóa */}
+                <div className="flex flex-wrap items-center gap-3 pr-10">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-cyan-400/10 text-cyan-300">
                     <FolderGit2 className="h-5 w-5" />
                   </div>
@@ -199,12 +195,11 @@ export function HistoryView() {
                       <span>·</span>
                       <span>{item.primaryLanguage ?? "Unknown"}</span>
                       <span>·</span>
-                      <span>{item.totalFiles} files</span>
-                      {item.messageCount > 0 && (<><span>·</span><span>{item.messageCount} chats</span></>)}
+                      <span>{item.totalFiles} {t("history", "files")}</span>
+                      {item.messageCount > 0 && (<><span>·</span><span>{item.messageCount} {t("history", "chats")}</span></>)}
                     </p>
                   </div>
 
-                  {/* mini scores */}
                   <div className="flex flex-wrap gap-2">
                     <MiniScore icon={ShieldCheck} value={item.securityScore} color="#f472b6" label="Sec" />
                     <MiniScore icon={Gauge} value={item.performanceScore} color="#34d399" label="Perf" />
@@ -212,14 +207,12 @@ export function HistoryView() {
                     <MiniScore icon={Code2} value={item.codeQualityScore} color="#60a5fa" label="Qual" />
                   </div>
 
-                  {/* overall */}
                   <div className="flex flex-col items-center rounded-xl border border-cyan-400/20 bg-cyan-400/[0.06] px-3 py-1.5">
-                    <span className="text-[9px] uppercase tracking-wider text-muted-foreground">Overall</span>
+                    <span className="text-[9px] uppercase tracking-wider text-muted-foreground">{t("history", "overall")}</span>
                     <span className="text-xl font-bold tabular-nums text-cyan-300">{item.overallScore}</span>
                   </div>
                 </div>
 
-                {/* language bars */}
                 {item.languages?.length > 0 && (
                   <>
                     <NeonDivider className="my-3" />
