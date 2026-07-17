@@ -30,14 +30,18 @@ model Analysis {
   frameworks      String @default("[]") // JSON array
   // Full report JSON
   report          String @default("{}") // JSON blob of full analysis
+  // Parsed repo data (structured memory)
+  parsedData      String? // JSON of ParsedRepository
   // Timestamps
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
   messages       ChatMessage[]
+  fileSummaries  FileSummary[]
 
   @@index([repoUrl])
   @@index([createdAt])
+  @@index([repoOwner, repoName])
 }
 
 model ChatMessage {
@@ -50,4 +54,36 @@ model ChatMessage {
   analysis    Analysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
 
   @@index([analysisId])
+}
+
+// Structured file-level memory — persists per-file summaries + symbols
+model FileSummary {
+  id          String   @id @default(cuid())
+  analysisId  String
+  path        String
+  language    String
+  lines       Int      @default(0)
+  complexity  Int      @default(0)
+  description String   @default("")
+  imports     String   @default("[]")  // JSON array
+  exports     String   @default("[]")  // JSON array
+  functions   String   @default("[]")  // JSON array
+  classes     String   @default("[]")  // JSON array
+  components  String   @default("[]")  // JSON array
+  routes      String   @default("[]")  // JSON array
+  issues      Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  analysis    Analysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+
+  @@index([analysisId])
+  @@index([path])
+}
+
+// User settings persistence (survives reload)
+model UserSettings {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String   // JSON
+  updatedAt   DateTime @updatedAt
 }

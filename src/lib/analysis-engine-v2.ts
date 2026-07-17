@@ -121,7 +121,14 @@ export function analyzeParsedRepository(parsed: ParsedRepository, rawFiles?: { p
       { title: "Team & Enterprise plans", description: "SSO, audit logs, dedicated support.", potential: "high" },
       { title: "Premium templates", description: "Curated starter templates marketplace.", potential: "medium" },
     ],
-    documentation: { readme: genReadme(parsed), apiDocs: genApiDocs(parsed) },
+    documentation: {
+      readme: genReadme(parsed),
+      apiDocs: genApiDocs(parsed),
+      architectureMd: genArchitectureMd(parsed, arch),
+      folderGuide: genFolderGuide(parsed),
+      componentGuide: genComponentGuide(parsed),
+      deploymentGuide: genDeploymentGuide(parsed),
+    },
     activity,
     complexityTrend,
   };
@@ -215,4 +222,46 @@ function genApiDocs(parsed: ParsedRepository): string {
   const routes = parsed.files.flatMap(f => f.routes.map(r => ({ path: r, file: f.path })));
   if (routes.length === 0) return `# API Reference — ${parsed.name}\n\nNo explicit API routes detected.\n`;
   return `# API Reference — ${parsed.name}\n\n## Routes\n${routes.map(r=>`### ${r.path}\nDefined in: \`${r.file}\``).join("\n\n")}\n`;
+}
+
+function genArchitectureMd(parsed: ParsedRepository, arch: any): string {
+  const layers = arch.layers.map((l: any) => `### ${l.name}\n${l.responsibility} (${l.files} files)`).join("\n\n");
+  return `# Architecture — ${parsed.owner}/${parsed.name}\n\n## Pattern\n**${arch.pattern}**\n\n${arch.description}\n\n## Layers\n${layers}\n\n## Strengths\n${arch.strengths.map((s: string) => `- ${s}`).join("\n")}\n\n## Weaknesses\n${arch.weaknesses.map((w: string) => `- ${w}`).join("\n")}\n\n## Dependency Graph\n- Nodes: ${parsed.dependencies.nodes.length}\n- Edges: ${parsed.dependencies.edges.length}\n- Circular deps: ${parsed.dependencies.circular.length}\n\n## Frameworks\n${parsed.frameworks.map(f => `- ${f.name} ${f.version} (${f.category})`).join("\n")}\n`;
+}
+
+function genFolderGuide(parsed: ParsedRepository): string {
+  const dirMap = new Map<string, { files: number; lines: number; langs: Set<string> }>();
+  for (const f of parsed.files) {
+    const parts = f.path.split("/");
+    const dir = parts.length > 1 ? parts.slice(0, -1).join("/") : "(root)";
+    const existing = dirMap.get(dir) || { files: 0, lines: 0, langs: new Set<string>() };
+    existing.files++;
+    existing.lines += f.lines;
+    existing.langs.add(f.language);
+    dirMap.set(dir, existing);
+  }
+  const dirs = Array.from(dirMap.entries()).sort((a, b) => b[1].lines - a[1].lines);
+  return `# Folder Guide — ${parsed.name}\n\n| Folder | Files | Lines | Languages |\n|--------|-------|-------|-----------|\n${dirs.map(([dir, info]) => `| \`${dir}/\` | ${info.files} | ${info.lines.toLocaleString()} | ${Array.from(info.langs).join(", ")} |`).join("\n")}\n`;
+}
+
+function genComponentGuide(parsed: ParsedRepository): string {
+  const components = parsed.files.filter(f => f.components.length > 0);
+  if (components.length === 0) return `# Component Guide — ${parsed.name}\n\nNo React/Vue/Svelte components detected.\n`;
+  return `# Component Guide — ${parsed.name}\n\n${components.map(f => `## ${f.components.join(", ")}\n- **File:** \`${f.path}\`\n- **Language:** ${f.language}\n- **Lines:** ${f.lines}\n- **Imports:** ${f.imports.slice(0, 5).join(", ") || "none"}\n- **Exports:** ${f.exports.slice(0, 5).join(", ") || "none"}\n- **Description:** ${f.description}\n`).join("\n")}`;
+}
+
+function genDeploymentGuide(parsed: ParsedRepository): string {
+  const hasDocker = parsed.files.some(f => f.path.toLowerCase().includes("dockerfile") || f.path.toLowerCase().includes("docker-compose"));
+  const hasVercel = parsed.files.some(f => f.path.toLowerCase().includes("vercel.json") || f.path.includes(".vercel"));
+  const hasCI = parsed.files.some(f => f.path.includes(".github/workflows") || f.path.includes(".gitlab-ci") || f.path.includes("Jenkinsfile"));
+  const hasNext = parsed.frameworks.some(f => f.name === "Next.js");
+  const hasExpress = parsed.frameworks.some(f => f.name === "Express" || f.name === "NestJS" || f.name === "Fastify");
+
+  let guide = `# Deployment Guide — ${parsed.name}\n\n## Package Manager\n${parsed.packageManager}\n\n`;
+  if (hasDocker) guide += `## Docker\nThis project includes Docker configuration.\n\`\`\`bash\ndocker build -t ${parsed.name} .\ndocker run -p 3000:3000 ${parsed.name}\n\`\`\`\n\n`;
+  if (hasVercel || hasNext) guide += `## Vercel (Recommended for Next.js)\n\`\`\`bash\nnpx vercel --prod\n\`\`\`\n\n`;
+  if (hasExpress) guide += `## VPS / Cloud\n\`\`\`bash\n${parsed.packageManager === "bun" ? "bun install" : "npm install"}\n${parsed.packageManager === "bun" ? "bun run build" : "npm run build"}\n${parsed.packageManager === "bun" ? "bun run start" : "npm start"}\n\`\`\`\nUse PM2 or systemd for process management.\n\n`;
+  if (hasCI) guide += `## CI/CD\nCI/CD pipeline detected. Check the configuration files for deployment automation.\n\n`;
+  guide += `## Environment Variables\nEnsure these are set in production:\n- \`NODE_ENV=production\`\n- \`DATABASE_URL\`\n- Any API keys required by the application\n`;
+  return guide;
 }
