@@ -183,31 +183,50 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // 5. Call the LLM (personality temperature/maxTokens override if provided)
+    // 5. Call the LLM — use user's provider if available, else built-in
     const queueMs = Date.now() - requestStart;
     const genStart = Date.now();
     let reply: string;
     let llmError: string | undefined;
     let retryCount = 0;
+
     try {
-      const ZAI = (await import("z-ai-web-dev-sdk")).default;
-      const zai = await ZAI.create();
-      const completion = await zai.chat.completions.create({
-        messages: llmMessages,
-        thinking: { type: "disabled" },
-        ...(personality?.temperature != null ? { temperature: personality.temperature } : {}),
-        ...(personality?.maxTokens != null && personality.maxTokens > 0 ? { max_tokens: personality.maxTokens } : {}),
-      });
-      reply = completion.choices[0]?.message?.content ?? "";
+      if (provider && provider.apiKey) {
+        // Call the user's selected provider directly (OpenAI-compatible)
+        reply = await callProvider(provider, llmMessages, personality);
+      } else if (provider && (provider.providerId === "ollama" || provider.providerId === "lmstudio")) {
+        // Local providers don't need API key
+        reply = await callProvider(provider, llmMessages, personality);
+      } else {
+        // Fallback: try z-ai built-in SDK
+        try {
+          const ZAI = (await import("z-ai-web-dev-sdk")).default;
+          const zai = await ZAI.create();
+          const completion = await zai.chat.completions.create({
+            messages: llmMessages,
+            thinking: { type: "disabled" },
+            ...(personality?.temperature != null ? { temperature: personality.temperature } : {}),
+            ...(personality?.maxTokens != null && personality.maxTokens > 0 ? { max_tokens: personality.maxTokens } : {}),
+          });
+          reply = completion.choices[0]?.message?.content ?? "";
+        } catch (zaiErr) {
+          console.error("[/api/chat] z-ai SDK error", zaiErr);
+          // If z-ai fails, return error (don't use fallback — user wants real AI)
+          throw new Error("No AI provider configured. Please add an AI provider in Settings → AI Providers, or enable a provider with a valid API key.");
+        }
+      }
     } catch (err) {
       console.error("[/api/chat] LLM error", err);
       llmError = err instanceof Error ? err.message : String(err);
-      retryCount = 1;
-      reply = fallbackReply(message, report, personality);
+      reply = ""; // Don't use fake fallback — return the error to the user
     }
 
     if (!reply || !reply.trim()) {
-      reply = fallbackReply(message, report, personality);
+      if (llmError) {
+        reply = `⚠️ **AI Error**: ${llmError}\n\nPlease check your API key and provider configuration in **AI Providers** settings.`;
+      } else {
+        reply = "⚠️ The AI returned an empty response. Please try again or check your provider configuration.";
+      }
     }
 
     const generationMs = Date.now() - genStart;
@@ -315,24 +334,102 @@ export async function POST(req: NextRequest) {
   }
 }
 
-function fallbackReply(message: string, report: AnalysisReport | null, personality?: PersonalityConfig): string {
-  const isTeacher = personality?.id === "teacher";
-  const prefix = isTeacher ? "Let's walk through this together! 📚\n\n" : "";
-  if (!report) {
-    return `${prefix}I don't have a repository loaded yet. Run an analysis first, then ask me anything about the codebase — architecture, security, performance, or what to build next.`;
+/**
+ * Call a user-configured AI provider (OpenAI-compatible API).
+ * Supports: OpenAI, OpenRouter, DeepSeek, Groq, Together, Fireworks,
+ * Mistral, xAI, Ollama, LM Studio, Custom, Anthropic, Gemini.
+ */
+async function callProvider(
+  provider: ProviderConfig,
+  messages: { role: string; content: string }[],
+  personality?: PersonalityConfig
+): Promise<string> {
+  const temperature = personality?.temperature ?? provider.temperature ?? 0.7;
+  const maxTokens = personality?.maxTokens && personality.maxTokens > 0 ? personality.maxTokens : (provider.maxTokens > 0 ? provider.maxTokens : undefined);
+  const model = provider.model || "gpt-4o-mini";
+  const timeout = (provider.timeout || 60) * 1000;
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeout);
+
+  try {
+    let url: string;
+    let headers: Record<string, string> = { "Content-Type": "application/json" };
+    let body: Record<string, unknown>;
+
+    if (provider.providerId === "anthropic") {
+      // Anthropic Messages API
+      url = provider.baseUrl.endsWith("/v1") ? `${provider.baseUrl}/messages` : `${provider.baseUrl}/v1/messages`;
+      headers["x-api-key"] = provider.apiKey || "";
+      headers["anthropic-version"] = "2023-06-01";
+      // Convert messages: Anthropic needs separate system + messages array
+      const systemMsg = messages.find(m => m.role === "assistant")?.content || "";
+      const chatMsgs = messages.filter(m => m.role !== "assistant" || messages.indexOf(m) > 0).map(m => ({
+        role: m.role === "assistant" ? "assistant" : "user",
+        content: m.content,
+      }));
+      body = {
+        model,
+        max_tokens: maxTokens || 4096,
+        temperature,
+        system: systemMsg,
+        messages: chatMsgs,
+      };
+    } else if (provider.providerId === "gemini") {
+      // Google Gemini API
+      url = `${provider.baseUrl}/models/${model}:generateContent?key=${provider.apiKey}`;
+      const contents = messages.filter(m => m.role !== "assistant" || messages.indexOf(m) > 0).map(m => ({
+        role: m.role === "assistant" ? "model" : "user",
+        parts: [{ text: m.content }],
+      }));
+      body = {
+        contents,
+        generationConfig: { temperature, maxOutputTokens: maxTokens || 4096 },
+      };
+    } else {
+      // OpenAI-compatible API (default)
+      url = provider.baseUrl.endsWith("/v1") ? `${provider.baseUrl}/chat/completions` : `${provider.baseUrl}/v1/chat/completions`;
+      if (provider.apiKey) {
+        headers["Authorization"] = `Bearer ${provider.apiKey}`;
+      }
+      body = {
+        model,
+        messages: messages.map(m => ({ role: m.role === "assistant" ? "system" : m.role, content: m.content })),
+        temperature,
+        ...(maxTokens ? { max_tokens: maxTokens } : {}),
+      };
+    }
+
+    const res = await fetch(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+
+    if (!res.ok) {
+      const errText = await res.text().catch(() => "");
+      let errMsg = `HTTP ${res.status}`;
+      try {
+        const errJson = JSON.parse(errText);
+        errMsg = errJson.error?.message || errJson.message || errMsg;
+      } catch {
+        if (errText) errMsg = errText.substring(0, 300);
+      }
+      throw new Error(`Provider error (${res.status}): ${errMsg}`);
+    }
+
+    const data = await res.json();
+
+    // Extract response based on provider format
+    if (provider.providerId === "anthropic") {
+      return data.content?.[0]?.text || "";
+    } else if (provider.providerId === "gemini") {
+      return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    } else {
+      return data.choices?.[0]?.message?.content || "";
+    }
+  } finally {
+    clearTimeout(timer);
   }
-  const q = message.toLowerCase();
-  if (q.includes("security") || q.includes("vulnerab")) {
-    return `${prefix}## Security overview\n\nOverall security score: **${report.scores.security}/100**.\n\nTop concerns:\n${report.issues.security.slice(0, 3).map((i) => `- **[${i.severity}] ${i.title}** in \`${i.file}\` — ${i.recommendation}`).join("\n")}\n\nI'd start with the critical secrets issue, then layer in the missing security headers.`;
-  }
-  if (q.includes("performance") || q.includes("slow") || q.includes("optimi")) {
-    return `${prefix}## Performance review\n\nPerformance score: **${report.scores.performance}/100**.\n\nThe biggest wins:\n${report.issues.performance.slice(0, 3).map((i) => `- **${i.title}** — ${i.recommendation} _(effort: ${i.effort})_`).join("\n")}\n\nTackle the trivial bundle-size fix first for an immediate win, then the N+1 query.`;
-  }
-  if (q.includes("architecture") || q.includes("structure") || q.includes("pattern")) {
-    return `${prefix}## Architecture\n\nPattern: **${report.architecture.pattern}**.\n\n${report.architecture.description}\n\n**Strengths:**\n${report.architecture.strengths.map((s) => `- ${s}`).join("\n")}\n\n**Weaknesses to address:**\n${report.architecture.weaknesses.map((s) => `- ${s}`).join("\n")}`;
-  }
-  if (q.includes("refactor") || q.includes("improve") || q.includes("fix")) {
-    return `${prefix}## Where to focus\n\nPriority refactor targets based on complexity & debt:\n${report.files.filter((f) => f.complexity > 15).slice(0, 4).map((f) => `- \`${f.path}\` — complexity ${f.complexity}, maintainability ${f.maintainability}`).join("\n")}\n\nKnock out the trivial fixes first to build momentum, then schedule the medium-effort items.`;
-  }
-  return `${prefix}Here's my take on **${report.repoOwner}/${report.repoName}**:\n\n- **Overall health:** ${report.scores.overall}/100\n- **Primary language:** ${report.primaryLanguage}\n- **Architecture:** ${report.architecture.pattern}\n\nAsk me about security, performance, architecture, what to refactor, or what feature to build next.`;
 }
