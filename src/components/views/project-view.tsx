@@ -21,6 +21,7 @@ import {
   Copy,
   Check,
   GitBranch,
+  Activity,
 } from "lucide-react";
 import { GlassCard, ScoreGauge, GradientText, NeonDivider, SeverityBadge } from "@/components/shared/ui";
 import { DependencyGraph } from "@/components/shared/dependency-graph";
@@ -311,11 +312,48 @@ function ArchitectureTab({ report }: { report: AnalysisReport }) {
                 <p className="text-sm font-medium">{l.name}</p>
                 <p className="text-[11px] text-muted-foreground">{l.responsibility}</p>
               </div>
-              <span className="text-xs tabular-nums text-muted-foreground">{l.files} files</span>
+              <span className="text-xs tabular-nums text-muted-foreground">{l.files} {t("reports", "files")}</span>
             </motion.div>
           ))}
         </div>
       </GlassCard>
+
+      {/* Architecture Metrics — deep metrics from the import graph */}
+      {a.metrics && (
+        <GlassCard className="p-6">
+          <div className="flex items-center gap-2">
+            <Activity className="h-4 w-4 text-cyan-300" />
+            <h4 className="text-sm font-semibold">{t("reports", "architectureMetrics")}</h4>
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">{t("reports", "metricsDesc")}</p>
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+            <MetricCard label={t("reports", "metricAvgCoupling")} value={a.metrics.avgCoupling.toFixed(2)} hint="imports/file" tone={a.metrics.avgCoupling > 8 ? "bad" : a.metrics.avgCoupling < 3 ? "good" : "neutral"} />
+            <MetricCard label={t("reports", "metricAvgCohesion")} value={`${(a.metrics.avgCohesion * 100).toFixed(0)}%`} hint="intra-dir" tone={a.metrics.avgCohesion > 0.5 ? "good" : a.metrics.avgCohesion < 0.2 ? "bad" : "neutral"} />
+            <MetricCard label={t("reports", "metricInstability")} value={a.metrics.instability.toFixed(2)} hint="0=stable, 1=volatile" tone={a.metrics.instability > 0.7 ? "bad" : a.metrics.instability < 0.3 ? "good" : "neutral"} />
+            <MetricCard label={t("reports", "metricAbstractness")} value={a.metrics.abstractness.toFixed(2)} hint="0=concrete, 1=abstract" tone="neutral" />
+            <MetricCard label={t("reports", "metricDistanceMain")} value={a.metrics.distanceFromMain.toFixed(2)} hint="0=optimal, 1=worst" tone={a.metrics.distanceFromMain > 0.5 ? "bad" : a.metrics.distanceFromMain < 0.2 ? "good" : "neutral"} />
+            <MetricCard label={t("reports", "metricFanIn")} value={a.metrics.fanInAvg.toFixed(1)} hint="depend on me" tone="neutral" />
+            <MetricCard label={t("reports", "metricFanOut")} value={a.metrics.fanOutAvg.toFixed(1)} hint="I depend on" tone="neutral" />
+            <MetricCard label={t("reports", "metricFileCycles")} value={String(a.metrics.fileCircularDeps)} hint="A↔B pairs" tone={a.metrics.fileCircularDeps > 0 ? "bad" : "good"} />
+            <MetricCard label={t("reports", "metricDirCycles")} value={String(a.metrics.dirCircularDeps.length)} hint="dir→dir chains" tone={a.metrics.dirCircularDeps.length > 0 ? "bad" : "good"} />
+            <MetricCard label={t("reports", "metricLayerViolations")} value={String(a.metrics.layerViolations.length)} hint="comp→DB" tone={a.metrics.layerViolations.length > 0 ? "bad" : "good"} />
+            <MetricCard label={t("reports", "metricGodModules")} value={String(a.metrics.godModules.length)} hint=">20 funcs" tone={a.metrics.godModules.length > 0 ? "bad" : "good"} />
+          </div>
+        </GlassCard>
+      )}
+    </div>
+  );
+}
+
+/* ---------- Architecture Metric Card ---------- */
+function MetricCard({ label, value, hint, tone }: { label: string; value: string; hint: string; tone: "good" | "bad" | "neutral" }) {
+  const toneColor = tone === "good" ? "text-emerald-400" : tone === "bad" ? "text-rose-400" : "text-cyan-300";
+  const borderColor = tone === "good" ? "border-emerald-400/20" : tone === "bad" ? "border-rose-400/20" : "border-white/5";
+  return (
+    <div className={`rounded-lg border ${borderColor} bg-white/[0.02] p-3`}>
+      <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</p>
+      <p className={`mt-0.5 text-xl font-bold tabular-nums ${toneColor}`}>{value}</p>
+      <p className="text-[9px] text-muted-foreground">{hint}</p>
     </div>
   );
 }
@@ -335,12 +373,13 @@ function IssuesTab({ issues, title, color, report }: { issues: Issue[]; title: s
             <h3 className="text-lg font-semibold">{title}</h3>
           </div>
           <div className="flex gap-1.5">
-            {["critical", "high", "medium", "low"].map((sev) => {
+            {(["critical", "high", "medium", "low"] as const).map((sev) => {
               const count = issues.filter((i) => i.severity === sev).length;
               if (!count) return null;
+              const sevKey = sev === "critical" ? "critical" : `${sev}_sev`;
               return (
                 <span key={sev} className="rounded-full border border-white/10 bg-white/[0.03] px-2 py-0.5 text-[10px]">
-                  {count} {sev}
+                  {count} {t("reports", sevKey)}
                 </span>
               );
             })}
@@ -353,9 +392,9 @@ function IssuesTab({ issues, title, color, report }: { issues: Issue[]; title: s
         <GlassCard className="p-5">
           <div className="flex items-center gap-2 mb-3">
             <Check className="h-4 w-4 text-emerald-400" />
-            <h4 className="text-sm font-semibold text-emerald-400">No performance issues detected</h4>
+            <h4 className="text-sm font-semibold text-emerald-400">{t("reports", "noPerfIssues")}</h4>
           </div>
-          <p className="text-xs text-muted-foreground mb-3">Static analysis found no clear performance problems. Best practices already followed:</p>
+          <p className="text-xs text-muted-foreground mb-3">{t("reports", "noPerfIssuesDesc")}</p>
           <div className="space-y-1.5">
             {report.perfPositiveFindings.map((f, i) => (
               <p key={i} className="text-xs text-foreground/80">{f}</p>
@@ -368,7 +407,7 @@ function IssuesTab({ issues, title, color, report }: { issues: Issue[]; title: s
       {issues.length === 0 && !(title.includes("Performance") && report.perfPositiveFindings?.length) && (
         <GlassCard className="p-8 text-center">
           <Check className="mx-auto h-8 w-8 text-emerald-400" />
-          <p className="mt-2 text-sm font-medium">No issues detected in this category</p>
+          <p className="mt-2 text-sm font-medium">{t("reports", "noIssuesInCategory")}</p>
         </GlassCard>
       )}
 
@@ -407,7 +446,7 @@ function IssuesTab({ issues, title, color, report }: { issues: Issue[]; title: s
                         <p className="text-sm leading-relaxed text-foreground/85">{iss.description}</p>
                         <div className="mt-3 rounded-lg border border-cyan-400/20 bg-cyan-400/[0.04] p-3">
                           <p className="flex items-center gap-1.5 text-xs font-semibold text-cyan-300">
-                            <Sparkles className="h-3.5 w-3.5" /> AI Recommendation
+                            <Sparkles className="h-3.5 w-3.5" /> {t("reports", "aiRecommendation")}
                           </p>
                           <p className="mt-1 text-sm text-foreground/85">{iss.recommendation}</p>
                         </div>
@@ -432,10 +471,10 @@ function DependenciesTab({ report }: { report: AnalysisReport }) {
       <GlassCard className="p-5">
         <div className="flex items-center gap-2">
           <Boxes className="h-5 w-5 text-cyan-300" />
-          <h3 className="text-lg font-semibold">Interactive Dependency Graph</h3>
+          <h3 className="text-lg font-semibold">{t("reports", "interactiveDepGraph")}</h3>
         </div>
         <p className="mt-1 text-sm text-muted-foreground">
-          Drag to pan · scroll-click a node to inspect · circular dependencies highlighted in red.
+          {t("reports", "depGraphHint")}
         </p>
       </GlassCard>
       <DependencyGraph report={report} />
@@ -447,10 +486,10 @@ function DependenciesTab({ report }: { report: AnalysisReport }) {
             <FileCode className="h-4 w-4 text-rose-400" />
             <h4 className="text-sm font-semibold">{t("reports", "deadCode")} <span className="text-muted-foreground">({report.deadCode.length})</span></h4>
           </div>
-          <p className="mt-1 text-xs text-muted-foreground">Files with no inbound references — safe candidates for removal.</p>
+          <p className="mt-1 text-xs text-muted-foreground">{t("reports", "deadCodeDesc")}</p>
           <div className="mt-3 space-y-1.5">
             {report.deadCode.length === 0 ? (
-              <p className="rounded-lg border border-emerald-400/20 bg-emerald-400/[0.04] p-3 text-xs text-emerald-300">No dead code detected — clean codebase.</p>
+              <p className="rounded-lg border border-emerald-400/20 bg-emerald-400/[0.04] p-3 text-xs text-emerald-300">{t("reports", "noDeadCode")}</p>
             ) : (
               report.deadCode.map((d, i) => (
                 <div key={i} className="rounded-lg border border-white/5 bg-white/[0.02] p-2.5">
@@ -471,16 +510,16 @@ function DependenciesTab({ report }: { report: AnalysisReport }) {
             <Copy className="h-4 w-4 text-amber-400" />
             <h4 className="text-sm font-semibold">{t("reports", "duplicateCode")} <span className="text-muted-foreground">({report.duplicates.length})</span></h4>
           </div>
-          <p className="mt-1 text-xs text-muted-foreground">Clusters of near-identical blocks — extract a shared helper.</p>
+          <p className="mt-1 text-xs text-muted-foreground">{t("reports", "duplicateCodeDesc")}</p>
           <div className="mt-3 space-y-1.5">
             {report.duplicates.length === 0 ? (
-              <p className="rounded-lg border border-emerald-400/20 bg-emerald-400/[0.04] p-3 text-xs text-emerald-300">No significant duplication found.</p>
+              <p className="rounded-lg border border-emerald-400/20 bg-emerald-400/[0.04] p-3 text-xs text-emerald-300">{t("reports", "noDuplicates")}</p>
             ) : (
               report.duplicates.map((d, i) => (
                 <div key={i} className="rounded-lg border border-white/5 bg-white/[0.02] p-2.5">
                   <div className="flex items-center gap-2">
-                    <span className="rounded bg-amber-400/15 px-1.5 py-0.5 text-[9px] font-bold text-amber-400">GROUP {d.group}</span>
-                    <span className="ml-auto text-[10px] text-muted-foreground">{d.lines} lines duplicated</span>
+                    <span className="rounded bg-amber-400/15 px-1.5 py-0.5 text-[9px] font-bold text-amber-400">{t("reports", "group")} {d.group}</span>
+                    <span className="ml-auto text-[10px] text-muted-foreground">{d.lines} {t("reports", "linesDuplicated")}</span>
                   </div>
                   <div className="mt-1.5 space-y-0.5">
                     {d.files.map((f) => (
@@ -525,7 +564,7 @@ function CodeTab({ report }: { report: AnalysisReport }) {
           <h3 className="text-lg font-semibold">{t("reports", "aiCodeExplorer")}</h3>
         </div>
         <p className="mt-1 text-sm text-muted-foreground">
-          Representative snippets parsed from the codebase, each with syntax highlighting and an AI explanation of what it does and how to improve it.
+          {t("reports", "aiCodeExplorerDesc")}
         </p>
       </GlassCard>
       <CodeViewer snippets={report.snippets} />
@@ -543,7 +582,7 @@ function DocsTab({ report }: { report: AnalysisReport }) {
   const copy = (which: string, content: string) => {
     navigator.clipboard.writeText(content);
     setCopied(which);
-    toast.success("Copied to clipboard");
+    toast.success(t("reports", "copiedToClipboard"));
     setTimeout(() => setCopied(null), 1500);
   };
 
@@ -574,7 +613,7 @@ function DocsTab({ report }: { report: AnalysisReport }) {
       {allDiagrams.length > 0 && (
       <GlassCard className="p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h4 className="flex items-center gap-2 text-sm font-semibold"><Network className="h-4 w-4 text-cyan-300" /> Generated Diagrams</h4>
+          <h4 className="flex items-center gap-2 text-sm font-semibold"><Network className="h-4 w-4 text-cyan-300" /> {t("reports", "generatedDiagrams")}</h4>
           <div className="inline-flex gap-1 rounded-lg border border-white/10 bg-white/[0.03] p-1">
             {allDiagrams.map((d) => (
               <button
@@ -600,7 +639,7 @@ function DocsTab({ report }: { report: AnalysisReport }) {
       {/* Documentation tabs */}
       <GlassCard className="p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h4 className="flex items-center gap-2 text-sm font-semibold"><FileText className="h-4 w-4 text-cyan-300" /> Auto-Generated Documentation</h4>
+          <h4 className="flex items-center gap-2 text-sm font-semibold"><FileText className="h-4 w-4 text-cyan-300" /> {t("reports", "autoGeneratedDocs")}</h4>
           <div className="flex flex-wrap gap-1">
             {docs.map((d) => (
               <button
@@ -709,15 +748,15 @@ function RoadmapTab({ report }: { report: AnalysisReport }) {
           <GlassCard className="p-5">
             <div className="flex items-center gap-2">
               <TrendingUp className="h-5 w-5 text-amber-400" />
-              <h3 className="text-lg font-semibold">Technical Debt — {report.technicalDebt.score}/100</h3>
+              <h3 className="text-lg font-semibold">{t("reports", "techDebt")} — {report.technicalDebt.score}/100</h3>
             </div>
             <div className="mt-3 space-y-1.5">
-              {report.technicalDebt.items.map((t, i) => (
+              {report.technicalDebt.items.map((debt, i) => (
                 <div key={i} className="flex items-center gap-2 rounded-lg border border-white/5 bg-white/[0.02] p-2.5 text-xs">
                   <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400" />
-                  <span className="flex-1">{t.title}</span>
-                  <span className="text-muted-foreground">{t.impact}</span>
-                  <span className="rounded bg-white/5 px-1.5 py-0.5 text-[10px]">{t.estimate}</span>
+                  <span className="flex-1">{debt.title}</span>
+                  <span className="text-muted-foreground">{debt.impact}</span>
+                  <span className="rounded bg-white/5 px-1.5 py-0.5 text-[10px]">{debt.estimate}</span>
                 </div>
               ))}
             </div>
