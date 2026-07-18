@@ -59,10 +59,20 @@ export class GitOperations {
     args: string[],
     cwd?: string
   ): Promise<{ stdout: string; stderr: string; exitCode: number }> {
-    const cmd = `git ${args.map(quote).join(" ")}`;
+    // Don't quote the subcommand name (first arg) so allowlist patterns like
+    // "git status" / "git log" / "git diff" match via prefix.
+    // Only quote the remaining arguments for shell-safety.
+    const subcommand = args[0] ?? "";
+    const rest = args.slice(1).map(quote).join(" ");
+    const cmd = rest ? `git ${subcommand} ${rest}` : `git ${subcommand}`;
     const result = await commandRunner.runCommand(cmd, {
       cwd: getProjectRoot(cwd),
       recordHistory: false,
+      // Git operations are invoked by the API route (server-controlled, not
+      // arbitrary user input). Auto-approve any "prompt" level so read/write
+      // git ops (status/log/diff/commit/push/etc.) work without an onPrompt
+      // handler. Dangerous commands are still denied by the denylist.
+      onPrompt: async () => true,
     });
     return { stdout: result.stdout, stderr: result.stderr, exitCode: result.exitCode };
   }

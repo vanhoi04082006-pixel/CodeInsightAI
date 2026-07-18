@@ -40,14 +40,21 @@ export const authOptions: NextAuthOptions = {
       return token;
     },
     async session({ session, token }) {
-      // Tìm TẤT CẢ các tài khoản (Github, Google...) đã liên kết với User này trong Database
+      // Tìm TẤT CẢ các tài khoản (Github, Google...) đã liên kết với User này trong Database.
+      // Wrap trong try/catch: nếu user chưa chạy `bun run db:push` (schema chưa sync),
+      // bảng Account có thể chưa tồn tại → không crash toàn bộ session, chỉ trả về providers rỗng.
       if (session.user && token.sub) {
-        const accounts = await db.account.findMany({
-          where: { userId: token.sub },
-          select: { provider: true },
-        });
-        // Trả về một mảng chứa tên các provider (VD: ["github", "google"])
-        (session as any).providers = accounts.map(a => a.provider);
+        try {
+          const accounts = await db.account.findMany({
+            where: { userId: token.sub },
+            select: { provider: true },
+          });
+          (session as any).providers = accounts.map(a => a.provider);
+        } catch (err) {
+          // Bảng Account chưa tồn tại hoặc DB chưa sẵn sàng — fallback an toàn.
+          console.warn("[auth] session callback: could not query Account table (run `bun run db:push` to sync schema):", err instanceof Error ? err.message : String(err));
+          (session as any).providers = [];
+        }
       }
       // Expose accessToken lên session để các API route phía server dùng
       // gọi GitHub API (đặc biệt cho repo private).
