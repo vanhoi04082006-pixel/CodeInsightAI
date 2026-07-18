@@ -138,12 +138,15 @@ export interface CodeSnippet {
 }
 
 export interface DiagramSet {
-  uml: string; // SVG markup for class/UML diagram
-  sequence: string; // SVG markup for sequence diagram
-  erd: string; // SVG markup for database ER diagram
+  uml: string;
+  sequence: string;
+  erd: string;
   umlExplanation: string;
   sequenceExplanation: string;
   erdExplanation: string;
+  hasUml?: boolean;
+  hasSequence?: boolean;
+  hasErd?: boolean;
 }
 
 export interface ScoreBreakdown {
