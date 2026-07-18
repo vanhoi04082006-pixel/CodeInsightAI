@@ -172,12 +172,19 @@ class PermissionSystem {
   /** Pattern matching: exact match, prefix match, or glob (with `*`). */
   private matchPattern(command: string, pattern: string): boolean {
     if (command === pattern) return true;
+    // Normalize: strip single quotes around args so patterns like "git status"
+    // match commands built as `git 'status' '--porcelain=v1' '-b'`.
+    const normalized = command.replace(/'(\w[\w-]*)'/g, "$1");
+    if (normalized === pattern) return true;
     // Prefix match — "git status" matches "git status --porcelain".
+    if (normalized.startsWith(pattern + " ") || normalized.startsWith(pattern + "\t")) return true;
+    if (normalized.startsWith(pattern + " |") || normalized.startsWith(pattern + "&&")) return true;
+    // Also check the original (un-normalized) command for prefix match.
     if (command.startsWith(pattern + " ") || command.startsWith(pattern + "\t")) return true;
     if (command.startsWith(pattern + " |") || command.startsWith(pattern + "&&")) return true;
     if (pattern.includes("*")) {
       const re = this.globToRegExp(pattern);
-      if (re.test(command)) return true;
+      if (re.test(command) || re.test(normalized)) return true;
     }
     return false;
   }
