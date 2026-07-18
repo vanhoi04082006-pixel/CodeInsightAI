@@ -10,7 +10,8 @@ export type View =
   | "history"
   | "settings"
   | "providers"
-  | "personalities";
+  | "personalities"
+  | "agents";
 
 /* ---------- AI Providers (local-first, BYO keys) ---------- */
 export type ProviderId =

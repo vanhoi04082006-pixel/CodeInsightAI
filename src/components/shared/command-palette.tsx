@@ -33,6 +33,7 @@ const COMMANDS: { id: View; labelKey: string; icon: typeof Home; group: string }
   { id: "history", labelKey: "nav.history", icon: History, group: "Navigation" },
   { id: "providers", labelKey: "nav.providers", icon: Plug, group: "Actions" },
   { id: "personalities", labelKey: "nav.personalities", icon: Bot, group: "Actions" },
+  { id: "agents", labelKey: "nav.agents", icon: Bot, group: "Actions" },
   { id: "settings", labelKey: "nav.settings", icon: Settings, group: "Navigation" },
 ];
 
