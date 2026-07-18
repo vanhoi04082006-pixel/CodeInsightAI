@@ -228,6 +228,7 @@ export interface AnalysisReport {
     componentGuide: string;
     deploymentGuide: string;
   };
+  perfPositiveFindings?: string[]; // shown when no perf issues found
   activity: ChartPoint[];
   complexityTrend: ChartPoint[];
 }

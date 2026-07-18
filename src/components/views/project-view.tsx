@@ -348,6 +348,30 @@ function IssuesTab({ issues, title, color, report }: { issues: Issue[]; title: s
         </div>
       </GlassCard>
 
+      {/* If no issues and this is Performance tab, show positive findings */}
+      {issues.length === 0 && title.includes("Performance") && report.perfPositiveFindings && report.perfPositiveFindings.length > 0 && (
+        <GlassCard className="p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <Check className="h-4 w-4 text-emerald-400" />
+            <h4 className="text-sm font-semibold text-emerald-400">No performance issues detected</h4>
+          </div>
+          <p className="text-xs text-muted-foreground mb-3">Static analysis found no clear performance problems. Best practices already followed:</p>
+          <div className="space-y-1.5">
+            {report.perfPositiveFindings.map((f, i) => (
+              <p key={i} className="text-xs text-foreground/80">{f}</p>
+            ))}
+          </div>
+        </GlassCard>
+      )}
+
+      {/* If no issues at all */}
+      {issues.length === 0 && !(title.includes("Performance") && report.perfPositiveFindings?.length) && (
+        <GlassCard className="p-8 text-center">
+          <Check className="mx-auto h-8 w-8 text-emerald-400" />
+          <p className="mt-2 text-sm font-medium">No issues detected in this category</p>
+        </GlassCard>
+      )}
+
       <div className="space-y-2">
         {issues.map((iss, i) => {
           const open = expanded === iss.id;
