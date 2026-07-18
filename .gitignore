@@ -73,3 +73,4 @@ provider-config.json
 /tool-results/
 *.pid
 agent-ctx/
+upload/

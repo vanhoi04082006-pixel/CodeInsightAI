@@ -564,9 +564,42 @@ function WorkflowTab() {
     setProgressMsg("Starting autonomous workflow…");
 
     // Simulate incremental progress while the synchronous API call runs.
+    // Cap at 90% — the real 100% only arrives when the API responds.
+    // Without this cap, the bar would jump to 100% only after the full
+    // (potentially multi-minute) workflow completes, leaving the user
+    // wondering if it's stuck.
     const progressTimer = setInterval(() => {
-      setProgress((p) => (p >= 95 ? p : p + Math.random() * 2));
-    }, 800);
+      setProgress((p) => {
+        if (p >= 90) return p;  // hold at 90% until API responds
+        // Slow down as we approach 90% — diminishing increments
+        const remaining = 90 - p;
+        const increment = Math.max(0.3, remaining * 0.08);
+        return Math.min(90, p + increment + Math.random() * 0.5);
+      });
+    }, 1000);
+
+    // Also update the progress message with rotating status hints so the
+    // user knows the workflow is still active (the API is synchronous and
+    // can't stream real progress yet).
+    const statusHints = [
+      "Planning task breakdown…",
+      "Analyzing repository structure…",
+      "Executing agent tasks…",
+      "Running static analyzers…",
+      "Generating code changes…",
+      "Writing file artifacts…",
+      "Running tsc --noEmit…",
+      "Running bun run lint…",
+      "Running tests…",
+      "Generating commit message…",
+      "Committing changes…",
+      "Pushing to remote…",
+    ];
+    let hintIdx = 0;
+    const hintTimer = setInterval(() => {
+      hintIdx = (hintIdx + 1) % statusHints.length;
+      setProgressMsg(statusHints[hintIdx]);
+    }, 3000);
 
     try {
       const res = await fetch("/api/workflow/autonomous", {
@@ -599,6 +632,7 @@ function WorkflowTab() {
       setProgressMsg(`Failed: ${msg}`);
     } finally {
       clearInterval(progressTimer);
+      clearInterval(hintTimer);
       setRunning(false);
     }
   };
