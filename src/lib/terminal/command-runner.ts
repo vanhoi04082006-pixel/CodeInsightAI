@@ -2,7 +2,8 @@
 // Sandboxed shell runner with permission enforcement, streaming stdout/stderr,
 // timeout + AbortSignal support, and automatic history recording.
 
-import { spawn, type ChildProcess } from "child_process";
+import { spawn, execSync, type ChildProcess } from "child_process";
+import * as fs from "fs";
 import { permissionSystem } from "./permission-system";
 import { commandHistory, type CommandHistoryEntry } from "./command-history";
 
@@ -28,7 +29,7 @@ export interface RunCommandOptions {
   onStderr?: (data: string) => void;
   /** Cancellation signal. Triggers SIGTERM → SIGKILL. */
   signal?: AbortSignal;
-  /** Override the shell binary (default: process.env.SHELL || "/bin/bash"). */
+  /** Override the shell binary (default: auto-detected per platform). */
   shell?: string;
   /** Called when permission is "prompt". Return true to allow, false to deny. */
   onPrompt?: (command: string) => Promise<boolean>;
@@ -45,8 +46,52 @@ function getProjectRoot(): string {
   return permissionSystem.getProjectRoot() || process.cwd();
 }
 
+/**
+ * Detect the default shell for the current platform.
+ * - Windows: prefer Git Bash if installed (COMSPEC points to cmd.exe usually),
+ *   fall back to cmd.exe. PowerShell is avoided due to quoting complexity.
+ * - Unix (Linux/macOS): use $SHELL env var, fall back to /bin/bash, then /bin/sh.
+ */
 function defaultShell(): string {
-  return process.env.SHELL || "/bin/bash";
+  // Unix: respect $SHELL, fall back to bash then sh.
+  if (process.platform !== "win32") {
+    return process.env.SHELL || "/bin/bash";
+  }
+  // Windows: prefer Git Bash (common in dev setups via Git for Windows).
+  // Check common install paths.
+  const gitBashCandidates = [
+    process.env.SHELL,
+    "C:\\Program Files\\Git\\bin\\bash.exe",
+    "C:\\Program Files\\Git\\usr\\bin\\bash.exe",
+    "C:\\Program Files (x86)\\Git\\bin\\bash.exe",
+  ].filter(Boolean) as string[];
+  for (const candidate of gitBashCandidates) {
+    try {
+      if (fs.existsSync(candidate)) return candidate;
+    } catch {
+      // ignore — try next candidate
+    }
+  }
+  // Fall back to cmd.exe (always present on Windows).
+  return process.env.COMSPEC || "cmd.exe";
+}
+
+/**
+ * Build spawn args for the given shell.
+ * - bash/sh: ["-c", command]
+ * - cmd.exe: ["/c", command]
+ * - PowerShell: ["-NoProfile", "-Command", command]
+ */
+function shellSpawnArgs(shell: string, command: string): string[] {
+  const lower = shell.toLowerCase();
+  if (lower.endsWith("cmd.exe") || lower.endsWith("cmd")) {
+    return ["/c", command];
+  }
+  if (lower.includes("powershell") || lower.includes("pwsh")) {
+    return ["-NoProfile", "-Command", command];
+  }
+  // bash / sh / zsh / fish — all use -c
+  return ["-c", command];
 }
 
 /** Ensure a command is permitted, prompting the caller if necessary. */
@@ -80,7 +125,8 @@ function spawnChild(
   const cwd = options.cwd || getProjectRoot();
   const shell = options.shell || defaultShell();
   const env = { ...process.env, ...options.env };
-  return spawn(shell, ["-c", command], {
+  const args = shellSpawnArgs(shell, command);
+  return spawn(shell, args, {
     cwd,
     env,
     stdio: ["ignore", "pipe", "pipe"],
@@ -118,11 +164,22 @@ export class CommandRunner {
 
     const onAbort = () => {
       cancelled = true;
-      try { child.kill("SIGTERM"); } catch { /* ignore */ }
-      // Escalate to SIGKILL after 1s if still alive.
-      setTimeout(() => {
-        try { child.kill("SIGKILL"); } catch { /* ignore */ }
-      }, 1000);
+      // Windows doesn't support SIGTERM/SIGKILL signals — child.kill() without
+      // a signal sends a graceful termination, and we escalate with taskkill /F /T /PID.
+      if (process.platform === "win32") {
+        try {
+          // /F = force, /T = kill child tree, /PID = process id
+          execSync(`taskkill /F /T /PID ${child.pid}`, { stdio: "ignore" });
+        } catch {
+          try { child.kill(); } catch { /* ignore */ }
+        }
+      } else {
+        try { child.kill("SIGTERM"); } catch { /* ignore */ }
+        // Escalate to SIGKILL after 1s if still alive.
+        setTimeout(() => {
+          try { child.kill("SIGKILL"); } catch { /* ignore */ }
+        }, 1000);
+      }
     };
 
     if (options.timeout) {
