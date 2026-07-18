@@ -10,6 +10,7 @@
     "history": "History",
     "providers": "AI Providers",
     "personalities": "Personalities",
+    "agents": "AI Agents",
     "settings": "Settings"
   },
   "actions": {

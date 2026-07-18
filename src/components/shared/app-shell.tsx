@@ -24,7 +24,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { LanguageSwitcher } from "@/components/shared/language-switcher";
 
-const NAV: { id: View; labelKey: string; icon: typeof LayoutDashboard }[] = [
+const NAV: { id: View; labelKey: string; icon: typeof LayoutDashboard; disabled?: boolean }[] = [
   { id: "landing", labelKey: "nav.home", icon: Sparkles },
   { id: "dashboard", labelKey: "nav.dashboard", icon: LayoutDashboard },
   { id: "analyze", labelKey: "nav.analyze", icon: ScanSearch },
@@ -33,6 +33,7 @@ const NAV: { id: View; labelKey: string; icon: typeof LayoutDashboard }[] = [
   { id: "history", labelKey: "nav.history", icon: History },
   { id: "providers", labelKey: "nav.providers", icon: Plug },
   { id: "personalities", labelKey: "nav.personalities", icon: Bot },
+  { id: "agents", labelKey: "nav.agents", icon: Bot, disabled: false },
   { id: "settings", labelKey: "nav.settings", icon: Settings },
 ];
 
@@ -90,7 +91,7 @@ export function AppSidebar() {
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 scrollbar-thin">
         {NAV.map((item) => {
           const active = view === item.id;
-          const disabled = (item.id === "project" || item.id === "chat") && !activeReport;
+          const disabled = item.disabled === true || ((item.id === "project" || item.id === "chat") && !activeReport);
           const Icon = item.icon;
           const label = t("common", item.labelKey);
           return (
@@ -150,6 +151,7 @@ export function AppTopbar() {
     settings: "nav.settings",
     providers: "nav.providers",
     personalities: "nav.personalities",
+    agents: "nav.agents",
   };
 
   return (
@@ -211,7 +213,7 @@ export function MobileNav() {
     <nav className="glass-strong fixed bottom-0 left-0 right-0 z-30 flex items-center justify-around border-t border-white/10 px-1 py-1.5 md:hidden">
       {items.map((item) => {
         const active = view === item.id;
-        const disabled = (item.id === "project" || item.id === "chat") && !activeReport;
+        const disabled = item.disabled === true || ((item.id === "project" || item.id === "chat") && !activeReport);
         const Icon = item.icon;
         const label = t("common", item.labelKey);
         return (

@@ -72,3 +72,4 @@ provider-config.json
 /.zscripts/
 /tool-results/
 *.pid
+agent-ctx/
