@@ -204,6 +204,19 @@ export interface AnalysisReport {
     layers: { name: string; responsibility: string; files: number }[];
     strengths: string[];
     weaknesses: string[];
+    metrics?: {
+      avgCoupling: number;
+      avgCohesion: number;
+      instability: number;
+      abstractness: number;
+      distanceFromMain: number;
+      fanInAvg: number;
+      fanOutAvg: number;
+      layerViolations: string[];
+      godModules: string[];
+      dirCircularDeps: string[];
+      fileCircularDeps: number;
+    };
   };
   technicalDebt: {
     score: number;

@@ -165,6 +165,7 @@ export function analyzeParsedRepository(parsed: ParsedRepository, rawFiles?: { p
       layers: arch.layers,
       strengths: arch.strengths,
       weaknesses: arch.weaknesses,
+      metrics: arch.metrics,
     },
     technicalDebt: { score: techDebt.score, items: techDebt.items },
     roadmap: genRoadmap(securityIssues, perfIssues, arch),
@@ -219,12 +220,32 @@ function calcCodeQuality(files: ParsedFile[], bugs: Issue[]): number {
   return clamp(100 - avgComplexity * 1.5 - bugs.length * 2, 10, 99);
 }
 
-function calcArchitecture(arch: { pattern: string; strengths: string[]; weaknesses: string[] }, parsed: ParsedRepository): number {
+function calcArchitecture(arch: { pattern: string; strengths: string[]; weaknesses: string[]; metrics?: any }, parsed: ParsedRepository): number {
   let score = 80;
   score += Math.min(arch.strengths.length * 3, 15);
   score -= Math.min(arch.weaknesses.length * 4, 20);
   if (parsed.dependencies.circular.length > 0) score -= 10;
   if (parsed.frameworks.length > 0) score += 5;
+
+  // Use deep metrics for a more accurate architecture score
+  const m = arch.metrics;
+  if (m) {
+    // Penalize high instability (volatile dependencies)
+    if (m.instability > 0.7) score -= 8;
+    else if (m.instability < 0.3) score += 5;
+    // Reward closeness to Main Sequence
+    score -= Math.round(m.distanceFromMain * 15);
+    // Penalize directory-level circular deps heavily
+    score -= Math.min(m.dirCircularDeps.length * 6, 18);
+    // Penalize layer violations
+    score -= Math.min(m.layerViolations.length * 4, 12);
+    // Penalize god modules
+    score -= Math.min(m.godModules.length * 3, 9);
+    // Reward good cohesion
+    if (m.avgCohesion > 0.5) score += 4;
+    else if (m.avgCohesion < 0.2) score -= 4;
+  }
+
   return clamp(score, 20, 99);
 }
 
