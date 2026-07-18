@@ -6,6 +6,8 @@ import type { AgentId, AgentInfo, Task, TaskResult } from "./types";
 import { BaseAgent } from "./base-agent";
 import { callAI, type AIProviderConfig, type AIMessage } from "./ai-client";
 import { repositoryMemory } from "./repository-memory";
+import { commandRunner } from "@/lib/terminal";
+import { writeFile } from "@/lib/repo-editor";
 
 /* ────────────── Input shapes ────────────── */
 
@@ -16,6 +18,8 @@ interface TestInput {
   framework?: string;
   provider?: AIProviderConfig;
   repositoryUrl?: string;
+  /** When false, skip the run-test-and-fix loop (default: true). */
+  runTests?: boolean;
 }
 
 /* ────────────── Output shape ────────────── */
@@ -26,6 +30,9 @@ interface TestOutput {
   framework: string;
   testType: "unit" | "integration" | "e2e";
   exportsCovered: string[];
+  testPassed: boolean;
+  testAttempts: number;
+  testFailures: string[];
 }
 
 /* ────────────── Agent ────────────── */
@@ -97,17 +104,50 @@ export class TestAgent extends BaseAgent {
 
     if (signal.aborted) return cancelled(this.info.name);
 
-    onProgress(80, "Validating test syntax");
+    onProgress(62, "Validating test syntax");
     const validation = validateTest(testContent, framework);
     if (!validation.ok) {
       this.log("warn", `Test validation warning: ${validation.reason}`);
       // Don't fail the whole task — tests may still be useful — but record the warning.
     }
 
-    onProgress(100, "Test file ready");
+    if (signal.aborted) return cancelled(this.info.name);
+
+    // ── Test runner loop (60-100%): write → run → fix → retry, up to 3 attempts ──
+    let testPassed = false;
+    let testAttempts = 0;
+    let testFailures: string[] = [];
+    let testRunDurationMs = 0;
+
+    if (input.runTests !== false) {
+      const loopResult = await this.runTestLoop(
+        testPath,
+        testContent,
+        framework,
+        filePath,
+        sourceContent,
+        provider,
+        signal,
+        onProgress,
+      );
+      testPassed = loopResult.passed;
+      testAttempts = loopResult.attempts;
+      testFailures = loopResult.failures;
+      testRunDurationMs = loopResult.durationMs;
+      testContent = loopResult.finalContent;
+    } else {
+      this.log("info", "runTests disabled — skipping test execution");
+      onProgress(100, "Test file ready (runTests disabled)");
+    }
+
+    if (signal.aborted) return cancelled(this.info.name);
+
     this.recordDecision(
       task.id,
-      `Generated ${testType} tests for ${filePath} (${framework}) — ${exportsList.length} export(s) covered`,
+      `Generated ${testType} tests for ${filePath} (${framework}) — ${exportsList.length} export(s) covered` +
+        (input.runTests !== false
+          ? ` — tests ${testPassed ? "PASSED" : "FAILED"} after ${testAttempts} attempt(s)`
+          : ""),
       validation.ok ? "Validation passed." : `Validation: ${validation.reason}`,
     );
 
@@ -124,7 +164,11 @@ export class TestAgent extends BaseAgent {
       }
     }
 
-    this.log("info", `Generated ${testType} test for ${filePath} → ${testPath}`);
+    this.log(
+      "info",
+      `Generated ${testType} test for ${filePath} → ${testPath}` +
+        (input.runTests !== false ? ` (run: ${testPassed ? "pass" : "fail"}/${testAttempts} attempt(s))` : ""),
+    );
 
     const output: TestOutput = {
       testPath,
@@ -132,24 +176,40 @@ export class TestAgent extends BaseAgent {
       framework,
       testType,
       exportsCovered: exportsList,
+      testPassed,
+      testAttempts,
+      testFailures,
     };
 
     return {
       success: true,
       data: output,
-      summary: `Generated ${testType} test file for ${filePath} (${framework}).`,
+      summary:
+        input.runTests !== false
+          ? `Generated ${testType} test file for ${filePath} (${framework}) — tests ${testPassed ? "passed" : "failed"} after ${testAttempts} attempt(s).`
+          : `Generated ${testType} test file for ${filePath} (${framework}).`,
       artifacts: [
         {
           kind: "file",
           path: testPath,
           content: testContent,
           language: detectLanguage(filePath),
-          meta: { framework, testType, sourcePath: filePath, exportsCovered: exportsList.length },
+          meta: {
+            framework,
+            testType,
+            sourcePath: filePath,
+            exportsCovered: exportsList.length,
+            testPassed,
+            testAttempts,
+          },
         },
       ],
       metrics: {
         exportsCovered: exportsList.length,
         testLines: testContent.split("\n").length,
+        testsPassed: testPassed ? 1 : 0,
+        testsFailed: testPassed ? 0 : 1,
+        testRunDurationMs,
       },
     };
   }
@@ -194,7 +254,7 @@ export class TestAgent extends BaseAgent {
         `### SOURCE: ${filePath}\n\`\`\`\n${truncate(source, 8000)}\n\`\`\``,
     };
 
-    onProgress(60, "Calling AI to generate test file");
+    onProgress(55, "Calling AI to generate test file");
     const reply = await callAI(provider, [system, user], { temperature: 0.2, maxTokens: 6000, signal });
     // Strip stray markdown fences if the model added them despite instructions.
     return stripCodeFences(reply && reply.trim() ? reply : this.skeletonTest(filePath, source, framework, testType, exportsList));
@@ -255,6 +315,206 @@ export class TestAgent extends BaseAgent {
     // Suppress unused-source warning (skeleton reference).
     void source;
     return header.join("\n");
+  }
+
+  /* ────── Test runner loop (Prompt 6) ────── */
+
+  /**
+   * Write the generated test to disk, run it with the framework's CLI, and on
+   * failure ask the AI for a corrected version. Up to 3 attempts total.
+   */
+  private async runTestLoop(
+    testPath: string,
+    testContent: string,
+    framework: string,
+    sourcePath: string,
+    sourceContent: string,
+    provider: AIProviderConfig | undefined,
+    signal: AbortSignal,
+    onProgress: (p: number, msg: string) => void,
+  ): Promise<{ passed: boolean; attempts: number; finalContent: string; failures: string[]; durationMs: number }> {
+    const maxAttempts = 3;
+    let currentContent = testContent;
+    let totalDurationMs = 0;
+
+    // 1. Write the test file to disk. If the FS is read-only or the path is
+    //    otherwise unwritable, log a warning and skip the run-test loop.
+    try {
+      await writeFile(testPath, currentContent);
+    } catch (err) {
+      this.log(
+        "warn",
+        `Failed to write test file ${testPath}: ${(err as Error).message} — skipping test run loop`,
+      );
+      return {
+        passed: false,
+        attempts: 0,
+        finalContent: testContent,
+        failures: [`write failed: ${(err as Error).message}`],
+        durationMs: 0,
+      };
+    }
+
+    const cmd = buildTestCommand(framework, testPath);
+    this.log("info", `Running test command: ${cmd}`);
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      if (signal.aborted) {
+        return {
+          passed: false,
+          attempts: attempt - 1,
+          finalContent: currentContent,
+          failures: ["aborted"],
+          durationMs: totalDurationMs,
+        };
+      }
+
+      const runProgress = 65 + Math.round(((attempt - 1) / maxAttempts) * 25);
+      onProgress(runProgress, `Running tests — attempt ${attempt}/${maxAttempts} (${framework})`);
+
+      let exitCode = 1;
+      let stderr = "";
+      let stdout = "";
+      try {
+        const result = await commandRunner.runCommand(cmd, {
+          timeout: 30000,
+          signal,
+          // Auto-approve: this is an autonomous workflow and the test
+          // commands are not on the static allowlist (vitest/jest/mocha/...).
+          onPrompt: async () => true,
+        });
+        exitCode = result.exitCode;
+        stderr = result.stderr;
+        stdout = result.stdout;
+        totalDurationMs += result.durationMs;
+      } catch (err) {
+        this.log("warn", `Test command failed to spawn: ${(err as Error).message}`);
+        return {
+          passed: false,
+          attempts: attempt,
+          finalContent: currentContent,
+          failures: [`spawn failed: ${(err as Error).message}`],
+          durationMs: totalDurationMs,
+        };
+      }
+
+      if (signal.aborted) {
+        return {
+          passed: false,
+          attempts: attempt,
+          finalContent: currentContent,
+          failures: ["aborted"],
+          durationMs: totalDurationMs,
+        };
+      }
+
+      // 4. exit code 0 → pass.
+      if (exitCode === 0) {
+        onProgress(100, `Tests passed on attempt ${attempt}/${maxAttempts}`);
+        this.log("info", `Tests passed on attempt ${attempt}/${maxAttempts}`);
+        return {
+          passed: true,
+          attempts: attempt,
+          finalContent: currentContent,
+          failures: [],
+          durationMs: totalDurationMs,
+        };
+      }
+
+      // 5. Parse stderr for failure messages.
+      const failures = parseTestFailures(`${stderr}\n${stdout}`);
+      this.log(
+        "warn",
+        `Test attempt ${attempt}/${maxAttempts} failed (exit ${exitCode}): ${failures[0] ?? "(no output)"}`,
+      );
+
+      // No provider → cannot auto-fix; give up.
+      // Last attempt → also give up.
+      if (!provider || attempt === maxAttempts) {
+        return {
+          passed: false,
+          attempts: attempt,
+          finalContent: currentContent,
+          failures,
+          durationMs: totalDurationMs,
+        };
+      }
+
+      onProgress(runProgress + 5, `Asking AI to fix the test (attempt ${attempt + 1}/${maxAttempts})`);
+
+      try {
+        const fixed = await this.fixTestWithAI(
+          provider,
+          sourcePath,
+          sourceContent,
+          currentContent,
+          stderr,
+          signal,
+        );
+        currentContent = fixed;
+        try {
+          await writeFile(testPath, currentContent);
+        } catch (err) {
+          this.log("warn", `Failed to re-write fixed test file: ${(err as Error).message}`);
+          return {
+            passed: false,
+            attempts: attempt,
+            finalContent: currentContent,
+            failures: [...failures, `re-write failed: ${(err as Error).message}`],
+            durationMs: totalDurationMs,
+          };
+        }
+      } catch (err) {
+        this.log("warn", `AI test-fix call failed: ${(err as Error).message}`);
+        return {
+          passed: false,
+          attempts: attempt,
+          finalContent: currentContent,
+          failures: [...failures, `AI fix failed: ${(err as Error).message}`],
+          durationMs: totalDurationMs,
+        };
+      }
+    }
+
+    // Unreachable: loop always returns inside. Safety net.
+    return {
+      passed: false,
+      attempts: maxAttempts,
+      finalContent: currentContent,
+      failures: ["max attempts reached"],
+      durationMs: totalDurationMs,
+    };
+  }
+
+  /** Ask the AI for a corrected version of a failing test file. */
+  private async fixTestWithAI(
+    provider: AIProviderConfig,
+    sourcePath: string,
+    sourceContent: string,
+    currentTest: string,
+    stderr: string,
+    signal: AbortSignal,
+  ): Promise<string> {
+    const system: AIMessage = {
+      role: "system",
+      content:
+        "You are a senior test engineer fixing a failing test. " +
+        "Return ONLY the corrected test file content — no markdown fences, no prose, no explanations.",
+    };
+    const user: AIMessage = {
+      role: "user",
+      content:
+        `The test file below failed with these errors:\n\n${truncate(stderr, 4000)}\n\n` +
+        `Source file: ${sourcePath}\n\`\`\`\n${truncate(sourceContent, 6000)}\n\`\`\`\n\n` +
+        `Current test:\n\`\`\`\n${truncate(currentTest, 6000)}\n\`\`\`\n\n` +
+        `Fix the test file. Return ONLY the corrected test content.`,
+    };
+    const reply = await callAI(provider, [system, user], {
+      temperature: 0.15,
+      maxTokens: 6000,
+      signal,
+    });
+    return stripCodeFences(reply && reply.trim() ? reply : currentTest);
   }
 }
 
@@ -435,6 +695,54 @@ function stripCodeFences(text: string): string {
 
 function truncate(text: string, max: number): string {
   return text.length <= max ? text : text.slice(0, max) + "\n… [truncated]";
+}
+
+/* ────────────── Test runner helpers (Prompt 6) ────────────── */
+
+/** Build the shell command to run a test file with the chosen framework. */
+function buildTestCommand(framework: string, testPath: string): string {
+  const f = framework.toLowerCase();
+  const quoted = shellQuote(testPath);
+  switch (f) {
+    case "vitest":
+      return `bunx vitest run ${quoted} --reporter=verbose`;
+    case "jest":
+      return `bunx jest ${quoted} --verbose`;
+    case "mocha":
+      return `bunx mocha ${quoted}`;
+    case "playwright":
+      return `bunx playwright test ${quoted}`;
+    case "cypress":
+      return `bunx cypress run --spec ${quoted}`;
+    case "pytest":
+      return `python -m pytest ${quoted} -v`;
+    default:
+      return `bunx vitest run ${quoted}`;
+  }
+}
+
+/** POSIX-style single-quote so paths with spaces / special chars are safe. */
+function shellQuote(p: string): string {
+  return `'${p.replace(/'/g, "'\\''")}'`;
+}
+
+/** Heuristically extract the most informative failure lines from test output. */
+function parseTestFailures(combinedOutput: string): string[] {
+  if (!combinedOutput.trim()) return ["(no output captured)"];
+  const lines = combinedOutput.split("\n");
+  const failures: string[] = [];
+  for (const ln of lines) {
+    const t = ln.trim();
+    if (!t) continue;
+    if (/✗|✘|FAIL|Error|AssertionError|Expected|Received|expected|received|TypeError|ReferenceError/i.test(t)) {
+      failures.push(t);
+      if (failures.length >= 10) break;
+    }
+  }
+  if (failures.length > 0) return failures;
+  // Fallback: return the last 3 non-empty lines (often where the summary lives).
+  const tail = lines.map(l => l.trim()).filter(Boolean).slice(-3);
+  return tail.length > 0 ? tail : [combinedOutput.slice(-300)];
 }
 
 function cancelled(agentName: string): TaskResult {

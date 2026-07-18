@@ -141,3 +141,62 @@ model VerificationToken {
 
   @@unique([identifier, token])
 }
+
+// ==========================================
+// PHASE 3: KNOWLEDGE BASE & AGENT MEMORY
+// ==========================================
+
+model MemoryEntry {
+  id          String   @id @default(cuid())
+  category    String   // repository | conversation | coding-style | previous-fix | architecture-decision
+  key         String
+  value       String   @default("{}") // JSON
+  tags        String   @default("[]") // JSON array
+  repoUrl     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  accessCount Int      @default(0)
+
+  @@index([category])
+  @@index([repoUrl])
+  @@index([key])
+  @@unique([category, key, repoUrl])
+}
+
+model AgentTask {
+  id          String   @id @default(cuid())
+  taskId      String   @unique
+  kind        String
+  title       String
+  status      String   // pending | running | completed | failed | cancelled | retrying
+  assignedAgent String?
+  priority    String   @default("medium")
+  input       String   @default("{}") // JSON
+  output      String?  // JSON
+  error       String?
+  progress    Int      @default(0)
+  attempts    Int      @default(0)
+  parentTaskId String?
+  createdAt   DateTime @default(now())
+  startedAt   DateTime?
+  completedAt DateTime?
+
+  @@index([status])
+  @@index([kind])
+  @@index([createdAt])
+}
+
+model AgentEvent {
+  id          String   @id @default(cuid())
+  taskId      String?
+  agentId     String?
+  type        String
+  message     String
+  level       String   @default("info") // info | warn | error | debug
+  data        String?  // JSON
+  createdAt   DateTime @default(now())
+
+  @@index([taskId])
+  @@index([agentId])
+  @@index([createdAt])
+}
