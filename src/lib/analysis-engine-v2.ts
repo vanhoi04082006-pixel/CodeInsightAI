@@ -3,7 +3,7 @@ import type { AnalysisReport, Issue, ChartPoint } from "./types";
 import type { ParsedRepository, ParsedFile } from "./repo-parser";
 import { analyzeSecurity } from "./analyzers/security";
 import { analyzeBugs } from "./analyzers/bugs";
-import { analyzePerformance } from "./analyzers/performance";
+import { analyzePerformance, getPositiveFindings } from "./analyzers/performance";
 import { detectArchitecture, analyzeTechDebt } from "./analyzers/architecture";
 
 export function analyzeParsedRepository(parsed: ParsedRepository, rawFiles?: { path: string; content: string }[]): AnalysisReport {
@@ -19,6 +19,7 @@ export function analyzeParsedRepository(parsed: ParsedRepository, rawFiles?: { p
   const securityIssues = analyzeSecurity(validCodeFiles);
   const bugIssues = analyzeBugs(validCodeFiles);
   const perfIssues = analyzePerformance(validCodeFiles);
+  const perfPositiveFindings = getPositiveFindings(validCodeFiles);
 
   const arch = detectArchitecture(parsed.files);
   const techDebt = analyzeTechDebt(parsed.files);
@@ -151,6 +152,7 @@ export function analyzeParsedRepository(parsed: ParsedRepository, rawFiles?: { p
     frameworks: parsed.frameworks,
     dependencies: parsed.dependencies,
     issues: { bugs: bugIssues, security: securityIssues, performance: perfIssues },
+    perfPositiveFindings,
     files: fileInsights,
     snippets: generatedSnippets,
     diagrams: buildDiagrams(parsed, arch), // Dynamic SVG from real data
