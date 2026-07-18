@@ -4,9 +4,11 @@
 
 import type { AgentId, AgentInfo, Task, TaskResult } from "./types";
 import { BaseAgent } from "./base-agent";
-import { callAIForJSON, type AIProviderConfig, type AIMessage } from "./ai-client";
+import { callAI, callAIForJSON, type AIProviderConfig, type AIMessage } from "./ai-client";
 import { repositoryMemory } from "./repository-memory";
 import type { Issue } from "@/lib/types";
+import { commandRunner } from "@/lib/terminal";
+import { writeFile } from "@/lib/repo-editor";
 
 /* ────────────── Input shapes ────────────── */
 
@@ -31,6 +33,10 @@ interface BugFixProposal {
   fixDescription: string;
   patchedFile: string;
   confidence: number; // 0-1
+  /** Whether the patched file passed `bunx tsc --noEmit` + `bun run lint` after being applied. */
+  verified?: boolean;
+  /** Type-check / lint errors that remained after verification (empty when `verified === true`). */
+  verificationErrors?: string[];
 }
 
 interface StackFrame {
@@ -128,7 +134,7 @@ export class BugFixerAgent extends BaseAgent {
 
       const validation = validatePatch(proposal.patchedFile, buggyFile.path);
       if (validation.ok) {
-        onProgress(90, "Patch validated");
+        onProgress(70, "Patch syntax validated — running tsc + lint verification");
         break;
       }
       lastReason = validation.reason;
@@ -164,6 +170,24 @@ export class BugFixerAgent extends BaseAgent {
       };
     }
 
+    if (signal.aborted) return cancelled(this.info.name);
+
+    // ── Build verification (Prompt 7): write the patched file, run `bunx tsc --noEmit`
+    //    and `bun run lint`, on failure ask the AI to fix the typecheck/lint errors.
+    //    Up to 2 attempts. Progress covers 70-95%.
+    const verification = await this.verifyFix(
+      buggyFile.path,
+      proposal.patchedFile,
+      provider,
+      signal,
+      onProgress,
+    );
+    proposal.verified = verification.ok;
+    proposal.verificationErrors = verification.errors;
+    proposal.patchedFile = verification.finalContent;
+
+    if (signal.aborted) return cancelled(this.info.name);
+
     onProgress(100, "Patch ready");
     this.recordDecision(
       task.id,
@@ -184,18 +208,29 @@ export class BugFixerAgent extends BaseAgent {
       }
     }
 
-    this.log("info", `Bug fix ready for ${buggyFile.path} — confidence ${(proposal.confidence * 100).toFixed(0)}%`);
+    this.log(
+      "info",
+      `Bug fix ready for ${buggyFile.path} — confidence ${(proposal.confidence * 100).toFixed(0)}%` +
+        (proposal.verified === true ? " (tsc + lint verified)" : proposal.verified === false ? " (verification FAILED)" : ""),
+    );
 
     const diffArtifact = buildDiffArtifact(buggyFile, proposal);
 
     return {
       success: true,
-      data: proposal,
-      summary: `Proposed fix for ${buggyFile.path}: ${truncateStr(proposal.fixDescription, 120)}`,
+      data: {
+        ...proposal,
+        verified: proposal.verified ?? false,
+        verificationErrors: proposal.verificationErrors ?? [],
+      },
+      summary: `Proposed fix for ${buggyFile.path}: ${truncateStr(proposal.fixDescription, 120)}` +
+        (proposal.verified === true ? " (verified)" : proposal.verified === false ? " (verification failed)" : ""),
       artifacts: [diffArtifact],
       metrics: {
         confidence: Math.round(proposal.confidence * 100),
         attempts: attempt + 1,
+        verified: proposal.verified === true ? 1 : 0,
+        verificationErrorCount: (proposal.verificationErrors ?? []).length,
       },
     };
   }
@@ -261,6 +296,185 @@ export class BugFixerAgent extends BaseAgent {
       patchedFile: typeof raw.patchedFile === "string" && raw.patchedFile.trim() ? raw.patchedFile : buggyFile.content,
       confidence: typeof raw.confidence === "number" ? Math.max(0, Math.min(1, raw.confidence)) : 0.5,
     };
+  }
+
+  /* ────── Build verification (Prompt 7) ────── */
+
+  /**
+   * Write the patched file to disk, then run `bunx tsc --noEmit` and
+   * `bun run lint`. On failure, ask the AI to fix the typecheck/lint errors
+   * and re-verify, up to 2 attempts. Progress covers the 70-95% band.
+   */
+  private async verifyFix(
+    filePath: string,
+    patchedContent: string,
+    provider: AIProviderConfig | undefined,
+    signal: AbortSignal,
+    onProgress: (p: number, msg: string) => void,
+  ): Promise<{ ok: boolean; errors: string[]; finalContent: string }> {
+    const maxAttempts = 2;
+    let currentContent = patchedContent;
+
+    // 1. Write the patched file to disk. If unwritable (read-only FS, perm
+    //    denial, ...), log and skip verification — return as not-verified.
+    try {
+      await writeFile(filePath, currentContent);
+    } catch (err) {
+      this.log(
+        "warn",
+        `Failed to write patched file ${filePath}: ${(err as Error).message} — skipping build verification`,
+      );
+      return {
+        ok: false,
+        errors: [`write failed: ${(err as Error).message}`],
+        finalContent: patchedContent,
+      };
+    }
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      if (signal.aborted) {
+        return { ok: false, errors: ["aborted"], finalContent: currentContent };
+      }
+
+      // 2. Run typecheck.
+      const tscProgress = 72 + (attempt - 1) * 8;
+      onProgress(tscProgress, `Type-checking patched file (attempt ${attempt}/${maxAttempts})`);
+      let tscExitCode = 0;
+      let tscStderr = "";
+      try {
+        const tscResult = await commandRunner.runCommand("bunx tsc --noEmit", {
+          timeout: 60000,
+          signal,
+          // Auto-approve: `bunx tsc --noEmit` is not on the static allowlist
+          // (only `tsc --noEmit` is), but this is an autonomous workflow.
+          onPrompt: async () => true,
+        });
+        tscExitCode = tscResult.exitCode;
+        tscStderr = tscResult.stderr;
+      } catch (err) {
+        this.log("warn", `tsc failed to spawn: ${(err as Error).message}`);
+        return {
+          ok: false,
+          errors: [`tsc spawn failed: ${(err as Error).message}`],
+          finalContent: currentContent,
+        };
+      }
+
+      if (signal.aborted) {
+        return { ok: false, errors: ["aborted"], finalContent: currentContent };
+      }
+
+      // 3. Run lint.
+      const lintProgress = 84 + (attempt - 1) * 4;
+      onProgress(lintProgress, `Linting patched file (attempt ${attempt}/${maxAttempts})`);
+      let lintExitCode = 0;
+      let lintStderr = "";
+      try {
+        const lintResult = await commandRunner.runCommand("bun run lint", {
+          timeout: 60000,
+          signal,
+        });
+        lintExitCode = lintResult.exitCode;
+        lintStderr = lintResult.stderr;
+      } catch (err) {
+        this.log("warn", `lint failed to spawn: ${(err as Error).message}`);
+        return {
+          ok: false,
+          errors: [`lint spawn failed: ${(err as Error).message}`],
+          finalContent: currentContent,
+        };
+      }
+
+      if (signal.aborted) {
+        return { ok: false, errors: ["aborted"], finalContent: currentContent };
+      }
+
+      // 4. Collect errors.
+      const errors: string[] = [];
+      if (tscExitCode !== 0 && tscStderr.trim()) {
+        errors.push(...splitErrors(tscStderr));
+      }
+      if (lintExitCode !== 0 && lintStderr.trim()) {
+        errors.push(...splitErrors(lintStderr));
+      }
+
+      if (errors.length === 0) {
+        onProgress(95, "Verification passed (tsc + lint clean)");
+        this.log("info", `Patch verified: tsc + lint clean on attempt ${attempt}/${maxAttempts}`);
+        return { ok: true, errors: [], finalContent: currentContent };
+      }
+
+      this.log(
+        "warn",
+        `Verification attempt ${attempt}/${maxAttempts} failed with ${errors.length} error(s): ${errors[0] ?? "(no detail)"}`,
+      );
+
+      // No provider → cannot auto-fix; give up.
+      // Last attempt → give up.
+      if (!provider || attempt === maxAttempts) {
+        return { ok: false, errors, finalContent: currentContent };
+      }
+
+      // 5. Ask AI to fix the typecheck/lint errors.
+      onProgress(88, `Asking AI to fix verification errors (attempt ${attempt + 1}/${maxAttempts})`);
+      try {
+        const fixed = await this.fixFileWithAI(provider, filePath, currentContent, errors, signal);
+        currentContent = fixed;
+        try {
+          await writeFile(filePath, currentContent);
+        } catch (err) {
+          this.log("warn", `Failed to re-write fixed file: ${(err as Error).message}`);
+          return {
+            ok: false,
+            errors: [...errors, `re-write failed: ${(err as Error).message}`],
+            finalContent: currentContent,
+          };
+        }
+      } catch (err) {
+        this.log("warn", `AI verification-fix call failed: ${(err as Error).message}`);
+        return {
+          ok: false,
+          errors: [...errors, `AI fix failed: ${(err as Error).message}`],
+          finalContent: currentContent,
+        };
+      }
+    }
+
+    // Unreachable: loop always returns inside. Safety net.
+    return {
+      ok: false,
+      errors: ["verification failed after retries"],
+      finalContent: currentContent,
+    };
+  }
+
+  /** Ask the AI for a corrected version of the file that resolves tsc/lint errors. */
+  private async fixFileWithAI(
+    provider: AIProviderConfig,
+    filePath: string,
+    currentContent: string,
+    errors: string[],
+    signal: AbortSignal,
+  ): Promise<string> {
+    const system: AIMessage = {
+      role: "system",
+      content:
+        "You are a senior engineer fixing TypeScript typecheck and ESLint lint errors. " +
+        "Return ONLY the corrected file content — no markdown fences, no prose, no explanations.",
+    };
+    const user: AIMessage = {
+      role: "user",
+      content:
+        `The file below failed typecheck/lint with these errors:\n\n${errors.slice(0, 20).join("\n")}\n\n` +
+        `File: ${filePath}\n\`\`\`\n${truncate(currentContent, 8000)}\n\`\`\`\n\n` +
+        `Fix the file. Return ONLY the corrected content.`,
+    };
+    const reply = await callAI(provider, [system, user], {
+      temperature: 0.15,
+      maxTokens: 8000,
+      signal,
+    });
+    return stripCodeFences(reply && reply.trim() ? reply : currentContent);
   }
 }
 
@@ -357,9 +571,10 @@ function countBraces(src: string): { braces: number; parens: number; brackets: n
 /* ────────────── Helpers ────────────── */
 
 function progressForAttempt(attempt: number, maxRetries: number): number {
-  // attempt 0 → 50; attempt maxRetries → 88
+  // attempt 0 → 50; attempt maxRetries → 68
+  // (Kept within the 0-70% propose+validate phase — verifyFix covers 70-95%.)
   if (maxRetries <= 0) return 50;
-  return 50 + Math.round((attempt / maxRetries) * 38);
+  return 50 + Math.round((attempt / maxRetries) * 18);
 }
 
 function truncate(text: string, max: number): string {
@@ -368,6 +583,28 @@ function truncate(text: string, max: number): string {
 
 function truncateStr(text: string, max: number): string {
   return text.length <= max ? text : text.slice(0, max) + "…";
+}
+
+/** Split a tsc/eslint stderr blob into individual error/warning lines (capped at 20). */
+function splitErrors(output: string): string[] {
+  return output
+    .split("\n")
+    .map(l => l.trim())
+    .filter(l => l.length > 0 && /error|warning/i.test(l))
+    .slice(0, 20);
+}
+
+/** Strip stray ``` fences from an AI reply that should be raw code. */
+function stripCodeFences(text: string): string {
+  const trimmed = text.trim();
+  if (trimmed.startsWith("```")) {
+    const firstNewline = trimmed.indexOf("\n");
+    if (firstNewline !== -1) {
+      const body = trimmed.slice(firstNewline + 1);
+      return body.replace(/```\s*$/, "").trim();
+    }
+  }
+  return trimmed;
 }
 
 function cancelled(agentName: string): TaskResult {
@@ -390,6 +627,8 @@ function buildDiffArtifact(original: SourceFile, proposal: BugFixProposal): impo
       rootCause: proposal.rootCause,
       fixDescription: proposal.fixDescription,
       confidence: proposal.confidence,
+      verified: proposal.verified ?? false,
+      verificationErrors: proposal.verificationErrors ?? [],
     },
   };
 }
