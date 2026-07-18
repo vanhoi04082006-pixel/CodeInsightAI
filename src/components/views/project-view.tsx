@@ -533,35 +533,45 @@ function DocsTab({ report }: { report: AnalysisReport }) {
   ].filter(d => d.content);
 
   const diagrams = report.diagrams;
-  const diagramTab = { uml: { svg: diagrams.uml, title: "UML Class Diagram", desc: diagrams.umlExplanation, icon: Network }, sequence: { svg: diagrams.sequence, title: "Sequence Diagram", desc: diagrams.sequenceExplanation, icon: GitBranch }, erd: { svg: diagrams.erd, title: "Database ER Diagram", desc: diagrams.erdExplanation, icon: Boxes } }[diagram];
+  // Build diagram tabs dynamically — hide empty ones
+  const allDiagrams = [
+    { id: "uml" as const, label: "UML", svg: diagrams.uml, desc: diagrams.umlExplanation, show: diagrams.hasUml !== false && !!diagrams.uml },
+    { id: "sequence" as const, label: "Sequence", svg: diagrams.sequence, desc: diagrams.sequenceExplanation, show: diagrams.hasSequence !== false && !!diagrams.sequence },
+    { id: "erd" as const, label: "ERD", svg: diagrams.erd, desc: diagrams.erdExplanation, show: diagrams.hasErd !== false && !!diagrams.erd },
+  ].filter(d => d.show);
+
+  // If current diagram tab is hidden, switch to first available
+  const activeDiagram = allDiagrams.find(d => d.id === diagram) || allDiagrams[0];
   const activeDoc = docs.find(d => d.id === docTab) || docs[0];
 
   return (
     <div className="space-y-4">
-      {/* Diagrams */}
+      {/* Diagrams — only show if at least one has content */}
+      {allDiagrams.length > 0 && (
       <GlassCard className="p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h4 className="flex items-center gap-2 text-sm font-semibold"><Network className="h-4 w-4 text-cyan-300" /> Generated Diagrams</h4>
           <div className="inline-flex gap-1 rounded-lg border border-white/10 bg-white/[0.03] p-1">
-            {([["uml", "UML"], ["sequence", "Sequence"], ["erd", "ERD"]] as const).map(([id, label]) => (
+            {allDiagrams.map((d) => (
               <button
-                key={id}
-                onClick={() => setDiagram(id)}
+                key={d.id}
+                onClick={() => setDiagram(d.id)}
                 className={cn(
                   "rounded-md px-2.5 py-1 text-xs transition",
-                  diagram === id ? "bg-gradient-to-r from-cyan-500/30 to-violet-500/30 text-cyan-300" : "text-muted-foreground hover:text-foreground"
+                  diagram === d.id ? "bg-gradient-to-r from-cyan-500/30 to-violet-500/30 text-cyan-300" : "text-muted-foreground hover:text-foreground"
                 )}
               >
-                {label}
+                {d.label}
               </button>
             ))}
           </div>
         </div>
         <div className="mt-3 overflow-x-auto scrollbar-thin rounded-lg border border-white/5 bg-black/30 p-3">
-          <div className="mx-auto min-w-[480px]" dangerouslySetInnerHTML={{ __html: diagramTab.svg }} />
+          {activeDiagram && <div className="mx-auto min-w-[480px]" dangerouslySetInnerHTML={{ __html: activeDiagram.svg }} />}
         </div>
-        <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{diagramTab.desc}</p>
+        <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{activeDiagram?.desc}</p>
       </GlassCard>
+      )}
 
       {/* Documentation tabs */}
       <GlassCard className="p-5">

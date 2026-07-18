@@ -153,7 +153,7 @@ export function analyzeParsedRepository(parsed: ParsedRepository, rawFiles?: { p
     issues: { bugs: bugIssues, security: securityIssues, performance: perfIssues },
     files: fileInsights,
     snippets: generatedSnippets,
-    diagrams: buildDiagrams(parsed.name), // ĐÃ KHÔI PHỤC DIAGRAMS
+    diagrams: buildDiagrams(parsed, arch), // Dynamic SVG from real data
     deadCode,
     duplicates,
     maintainabilityTrend,
@@ -321,85 +321,139 @@ function genDeploymentGuide(parsed: ParsedRepository): string {
 }
 
 // 💡 HÀM TẠO SƠ ĐỒ SVG ĐÃ ĐƯỢC KHÔI PHỤC (Lấy từ bản v1 gốc)
-function buildDiagrams(name: string): import("@/lib/types").DiagramSet {
-  const uml = `<svg viewBox="0 0 720 420" xmlns="http://www.w3.org/2000/svg" font-family="monospace" font-size="11">
-    <defs>
-      <marker id="arr" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
-        <path d="M0,0 L8,3 L0,6 z" fill="#67e8f9"/>
-      </marker>
-      <linearGradient id="cls" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="rgba(34,211,238,0.18)"/>
-        <stop offset="100%" stop-color="rgba(34,211,238,0.04)"/>
-      </linearGradient>
-    </defs>
-    <!-- Mẫu User class -->
-    <rect x="40" y="30" width="180" height="120" rx="6" fill="url(#cls)" stroke="#22d3ee" stroke-width="1.5"/>
-    <rect x="40" y="30" width="180" height="24" rx="6" fill="rgba(34,211,238,0.25)"/>
-    <text x="130" y="46" text-anchor="middle" fill="#a5f3fc" font-weight="bold">Core Module</text>
-    <text x="50" y="72" fill="#cbd5e1">- id: string</text>
-    <text x="50" y="88" fill="#cbd5e1">- state: State</text>
-    <line x1="40" y1="112" x2="220" y2="112" stroke="#22d3ee" stroke-opacity="0.4"/>
-    <text x="50" y="128" fill="#86efac">+ initialize()</text>
-    
-    <!-- Mẫu Repository class -->
-    <rect x="490" y="30" width="180" height="120" rx="6" fill="url(#cls)" stroke="#a78bfa" stroke-width="1.5"/>
-    <rect x="490" y="30" width="180" height="24" rx="6" fill="rgba(167,139,250,0.25)"/>
-    <text x="580" y="46" text-anchor="middle" fill="#c4b5fd" font-weight="bold">Service Layer</text>
-    <text x="500" y="72" fill="#cbd5e1">- data: any[]</text>
-    <line x1="490" y1="112" x2="670" y2="112" stroke="#a78bfa" stroke-opacity="0.4"/>
-    <text x="500" y="128" fill="#86efac">+ fetch()</text>
+function buildDiagrams(parsed: ParsedRepository, arch: any): import("@/lib/types").DiagramSet {
+  // ── UML Class Diagram ── generated from real classes/interfaces
+  const modulesWithClasses = parsed.files
+    .filter(f => f.classes.length > 0 || f.interfaces.length > 0)
+    .slice(0, 10);
 
-    <!-- Relationships -->
-    <line x1="220" y1="90" x2="490" y2="90" stroke="#67e8f9" stroke-width="1.2" marker-end="url(#arr)"/>
-    <text x="355" y="80" text-anchor="middle" fill="#94a3b8">depends on</text>
-  </svg>`;
+  let hasUml = modulesWithClasses.length > 0;
+  let uml = "";
+  let umlExplanation = "No classes or interfaces detected — UML diagram hidden.";
 
-  const sequence = `<svg viewBox="0 0 720 460" xmlns="http://www.w3.org/2000/svg" font-family="monospace" font-size="11">
-    <defs><marker id="sarr" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 z" fill="#67e8f9"/></marker></defs>
-    <!-- actors -->
-    <rect x="40" y="20" width="100" height="28" rx="4" fill="rgba(34,211,238,0.2)" stroke="#22d3ee"/>
-    <text x="90" y="38" text-anchor="middle" fill="#a5f3fc">Client</text>
-    <rect x="310" y="20" width="100" height="28" rx="4" fill="rgba(167,139,250,0.2)" stroke="#a78bfa"/>
-    <text x="360" y="38" text-anchor="middle" fill="#c4b5fd">API Handler</text>
-    <rect x="580" y="20" width="100" height="28" rx="4" fill="rgba(244,114,182,0.2)" stroke="#f472b6"/>
-    <text x="630" y="38" text-anchor="middle" fill="#f9a8d4">Database</text>
-    <!-- lifelines -->
-    <line x1="90" y1="48" x2="90" y2="440" stroke="#475569" stroke-dasharray="3 3"/>
-    <line x1="360" y1="48" x2="360" y2="440" stroke="#475569" stroke-dasharray="3 3"/>
-    <line x1="630" y1="48" x2="630" y2="440" stroke="#475569" stroke-dasharray="3 3"/>
-    <!-- messages -->
-    <line x1="90" y1="90" x2="360" y2="90" stroke="#67e8f9" stroke-width="1.2" marker-end="url(#sarr)"/>
-    <text x="225" y="84" text-anchor="middle" fill="#cbd5e1">Request Data</text>
-    <line x1="360" y1="140" x2="630" y2="140" stroke="#67e8f9" stroke-width="1.2" marker-end="url(#sarr)"/>
-    <text x="495" y="134" text-anchor="middle" fill="#cbd5e1">Query()</text>
-    <line x1="630" y1="190" x2="360" y2="190" stroke="#67e8f9" stroke-width="1.2" stroke-dasharray="4 2" marker-end="url(#sarr)"/>
-    <text x="495" y="184" text-anchor="middle" fill="#cbd5e1">Return Results</text>
-    <line x1="360" y1="240" x2="90" y2="240" stroke="#67e8f9" stroke-width="1.2" marker-end="url(#sarr)"/>
-    <text x="225" y="234" text-anchor="middle" fill="#cbd5e1">JSON Response</text>
-  </svg>`;
+  if (hasUml) {
+    const colors = ["#22d3ee", "#a78bfa", "#f472b6", "#34d399", "#fbbf24"];
+    const boxW = 200, boxH = 100, gapX = 240, gapY = 130;
+    const cols = Math.min(modulesWithClasses.length, 4);
+    let svgParts: string[] = [];
+    modulesWithClasses.forEach((f, i) => {
+      const col = i % cols, row = Math.floor(i / cols);
+      const x = 20 + col * gapX, y = 20 + row * gapY;
+      const color = colors[i % colors.length];
+      const name = f.path.split("/").pop()?.replace(/\.\w+$/, "") || f.path;
+      const fields = f.classes.slice(0, 3).map(c => `+ ${c}`).join("\n  ");
+      svgParts.push(`
+        <rect x="${x}" y="${y}" width="${boxW}" height="${boxH}" rx="6" fill="${color}15" stroke="${color}" stroke-width="1.5"/>
+        <rect x="${x}" y="${y}" width="${boxW}" height="22" rx="6" fill="${color}30"/>
+        <text x="${x + boxW/2}" y="${y + 15}" text-anchor="middle" fill="${color}" font-weight="bold" font-size="12">${name}</text>
+        <text x="${x + 8}" y="${y + 40}" fill="#cbd5e1" font-size="10">${fields.split("\n").join('</text>\n        <text x="' + (x+8) + '" y="' + (y+55) + '" fill="#cbd5e1" font-size="10">')}</text>
+        <text x="${x + 8}" y="${y + 75}" fill="#86efac" font-size="10">${f.functions.slice(0,2).map(fn => `+ ${fn}()`).join("  ")}</text>`);
+    });
+    // Add dependency edges
+    parsed.dependencies.edges.slice(0, 15).forEach(e => {
+      const fromIdx = modulesWithClasses.findIndex(f => f.path === e.from);
+      const toIdx = modulesWithClasses.findIndex(f => f.path === e.to);
+      if (fromIdx >= 0 && toIdx >= 0 && fromIdx !== toIdx) {
+        const fromCol = fromIdx % cols, fromRow = Math.floor(fromIdx / cols);
+        const toCol = toIdx % cols, toRow = Math.floor(toIdx / cols);
+        const x1 = 20 + fromCol * gapX + boxW, y1 = 20 + fromRow * gapY + boxH/2;
+        const x2 = 20 + toCol * gapX, y2 = 20 + toRow * gapY + boxH/2;
+        svgParts.push(`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#67e8f9" stroke-width="0.8" stroke-opacity="0.4" marker-end="url(#arr)"/>`);
+      }
+    });
+    const svgH = Math.ceil(modulesWithClasses.length / cols) * gapY + 20;
+    uml = `<svg viewBox="0 0 ${cols * gapX + 20} ${svgH}" xmlns="http://www.w3.org/2000/svg" font-family="monospace"><defs><marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6z" fill="#67e8f9"/></marker></defs>${svgParts.join("")}</svg>`;
+    umlExplanation = `UML diagram showing ${modulesWithClasses.length} modules with their classes, methods, and dependency relationships.`;
+  }
 
-  const erd = `<svg viewBox="0 0 720 400" xmlns="http://www.w3.org/2000/svg" font-family="monospace" font-size="11">
-    <defs><marker id="earr" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 z" fill="#67e8f9"/></marker></defs>
-    <rect x="40" y="40" width="180" height="160" rx="6" fill="rgba(34,211,238,0.08)" stroke="#22d3ee" stroke-width="1.5"/>
-    <rect x="40" y="40" width="180" height="26" rx="6" fill="rgba(34,211,238,0.25)"/>
-    <text x="130" y="58" text-anchor="middle" fill="#a5f3fc" font-weight="bold">Entity A</text>
-    <text x="50" y="84" fill="#fde68a">  id (uuid)</text>
-    <text x="50" y="100" fill="#cbd5e1">createdAt</text>
+  // ── Sequence Diagram ── generated from real routes
+  const routes = parsed.files.flatMap(f => f.routes.map(r => ({ path: r, file: f.path, functions: f.functions })));
+  const hasSequence = routes.length > 0;
+  let sequence = "";
+  let sequenceExplanation = "No API routes detected — Sequence diagram hidden.";
 
-    <rect x="400" y="40" width="180" height="160" rx="6" fill="rgba(244,114,182,0.08)" stroke="#f472b6" stroke-width="1.5"/>
-    <rect x="400" y="40" width="180" height="26" rx="6" fill="rgba(244,114,182,0.25)"/>
-    <text x="490" y="58" text-anchor="middle" fill="#f9a8d4" font-weight="bold">Entity B</text>
-    <text x="410" y="84" fill="#fde68a">  id (uuid)</text>
-    <text x="410" y="100" fill="#fca5a5">  entityA_id (fk)</text>
+  if (hasSequence) {
+    const topRoutes = routes.slice(0, 6);
+    const actorW = 120, actorGap = 200;
+    const actors = ["Client", "API", "Service", "DB"];
+    let parts: string[] = [];
+    // Actor headers
+    actors.forEach((a, i) => {
+      const x = 40 + i * actorGap;
+      parts.push(`<rect x="${x}" y="10" width="${actorW}" height="24" rx="4" fill="rgba(34,211,238,0.15)" stroke="#22d3ee"/>`);
+      parts.push(`<text x="${x + actorW/2}" y="26" text-anchor="middle" fill="#a5f3fc" font-size="11">${a}</text>`);
+      parts.push(`<line x1="${x + actorW/2}" y1="34" x2="${x + actorW/2}" y2="${topRoutes.length * 50 + 50}" stroke="#475569" stroke-dasharray="3 3"/>`);
+    });
+    // Messages
+    topRoutes.forEach((r, i) => {
+      const y = 50 + i * 50;
+      const x1 = 40 + actorW/2, x2 = 40 + actorGap + actorW/2;
+      parts.push(`<line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}" stroke="#67e8f9" stroke-width="1" marker-end="url(#sarr)"/>`);
+      parts.push(`<text x="${(x1+x2)/2}" y="${y-4}" text-anchor="middle" fill="#cbd5e1" font-size="10">${r.path}</text>`);
+      // Response
+      parts.push(`<line x1="${x2}" y1="${y+20}" x2="${x1}" y2="${y+20}" stroke="#67e8f9" stroke-width="1" stroke-dasharray="3 2" marker-end="url(#sarr)"/>`);
+      parts.push(`<text x="${(x1+x2)/2}" y="${y+16}" text-anchor="middle" fill="#94a3b8" font-size="9">200 OK</text>`);
+    });
+    const svgH = topRoutes.length * 50 + 60;
+    sequence = `<svg viewBox="0 0 720 ${svgH}" xmlns="http://www.w3.org/2000/svg" font-family="monospace"><defs><marker id="sarr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6z" fill="#67e8f9"/></marker></defs>${parts.join("")}</svg>`;
+    sequenceExplanation = `Sequence diagram showing ${topRoutes.length} API routes and their request/response flow between Client → API → Service layers.`;
+  }
 
-    <line x1="220" y1="100" x2="400" y2="100" stroke="#67e8f9" stroke-width="1.2" marker-end="url(#earr)"/>
-    <text x="310" y="90" text-anchor="middle" fill="#94a3b8">1   to   Many</text>
-  </svg>`;
+  // ── ERD ── detect database schemas from file contents
+  const dbFiles = parsed.files.filter(f =>
+    f.path.includes("schema.prisma") ||
+    f.path.includes("model") ||
+    f.path.includes("entity") ||
+    f.classes.some(c => c.includes("Entity") || c.includes("Model") || c.includes("Schema"))
+  );
+
+  // Also detect Prisma models from file descriptions
+  const prismaModels: { name: string; fields: string[] }[] = [];
+  for (const f of parsed.files) {
+    if (f.path.endsWith(".prisma") || f.path.includes("schema.prisma")) {
+      // Detect model names from functions (simplified)
+      f.classes.forEach(c => prismaModels.push({ name: c, fields: ["id", "createdAt"] }));
+    }
+    // Detect Mongoose schemas
+    if (f.imports.some(i => i.includes("mongoose"))) {
+      f.classes.forEach(c => prismaModels.push({ name: c, fields: ["_id", "createdAt"] }));
+    }
+    // Detect TypeORM entities
+    if (f.imports.some(i => i.includes("typeorm"))) {
+      f.classes.forEach(c => prismaModels.push({ name: c, fields: ["id", "createdAt"] }));
+    }
+  }
+
+  const hasErd = prismaModels.length > 0 || dbFiles.length > 0;
+  let erd = "";
+  let erdExplanation = "No database schema detected — ERD diagram hidden.";
+
+  if (hasErd) {
+    const models = prismaModels.slice(0, 6);
+    const colors = ["#22d3ee", "#a78bfa", "#f472b6", "#34d399"];
+    const boxW = 180, boxH = 100, gapX = 220, gapY = 130;
+    const cols = Math.min(models.length, 3);
+    let parts: string[] = [];
+    models.forEach((m, i) => {
+      const col = i % cols, row = Math.floor(i / cols);
+      const x = 20 + col * gapX, y = 20 + row * gapY;
+      const color = colors[i % colors.length];
+      const fields = m.fields.map(f => `  ${f}`).join("\n  ");
+      parts.push(`
+        <rect x="${x}" y="${y}" width="${boxW}" height="${boxH}" rx="6" fill="${color}10" stroke="${color}" stroke-width="1.5"/>
+        <rect x="${x}" y="${y}" width="${boxW}" height="22" rx="6" fill="${color}25"/>
+        <text x="${x + boxW/2}" y="${y + 15}" text-anchor="middle" fill="${color}" font-weight="bold" font-size="11">${m.name}</text>
+        <text x="${x + 8}" y="${y + 38}" fill="#fde68a" font-size="10">🔑 id</text>
+        ${m.fields.slice(1).map((f, j) => `<text x="${x + 8}" y="${y + 54 + j * 14}" fill="#cbd5e1" font-size="10">${f}</text>`).join("")}`);
+    });
+    const svgH = Math.ceil(models.length / cols) * gapY + 20;
+    erd = `<svg viewBox="0 0 ${cols * gapX + 20} ${svgH}" xmlns="http://www.w3.org/2000/svg" font-family="monospace">${parts.join("")}</svg>`;
+    erdExplanation = `ERD showing ${models.length} database entities with their fields and primary keys.`;
+  }
 
   return {
     uml, sequence, erd,
-    umlExplanation: `Class diagram minh hoạ kiến trúc module tổng quan.`,
-    sequenceExplanation: `Sequence diagram biểu diễn luồng giao tiếp dữ liệu.`,
-    erdExplanation: `Sơ đồ thực thể liên kết (ERD) thể hiện cấu trúc dữ liệu dự kiến.`,
+    umlExplanation, sequenceExplanation, erdExplanation,
+    hasUml, hasSequence, hasErd,
   };
 }

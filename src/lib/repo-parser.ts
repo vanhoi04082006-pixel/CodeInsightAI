@@ -301,26 +301,110 @@ export function detectPackageManager(files: ParsedFile[]): string {
   return "unknown";
 }
 
+// Resolve import path aliases (@/, ~/, ./, ../) to actual file paths
+function resolveImport(imp: string, fromPath: string, allFiles: ParsedFile[]): ParsedFile | undefined {
+  // Skip external packages (no ./ or @/ or ~/)
+  if (!imp.startsWith(".") && !imp.startsWith("@/") && !imp.startsWith("~/") && !imp.startsWith("@components/")) {
+    // Try bare match (e.g. "react" won't match, but "lib/db" might)
+    return allFiles.find(f => f.path === imp);
+  }
+
+  // Normalize: strip ./ and ../
+  let normalized = imp;
+  // Replace common aliases
+  normalized = normalized.replace(/^@\//, "src/");
+  normalized = normalized.replace(/^~\//, "src/");
+  normalized = normalized.replace(/^@components\//, "src/components/");
+  normalized = normalized.replace(/^\.\//, "");
+  // Handle ../ — resolve relative to fromPath's directory
+  while (normalized.startsWith("../")) {
+    normalized = normalized.substring(3);
+    fromPath = fromPath.substring(0, fromPath.lastIndexOf("/"));
+  }
+
+  // Try exact match and with extensions
+  const candidates = [
+    normalized,
+    normalized + ".ts", normalized + ".tsx",
+    normalized + ".js", normalized + ".jsx",
+    normalized + ".mjs", normalized + ".cjs",
+    normalized + ".vue", normalized + ".svelte",
+    normalized + "/index.ts", normalized + "/index.tsx",
+    normalized + "/index.js", normalized + "/index.jsx",
+    // Also try with src/ prefix if not already
+    "src/" + normalized, "src/" + normalized + ".ts", "src/" + normalized + ".tsx",
+  ];
+
+  for (const c of candidates) {
+    const found = allFiles.find(f => f.path === c || f.path.endsWith("/" + c));
+    if (found) return found;
+  }
+  return undefined;
+}
+
+// DFS-based cycle detection — finds cycles of any length
+function detectCyclesDFS(nodes: string[], edges: { from: string; to: string }[]): { nodes: string[] }[] {
+  const adj = new Map<string, string[]>();
+  for (const n of nodes) adj.set(n, []);
+  for (const e of edges) {
+    if (!adj.has(e.from)) adj.set(e.from, []);
+    adj.get(e.from)!.push(e.to);
+  }
+
+  const cycles: { nodes: string[] }[] = [];
+  const visited = new Set<string>();
+  const recursionStack = new Set<string>();
+  const path: string[] = [];
+
+  function dfs(node: string): void {
+    visited.add(node);
+    recursionStack.add(node);
+    path.push(node);
+
+    const neighbors = adj.get(node) || [];
+    for (const next of neighbors) {
+      if (recursionStack.has(next)) {
+        // Found a cycle — extract it from the path
+        const cycleStart = path.indexOf(next);
+        const cycle = path.slice(cycleStart);
+        cycle.push(next); // close the cycle
+        // Deduplicate
+        const key = [...cycle].sort().join("|");
+        if (!cycles.some(c => [...c.nodes].sort().join("|") === key)) {
+          cycles.push({ nodes: cycle });
+        }
+      } else if (!visited.has(next)) {
+        dfs(next);
+      }
+    }
+
+    path.pop();
+    recursionStack.delete(node);
+  }
+
+  for (const n of nodes) {
+    if (!visited.has(n)) dfs(n);
+  }
+
+  return cycles;
+}
+
 // Build dependency graph from parsed files
 export function buildDependencyGraph(files: ParsedFile[]): { nodes: DependencyNode[]; edges: DependencyEdge[]; circular: { nodes: string[] }[] } {
   const nodes: DependencyNode[] = [];
   const edges: DependencyEdge[] = [];
-  const nodeMap = new Map<string, number>();
 
-  // CHỈ lấy các file code thực sự để vẽ đồ thị, loại bỏ .md, .json, .lock để đỡ rác
+  // Only include real code files (skip .md, .json, .lock, .yml, etc.)
   const codeFiles = files.filter(f => {
     const ext = f.path.substring(f.path.lastIndexOf(".")).toLowerCase();
-    return !['.md', '.txt', '.json', '.lock', '.csv', '.yml', '.yaml'].includes(ext);
+    return !['.md', '.txt', '.json', '.lock', '.csv', '.yml', '.yaml', '.toml', '.env'].includes(ext);
   });
 
-  // Create nodes using Golden Spiral distribution for better layout
-  const golden_ratio = (Math.sqrt(5) + 1) / 2 - 1;
-  const golden_angle = golden_ratio * 2 * Math.PI;
-
+  // Create nodes — x/y will be set by d3-force on client side
   codeFiles.forEach((f, i) => {
     const parts = f.path.split("/");
     const label = parts[parts.length - 1];
-    
+
     const type: DependencyNode["type"] =
       f.routes.length > 0 ? "entry" :
       f.components.length > 0 ? "component" :
@@ -328,41 +412,25 @@ export function buildDependencyGraph(files: ParsedFile[]): { nodes: DependencyNo
       f.functions.length > 0 ? "core" :
       f.path.includes("config") ? "config" : "util";
 
-    const group = Math.min(i % 4 + 1, 4);
-    
-    // Thuật toán Golden Spiral (toạ độ x, y rải đều từ tâm ra ngoài, không bị đè)
-    const ratio = i / codeFiles.length;
-    const angle = i * golden_angle;
-    // Bán kính từ 10 đến 45 (để không bị tràn ra ngoài viền viewBox 100x100)
-    const radius = 10 + Math.sqrt(ratio) * 35; 
+    const group = Math.min(i % 5 + 1, 5); // 5 groups for color variety
 
     nodes.push({
       id: f.path,
       label,
       type,
       group,
-      x: 50 + Math.cos(angle) * radius,
-      y: 50 + Math.sin(angle) * radius,
-      size: 10 + Math.min(f.lines / 50, 15),
+      x: 0, // d3-force will calculate
+      y: 0,
+      size: 8 + Math.min(f.lines / 40, 18), // size by LOC
     });
-    nodeMap.set(f.path, nodes.length - 1);
   });
 
-  // Create edges from imports
+  // Create edges from imports using alias resolution
+  const nodeIds = new Set(nodes.map(n => n.id));
   codeFiles.forEach((f) => {
     for (const imp of f.imports) {
-      const resolved = codeFiles.find(
-        (other) =>
-          other.path === imp ||
-          other.path.endsWith(imp) ||
-          other.path.endsWith(imp + ".ts") ||
-          other.path.endsWith(imp + ".tsx") ||
-          other.path.endsWith(imp + ".js") ||
-          other.path.endsWith(imp + ".jsx") ||
-          other.path.endsWith(imp + "/index.ts") ||
-          other.path.endsWith(imp + "/index.tsx")
-      );
-      if (resolved && resolved.path !== f.path) {
+      const resolved = resolveImport(imp, f.path, codeFiles);
+      if (resolved && resolved.path !== f.path && nodeIds.has(resolved.path)) {
         const exists = edges.some((e) => e.from === f.path && e.to === resolved.path);
         if (!exists) {
           edges.push({ from: f.path, to: resolved.path, weight: 2 });
@@ -371,15 +439,13 @@ export function buildDependencyGraph(files: ParsedFile[]): { nodes: DependencyNo
     }
   });
 
-  // Detect circular dependencies
-  const circular: { nodes: string[] }[] = [];
-  for (let i = 0; i < edges.length; i++) {
-    for (let j = i + 1; j < edges.length; j++) {
-      if (edges[i].from === edges[j].to && edges[i].to === edges[j].from) {
-        circular.push({ nodes: [edges[i].from, edges[i].to] });
-        edges[i].circular = true;
-        edges[j].circular = true;
-      }
+  // DFS cycle detection — catches cycles of any length (A→B→C→A)
+  const circular = detectCyclesDFS(nodes.map(n => n.id), edges);
+  // Mark circular edges
+  for (const cycle of circular) {
+    for (let i = 0; i < cycle.nodes.length - 1; i++) {
+      const edge = edges.find(e => e.from === cycle.nodes[i] && e.to === cycle.nodes[i + 1]);
+      if (edge) edge.circular = true;
     }
   }
 
