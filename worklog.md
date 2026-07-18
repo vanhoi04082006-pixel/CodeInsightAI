@@ -491,3 +491,29 @@ Stage Summary:
 - Part 4: Performance analyzer expanded from 24 → 40 rules covering memory leaks (timers, event listeners, subscriptions), advanced React patterns (dangerouslySetInnerHTML, missing Suspense, nested ternaries, useEffect deps, useState count), data/parsing (JSON.parse in render, string concat in loop), and CSS/layout (layout thrashing, DOM queries in render). 4 pre-existing TypeScript bugs fixed.
 - Part 5: 20+ new i18n keys added to reports.json (en+vi). All hardcoded English strings in project-view.tsx replaced with `t()` calls. New Architecture Metrics card displays 11 deep metrics with color-coded health indicators. Variable shadowing bug fixed.
 - The 6-part quality improvement plan (Parts 1-6) is now complete: d3-force dependency graph, dynamic SVG diagrams, deep architecture metrics, expanded performance rules, i18n coverage, and UI polish.
+
+---
+Task ID: 13
+Agent: Z.ai Code (verify 6-part plan + fix d3-force useEffect TS error)
+
+Task: Verify all 6 parts of the quality improvement plan are complete and fix any remaining TypeScript errors.
+
+Work Log:
+- Verified all 6 parts are in place:
+  - Part 1: repo-parser.ts has `resolveImport()` (handles @/, ~/, @components/, ./, ../ aliases + .mjs/.cjs/.vue/.svelte/.py extensions) and `detectCyclesDFS()` (full DFS cycle detection for any length A→B→C→A).
+  - Part 2: analysis-engine-v2.ts `buildDiagrams(parsed, arch)` generates dynamic SVG from real parsed data. types.ts DiagramSet has `hasUml?/hasSequence?/hasErd?` boolean fields.
+  - Part 3: architecture.ts implements Robert C. Martin's component metrics (Instability, Abstractness, Distance from Main Sequence, Fan-in/Fan-out) + directory-level circular dep detection via DFS.
+  - Part 4: performance.ts has 42 rule patterns (expanded from 24 → 40+ with memory leaks, advanced React, data/parsing, CSS/layout rules).
+  - Part 5: locales/en/reports.json (102 keys) + locales/vi/reports.json (102 keys) fully synced.
+  - Part 6: d3-force + @types/d3-force installed in package.json. project-view.tsx hides empty diagram tabs via `.filter(d => d.show)`.
+- **Fixed TypeScript error** in `src/components/shared/dependency-graph.tsx`: the useEffect cleanup function returned `simulation.stop()` directly, which returns a `d3.Simulation` object (not `void`). Wrapped in a block `return () => { simulation.stop(); };` so the cleanup returns void as `EffectCallback` requires.
+- Final verification:
+  - `npx tsc --noEmit`: 0 errors in all edited files (repo-parser, analysis-engine-v2, architecture, performance, project-view, dependency-graph, types).
+  - `bun run lint`: clean (0 errors, 0 warnings).
+  - Dev server: HTTP 200, page renders correctly.
+
+Stage Summary:
+- The 6-part quality improvement plan is now 100% complete and verified.
+- All TypeScript errors in edited files resolved.
+- Lint clean, server running, page renders.
+- Remaining pre-existing TS errors (in examples/, skills/, debug-panel.tsx maxTokens, api/analyze/route.ts db.account) are NOT from this plan's scope.

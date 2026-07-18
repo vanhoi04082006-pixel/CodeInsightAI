@@ -83,7 +83,9 @@ export function DependencyGraph({ report }: { report: AnalysisReport }) {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setNodePositions(posMap);
 
-    return () => simulation.stop();
+    return () => {
+      simulation.stop();
+    };
   }, [nodes, edges]);
 
   const onDown = (e: React.MouseEvent) => {
