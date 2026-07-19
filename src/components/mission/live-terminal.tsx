@@ -156,12 +156,19 @@ export function LiveTerminal({
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Merge incoming history prop into local state (newest first).
+  // Use a stable string key for comparison — the `history` array prop
+  // gets a new reference on every parent render, which would cause
+  // infinite re-renders if we depend on the array reference directly.
+  const historyKey = history.join("\n");
   useEffect(() => {
     setLocalHistory((prev) => {
       const merged = [...new Set([...history, ...prev])];
-      return merged.slice(0, 50);
+      const next = merged.slice(0, 50);
+      // Only update if content actually changed (avoid setState loop)
+      if (next.join("\n") === prev.join("\n")) return prev;
+      return next;
     });
-  }, [history]);
+  }, [historyKey, history]);
 
   // Auto-scroll to bottom when new output arrives (if user hasn't scrolled up).
   useEffect(() => {
