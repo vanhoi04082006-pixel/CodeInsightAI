@@ -1,0 +1,50 @@
+{
+  "title": "Mission Control",
+  "subtitle": "AI Operating System",
+  "description": "Give your AI team a goal. They plan, execute, verify, and ship — autonomously.",
+
+  "form": {
+    "title": "Define Your Mission",
+    "description": "Describe what you want your AI team to accomplish. They'll plan, execute, verify, and ship.",
+    "goalLabel": "Mission Goal",
+    "repoLabel": "Repository URL",
+    "providerLabel": "AI Provider",
+    "noProviders": "No enabled providers — workflow will use built-in fallbacks. Add one in Providers.",
+    "maxIterations": "Max Iterations",
+    "iterationsHint": "Each iteration = one observe → think → act → verify → reflect cycle. The Executive may stop earlier if confidence is high.",
+    "templates": "Quick Templates",
+    "disclaimer": "Missions execute locally — your code never leaves your machine.",
+    "demo": "Demo Mode",
+    "startButton": "Start Mission",
+    "starting": "Starting…"
+  },
+
+  "feed": {
+    "title": "AI Activity Feed"
+  },
+
+  "worldState": {
+    "title": "World State"
+  },
+
+  "agents": {
+    "title": "Agent Team"
+  },
+
+  "sidebar": {
+    "title": "Missions",
+    "history": "History",
+    "templates": "Templates"
+  },
+
+  "history": {
+    "title": "Mission History"
+  },
+
+  "actions": {
+    "stop": "Stop",
+    "collapseBottom": "Collapse Panel",
+    "expandBottom": "Expand Panel",
+    "newMission": "New Mission"
+  }
+}

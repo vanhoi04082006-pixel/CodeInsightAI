@@ -19,6 +19,7 @@ import enHistory from "../../locales/en/history.json";
 import enChat from "../../locales/en/chat.json";
 import enNotifications from "../../locales/en/notifications.json";
 import enAgents from "../../locales/en/agents.json";
+import enMission from "../../locales/en/mission.json";
 
 import viCommon from "../../locales/vi/common.json";
 import viSettings from "../../locales/vi/settings.json";
@@ -34,6 +35,7 @@ import viHistory from "../../locales/vi/history.json";
 import viChat from "../../locales/vi/chat.json";
 import viNotifications from "../../locales/vi/notifications.json";
 import viAgents from "../../locales/vi/agents.json";
+import viMission from "../../locales/vi/mission.json";
 
 type Dict = Record<string, unknown>;
 
@@ -43,18 +45,21 @@ export const DICTS: Record<Locale, Record<string, Dict>> = {
     analysis: enAnalysis, landing: enLanding, reports: enReports, errors: enErrors,
     providers: enProviders, personality: enPersonality, developer: enDeveloper,
     history: enHistory, chat: enChat, notifications: enNotifications, agents: enAgents,
+    mission: enMission,
   },
   vi: {
     common: viCommon, settings: viSettings, dashboard: viDashboard,
     analysis: viAnalysis, landing: viLanding, reports: viReports, errors: viErrors,
     providers: viProviders, personality: viPersonality, developer: viDeveloper,
     history: viHistory, chat: viChat, notifications: viNotifications, agents: viAgents,
+    mission: viMission,
   },
 };
 
 export const NAMESPACES = [
   "common", "settings", "dashboard", "analysis", "landing", "reports", "errors",
   "providers", "personality", "developer", "history", "chat", "notifications", "agents",
+  "mission",
 ] as const;
 
 export const COOKIE_NAME = "codeinsight-lang";

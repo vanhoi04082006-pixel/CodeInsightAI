@@ -1,0 +1,50 @@
+{
+  "title": "Mission Control",
+  "subtitle": "AI Operating System",
+  "description": "Giao mục tiêu cho đội AI. Họ tự lập kế hoạch, thực thi, kiểm chứng và ship.",
+
+  "form": {
+    "title": "Định nghĩa Mission",
+    "description": "Mô tả điều bạn muốn đội AI hoàn thành. Họ sẽ tự lập kế hoạch, thực thi, kiểm chứng và ship.",
+    "goalLabel": "Mục tiêu Mission",
+    "repoLabel": "URL Repository",
+    "providerLabel": "AI Provider",
+    "noProviders": "Chưa có provider nào được bật — workflow sẽ dùng fallback built-in. Thêm provider trong tab Providers.",
+    "maxIterations": "Số vòng lặp tối đa",
+    "iterationsHint": "Mỗi vòng = một chu kỳ observe → think → act → verify → reflect. Executive có thể dừng sớm nếu confidence cao.",
+    "templates": "Template nhanh",
+    "disclaimer": "Mission chạy cục bộ — code của bạn không rời máy.",
+    "demo": "Demo Mode",
+    "startButton": "Bắt đầu Mission",
+    "starting": "Đang bắt đầu…"
+  },
+
+  "feed": {
+    "title": "AI Activity Feed"
+  },
+
+  "worldState": {
+    "title": "World State"
+  },
+
+  "agents": {
+    "title": "Đội Agent"
+  },
+
+  "sidebar": {
+    "title": "Missions",
+    "history": "Lịch sử",
+    "templates": "Templates"
+  },
+
+  "history": {
+    "title": "Lịch sử Mission"
+  },
+
+  "actions": {
+    "stop": "Dừng",
+    "collapseBottom": "Thu gọn Panel",
+    "expandBottom": "Mở rộng Panel",
+    "newMission": "Mission mới"
+  }
+}

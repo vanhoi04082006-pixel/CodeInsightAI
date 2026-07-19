@@ -11,6 +11,7 @@
     "providers": "AI Providers",
     "personalities": "Personalities",
     "agents": "AI Agents",
+    "mission": "Mission Control",
     "settings": "Settings"
   },
   "actions": {
