@@ -3,6 +3,13 @@
   "subtitle": "AI Operating System",
   "description": "Give your AI team a goal. They plan, execute, verify, and ship — autonomously.",
 
+  "empty": {
+    "title": "No Repository Selected",
+    "description": "Select an analysis from History or analyze a new repository to start a mission. Mission Control binds to the active analysis — just like AI Chat and AI Report.",
+    "historyButton": "Open History",
+    "analyzeButton": "Analyze Repo"
+  },
+
   "form": {
     "title": "Define Your Mission",
     "description": "Describe what you want your AI team to accomplish. They'll plan, execute, verify, and ship.",

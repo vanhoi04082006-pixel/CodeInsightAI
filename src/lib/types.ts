@@ -11,7 +11,6 @@ export type View =
   | "settings"
   | "providers"
   | "personalities"
-  | "agents"
   | "mission";
 
 /* ---------- AI Providers (local-first, BYO keys) ---------- */
