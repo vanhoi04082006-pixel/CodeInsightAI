@@ -2,9 +2,9 @@
 
 // ═══════════════════════════════════════════════════════════════════
 //  GLSL SHADERS — Particle morphing with simplex noise + curl flow
+//  Torus → Wireframe Sphere morph with network lines
 // ═══════════════════════════════════════════════════════════════════
 
-// Simplex 3D noise (Ashima/Stefan Gustavson) — used for organic drift
 export const SIMPLEX_NOISE_GLSL = /* glsl */ `
   vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
   vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
@@ -53,135 +53,86 @@ export const SIMPLEX_NOISE_GLSL = /* glsl */ `
     m = m * m;
     return 42.0 * dot(m*m, vec4(dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3)));
   }
-
-  // Curl noise for flow-field drift
-  vec3 curlNoise(vec3 p) {
-    const float e = 0.1;
-    vec3 dx = vec3(e, 0.0, 0.0);
-    vec3 dy = vec3(0.0, e, 0.0);
-    vec3 dz = vec3(0.0, 0.0, e);
-    float p_x0 = snoise(p - dx); float p_x1 = snoise(p + dx);
-    float p_y0 = snoise(p - dy); float p_y1 = snoise(p + dy);
-    float p_z0 = snoise(p - dz); float p_z1 = snoise(p + dz);
-    float x = p_y1 - p_y0 - p_z1 + p_z0;
-    float y = p_z1 - p_z0 - p_x1 + p_x0;
-    float z = p_x1 - p_x0 - p_y1 + p_y0;
-    const float divisor = 1.0 / (2.0 * e);
-    return normalize(vec3(x, y, z) * divisor);
-  }
 `;
 
 export const PARTICLE_VERTEX_SHADER = /* glsl */ `
   precision highp float;
 
-  attribute vec3 aPosGalaxy;   // State 1: galaxy vortex
-  attribute vec3 aPosSphere;   // State 2: energy orb
-  attribute vec3 aPosGrid;     // State 3: data grid
+  attribute vec3 aPosTorus;    // State 1: particle ring (torus)
+  attribute vec3 aPosSphere;   // State 2: wireframe sphere surface
   attribute float aScale;
   attribute float aSeed;
 
   uniform float uTime;
-  uniform float uMorph;        // 0.0 = galaxy, 1.0 = sphere, 2.0 = grid
+  uniform float uMorph;        // 0.0 = torus, 1.0 = sphere
   uniform float uSize;
   uniform float uPixelRatio;
 
   varying float vAlpha;
   varying float vDist;
+  varying float vMorph;
 
   ${SIMPLEX_NOISE_GLSL}
 
-  // Smooth morph between 3 target positions
-  vec3 getMorphedPosition() {
-    float m = uMorph;
-    vec3 pos;
-
-    if (m <= 1.0) {
-      // Galaxy → Sphere
-      float t = smoothstep(0.0, 1.0, m);
-      pos = mix(aPosGalaxy, aPosSphere, t);
-    } else {
-      // Sphere → Grid
-      float t = smoothstep(0.0, 1.0, m - 1.0);
-      pos = mix(aPosSphere, aPosGrid, t);
-    }
-    return pos;
-  }
-
   void main() {
-    vec3 pos = getMorphedPosition();
+    // Smooth morph: torus → sphere
+    float t = smoothstep(0.0, 1.0, uMorph);
+    vec3 pos = mix(aPosTorus, aPosSphere, t);
 
-    // Organic drift via curl noise — intensity scales with morph state
-    float driftStrength = 0.15 + sin(uTime * 0.3 + aSeed * 6.28) * 0.05;
-    vec3 curl = curlNoise(pos * 0.5 + uTime * 0.08);
-    pos += curl * driftStrength;
+    // Organic drift via simplex noise — gentle, not chaotic
+    float drift = snoise(pos * 0.3 + uTime * 0.05) * 0.08;
+    pos += normalize(pos + 0.001) * drift;
 
-    // Slow orbital rotation for galaxy state
-    float angle = uTime * 0.1 + aSeed * 6.28;
-    float morphGalaxy = 1.0 - smoothstep(0.0, 0.3, uMorph);
-    pos.xz = rotate2d(pos.xz, angle * 0.02 * morphGalaxy);
+    // Torus state: slow orbital rotation around Y
+    float torusWeight = 1.0 - t;
+    float angle = uTime * 0.15 + aSeed * 6.28;
+    pos.xz = vec2(
+      pos.x * cos(angle * 0.02 * torusWeight) - pos.z * sin(angle * 0.02 * torusWeight),
+      pos.x * sin(angle * 0.02 * torusWeight) + pos.z * cos(angle * 0.02 * torusWeight)
+    );
 
-    // Pulsing for sphere state
-    float morphSphere = smoothstep(0.2, 0.6, uMorph) * (1.0 - smoothstep(0.8, 1.2, uMorph));
-    float pulse = 1.0 + sin(uTime * 2.0 + aSeed * 10.0) * 0.03 * morphSphere;
+    // Sphere state: gentle pulsing/breathing
+    float sphereWeight = t;
+    float pulse = 1.0 + sin(uTime * 1.2 + aSeed * 10.0) * 0.02 * sphereWeight;
     pos *= pulse;
 
     vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
     gl_Position = projectionMatrix * mvPosition;
 
-    // Size attenuation: closer = bigger
+    // Size attenuation
     float pointSize = uSize * aScale * uPixelRatio * (300.0 / max(1.0, -mvPosition.z));
     gl_PointSize = max(1.0, pointSize);
 
-    // Depth-based alpha fade
     vDist = length(mvPosition.xyz);
-    vAlpha = smoothstep(30.0, 5.0, vDist) * 0.9 + 0.1;
-    vAlpha *= smoothstep(0.0, 0.2, aScale);
-  }
-
-  // 2D rotation helper
-  vec2 rotate2d(vec2 v, float a) {
-    float s = sin(a); float c = cos(a);
-    return vec2(v.x * c - v.y * s, v.x * s + v.y * c);
+    vAlpha = smoothstep(25.0, 3.0, vDist) * 0.85 + 0.15;
+    vAlpha *= smoothstep(0.0, 0.15, aScale);
+    vMorph = uMorph;
   }
 `;
 
 export const PARTICLE_FRAGMENT_SHADER = /* glsl */ `
   precision highp float;
 
-  uniform vec3 uColorA;   // Primary (cyan/blue)
-  uniform vec3 uColorB;   // Secondary (violet)
-  uniform vec3 uColorC;   // Accent (neon green)
-  uniform float uMorph;
+  uniform vec3 uColorTorus;   // Cyan
+  uniform vec3 uColorSphere;  // Neon green
 
   varying float vAlpha;
   varying float vDist;
+  varying float vMorph;
 
   void main() {
-    // Soft circular particle — smooth radial falloff
     vec2 uv = gl_PointCoord - 0.5;
     float dist = length(uv);
     if (dist > 0.5) discard;
 
-    // Glow: brighter center, soft edge
     float glow = 1.0 - smoothstep(0.0, 0.5, dist);
     glow = pow(glow, 1.5);
 
-    // Color mixing based on morph state
-    vec3 color;
-    if (uMorph <= 1.0) {
-      // Galaxy: mix cyan → violet with distance
-      float t = clamp(vDist / 15.0, 0.0, 1.0);
-      color = mix(uColorA, uColorB, t);
-      // Add green hint as we approach sphere
-      color = mix(color, uColorC, smoothstep(0.7, 1.0, uMorph) * 0.5);
-    } else {
-      // Grid: green dominant
-      color = mix(uColorC, uColorA, smoothstep(0.0, 0.5, uMorph - 1.0));
-    }
+    // Color: cyan → green based on morph
+    vec3 color = mix(uColorTorus, uColorSphere, vMorph);
 
-    // HDR intensity for bloom (multiply > 1.0)
-    float intensity = glow * 2.5;
-    color *= intensity;
+    // HDR intensity for bloom
+    color *= glow * 2.5;
 
     float alpha = glow * vAlpha;
     gl_FragColor = vec4(color, alpha);
