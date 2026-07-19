@@ -1664,3 +1664,105 @@ Stage Summary:
   - **mission:completed ownership**: The ContinuousReasoningLoop emits the terminal `mission:completed` event with full MissionStats (including qualityScore + durationMs). The ExecutiveAgent's `buildResult()` does NOT re-emit it — this avoids duplicate events in the SSE stream. The `execute()` method's crash-fallback path DOES emit `mission:completed` (with a fallback stats object) because the loop never got a chance to.
   - **No breaking changes to ReActLoop**: The spec says "Don't break existing ReActLoop — ContinuousReasoningLoop wraps it". The ReActLoop is used as-is — each batch creates a fresh instance with the appropriate `maxIterations`. No methods were added, no fields were changed, no behavior was modified. The existing `run()` method works exactly as before for any caller that uses ReActLoop directly.
 - **Quality**: 0 TypeScript errors, 0 ESLint errors. Both passed on the first try.
+
+---
+Task ID: redesign-landing-cinematic
+Agent: full-stack-developer (Cinematic Landing Page)
+Task: Complete redesign of landing page with split-screen hero + 3D AI Core + cinematic sections.
+
+Work Log:
+- Read worklog.md, current landing-view.tsx, ai-core.tsx, globals.css, i18n.ts, store.ts, providers.ts, personalization-store.ts, language-switcher.tsx, page.tsx, shared/ui.tsx to understand the full project context.
+- Created /agent-ctx/redesign-landing-cinematic-cinematic-landing-page.md with task plan.
+- Added 500+ lines of cinematic CSS classes to src/app/globals.css:
+  * `.cinematic-bg` — deep black canvas with cyan/violet/emerald radial gradients + light-mode variant.
+  * `.cinematic-grid` — sci-fi perspective floor grid (masked radial).
+  * `.cinematic-nav` with `[data-scrolled]` — transparent → glass blur on scroll.
+  * `.cinematic-headline-gradient` — animated cyan→violet→emerald gradient text.
+  * `.cinematic-pill` — glowing cyan badge with live-dot.
+  * `.cinematic-input-wrap[data-focused]` — repo input with focus glow ring.
+  * `.cinematic-btn-primary` — gradient cyan→violet CTA with hover shimmer sweep.
+  * `.cinematic-btn-outline` — outline CTA with neon hover.
+  * `.live-dot` + `@keyframes live-ping` — pulsing green status dot.
+  * `.cinematic-card` + `:hover` lift + animated gradient border via mask-composite.
+  * `.cinematic-card-popular` — highlighted pricing card with double border + glow.
+  * `.cinematic-eyebrow` — monospace uppercase tracked label.
+  * `.cinematic-marquee` + `cinematic-marquee-mask` — infinite tech-logo scroll.
+  * `.cinematic-link` — animated underline grow.
+  * `.cinematic-flow-line` — animated gradient flow for workflow steps.
+  * `.cinematic-halo`, `.cinematic-scanline`, `.cinematic-skeleton`, `.cinematic-cta-bg`.
+  * `.cinematic-scroll` custom scrollbar.
+  * `.cinematic-stat-cyan|violet|emerald|amber` — glowing stat numbers.
+  * `.cinematic-mobile-menu`, `.cinematic-dot`, `.cinematic-bento`, `.cinematic-divider`, `.cinematic-footer-link`.
+  * `cinematic-float` keyframe.
+- Added new i18n keys to locales/en/landing.json + locales/vi/landing.json using NESTED objects (matching common.json pattern, required because i18n getPath splits on dots):
+  * `nav.*` — Features, How It Works, Pricing, FAQ, Launch App, Open menu.
+  * `hero.*` — badge, headline, description, inputPlaceholder, ctaAnalyze, ctaDemo, statusReady, badgeKeys, badgeLocal, badgeNoSubs, badgeProviders.
+  * `trust.label`.
+  * `stats.*` — agents, providers, rules, subscriptions.
+  * `feature.multiagent.*`, `feature.workflow.*` (plan/execute/build/test/ship + planDesc…shipDesc), `feature.deep.*` (security/performance/bugs/architecture + desc).
+  * `how.step1/2/3.*`.
+  * `providers.connect`, `providers.viewAll`.
+  * `pricing.*` — title, desc, free/pro/enterprise + Price + Desc + flat F1…F5 feature keys, popular, getStarted.
+  * `finalCta.*` — title, desc, button.
+  * `footer.*` — tagline, product/resources/company/legal titles + flat productFeatures/resourcesDocs/etc + copyright.
+- Enhanced src/components/3d/ai-core.tsx (backwards-compatible — `active` prop still works):
+  * Removed unused `Sparkles` import.
+  * Added `ParticleRing` sub-component — 1000-particle flat tilted annulus (cyan + accent blend), additive blending, color-lerps cyan↔green on analyze, rotation speed multiplies 1× / 2.4× / 4× for idle/focus/analyze, breathing scale on focus/analyze. Disposes geometry+material on unmount.
+  * Added `WireSphere` sub-component — neon icosahedron wireframe, lerps cyan↔green on analyze, opacity varies by mode.
+  * Added `AICoreMode = "idle" | "focus" | "analyze"` exported type + `AICoreProps` interface.
+  * New props: `mode?`, `paletteOverride?`, `particleRing?`, `particleRingCount?`, `wireSphere?`, `parallaxIntensity?`, `forceBloom?`.
+  * `ParallaxRig` now accepts `intensity` multiplier.
+  * When `mode === "analyze"`, palette shifts to neon green ({primary:#22c55e, accent:#34d399, glow:rgba(52,211,153,0.55)}) for the cinematic "energy burst + color shift" effect.
+  * Honors `reducedMotion` from personalization store with static gradient fallback.
+- Built brand-new src/components/views/landing-view.tsx (1720+ lines) with all 11 sections:
+  1. `CinematicNav` — fixed top, transparent→glass on scroll, logo (gradient + glow), center nav links (Features/How It Works/Pricing/FAQ smooth-scroll), right side: LanguageSwitcher + Launch App button (gradient cyan→violet), mobile hamburger menu.
+  2. `HeroSection` — split-screen: LEFT content (badge pill, gradient headline, description, glowing repo input with focus state, Analyze Repo + Watch Demo CTAs, "11 agents ready" live status, 4 feature badges, try chips); RIGHT immersive 3D (AICore with mode=idle/focus/analyze driven by input focus + analyze click, particleRing 600 desktop/300 mobile/0 reduced-motion, wireSphere, forceBloom, parallax 1.4×). Scroll parallax (contentY up, threeY down + scale). Status caption "11 AGENTS · IDLE / AGENTS LISTENING / ANALYZING…".
+  3. `TrustStrip` — "TRUSTED BY DEVELOPERS" marquee of 8 tech logos (TypeScript/React/Next.js/Python/Go/Rust/Vue/Svelte) with mask fade.
+  4. `StatsSection` — 4 cinematic cards with animated counters (11 AI Agents cyan, 14 Providers violet, 66 Analysis Rules emerald, 0 Subscriptions amber) using AnimatedCounter.
+  5. `FeaturesSection` — 3 UNIQUE layouts:
+     * `MultiAgentFeature` — split card: LEFT animated SVG agent-network viz (11 nodes around central "EX" executive, connection lines draw-in, 3 expanding pulse rings); RIGHT title + desc + 4 checkmark bullets.
+     * `WorkflowFeature` — horizontal timeline with animated flow-line connecting 5 step cards (Plan→Execute→Build→Test→Ship) with icons, hover lift, step numbers.
+     * `DeepAnalysisFeature` — asymmetric bento grid (6-col): Security large (radial chart with HIGH/MED/LOW segments), Performance medium (bar chart), Bugs medium (bar chart), Architecture large (node-edge graph viz).
+  6. `HowItWorksSection` — 3 vertical storytelling cards with alternating left/right viz: Step 1 (animated repo input with typing cursor + terminal log lines), Step 2 (reused AgentNetworkViz), Step 3 (dashboard preview with 4 score cards + issue list).
+  7. `ProviderGrid` — 14 provider cards (PROVIDER_PRESETS) in 2/3/4-col grid, each with icon + name + category + "Connect" hover reveal, "View all providers" CTA.
+  8. `PricingSection` — 3 tiers (Free / Pro / Enterprise), middle "Pro" highlighted with `.cinematic-card-popular` + "POPULAR" gradient badge, feature lists with checkmarks, "Get Started" buttons.
+  9. `FAQSection` — accordion (shadcn/ui) with 6 questions, cyan accent on expand, cinematic-card wrapper.
+  10. `FinalCTA` — full-width dramatic section with `.cinematic-cta-bg` gradient + 30 floating particle dots, large gradient headline "Ready to Ship Code with AI?", pulsing primary CTA button.
+  11. `CinematicFooter` — minimal dark with brand + tagline + social icons (GitHub/Twitter/Discord), 4 link columns (Product/Resources/Company/Legal), divider, copyright + "All systems operational" status.
+  - AICore lazy-loaded via `dynamic(() => import("@/components/3d/ai-core").then(m => m.AICore), { ssr: false, loading: Hero3DFallback })`.
+  - Hero3DFallback — static gradient shimmer sphere while R3F chunk loads.
+  - All animations use framer-motion `whileInView` + `staggerChildren` + `fadeUp` variants. Mouse parallax via AICore's ParallaxRig.
+  - Preserved business logic: parseRepoUrl validation, setView("analyze") on submit, setView("providers") on Launch App, setView("dashboard") on footer, language switch via LanguageSwitcher, try-chips set URL + navigate.
+- Updated src/app/page.tsx — removed the old landing header (LandingView now owns its cinematic fixed nav + footer). Cleaned up unused imports (Github, Sparkles, setView, t in Home component). Footer() function preserved for non-landing views.
+- Fixed lint error in RadialMiniChart (`react-hooks/immutability` — reassigning `cumulative` in map). Refactored to use `segments.reduce()` returning immutable array of {len, offset, color}.
+- Ran `bun run lint` — passes with 0 errors.
+- Ran `npx tsc --noEmit` — passes with exit 0.
+- Verified rendered HTML via `curl http://localhost:3000/`:
+  * HTTP 200, ~175KB SSR output.
+  * All section IDs present (trust, features, how-it-works, pricing, faq).
+  * All cinematic-* CSS classes present.
+  * All i18n keys resolve to actual translated strings (AI Operating System, Multi-Agent System, Autonomous Workflow, Deep Analysis, Plan/Execute/Build/Test/Ship, 14 providers with Connect badges, Free/Pro/Enterprise pricing with POPULAR badge, FAQ questions, Ready to Ship Code with AI? final CTA, full footer).
+  * AICore chunk (`ai-core_tsx_*.js`) and landing-view chunk both loaded.
+  * No actual hydration errors (only `suppressHydrationWarning: true` on <html>, which is the standard next-themes pattern).
+
+Stage Summary:
+- Landing page COMPLETELY redesigned — not a single line of the old landing-view.tsx remains recognizable.
+- "Software from the future" aesthetic: deep black canvas, cyan/violet/emerald neon palette, monospace technical labels, gradient headline, glassmorphic nav, sci-fi grid floor, particle halo, glowing inputs.
+- Split-screen hero with live R3F 3D AI Core (particle ring + wireframe sphere + bloom + mouse parallax + mode-driven color shift to neon green on analyze click).
+- 11 distinct sections each with unique layout (no repetitive grids): split multi-agent + horizontal workflow timeline + asymmetric bento grid for deep analysis.
+- All 11 AI agents visualized as network nodes around central Executive in two different SVG visualizations.
+- Animations: framer-motion whileInView fade-up + stagger everywhere, parallax on hero, mouse-tracked camera in 3D, pulsing live dots, animated counters, drawing SVG lines, marquee, hover lifts with gradient border reveal.
+- Performance: AICore lazy-loaded (ssr:false) with shimmer fallback, particle count adapts to device (600 desktop / 300 mobile / 0 reduced-motion), honors personalization-store reducedMotion + performance mode with static fallback.
+- i18n: all new copy localized in en + vi. Technical terms (Plan/Execute/Build/Test/Ship, BYO AI Keys, Local-first, API Reference, Changelog, etc.) stay in English per project convention.
+- Backwards compatible: AICore's `active` prop still works for any other caller; personalization-store accent still respected unless `paletteOverride` is passed.
+- Business logic 100% preserved: parseRepoUrl flow, setView navigation (analyze/providers/dashboard), LanguageSwitcher, try-chips — all wired and functional.
+- Lint: 0 errors. TypeScript: 0 errors. Dev server: HTTP 200, all content rendering server-side.
+
+Files Modified:
+- src/app/globals.css (added ~500 lines of cinematic CSS)
+- src/components/3d/ai-core.tsx (added ParticleRing + WireSphere + mode/paletteOverride props)
+- src/components/views/landing-view.tsx (full rewrite — 1720+ lines)
+- src/app/page.tsx (removed old landing header, cleaned imports)
+- locales/en/landing.json (added nested nav/hero/trust/stats/feature/how/providers/pricing/finalCta/footer objects)
+- locales/vi/landing.json (same structure, Vietnamese translations)
+- agent-ctx/redesign-landing-cinematic-cinematic-landing-page.md (work record)

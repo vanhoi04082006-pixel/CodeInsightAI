@@ -550,3 +550,502 @@ button:active:not(:disabled) {
     opacity: 0;
   }
 }
+
+/* ============================================================
+   CINEMATIC LANDING PAGE — "Software from the Future"
+   ============================================================ */
+
+/* Deep black canvas for the landing experience.
+   Applied via wrapper so the rest of the app keeps its theme. */
+.cinematic-bg {
+  position: relative;
+  background:
+    radial-gradient(ellipse 70% 50% at 50% 0%, oklch(0.32 0.16 195 / 0.18), transparent 60%),
+    radial-gradient(ellipse 60% 60% at 90% 30%, oklch(0.28 0.14 300 / 0.12), transparent 60%),
+    radial-gradient(ellipse 60% 60% at 10% 70%, oklch(0.3 0.16 155 / 0.08), transparent 60%),
+    #050507;
+  color: #ffffff;
+}
+html.light .cinematic-bg {
+  background:
+    radial-gradient(ellipse 70% 50% at 50% 0%, oklch(0.85 0.08 195 / 0.25), transparent 60%),
+    radial-gradient(ellipse 60% 60% at 90% 30%, oklch(0.85 0.08 300 / 0.15), transparent 60%),
+    radial-gradient(ellipse 60% 60% at 10% 70%, oklch(0.85 0.08 155 / 0.10), transparent 60%),
+    #f5f7fa;
+  color: #0a0a0a;
+}
+
+/* Hero perspective grid — sci-fi floor */
+.cinematic-grid {
+  background-image:
+    linear-gradient(oklch(0.82 0.16 195 / 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, oklch(0.82 0.16 195 / 0.06) 1px, transparent 1px);
+  background-size: 56px 56px;
+  -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 100%, black 0%, transparent 80%);
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 100%, black 0%, transparent 80%);
+}
+html.light .cinematic-grid {
+  background-image:
+    linear-gradient(oklch(0.55 0.18 195 / 0.10) 1px, transparent 1px),
+    linear-gradient(90deg, oklch(0.55 0.18 195 / 0.10) 1px, transparent 1px);
+}
+
+/* Cinematic nav — transparent at top, glass blur after scroll */
+.cinematic-nav {
+  background: transparent;
+  border-bottom: 1px solid transparent;
+  transition: background-color 0.35s ease, border-color 0.35s ease, backdrop-filter 0.35s ease;
+}
+.cinematic-nav[data-scrolled="true"] {
+  background: oklch(0.05 0.01 270 / 0.7);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  border-bottom: 1px solid oklch(0.82 0.16 195 / 0.15);
+}
+html.light .cinematic-nav[data-scrolled="true"] {
+  background: oklch(0.98 0.005 250 / 0.75);
+  border-bottom: 1px solid oklch(0.55 0.18 195 / 0.2);
+}
+
+/* Gradient headline text — cyan → violet → emerald */
+.cinematic-headline-gradient {
+  background: linear-gradient(120deg, #ffffff 0%, #22d3ee 35%, #a78bfa 65%, #34d399 100%);
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: cinematic-gradient-shift 12s ease infinite;
+}
+@keyframes cinematic-gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+html.light .cinematic-headline-gradient {
+  background: linear-gradient(120deg, #0a0a0a 0%, #06b6d4 35%, #7c3aed 65%, #059669 100%);
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: cinematic-gradient-shift 12s ease infinite;
+}
+
+/* Glowing cyan pill badge */
+.cinematic-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.875rem;
+  border-radius: 999px;
+  background: oklch(0.82 0.16 195 / 0.08);
+  border: 1px solid oklch(0.82 0.16 195 / 0.3);
+  color: oklch(0.85 0.16 195);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  box-shadow: 0 0 24px oklch(0.82 0.16 195 / 0.2), inset 0 0 12px oklch(0.82 0.16 195 / 0.05);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+html.light .cinematic-pill {
+  background: oklch(0.55 0.18 195 / 0.10);
+  border-color: oklch(0.55 0.18 195 / 0.4);
+  color: oklch(0.45 0.18 195);
+  box-shadow: 0 0 18px oklch(0.55 0.18 195 / 0.15);
+}
+
+/* Glowing repo input border */
+.cinematic-input-wrap {
+  position: relative;
+  border-radius: 16px;
+  background: oklch(0.08 0.01 270 / 0.7);
+  border: 1px solid oklch(0.82 0.16 195 / 0.2);
+  transition: border-color 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.cinematic-input-wrap[data-focused="true"] {
+  border-color: oklch(0.82 0.16 195 / 0.7);
+  box-shadow:
+    0 0 0 4px oklch(0.82 0.16 195 / 0.12),
+    0 0 32px oklch(0.82 0.16 195 / 0.35),
+    0 8px 32px oklch(0 0 0 / 0.4);
+  background: oklch(0.1 0.01 270 / 0.8);
+}
+html.light .cinematic-input-wrap {
+  background: oklch(1 0 0 / 0.7);
+  border-color: oklch(0.55 0.18 195 / 0.3);
+}
+html.light .cinematic-input-wrap[data-focused="true"] {
+  border-color: oklch(0.55 0.18 195 / 0.8);
+  box-shadow:
+    0 0 0 4px oklch(0.55 0.18 195 / 0.15),
+    0 0 24px oklch(0.55 0.18 195 / 0.25);
+  background: oklch(1 0 0 / 0.9);
+}
+
+/* CTA buttons */
+.cinematic-btn-primary {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #22d3ee 0%, #06b6d4 40%, #a78bfa 100%);
+  color: #050507;
+  font-weight: 600;
+  font-size: 0.875rem;
+  border: none;
+  cursor: pointer;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.3s ease, filter 0.2s ease;
+  box-shadow:
+    0 0 24px oklch(0.82 0.16 195 / 0.45),
+    0 0 56px oklch(0.7 0.22 300 / 0.25),
+    0 4px 16px oklch(0 0 0 / 0.3);
+  will-change: transform;
+}
+.cinematic-btn-primary:hover {
+  transform: translateY(-1px) scale(1.02);
+  box-shadow:
+    0 0 32px oklch(0.82 0.16 195 / 0.65),
+    0 0 72px oklch(0.7 0.22 300 / 0.4),
+    0 6px 20px oklch(0 0 0 / 0.4);
+  filter: brightness(1.05);
+}
+.cinematic-btn-primary:active {
+  transform: translateY(0) scale(0.98);
+}
+.cinematic-btn-primary::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 40%, oklch(1 0 0 / 0.25) 50%, transparent 60%);
+  transform: translateX(-100%);
+  transition: transform 0.6s ease;
+  pointer-events: none;
+}
+.cinematic-btn-primary:hover::before {
+  transform: translateX(100%);
+}
+
+.cinematic-btn-outline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 12px;
+  background: oklch(1 0 0 / 0.03);
+  color: #ffffff;
+  font-weight: 500;
+  font-size: 0.875rem;
+  border: 1px solid oklch(0.82 0.16 195 / 0.3);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.cinematic-btn-outline:hover {
+  background: oklch(0.82 0.16 195 / 0.08);
+  border-color: oklch(0.82 0.16 195 / 0.6);
+  box-shadow: 0 0 24px oklch(0.82 0.16 195 / 0.2);
+  transform: translateY(-1px);
+}
+html.light .cinematic-btn-outline {
+  color: #0a0a0a;
+  background: oklch(0 0 0 / 0.02);
+}
+
+/* Pulsing live dot */
+.live-dot {
+  position: relative;
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #34d399;
+  box-shadow: 0 0 12px #34d399;
+}
+.live-dot::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 999px;
+  background: #34d399;
+  opacity: 0.5;
+  animation: live-ping 2s ease-out infinite;
+}
+@keyframes live-ping {
+  0% { transform: scale(0.8); opacity: 0.6; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+
+/* Card with hover lift + neon border glow */
+.cinematic-card {
+  position: relative;
+  background: oklch(0.08 0.01 270 / 0.5);
+  border: 1px solid oklch(1 0 0 / 0.06);
+  border-radius: 16px;
+  padding: 1.5rem;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
+  overflow: hidden;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.cinematic-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, oklch(0.82 0.16 195 / 0), oklch(0.82 0.16 195 / 0));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  transition: background 0.3s ease;
+  pointer-events: none;
+}
+.cinematic-card:hover {
+  transform: translateY(-4px);
+  border-color: oklch(0.82 0.16 195 / 0.3);
+  background: oklch(0.1 0.01 270 / 0.6);
+  box-shadow:
+    0 12px 40px oklch(0 0 0 / 0.5),
+    0 0 24px oklch(0.82 0.16 195 / 0.15);
+}
+.cinematic-card:hover::before {
+  background: linear-gradient(135deg, oklch(0.82 0.16 195 / 0.6), oklch(0.7 0.22 300 / 0.4));
+}
+html.light .cinematic-card {
+  background: oklch(1 0 0 / 0.6);
+  border-color: oklch(0.18 0.02 270 / 0.08);
+}
+html.light .cinematic-card:hover {
+  background: oklch(1 0 0 / 0.85);
+  border-color: oklch(0.55 0.18 195 / 0.4);
+  box-shadow: 0 12px 32px oklch(0 0 0 / 0.08), 0 0 18px oklch(0.55 0.18 195 / 0.18);
+}
+
+/* Pricing card highlight (popular) */
+.cinematic-card-popular {
+  border-color: oklch(0.82 0.16 195 / 0.45);
+  box-shadow:
+    0 0 0 1px oklch(0.82 0.16 195 / 0.4),
+    0 0 40px oklch(0.82 0.16 195 / 0.2),
+    0 12px 48px oklch(0 0 0 / 0.5);
+  background: oklch(0.1 0.02 250 / 0.7);
+}
+
+/* Section eyebrow label */
+.cinematic-eyebrow {
+  display: inline-block;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: oklch(0.82 0.16 195);
+  text-shadow: 0 0 12px oklch(0.82 0.16 195 / 0.4);
+}
+
+/* Marquee for tech logos */
+.cinematic-marquee {
+  display: flex;
+  width: max-content;
+  animation: cinematic-marquee 40s linear infinite;
+}
+@keyframes cinematic-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.cinematic-marquee-mask {
+  -webkit-mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
+  mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
+}
+
+/* Animated underline link */
+.cinematic-link {
+  position: relative;
+  color: oklch(0.7 0.02 260);
+  font-size: 0.875rem;
+  transition: color 0.2s ease;
+}
+html.light .cinematic-link { color: oklch(0.4 0.02 260); }
+.cinematic-link::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -3px;
+  width: 0;
+  height: 1px;
+  background: linear-gradient(90deg, #22d3ee, #a78bfa);
+  transition: width 0.3s ease;
+}
+.cinematic-link:hover {
+  color: #ffffff;
+}
+html.light .cinematic-link:hover { color: #0a0a0a; }
+.cinematic-link:hover::after {
+  width: 100%;
+}
+
+/* Horizontal flow line for workflow steps */
+.cinematic-flow-line {
+  background: linear-gradient(90deg,
+    transparent 0%,
+    oklch(0.82 0.16 195 / 0.6) 10%,
+    oklch(0.7 0.22 300 / 0.6) 50%,
+    oklch(0.78 0.18 155 / 0.6) 90%,
+    transparent 100%);
+  background-size: 200% 100%;
+  animation: cinematic-flow 6s linear infinite;
+}
+@keyframes cinematic-flow {
+  0% { background-position: 0% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Glow halo behind hero */
+.cinematic-halo {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 50% 40% at 70% 50%, oklch(0.82 0.16 195 / 0.12), transparent 60%),
+    radial-gradient(ellipse 40% 50% at 30% 60%, oklch(0.7 0.22 300 / 0.08), transparent 60%);
+}
+
+/* Scanline overlay for terminal/code blocks */
+.cinematic-scanline {
+  position: relative;
+  overflow: hidden;
+}
+.cinematic-scanline::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, transparent 0%, oklch(0.82 0.16 195 / 0.04) 50%, transparent 100%);
+  background-size: 100% 8px;
+  pointer-events: none;
+  opacity: 0.4;
+}
+
+/* Skeleton shimmer for hero loading */
+.cinematic-skeleton {
+  background: linear-gradient(90deg,
+    oklch(0.15 0.01 270 / 0.6) 0%,
+    oklch(0.25 0.02 270 / 0.8) 50%,
+    oklch(0.15 0.01 270 / 0.6) 100%);
+  background-size: 200% 100%;
+  animation: cinematic-skeleton-shimmer 1.6s linear infinite;
+  border-radius: 8px;
+}
+@keyframes cinematic-skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Final CTA gradient background */
+.cinematic-cta-bg {
+  background:
+    radial-gradient(ellipse 60% 80% at 50% 100%, oklch(0.82 0.16 195 / 0.25), transparent 60%),
+    radial-gradient(ellipse 50% 60% at 20% 50%, oklch(0.7 0.22 300 / 0.18), transparent 60%),
+    radial-gradient(ellipse 50% 60% at 80% 50%, oklch(0.78 0.18 155 / 0.12), transparent 60%);
+}
+
+/* Custom scrollbar inside scrollable lists */
+.cinematic-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.cinematic-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.cinematic-scroll::-webkit-scrollbar-thumb {
+  background: oklch(0.82 0.16 195 / 0.3);
+  border-radius: 999px;
+}
+.cinematic-scroll::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.82 0.16 195 / 0.5);
+}
+
+/* Floating animation for orbiting icons */
+@keyframes cinematic-float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-8px) rotate(2deg); }
+}
+.cinematic-float { animation: cinematic-float 6s ease-in-out infinite; }
+
+/* Glow text for stats numbers */
+.cinematic-stat-cyan {
+  color: #22d3ee;
+  text-shadow: 0 0 24px oklch(0.82 0.16 195 / 0.6), 0 0 48px oklch(0.82 0.16 195 / 0.3);
+}
+.cinematic-stat-violet {
+  color: #a78bfa;
+  text-shadow: 0 0 24px oklch(0.7 0.22 300 / 0.6), 0 0 48px oklch(0.7 0.22 300 / 0.3);
+}
+.cinematic-stat-emerald {
+  color: #34d399;
+  text-shadow: 0 0 24px oklch(0.78 0.18 155 / 0.6), 0 0 48px oklch(0.78 0.18 155 / 0.3);
+}
+.cinematic-stat-amber {
+  color: #fbbf24;
+  text-shadow: 0 0 24px oklch(0.82 0.17 75 / 0.6), 0 0 48px oklch(0.82 0.17 75 / 0.3);
+}
+
+/* Mobile menu panel */
+.cinematic-mobile-menu {
+  background: oklch(0.05 0.01 270 / 0.95);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border-bottom: 1px solid oklch(0.82 0.16 195 / 0.2);
+}
+html.light .cinematic-mobile-menu {
+  background: oklch(0.98 0.005 250 / 0.95);
+  border-bottom-color: oklch(0.55 0.18 195 / 0.3);
+}
+
+/* Connector dots for step diagrams */
+.cinematic-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: oklch(0.82 0.16 195);
+  box-shadow: 0 0 8px oklch(0.82 0.16 195 / 0.8);
+}
+
+/* Bento grid asymmetric layout */
+.cinematic-bento {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 1rem;
+}
+@media (max-width: 768px) {
+  .cinematic-bento {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Section divider */
+.cinematic-divider {
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    oklch(0.82 0.16 195 / 0.3) 50%,
+    transparent 100%);
+}
+
+/* Footer link */
+.cinematic-footer-link {
+  color: oklch(0.65 0.02 260);
+  font-size: 0.8125rem;
+  transition: color 0.2s ease;
+}
+.cinematic-footer-link:hover {
+  color: #22d3ee;
+}

@@ -83,5 +83,156 @@
   "faqQ5": "Which providers are supported?",
   "faqA5": "OpenRouter, OpenAI, Anthropic (Claude), Google Gemini, DeepSeek, Groq, Ollama, LM Studio, Azure OpenAI, Together AI, Fireworks AI, Mistral, xAI (Grok), and any OpenAI-compatible custom endpoint. You can connect unlimited providers.",
   "faqQ6": "Can I analyze private repositories?",
-  "faqA6": "Yes. Because the analysis runs through your own AI keys and runs locally, private repos never pass through a third-party SaaS. Clone the repo locally and point CodeInsight at it, or paste a URL your provider can reach."
+  "faqA6": "Yes. Because the analysis runs through your own AI keys and runs locally, private repos never pass through a third-party SaaS. Clone the repo locally and point CodeInsight at it, or paste a URL your provider can reach.",
+
+  "nav": {
+    "features": "Features",
+    "howItWorks": "How It Works",
+    "pricing": "Pricing",
+    "faq": "FAQ",
+    "launch": "Launch App",
+    "openMenu": "Open menu"
+  },
+
+  "hero": {
+    "badge": "AI Operating System",
+    "headline": "Paste a GitHub Repo. AI Understands Everything.",
+    "description": "11 AI agents analyze, fix, test, and ship code autonomously. Your keys. Your data. Your models.",
+    "inputPlaceholder": "https://github.com/vercel/next.js",
+    "ctaAnalyze": "Analyze Repo",
+    "ctaDemo": "Watch Demo",
+    "statusReady": "11 agents ready",
+    "badgeKeys": "BYO AI Keys",
+    "badgeLocal": "Local-first",
+    "badgeNoSubs": "No Subscriptions",
+    "badgeProviders": "14 Providers"
+  },
+
+  "trust": {
+    "label": "TRUSTED BY DEVELOPERS"
+  },
+
+  "stats": {
+    "agents": "AI Agents",
+    "providers": "Providers",
+    "rules": "Analysis Rules",
+    "subscriptions": "Subscriptions"
+  },
+
+  "feature": {
+    "multiagent": {
+      "title": "Multi-Agent System",
+      "desc": "Eleven specialized AI agents — Repository Analyst, Security, Performance, Bug-Fixer, Test, Docs, DevOps, Refactoring, PR, Code Reviewer, and an Executive — collaborate like a real engineering team. Each agent owns its domain and reports to a shared context.",
+      "bullet1": "Parallel analysis across security, perf, bugs, architecture",
+      "bullet2": "Shared memory: every agent reads what others learned",
+      "bullet3": "Executive agent plans, replans, and gates quality",
+      "bullet4": "Real-time agent activity feed with consensus voting"
+    },
+    "workflow": {
+      "title": "Autonomous Workflow",
+      "desc": "Plan, Execute, Build, Test, Ship — fully autonomous, fully observable.",
+      "plan": "Plan",
+      "execute": "Execute",
+      "build": "Build",
+      "test": "Test",
+      "ship": "Ship",
+      "planDesc": "Executive agent decomposes the goal into a dependency graph of tasks.",
+      "executeDesc": "Specialized agents pick up tasks and operate on real files.",
+      "buildDesc": "Code is written, imports updated, diffs validated.",
+      "testDesc": "Test agent runs suites, fails fast, and feeds results back.",
+      "shipDesc": "PR agent opens a reviewable change with full context."
+    },
+    "deep": {
+      "title": "Deep Analysis",
+      "desc": "Every commit, every file, every dependency — scored, ranked, and explained.",
+      "security": "Security",
+      "securityDesc": "Hardcoded secrets, weak hashing, XSS, SSRF, injection — with concrete remediation steps.",
+      "performance": "Performance",
+      "performanceDesc": "Bundle bloat, N+1 queries, memory leaks, render bottlenecks ranked by impact.",
+      "bugs": "Bugs",
+      "bugsDesc": "Race conditions, null derefs, off-by-one errors, logic flaws with severity scoring.",
+      "architecture": "Architecture",
+      "architectureDesc": "Circular dependencies, dead code, module coupling, and a full dependency graph."
+    }
+  },
+
+  "how": {
+    "step1": {
+      "title": "Paste Repository URL",
+      "desc": "Drop any public GitHub link. We clone, parse ASTs, and build the dependency graph in seconds."
+    },
+    "step2": {
+      "title": "AI Agents Collaborate",
+      "desc": "Eleven specialized agents analyze security, performance, bugs, and architecture in parallel — sharing context in real time."
+    },
+    "step3": {
+      "title": "Get Full Report + Ship",
+      "desc": "Scores, issues, diagrams, and an AI CTO ready to chat about your code. Ship fixes with one click."
+    }
+  },
+
+  "providers": {
+    "connect": "Connect",
+    "viewAll": "View all providers"
+  },
+
+  "pricing": {
+    "title": "Pricing for every team",
+    "desc": "No subscriptions, no billing — bring your own AI keys. Pricing below is what you'd pay if we ever charged. Today: it's free.",
+    "free": "Free",
+    "freePrice": "$0",
+    "freeDesc": "For individual developers",
+    "pro": "Pro",
+    "proPrice": "$0",
+    "proDesc": "For power users — today it's free",
+    "enterprise": "Enterprise",
+    "enterprisePrice": "$0",
+    "enterpriseDesc": "For teams running locally",
+    "popular": "POPULAR",
+    "getStarted": "Get Started",
+    "freeF1": "Unlimited analyses",
+    "freeF2": "14 AI providers",
+    "freeF3": "Local-first storage",
+    "freeF4": "11 AI agents",
+    "proF1": "Everything in Free",
+    "proF2": "Autonomous workflow runner",
+    "proF3": "Mission control dashboard",
+    "proF4": "Agent personality system",
+    "proF5": "Priority model routing",
+    "enterpriseF1": "Everything in Pro",
+    "enterpriseF2": "Self-hosted, air-gapped",
+    "enterpriseF3": "Custom agent pipelines",
+    "enterpriseF4": "Audit logs & SSO ready"
+  },
+
+  "finalCta": {
+    "title": "Ready to Ship Code with AI?",
+    "desc": "Launch CodeInsight AI, paste a repo, and watch eleven agents do the work of a senior engineering team — in 60 seconds.",
+    "button": "Launch CodeInsight AI"
+  },
+
+  "footer": {
+    "tagline": "Local-first AI development platform.",
+    "product": "Product",
+    "resources": "Resources",
+    "company": "Company",
+    "legal": "Legal",
+    "productFeatures": "Features",
+    "productProviders": "Providers",
+    "productPricing": "Pricing",
+    "productDashboard": "Dashboard",
+    "resourcesDocs": "Documentation",
+    "resourcesApi": "API Reference",
+    "resourcesChangelog": "Changelog",
+    "resourcesStatus": "Status",
+    "companyAbout": "About",
+    "companyBlog": "Blog",
+    "companyCareers": "Careers",
+    "companyContact": "Contact",
+    "legalPrivacy": "Privacy",
+    "legalTerms": "Terms",
+    "legalSecurity": "Security",
+    "legalLicense": "License",
+    "copyright": "© 2026 CodeInsight AI. Built for developers, by developers."
+  }
 }

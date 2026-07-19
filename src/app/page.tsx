@@ -17,12 +17,10 @@ import { ProvidersView } from "@/components/views/providers-view";
 import { PersonalitiesView } from "@/components/views/personalities-view";
 import { MissionControlView } from "@/components/views/mission-control-view";
 import { CommandPalette } from "@/components/shared/command-palette";
-import { Github, Sparkles, Heart } from "lucide-react";
+import { Heart } from "lucide-react";
 
 export default function Home() {
   const view = useAppStore((s) => s.view);
-  const setView = useAppStore((s) => s.setView);
-  const { t } = useT();
 
   // ⌘K to open command palette
   useEffect(() => {
@@ -43,44 +41,8 @@ export default function Home() {
       <AnimatedBackground />
 
       {isLanding ? (
-        /* Landing = full bleed, own layout with footer */
-        <div className="flex min-h-screen flex-col">
-          {/* landing top nav */}
-          <header className="glass sticky top-0 z-40 flex h-16 items-center justify-between px-4 md:px-8">
-            <button onClick={() => setView("landing")} className="flex items-center gap-2">
-              <div className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-400/30 to-violet-500/30 neon-border-cyan">
-                <div className="absolute inset-0 rounded-xl bg-cyan-400/20 blur-md animate-pulse-glow" />
-                <img src="/logo.png" alt="CodeInsight AI" className="relative h-7 w-7 rounded-lg object-contain" />
-              </div>
-              <div className="leading-tight">
-                <span className="text-sm font-bold">CodeInsight</span>
-                <span className="ml-1 text-[10px] uppercase tracking-[0.2em] text-neon-cyan">AI</span>
-              </div>
-            </button>
-            <nav className="hidden items-center gap-6 text-sm text-muted-foreground md:flex">
-              <button onClick={() => setView("providers")} className="hover:text-foreground">{t("common", "nav.providers")}</button>
-              <button onClick={() => setView("history")} className="hover:text-foreground">{t("common", "nav.history")}</button>
-              <button onClick={() => setView("settings")} className="hover:text-foreground">{t("common", "nav.settings")}</button>
-            </nav>
-            <div className="flex items-center gap-2">
-              <button onClick={() => setView("dashboard")} className="hidden text-sm text-muted-foreground hover:text-foreground sm:block">
-                {t("common", "nav.dashboard")}
-              </button>
-              <button
-                onClick={() => setView("analyze")}
-                className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-cyan-500 to-violet-500 px-3 py-1.5 text-xs font-medium text-white transition hover:opacity-90"
-              >
-                <Sparkles className="h-3.5 w-3.5" /> {t("common", "actions.analyzeRepo")}
-              </button>
-            </div>
-          </header>
-
-          <main className="flex-1">
-            <LandingView />
-          </main>
-
-          <Footer />
-        </div>
+        /* Landing = full bleed, owns its own cinematic nav + footer */
+        <LandingView />
       ) : (
         /* App shell with sidebar + topbar */
         <div className="flex flex-1">
