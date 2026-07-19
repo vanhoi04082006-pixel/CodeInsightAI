@@ -59,9 +59,9 @@ import { LanguageSwitcher } from "@/components/shared/language-switcher";
 import { AnimatedCounter } from "@/components/shared/ui";
 import { useIsMobile } from "@/hooks/use-mobile";
 
-// Lazy-load the 3D AI Core — R3F must be client-only.
-const AICore = dynamic(
-  () => import("@/components/3d/ai-core").then((m) => m.AICore),
+// Lazy-load the new 3D Scene — R3F must be client-only.
+const Scene3D = dynamic(
+  () => import("@/components/3d/scene").then((m) => m.Scene),
   {
     ssr: false,
     loading: () => <Hero3DFallback />,
@@ -229,8 +229,12 @@ function HeroSection() {
   const [error, setError] = useState("");
   const [focused, setFocused] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
-  const isMobile = useIsMobile();
-  const reducedMotion = usePersonalizationStore((s) => s.reducedMotion);
+
+  // Morph state: 0 = galaxy, 1 = sphere, 2 = grid
+  // When user focuses input → morph to sphere (0.6)
+  // When user clicks Analyze → morph to grid (2.0) + energy burst
+  const [morphState, setMorphState] = useState(0);
+  const animLevel = usePersonalizationStore((s) => s.animation);
 
   const heroRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({
@@ -242,15 +246,6 @@ function HeroSection() {
   const threeY = useTransform(scrollYProgress, [0, 1], [0, 80]);
   const threeScale = useTransform(scrollYProgress, [0, 1], [1, 1.08]);
 
-  // Particle count: 600 desktop, 300 mobile, 0 reduced-motion
-  const particleCount = reducedMotion ? 0 : isMobile ? 300 : 600;
-
-  const aiMode: "idle" | "focus" | "analyze" = analyzing
-    ? "analyze"
-    : focused
-      ? "focus"
-      : "idle";
-
   const startAnalysis = () => {
     const parsed = parseRepoUrl(url);
     if (!parsed.valid) {
@@ -259,10 +254,20 @@ function HeroSection() {
     }
     setError("");
     setAnalyzing(true);
-    // Brief burst, then navigate to the analyze view.
-    window.setTimeout(() => {
-      setView("analyze");
-    }, 650);
+    // Cinematic morph sequence: galaxy → sphere → grid → navigate
+    setMorphState(1); // sphere (energy orb)
+    setTimeout(() => setMorphState(2), 400); // grid (data dispersion)
+    setTimeout(() => setView("analyze"), 1200);
+  };
+
+  // Drive morph from input focus
+  const onInputFocus = () => {
+    setFocused(true);
+    if (!analyzing) setMorphState(0.6); // partial sphere
+  };
+  const onInputBlur = () => {
+    setFocused(false);
+    if (!analyzing) setMorphState(0); // back to galaxy
   };
 
   const heroBadges = [
@@ -343,8 +348,8 @@ function HeroSection() {
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && startAnalysis()}
-                  onFocus={() => setFocused(true)}
-                  onBlur={() => setFocused(false)}
+                  onFocus={onInputFocus}
+                  onBlur={onInputBlur}
                   placeholder={t("landing", "hero.inputPlaceholder")}
                   className="border-0 bg-transparent px-1 font-mono text-sm shadow-none focus-visible:ring-0"
                   aria-label="GitHub repository URL"
@@ -433,15 +438,24 @@ function HeroSection() {
         >
           {/* Glow behind */}
           <div className="pointer-events-none absolute left-1/2 top-1/2 h-[400px] w-[400px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-cyan-500/15 blur-[100px]" />
-          <AICore
-            mode={aiMode}
+          <Scene3D
+            morph={morphState}
+            active={analyzing}
             className="absolute inset-0 h-full w-full"
           />
-          {/* Caption */}
-          <div className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 text-center">
-            <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-cyan-300/60">
-              {analyzing ? "ANALYZING…" : focused ? "AGENTS LISTENING" : "11 AGENTS · IDLE"}
-            </p>
+          {/* HUD overlay — cyberpunk metadata */}
+          <div className="pointer-events-none absolute inset-0 flex flex-col justify-between p-4">
+            {/* Top HUD bar */}
+            <div className="flex items-start justify-between text-[9px] font-mono uppercase tracking-wider text-cyan-300/40">
+              <span>VOLUME.CORE.SYS // [88.42.010]</span>
+              <span>{analyzing ? "STATUS: ANALYZING" : focused ? "STATUS: FOCUS" : "STATUS: OPTIMAL"}</span>
+            </div>
+            {/* Bottom caption */}
+            <div className="text-center">
+              <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-cyan-300/60">
+                {analyzing ? "DATA DISPERSION…" : focused ? "ENERGY CONVERGING" : "GALAXY VORTEX · IDLE"}
+              </p>
+            </div>
           </div>
         </motion.div>
       </div>
