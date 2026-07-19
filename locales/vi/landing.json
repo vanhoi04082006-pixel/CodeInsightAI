@@ -83,5 +83,156 @@
   "faqQ5": "Những provider nào được hỗ trợ?",
   "faqA5": "OpenRouter, OpenAI, Anthropic (Claude), Google Gemini, DeepSeek, Groq, Ollama, LM Studio, Azure OpenAI, Together AI, Fireworks AI, Mistral, xAI (Grok), và bất kỳ custom endpoint tương thích OpenAI. Bạn có thể kết nối không giới hạn provider.",
   "faqQ6": "Tôi có thể phân tích private repository không?",
-  "faqA6": "Có. Vì phân tích chạy qua API key của riêng bạn và chạy local, private repo không bao giờ đi qua SaaS bên thứ ba. Clone repo local và trỏ CodeInsight vào, hoặc dán URL mà provider có thể truy cập."
+  "faqA6": "Có. Vì phân tích chạy qua API key của riêng bạn và chạy local, private repo không bao giờ đi qua SaaS bên thứ ba. Clone repo local và trỏ CodeInsight vào, hoặc dán URL mà provider có thể truy cập.",
+
+  "nav": {
+    "features": "Tính năng",
+    "howItWorks": "Cách hoạt động",
+    "pricing": "Bảng giá",
+    "faq": "FAQ",
+    "launch": "Khởi động App",
+    "openMenu": "Mở menu"
+  },
+
+  "hero": {
+    "badge": "Hệ điều hành AI",
+    "headline": "Dán GitHub Repo. AI Hiểu Tất Cả.",
+    "description": "11 AI agent phân tích, sửa lỗi, kiểm thử, và ship code tự động. Keys của bạn. Data của bạn. Models của bạn.",
+    "inputPlaceholder": "https://github.com/vercel/next.js",
+    "ctaAnalyze": "Phân tích Repo",
+    "ctaDemo": "Xem Demo",
+    "statusReady": "11 agent sẵn sàng",
+    "badgeKeys": "BYO AI Keys",
+    "badgeLocal": "Local-first",
+    "badgeNoSubs": "Không Subscription",
+    "badgeProviders": "14 Providers"
+  },
+
+  "trust": {
+    "label": "ĐƯỢC DEVELOPER TIN DÙNG"
+  },
+
+  "stats": {
+    "agents": "AI Agent",
+    "providers": "Provider",
+    "rules": "Quy tắc phân tích",
+    "subscriptions": "Subscription"
+  },
+
+  "feature": {
+    "multiagent": {
+      "title": "Hệ thống Multi-Agent",
+      "desc": "11 AI agent chuyên biệt — Repository Analyst, Security, Performance, Bug-Fixer, Test, Docs, DevOps, Refactoring, PR, Code Reviewer, và Executive — cộng tác như một team engineering thật. Mỗi agent sở hữu lĩnh vực riêng và báo cáo lên context chung.",
+      "bullet1": "Phân tích song song security, perf, bugs, architecture",
+      "bullet2": "Shared memory: mọi agent đều đọc được kết quả của nhau",
+      "bullet3": "Executive agent lập kế hoạch, replan, và gate chất lượng",
+      "bullet4": "Activity feed real-time với bình thuận đa agent"
+    },
+    "workflow": {
+      "title": "Workflow Tự động",
+      "desc": "Plan, Execute, Build, Test, Ship — hoàn toàn tự động, hoàn toàn quan sát được.",
+      "plan": "Plan",
+      "execute": "Execute",
+      "build": "Build",
+      "test": "Test",
+      "ship": "Ship",
+      "planDesc": "Executive agent phân rã mục tiêu thành đồ thị phụ thuộc task.",
+      "executeDesc": "Agent chuyên biệt nhận task và thao tác file thật.",
+      "buildDesc": "Code được viết, import cập nhật, diff xác thực.",
+      "testDesc": "Test agent chạy suite, fail nhanh, và feedback kết quả.",
+      "shipDesc": "PR agent mở thay đổi reviewable với context đầy đủ."
+    },
+    "deep": {
+      "title": "Phân tích Sâu",
+      "desc": "Mỗi commit, mỗi file, mỗi dependency — được chấm điểm, xếp hạng, và giải thích.",
+      "security": "Security",
+      "securityDesc": "Secret hardcode, hash yếu, XSS, SSRF, injection — với bước khắc phục cụ thể.",
+      "performance": "Performance",
+      "performanceDesc": "Bundle bloat, N+1 query, memory leak, render bottleneck — xếp theo impact.",
+      "bugs": "Bugs",
+      "bugsDesc": "Race condition, null deref, off-by-one, logic flaw — với severity scoring.",
+      "architecture": "Architecture",
+      "architectureDesc": "Circular dependency, dead code, module coupling, và đồ thị dependency đầy đủ."
+    }
+  },
+
+  "how": {
+    "step1": {
+      "title": "Dán URL Repository",
+      "desc": "Dán link GitHub công khai. Clone, parse AST, và dựng dependency graph trong vài giây."
+    },
+    "step2": {
+      "title": "AI Agent Cộng tác",
+      "desc": "11 agent chuyên biệt phân tích security, performance, bugs, architecture song song — chia sẻ context real-time."
+    },
+    "step3": {
+      "title": "Nhận Report + Ship",
+      "desc": "Score, issue, diagram, và AI CTO sẵn sàng chat về code. Ship fix với một cú click."
+    }
+  },
+
+  "providers": {
+    "connect": "Kết nối",
+    "viewAll": "Xem tất cả provider"
+  },
+
+  "pricing": {
+    "title": "Bảng giá cho mọi team",
+    "desc": "Không subscription, không billing — mang AI key của bạn. Bảng giá dưới đây là mức bạn sẽ trả nếu chúng tôi tính phí. Hôm nay: hoàn toàn miễn phí.",
+    "free": "Free",
+    "freePrice": "$0",
+    "freeDesc": "Cho developer cá nhân",
+    "pro": "Pro",
+    "proPrice": "$0",
+    "proDesc": "Cho power user — hôm nay miễn phí",
+    "enterprise": "Enterprise",
+    "enterprisePrice": "$0",
+    "enterpriseDesc": "Cho team chạy local",
+    "popular": "PHỔ BIẾN",
+    "getStarted": "Bắt đầu",
+    "freeF1": "Phân tích không giới hạn",
+    "freeF2": "14 AI provider",
+    "freeF3": "Lưu trữ local-first",
+    "freeF4": "11 AI agent",
+    "proF1": "Mọi thứ trong Free",
+    "proF2": "Autonomous workflow runner",
+    "proF3": "Mission control dashboard",
+    "proF4": "Agent personality system",
+    "proF5": "Priority model routing",
+    "enterpriseF1": "Mọi thứ trong Pro",
+    "enterpriseF2": "Self-hosted, air-gapped",
+    "enterpriseF3": "Custom agent pipeline",
+    "enterpriseF4": "Audit log & SSO ready"
+  },
+
+  "finalCta": {
+    "title": "Sẵn sàng Ship Code với AI?",
+    "desc": "Khởi động CodeInsight AI, dán repo, và xem 11 agent làm việc của một team engineering cấp cao — trong 60 giây.",
+    "button": "Khởi động CodeInsight AI"
+  },
+
+  "footer": {
+    "tagline": "Nền tảng phát triển AI local-first.",
+    "product": "Sản phẩm",
+    "resources": "Tài nguyên",
+    "company": "Công ty",
+    "legal": "Pháp lý",
+    "productFeatures": "Tính năng",
+    "productProviders": "Provider",
+    "productPricing": "Bảng giá",
+    "productDashboard": "Dashboard",
+    "resourcesDocs": "Tài liệu",
+    "resourcesApi": "API Reference",
+    "resourcesChangelog": "Changelog",
+    "resourcesStatus": "Status",
+    "companyAbout": "Giới thiệu",
+    "companyBlog": "Blog",
+    "companyCareers": "Tuyển dụng",
+    "companyContact": "Liên hệ",
+    "legalPrivacy": "Quyền riêng tư",
+    "legalTerms": "Điều khoản",
+    "legalSecurity": "Bảo mật",
+    "legalLicense": "License",
+    "copyright": "© 2026 CodeInsight AI. Xây cho developer, bởi developer."
+  }
 }

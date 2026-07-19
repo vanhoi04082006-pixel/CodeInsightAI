@@ -2,7 +2,7 @@
 "use client";
 
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Float, Sparkles } from "@react-three/drei";
+import { Float } from "@react-three/drei";
 import { EffectComposer, Bloom } from "@react-three/postprocessing";
 import { useMemo, useRef, useState, useEffect } from "react";
 import * as THREE from "three";
@@ -511,11 +511,11 @@ function EnergyParticles({ active, accent }: { active: boolean; accent: AccentPa
 /* ============================================================
    Mouse Parallax Camera Rig
    ============================================================ */
-function ParallaxRig() {
+function ParallaxRig({ intensity = 1 }: { intensity?: number }) {
   const { camera, pointer } = useThree();
   const target = useRef(new THREE.Vector3(0, 0, 7));
   useFrame(() => {
-    target.current.set(pointer.x * 1.8, pointer.y * 1.2, 7);
+    target.current.set(pointer.x * 1.8 * intensity, pointer.y * 1.2 * intensity, 7);
     camera.position.lerp(target.current, 0.04);
     camera.lookAt(0, 0, 0);
   });
@@ -523,9 +523,167 @@ function ParallaxRig() {
 }
 
 /* ============================================================
+   Particle Ring — 1000+ cyan particles in a flat tilted ring
+   Idle: slow rotation. Focus: faster. Analyze: green + fast + outward push.
+   ============================================================ */
+function ParticleRing({
+  mode,
+  accent,
+  count = 1000,
+}: {
+  mode: AICoreMode;
+  accent: AccentPalette;
+  count?: number;
+}) {
+  const ring = useRef<THREE.Points>(null!);
+
+  const cyanColor = useMemo(() => new THREE.Color("#22d3ee"), []);
+  const greenColor = useMemo(() => new THREE.Color("#34d399"), []);
+  const primaryColor = useMemo(() => new THREE.Color(accent.primary), [accent.primary]);
+
+  const geo = useMemo(() => {
+    const pos = new Float32Array(count * 3);
+    const col = new Float32Array(count * 3);
+    const innerR = 2.0;
+    const outerR = 3.2;
+    for (let i = 0; i < count; i++) {
+      // Distribute in a flat annulus (slight z thickness)
+      const t = Math.random();
+      const r = innerR + Math.sqrt(t) * (outerR - innerR);
+      const angle = Math.random() * Math.PI * 2;
+      const thickness = (Math.random() - 0.5) * 0.18;
+      pos[i * 3] = Math.cos(angle) * r;
+      pos[i * 3 + 1] = Math.sin(angle) * r * 0.18; // flatten on Y (tilted ellipse view)
+      pos[i * 3 + 2] = Math.sin(angle) * r + thickness;
+      const c = new THREE.Color().lerpColors(cyanColor, primaryColor, Math.random() * 0.5);
+      col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b;
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    g.setAttribute("color", new THREE.BufferAttribute(col, 3));
+    return g;
+  }, [count, cyanColor, primaryColor]);
+
+  // Material lives in a ref-tracked variable so useFrame can mutate it safely.
+  const material = useMemo(() => new THREE.PointsMaterial({
+    size: 0.05,
+    color: cyanColor.clone(),
+    vertexColors: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    transparent: true,
+    opacity: 0.95,
+    toneMapped: false,
+    sizeAttenuation: true,
+  }), [cyanColor]);
+
+  // Track color lerp (0 = cyan, 1 = green) for smooth analyze transition.
+  const colorLerp = useRef(0);
+
+  // Dispose material on unmount.
+  useEffect(() => () => { material.dispose(); geo.dispose(); }, [material, geo]);
+
+  useFrame((state, delta) => {
+    const t = state.clock.getElapsedTime();
+    const targetLerp = mode === "analyze" ? 1 : 0;
+    colorLerp.current += (targetLerp - colorLerp.current) * 0.05;
+
+    // Lerp material color toward target (cyan ↔ green)
+    if (Math.abs(targetLerp - colorLerp.current) > 0.002) {
+      const c = new THREE.Color().lerpColors(cyanColor, greenColor, colorLerp.current);
+      material.color.copy(c);
+    }
+
+    if (ring.current) {
+      const speedMul = mode === "idle" ? 1 : mode === "focus" ? 2.4 : 4.0;
+      ring.current.rotation.y += delta * 0.18 * speedMul;
+      ring.current.rotation.x = Math.PI / 2.4 + Math.sin(t * 0.4) * 0.05;
+      // Breathing scale on focus/analyze
+      const breath = mode === "idle" ? 1 : 1 + Math.sin(t * 2) * 0.025;
+      ring.current.scale.setScalar(breath);
+    }
+  });
+
+  return (
+    <points ref={ring} geometry={geo}>
+      <primitive object={material} attach="material" />
+    </points>
+  );
+}
+
+/* ============================================================
+   Wireframe Sphere — neon green semi-transparent wireframe
+   ============================================================ */
+function WireSphere({ mode, accent }: { mode: "idle" | "focus" | "analyze"; accent: AccentPalette }) {
+  const mesh = useRef<THREE.Mesh>(null!);
+  const cyanColor = useMemo(() => new THREE.Color("#22d3ee"), []);
+  const greenColor = useMemo(() => new THREE.Color("#34d399"), []);
+  const mat = useMemo(() => new THREE.MeshBasicMaterial({
+    color: cyanColor.clone(),
+    wireframe: true,
+    transparent: true,
+    opacity: 0.15,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    toneMapped: false,
+  }), [cyanColor]);
+
+  useFrame((state, delta) => {
+    const t = state.clock.getElapsedTime();
+    const targetColor = mode === "analyze" ? greenColor : cyanColor;
+    mat.color.lerp(targetColor, 0.04);
+    if (mesh.current) {
+      mesh.current.rotation.y += delta * 0.12;
+      mesh.current.rotation.x += delta * 0.05;
+      const s = 2.4 + Math.sin(t * 0.8) * 0.06;
+      mesh.current.scale.setScalar(s);
+    }
+    mat.opacity = mode === "idle" ? 0.12 : mode === "focus" ? 0.2 : 0.32;
+  });
+
+  return (
+    <mesh ref={mesh} material={mat}>
+      <icosahedronGeometry args={[1, 2]} />
+    </mesh>
+  );
+}
+
+/* ============================================================
    Main AI Core Component
    ============================================================ */
-export function AICore({ active = false, className }: { active?: boolean; className?: string }) {
+export type AICoreMode = "idle" | "focus" | "analyze";
+
+export interface AICoreProps {
+  /** Legacy boolean — when true, behaves like mode="analyze". */
+  active?: boolean;
+  className?: string;
+  /** Idle / focus / analyze state. Overrides `active` if provided. */
+  mode?: AICoreMode;
+  /** Optional palette override (e.g. cyan) — bypasses personalization store. */
+  paletteOverride?: AccentPalette;
+  /** Render the cinematic 1000+ particle ring. */
+  particleRing?: boolean;
+  /** Override particle ring count (default 1000). */
+  particleRingCount?: number;
+  /** Render the neon wireframe sphere. */
+  wireSphere?: boolean;
+  /** Mouse parallax strength multiplier (default 1). */
+  parallaxIntensity?: number;
+  /** Force-enable Bloom postprocessing regardless of personalization. */
+  forceBloom?: boolean;
+}
+
+export function AICore({
+  active = false,
+  className,
+  mode,
+  paletteOverride,
+  particleRing = false,
+  particleRingCount = 1000,
+  wireSphere = false,
+  parallaxIntensity = 1,
+  forceBloom = false,
+}: AICoreProps) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -534,19 +692,32 @@ export function AICore({ active = false, className }: { active?: boolean; classN
 
   const accentId = usePersonalizationStore((s) => s.accent);
   const animation = usePersonalizationStore((s) => s.animation);
-  const palette = ACCENT_PALETTES[accentId];
+  const reducedMotion = usePersonalizationStore((s) => s.reducedMotion);
+
+  const resolvedMode: AICoreMode = mode ?? (active ? "analyze" : "idle");
+
+  // Resolve effective palette: override → store accent → default.
+  // When analyzing, shift colors to neon green for the cinematic "energy burst".
+  const basePalette = paletteOverride ?? ACCENT_PALETTES[accentId];
+  const palette: AccentPalette = resolvedMode === "analyze"
+    ? { primary: "#22c55e", accent: "#34d399", ring: "#22c55e", glow: "rgba(52,211,153,0.55)" }
+    : basePalette;
+
   const perfMode = animation === "performance";
   const balanced = animation === "balanced";
 
   if (!mounted) return <div className={className} />;
 
-  if (perfMode) {
+  // Honor reduced-motion / perf-mode with a static fallback.
+  if (perfMode || reducedMotion) {
     return (
       <div className={className} style={{ background: `radial-gradient(circle at 50% 50%, ${palette.glow}, transparent 60%)` }}>
         <div className="absolute left-1/2 top-1/2 h-32 w-32 -translate-x-1/2 -translate-y-1/2 rounded-full" style={{ background: palette.primary, opacity: 0.3, filter: "blur(40px)" }} />
       </div>
     );
   }
+
+  const activeBool = resolvedMode !== "idle";
 
   return (
     <div className={className}>
@@ -567,21 +738,23 @@ export function AICore({ active = false, className }: { active?: boolean; classN
         <pointLight position={[0, -5, -4]} intensity={2.0} color={palette.accent} />
         <pointLight position={[4, -3, -5]} intensity={1.5} color={"#c084fc"} />
 
-        <ParallaxRig />
+        <ParallaxRig intensity={parallaxIntensity} />
         <Float speed={1.4} rotationIntensity={0.3} floatIntensity={0.4}>
-          <CoreOrb active={active} accent={palette} />
-          <Shockwave active={active} accent={palette} />
+          <CoreOrb active={activeBool} accent={palette} />
+          <Shockwave active={activeBool} accent={palette} />
         </Float>
-        <Rings active={active} accent={palette} />
-        {!balanced && <DNAHelix active={active} accent={palette} />}
-        {!balanced && <DataStreams active={active} accent={palette} />}
-        <ParticleSystems active={active} accent={palette} />
-        {!balanced && <GodRays active={active} accent={palette} />}
-        <EnergyParticles active={active} accent={palette} />
+        <Rings active={activeBool} accent={palette} />
+        {wireSphere && <WireSphere mode={resolvedMode} accent={palette} />}
+        {particleRing && <ParticleRing mode={resolvedMode} accent={palette} count={particleRingCount} />}
+        {!balanced && <DNAHelix active={activeBool} accent={palette} />}
+        {!balanced && <DataStreams active={activeBool} accent={palette} />}
+        <ParticleSystems active={activeBool} accent={palette} />
+        {!balanced && <GodRays active={activeBool} accent={palette} />}
+        <EnergyParticles active={activeBool} accent={palette} />
 
-        {animation === "ultra" && (
+        {(forceBloom || animation === "ultra") && (
           <EffectComposer>
-            <Bloom intensity={active ? 1.2 : 0.8} luminanceThreshold={0.35} luminanceSmoothing={0.9} mipmapBlur />
+            <Bloom intensity={activeBool ? 1.4 : 0.9} luminanceThreshold={0.32} luminanceSmoothing={0.9} mipmapBlur />
           </EffectComposer>
         )}
       </Canvas>
