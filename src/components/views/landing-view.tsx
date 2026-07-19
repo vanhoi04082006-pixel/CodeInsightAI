@@ -68,13 +68,6 @@ const AICore = dynamic(
   }
 );
 
-const CYAN_PALETTE = {
-  primary: "#22d3ee",
-  accent: "#06b6d4",
-  ring: "#22d3ee",
-  glow: "rgba(34,211,238,0.55)",
-};
-
 /* ---------------------------------------------------------------
    Shared animation variants
    --------------------------------------------------------------- */
@@ -442,12 +435,6 @@ function HeroSection() {
           <div className="pointer-events-none absolute left-1/2 top-1/2 h-[400px] w-[400px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-cyan-500/15 blur-[100px]" />
           <AICore
             mode={aiMode}
-            paletteOverride={CYAN_PALETTE}
-            particleRing={particleCount > 0}
-            particleRingCount={particleCount}
-            wireSphere
-            forceBloom
-            parallaxIntensity={1.4}
             className="absolute inset-0 h-full w-full"
           />
           {/* Caption */}
