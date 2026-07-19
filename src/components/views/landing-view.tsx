@@ -230,9 +230,9 @@ function HeroSection() {
   const [focused, setFocused] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
 
-  // Morph state: 0 = galaxy, 1 = sphere, 2 = grid
-  // When user focuses input → morph to sphere (0.6)
-  // When user clicks Analyze → morph to grid (2.0) + energy burst
+  // Morph state: 0 = torus (cyan ring), 1 = sphere (green wireframe)
+  // When user focuses input → morph toward sphere (0.7)
+  // When user clicks Analyze → full sphere (1.0) then navigate
   const [morphState, setMorphState] = useState(0);
   const animLevel = usePersonalizationStore((s) => s.animation);
 
@@ -254,20 +254,19 @@ function HeroSection() {
     }
     setError("");
     setAnalyzing(true);
-    // Cinematic morph sequence: galaxy → sphere → grid → navigate
-    setMorphState(1); // sphere (energy orb)
-    setTimeout(() => setMorphState(2), 400); // grid (data dispersion)
-    setTimeout(() => setView("analyze"), 1200);
+    // Cinematic morph: torus → sphere → navigate
+    setMorphState(1); // full sphere (green wireframe)
+    setTimeout(() => setView("analyze"), 1500);
   };
 
   // Drive morph from input focus
   const onInputFocus = () => {
     setFocused(true);
-    if (!analyzing) setMorphState(0.6); // partial sphere
+    if (!analyzing) setMorphState(0.7); // partial morph toward sphere
   };
   const onInputBlur = () => {
     setFocused(false);
-    if (!analyzing) setMorphState(0); // back to galaxy
+    if (!analyzing) setMorphState(0); // back to torus
   };
 
   const heroBadges = [
@@ -280,18 +279,33 @@ function HeroSection() {
   return (
     <section
       ref={heroRef}
-      className="relative flex min-h-screen items-center overflow-hidden pt-16"
+      className="relative flex min-h-screen items-center overflow-hidden"
     >
-      {/* Perspective grid floor */}
-      <div className="cinematic-grid pointer-events-none absolute inset-x-0 bottom-0 h-1/2" />
-      {/* Halo glow */}
-      <div className="cinematic-halo" />
+      {/* ═══ FULL-BLEED 3D BACKGROUND ═══
+          The 3D scene fills the ENTIRE hero section — no container box.
+          Particles are the background, content overlays on top.
+          This matches the reference video: seamless, integrated, immersive. */}
+      <div className="absolute inset-0 z-0">
+        <Scene3D
+          morph={morphState}
+          active={analyzing}
+          className="h-full w-full"
+        />
+      </div>
 
-      <div className="mx-auto grid w-full max-w-7xl grid-cols-1 gap-8 px-4 md:px-6 lg:grid-cols-2 lg:gap-4">
-        {/* LEFT — content */}
+      {/* Radial gradient overlay for text readability (subtle, doesn't hide 3D) */}
+      <div
+        className="pointer-events-none absolute inset-0 z-1"
+        style={{
+          background: "radial-gradient(ellipse 80% 60% at 30% 50%, rgba(5,5,7,0.85), transparent 70%)",
+        }}
+      />
+
+      {/* Content overlay — sits on top of 3D */}
+      <div className="relative z-10 mx-auto flex w-full max-w-7xl flex-col justify-center px-4 py-20 md:px-6 lg:py-28">
         <motion.div
           style={{ y: contentY, opacity: contentOpacity }}
-          className="relative z-10 flex flex-col justify-center py-8 lg:py-16"
+          className="max-w-2xl"
         >
           {/* Badge */}
           <motion.div
@@ -430,34 +444,22 @@ function HeroSection() {
             })}
           </motion.div>
         </motion.div>
+      </div>
 
-        {/* RIGHT — immersive 3D */}
-        <motion.div
-          style={{ y: threeY, scale: threeScale }}
-          className="relative z-0 hidden h-[600px] min-h-[500px] lg:block"
-        >
-          {/* Glow behind */}
-          <div className="pointer-events-none absolute left-1/2 top-1/2 h-[400px] w-[400px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-cyan-500/15 blur-[100px]" />
-          <Scene3D
-            morph={morphState}
-            active={analyzing}
-            className="absolute inset-0 h-full w-full"
-          />
-          {/* HUD overlay — cyberpunk metadata */}
-          <div className="pointer-events-none absolute inset-0 flex flex-col justify-between p-4">
-            {/* Top HUD bar */}
-            <div className="flex items-start justify-between text-[9px] font-mono uppercase tracking-wider text-cyan-300/40">
-              <span>VOLUME.CORE.SYS // [88.42.010]</span>
-              <span>{analyzing ? "STATUS: ANALYZING" : focused ? "STATUS: FOCUS" : "STATUS: OPTIMAL"}</span>
-            </div>
-            {/* Bottom caption */}
-            <div className="text-center">
-              <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-cyan-300/60">
-                {analyzing ? "DATA DISPERSION…" : focused ? "ENERGY CONVERGING" : "GALAXY VORTEX · IDLE"}
-              </p>
-            </div>
-          </div>
-        </motion.div>
+      {/* HUD overlay — cyberpunk metadata (full-bleed, on top of 3D) */}
+      <div className="pointer-events-none absolute inset-0 z-5 flex flex-col justify-between p-6">
+        <div className="flex items-start justify-between text-[9px] font-mono uppercase tracking-wider text-cyan-300/30">
+          <span>VOLUME.CORE.SYS // [88.42.010]</span>
+          <span>{analyzing ? "STATUS: ANALYZING" : focused ? "STATUS: FOCUS" : "STATUS: OPTIMAL"}</span>
+        </div>
+        <div className="flex items-end justify-between">
+          <span className="font-mono text-[9px] uppercase tracking-wider text-cyan-300/30">
+            {analyzing ? "MORPH: SPHERE → GRID" : focused ? "MORPH: TORUS → SPHERE" : "MORPH: TORUS · IDLE"}
+          </span>
+          <span className="font-mono text-[9px] uppercase tracking-wider text-cyan-300/30">
+            60,000 PARTICLES · BLOOM ON
+          </span>
+        </div>
       </div>
 
       {/* Scroll cue */}
