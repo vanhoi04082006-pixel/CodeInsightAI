@@ -336,11 +336,108 @@ function genFolderGuide(parsed: ParsedRepository): string {
 }
 
 function genComponentGuide(parsed: ParsedRepository): string {
-  return `# Component Guide\n\nDanh sách các UI components đang phân tích...`;
+  // Gom các component theo file (.tsx/.jsx/.vue/.svelte) — dựa trên dữ liệu parse thật.
+  const UI_EXTS = [".tsx", ".jsx", ".vue", ".svelte"];
+  const rows: { file: string; components: string[]; lines: number }[] = [];
+  for (const f of parsed.files) {
+    const ext = f.path.substring(f.path.lastIndexOf(".")).toLowerCase();
+    if (!UI_EXTS.includes(ext) || f.components.length === 0) continue;
+    rows.push({ file: f.path, components: f.components, lines: f.lines });
+  }
+
+  if (rows.length === 0) {
+    return `# Component Guide\n\nKhông phát hiện UI component nào trong kho mã (không có tệp \`.tsx\`, \`.jsx\`, \`.vue\` hoặc \`.svelte\` chứa component).\n`;
+  }
+
+  const total = rows.reduce((s, r) => s + r.components.length, 0);
+  const table = rows
+    .slice(0, 60) // giới hạn để tài liệu không quá dài
+    .map(r => `| \`${r.components.join("`, `")}\` | ${r.lines.toLocaleString()} | \`${r.file}\` |`)
+    .join("\n");
+
+  return `# Component Guide\n\nPhát hiện **${total}** UI component trong **${rows.length}** tệp.\n\n| Component(s) | Dòng | Tệp định nghĩa |\n|--------------|------|-----------------|\n${table}\n`;
 }
 
 function genDeploymentGuide(parsed: ParsedRepository): string {
-  return `# Deployment Guide\n\nSử dụng ${parsed.packageManager} để cài đặt và triển khai.`;
+  // Gói gọn package manager; hiển thị thân thiện khi không xác định được.
+  const pm = parsed.packageManager && parsed.packageManager !== "unknown"
+    ? parsed.packageManager
+    : null;
+
+  const hasNode = parsed.languages.some(l => l.name === "TypeScript" || l.name === "JavaScript");
+  const inferredPm = pm ?? (hasNode ? "npm" : null);
+
+  const installCmd = inferredPm === "bun" ? "bun install"
+    : inferredPm === "pnpm" ? "pnpm install"
+    : inferredPm === "yarn" ? "yarn"
+    : inferredPm === "pip" ? "pip install -r requirements.txt"
+    : inferredPm === "go mod" ? "go mod download"
+    : inferredPm === "cargo" ? "cargo build"
+    : inferredPm === "npm" ? "npm install"
+    : null;
+
+  const devCmd = inferredPm === "bun" ? "bun dev"
+    : inferredPm === "pnpm" ? "pnpm dev"
+    : inferredPm === "yarn" ? "yarn dev"
+    : inferredPm === "cargo" ? "cargo run"
+    : inferredPm && inferredPm !== "pip" && inferredPm !== "go mod" ? `${inferredPm} run dev`
+    : null;
+
+  const hasDocker = parsed.configFiles.some(c => /(^|\/)Dockerfile(\.|$)/i.test(c));
+  const fwNames = parsed.frameworks.map(f => f.name).filter(Boolean);
+  const isNext = fwNames.some(n => /next/i.test(n));
+
+  const lines: string[] = [];
+  lines.push("# Deployment Guide");
+  lines.push("");
+  lines.push(`Package manager: **${pm ?? "không xác định"}**${pm ? "" : " (không thấy tệp lock — suy luận từ ngôn ngữ)."}`);
+  lines.push("");
+  lines.push("## 1. Cài đặt");
+  if (installCmd) {
+    lines.push("");
+    lines.push("```bash");
+    lines.push(installCmd);
+    lines.push("```");
+  } else {
+    lines.push("");
+    lines.push("- Không tự suy luận được lệnh cài đặt. Vui lòng tham khảo tài liệu của framework/ngôn ngữ tương ứng.");
+  }
+
+  if (devCmd) {
+    lines.push("");
+    lines.push("## 2. Chạy ở môi trường dev");
+    lines.push("");
+    lines.push("```bash");
+    lines.push(devCmd);
+    lines.push("```");
+  }
+
+  lines.push("");
+  lines.push("## 3. Build & Triển khai");
+  if (isNext) {
+    lines.push("");
+    lines.push("```bash");
+    lines.push("# Build production");
+    lines.push(inferredPm === "bun" ? "bun run build" : inferredPm === "pnpm" ? "pnpm build" : "npm run build");
+    lines.push("# Khởi động production server");
+    lines.push(inferredPm === "bun" ? "bun start" : inferredPm === "pnpm" ? "pnpm start" : "npm start");
+    lines.push("```");
+    lines.push("");
+    lines.push("- Nền tảng khuyến nghị: **Vercel** (`vercel deploy`) hoặc bất kỳ Node host nào (Railway, Render, Fly.io).");
+  } else if (hasDocker) {
+    lines.push("");
+    lines.push("- Dự án có `Dockerfile`. Build & run bằng Docker:");
+    lines.push("");
+    lines.push("```bash");
+    lines.push("docker build -t app .");
+    lines.push("docker run -p 3000:3000 app");
+    lines.push("```");
+  } else {
+    lines.push("");
+    lines.push("- Chưa phát hiện `Dockerfile` hay framework build rõ ràng — cấu hình thủ công theo stack của bạn.");
+  }
+
+  return lines.join("\n") + "\n";
 }
 
 // 💡 HÀM TẠO SƠ ĐỒ SVG ĐÃ ĐƯỢC KHÔI PHỤC (Lấy từ bản v1 gốc)
