@@ -49,8 +49,15 @@ import { BottomPanel } from "@/components/mission/bottom-panel";
 import { AgentDock } from "@/components/mission/agent-dock";
 import { FileDiffViewer } from "@/components/mission/file-diff-viewer";
 import { FileTreePanel } from "@/components/mission/file-tree-panel";
+import { AgentNetworkGraph } from "@/components/mission/agent-network-graph";
 import type { TerminalLine as LiveTerminalLine } from "@/components/mission/live-terminal";
 import type { AIProviderConfig } from "@/lib/mission-store";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { ChevronDown, Network as NetworkIcon } from "lucide-react";
 
 const STATUS_META: Record<
   string,
@@ -585,8 +592,27 @@ export function MissionControlView() {
             <MissionTimeline events={events} className="shrink-0" />
           </div>
 
-          {/* RIGHT: tabbed panel (File Tree | Diff | World State) */}
-          <div className="hidden min-h-0 flex-col lg:flex">
+          {/* RIGHT: agent network graph (collapsible) + tabbed panel */}
+          <div className="hidden min-h-0 flex-col gap-3 lg:flex">
+            <Collapsible defaultOpen className="shrink-0">
+              <GlassCard className="p-3">
+                <CollapsibleTrigger className="flex w-full items-center justify-between rounded-md px-1 py-0.5 transition hover:bg-white/[0.02]">
+                  <div className="flex items-center gap-1.5">
+                    <NetworkIcon className="h-3.5 w-3.5 text-cyan-300" />
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      Agent Network Graph
+                    </span>
+                  </div>
+                  <ChevronDown className="h-3.5 w-3.5 text-muted-foreground transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="mt-2">
+                    <AgentNetworkGraph />
+                  </div>
+                </CollapsibleContent>
+              </GlassCard>
+            </Collapsible>
+
             <GlassCard className="flex min-h-0 flex-1 flex-col overflow-hidden p-0">
               <Tabs
                 value={rightTab}

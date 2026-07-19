@@ -84,6 +84,8 @@ export interface ToolCall {
   success: boolean;
   durationMs?: number;
   error?: string;
+  /** Phase D: optional metadata (cache hit/miss, approval flag, etc.). */
+  meta?: Record<string, unknown>;
 }
 
 export interface AgentInvocation {
@@ -171,6 +173,10 @@ export interface MissionStats {
   decisions: number;
   errors: number;
   finalConfidence: number;
+  /** Phase I: overall quality score from the final quality gate (0-100). */
+  qualityScore: number;
+  /** Phase I: total wall-clock duration in milliseconds. */
+  durationMs: number;
 }
 
 // ── SSE event union ─────────────────────────────────────────────────────────
@@ -239,6 +245,8 @@ export type MissionEvent =
       tool: string;
       args: Record<string, unknown>;
       timestamp: number;
+      /** Phase D: optional metadata (cache hit/miss, approval flag, etc.). */
+      meta?: Record<string, unknown>;
     }
   | {
       type: "tool:result";
@@ -248,6 +256,8 @@ export type MissionEvent =
       result?: unknown;
       durationMs?: number;
       timestamp: number;
+      /** Phase D: optional metadata (cache hit/miss, etc.). */
+      meta?: Record<string, unknown>;
     }
   | {
       type: "confidence:update";
