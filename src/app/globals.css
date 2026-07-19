@@ -187,10 +187,13 @@ html[data-animation="performance"] .animate-float-slow {
   }
   body {
     @apply bg-background text-foreground;
+    /* Layered background matching the reference video:
+       deep navy-black base + subtle cyan/teal radial glow + slight violet */
+    background-color: #050507;
     background-image:
-      radial-gradient(ellipse 80% 60% at 50% -10%, oklch(0.3 0.15 290 / 0.35), transparent),
-      radial-gradient(ellipse 60% 50% at 100% 20%, oklch(0.28 0.14 190 / 0.18), transparent),
-      radial-gradient(ellipse 70% 60% at 0% 80%, oklch(0.3 0.16 340 / 0.15), transparent);
+      radial-gradient(ellipse 90% 70% at 50% -10%, rgba(10, 40, 60, 0.6), transparent 60%),
+      radial-gradient(ellipse 50% 40% at 80% 30%, rgba(6, 78, 95, 0.12), transparent 60%),
+      radial-gradient(ellipse 60% 50% at 20% 70%, rgba(15, 23, 42, 0.4), transparent 60%);
     background-attachment: fixed;
   }
   /* Light theme body background overrides */
