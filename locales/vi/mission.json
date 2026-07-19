@@ -3,6 +3,13 @@
   "subtitle": "AI Operating System",
   "description": "Giao mục tiêu cho đội AI. Họ tự lập kế hoạch, thực thi, kiểm chứng và ship.",
 
+  "empty": {
+    "title": "Chưa chọn repository",
+    "description": "Chọn một phân tích từ Lịch sử hoặc phân tích repository mới để bắt đầu mission. Mission Control gắn với phân tích hiện tại — giống AI Chat và AI Report.",
+    "historyButton": "Mở Lịch sử",
+    "analyzeButton": "Phân tích Repo"
+  },
+
   "form": {
     "title": "Định nghĩa Mission",
     "description": "Mô tả điều bạn muốn đội AI hoàn thành. Họ sẽ tự lập kế hoạch, thực thi, kiểm chứng và ship.",

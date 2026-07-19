@@ -79,6 +79,7 @@ const STATUS_META: Record<
 export function MissionControlView() {
   const { t } = useT();
   const report = useAppStore((s) => s.activeReport);
+  const setView = useAppStore((s) => s.setView);
 
   // Use selective subscriptions to avoid re-rendering on every event.
   // The previous code destructured the entire store, causing infinite re-renders
@@ -239,6 +240,41 @@ export function MissionControlView() {
     };
     setProvider(cfg);
   };
+
+  // ── Render: Empty state (no active analysis — like ProjectView/ChatView) ──
+  if (!report) {
+    return (
+      <div className="mx-auto flex min-h-[60vh] max-w-xl flex-col items-center justify-center px-4 text-center">
+        <GlassCard className="p-10">
+          <Rocket className="mx-auto h-10 w-10 text-cyan-300" />
+          <h2 className="mt-4 text-xl font-bold">
+            {t("mission", "empty.title") || "No Repository Selected"}
+          </h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {t("mission", "empty.description") ||
+              "Select an analysis from History or analyze a new repository to start a mission. Mission Control binds to the active analysis — just like AI Chat and AI Report."}
+          </p>
+          <div className="mt-4 flex items-center justify-center gap-2">
+            <Button
+              onClick={() => setView("history")}
+              variant="outline"
+              className="gap-1.5"
+            >
+              <History className="h-4 w-4" />
+              {t("mission", "empty.historyButton") || "Open History"}
+            </Button>
+            <Button
+              onClick={() => setView("analyze")}
+              className="gap-1.5 bg-gradient-to-r from-cyan-500 to-violet-500 text-white"
+            >
+              <Target className="h-4 w-4" />
+              {t("mission", "empty.analyzeButton") || "Analyze Repo"}
+            </Button>
+          </div>
+        </GlassCard>
+      </div>
+    );
+  }
 
   // ── Render: Start Mission form (when no active mission) ──────────────────
   if (!hasMission) {
@@ -729,306 +765,227 @@ export function MissionControlView() {
         )}
       </AnimatePresence>
 
+      {/* ═══ FULLY RESIZABLE WORKSPACE ═══
+          Vertical PanelGroup: Workspace (flex) | Agent Status Row | Bottom Panel
+          Horizontal PanelGroup inside Workspace: Dock | Sidebar | Feed | Right
+          ALL panels resizable via drag handles. */}
+
       {/* Normal resizable workspace (hidden when any panel is maximized) */}
       {!feedMaximized && !rightMaximized && !networkMaximized && (
-        <div className="flex min-h-0 flex-1 gap-2">
-          <AgentDock
-            agentStatuses={agentStatuses}
-            events={events}
-            className="hidden md:flex"
-          />
+        <PanelGroup direction="vertical" className="min-h-0 flex-1">
+          {/* ── Main workspace row (horizontal resizable) ── */}
+          <Panel defaultSize={62} minSize={30}>
+            <div className="flex h-full min-h-0 gap-2">
+              <AgentDock
+                agentStatuses={agentStatuses}
+                events={events}
+                className="hidden md:flex"
+              />
 
-          {/* Horizontal resizable: Sidebar | Feed | Right */}
-          <PanelGroup direction="horizontal" className="min-h-0 flex-1">
-            {/* LEFT: Missions sidebar (resizable, scrollable) */}
-            <Panel defaultSize={18} minSize={12} maxSize={30} className="hidden lg:block">
-              <div className="h-full min-h-0 overflow-y-auto scrollbar-thin pr-1">
-                <MissionsSidebar />
-              </div>
-            </Panel>
-
-            <PanelResizeHandle className="hidden lg:block w-1 bg-transparent hover:bg-cyan-400/20 transition-colors cursor-col-resize" />
-
-            {/* CENTER: Activity Feed + Timeline (resizable, scrollable) */}
-            <Panel defaultSize={42} minSize={25}>
-              <div className="flex h-full min-h-0 flex-col gap-2">
-                <GlassCard className="flex min-h-0 flex-1 flex-col overflow-hidden p-0">
-                  <div className="flex items-center justify-between border-b border-white/5 px-4 py-2">
-                    <div className="flex items-center gap-2">
-                      <Activity className="h-3.5 w-3.5 text-cyan-300" />
-                      <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                        {t("mission", "feed.title") || "AI Activity Feed"}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-[10px] text-muted-foreground/60">
-                        {events.length} events
-                      </span>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => setFeedMaximized(true)}
-                        className="h-6 w-6 p-0 text-muted-foreground hover:text-cyan-300"
-                        title="Maximize Activity Feed"
-                      >
-                        <Maximize2 className="h-3 w-3" />
-                      </Button>
-                    </div>
+              {/* Horizontal resizable: Sidebar | Feed | Right */}
+              <PanelGroup direction="horizontal" className="min-h-0 flex-1">
+                {/* LEFT: Missions sidebar (resizable, scrollable) */}
+                <Panel defaultSize={18} minSize={12} maxSize={30} className="hidden lg:block">
+                  <div className="h-full min-h-0 overflow-y-auto scrollbar-thin pr-1">
+                    <MissionsSidebar />
                   </div>
-                  <div className="min-h-0 flex-1 p-2">
-                    <AIActivityFeed events={events} />
-                  </div>
-                </GlassCard>
+                </Panel>
 
-                <MissionTimeline events={events} className="shrink-0" />
-              </div>
-            </Panel>
+                <PanelResizeHandle className="hidden lg:block w-1 bg-transparent hover:bg-cyan-400/20 transition-colors cursor-col-resize" />
 
-            <PanelResizeHandle className="hidden lg:block w-1 bg-transparent hover:bg-violet-400/20 transition-colors cursor-col-resize" />
-
-            {/* RIGHT: Network Graph + Files/Diff/World (resizable, scrollable, maximizable) */}
-            <Panel defaultSize={30} minSize={20} maxSize={50} className="hidden lg:block">
-              <div className="flex h-full min-h-0 flex-col gap-2">
-                <Collapsible defaultOpen className="shrink-0">
-                  <GlassCard className="p-3">
-                    <div className="flex items-center justify-between">
-                      <CollapsibleTrigger className="flex items-center gap-1.5 rounded-md px-1 py-0.5 transition hover:bg-white/[0.02]">
-                        <NetworkIcon className="h-3.5 w-3.5 text-cyan-300" />
-                        <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                          Agent Network Graph
-                        </span>
-                        <ChevronDown className="h-3.5 w-3.5 text-muted-foreground transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
-                      </CollapsibleTrigger>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => setNetworkMaximized(true)}
-                        className="h-6 w-6 p-0 text-muted-foreground hover:text-cyan-300"
-                        title="Maximize Network Graph"
-                      >
-                        <Maximize2 className="h-3 w-3" />
-                      </Button>
-                    </div>
-                    <CollapsibleContent>
-                      <div className="mt-2">
-                        <AgentNetworkGraph />
-                      </div>
-                    </CollapsibleContent>
-                  </GlassCard>
-                </Collapsible>
-
-                <GlassCard className="flex min-h-0 flex-1 flex-col overflow-hidden p-0">
-                  <Tabs
-                    value={rightTab}
-                    onValueChange={setRightTab}
-                    className="flex h-full flex-col"
-                  >
-                    <div className="flex items-center justify-between border-b border-white/5 px-2">
-                      <TabsList className="h-auto bg-transparent p-1">
-                        <TabsTrigger
-                          value="tree"
-                          className="gap-1.5 rounded-md px-2.5 py-1 text-[11px] data-[state=active]:bg-white/5"
-                        >
-                          <ListTree className="h-3 w-3" /> Files
-                          {filesModified.length > 0 && (
-                            <span className="ml-1 rounded-full bg-white/5 px-1 text-[9px] text-muted-foreground">
-                              {filesModified.length}
-                            </span>
-                          )}
-                        </TabsTrigger>
-                        <TabsTrigger
-                          value="diff"
-                          className="gap-1.5 rounded-md px-2.5 py-1 text-[11px] data-[state=active]:bg-white/5"
-                        >
-                          <FileDiffIcon className="h-3 w-3" /> Diff
-                        </TabsTrigger>
-                        <TabsTrigger
-                          value="world"
-                          className="gap-1.5 rounded-md px-2.5 py-1 text-[11px] data-[state=active]:bg-white/5"
-                        >
-                          <Globe className="h-3 w-3" /> World
-                        </TabsTrigger>
-                      </TabsList>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => setRightMaximized(true)}
-                        className="h-6 w-6 p-0 text-muted-foreground hover:text-violet-300"
-                        title="Maximize Panel"
-                      >
-                        <Maximize2 className="h-3 w-3" />
-                      </Button>
-                    </div>
-
-                    <div className="min-h-0 flex-1 overflow-hidden">
-                      {rightTab === "tree" && (
-                        <FileTreePanel
-                          filesModified={filesModified}
-                          onSelectFile={onSelectFile}
-                          selectedPath={selectedFilePath}
-                          className="h-full"
-                        />
-                      )}
-                      {rightTab === "diff" && (
-                        <FileDiffViewer
-                          filesModified={filesModified}
-                          selectedPath={selectedFilePath}
-                          onSelect={setSelectedFilePath}
-                          className="h-full"
-                        />
-                      )}
-                      {rightTab === "world" && (
-                        <div className="h-full overflow-y-auto scrollbar-thin">
-                          <WorldStatePanel
-                            currentTask={currentTask}
-                            currentFile={currentFile}
-                            confidence={confidence}
-                            buildStatus={buildStatus}
-                            testStatus={testStatus}
-                            iteration={iteration}
-                            maxIterations={maxIterations}
-                            currentPhase={currentPhase}
-                            filesModified={filesModified}
-                            decisions={decisions}
-                            memory={memory}
-                          />
+                {/* CENTER: Activity Feed + Timeline (resizable, scrollable) */}
+                <Panel defaultSize={42} minSize={25}>
+                  <div className="flex h-full min-h-0 flex-col gap-2">
+                    <GlassCard className="flex min-h-0 flex-1 flex-col overflow-hidden p-0">
+                      <div className="flex items-center justify-between border-b border-white/5 px-4 py-2">
+                        <div className="flex items-center gap-2">
+                          <Activity className="h-3.5 w-3.5 text-cyan-300" />
+                          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                            {t("mission", "feed.title") || "AI Activity Feed"}
+                          </span>
                         </div>
-                      )}
-                    </div>
-                  </Tabs>
-                </GlassCard>
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-[10px] text-muted-foreground/60">
+                            {events.length} events
+                          </span>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setFeedMaximized(true)}
+                            className="h-6 w-6 p-0 text-muted-foreground hover:text-cyan-300"
+                            title="Maximize Activity Feed"
+                          >
+                            <Maximize2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="min-h-0 flex-1 p-2">
+                        <AIActivityFeed events={events} />
+                      </div>
+                    </GlassCard>
+
+                    <MissionTimeline events={events} className="shrink-0" />
+                  </div>
+                </Panel>
+
+                <PanelResizeHandle className="hidden lg:block w-1 bg-transparent hover:bg-violet-400/20 transition-colors cursor-col-resize" />
+
+                {/* RIGHT: Network Graph + Files/Diff/World (resizable, scrollable, maximizable) */}
+                <Panel defaultSize={30} minSize={20} maxSize={50} className="hidden lg:block">
+                  <div className="flex h-full min-h-0 flex-col gap-2">
+                    <Collapsible defaultOpen className="shrink-0">
+                      <GlassCard className="p-3">
+                        <div className="flex items-center justify-between">
+                          <CollapsibleTrigger className="flex items-center gap-1.5 rounded-md px-1 py-0.5 transition hover:bg-white/[0.02]">
+                            <NetworkIcon className="h-3.5 w-3.5 text-cyan-300" />
+                            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                              Agent Network Graph
+                            </span>
+                            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
+                          </CollapsibleTrigger>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setNetworkMaximized(true)}
+                            className="h-6 w-6 p-0 text-muted-foreground hover:text-cyan-300"
+                            title="Maximize Network Graph"
+                          >
+                            <Maximize2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                        <CollapsibleContent>
+                          <div className="mt-2">
+                            <AgentNetworkGraph />
+                          </div>
+                        </CollapsibleContent>
+                      </GlassCard>
+                    </Collapsible>
+
+                    <GlassCard className="flex min-h-0 flex-1 flex-col overflow-hidden p-0">
+                      <Tabs
+                        value={rightTab}
+                        onValueChange={setRightTab}
+                        className="flex h-full flex-col"
+                      >
+                        <div className="flex items-center justify-between border-b border-white/5 px-2">
+                          <TabsList className="h-auto bg-transparent p-1">
+                            <TabsTrigger
+                              value="tree"
+                              className="gap-1.5 rounded-md px-2.5 py-1 text-[11px] data-[state=active]:bg-white/5"
+                            >
+                              <ListTree className="h-3 w-3" /> Files
+                              {filesModified.length > 0 && (
+                                <span className="ml-1 rounded-full bg-white/5 px-1 text-[9px] text-muted-foreground">
+                                  {filesModified.length}
+                                </span>
+                              )}
+                            </TabsTrigger>
+                            <TabsTrigger
+                              value="diff"
+                              className="gap-1.5 rounded-md px-2.5 py-1 text-[11px] data-[state=active]:bg-white/5"
+                            >
+                              <FileDiffIcon className="h-3 w-3" /> Diff
+                            </TabsTrigger>
+                            <TabsTrigger
+                              value="world"
+                              className="gap-1.5 rounded-md px-2.5 py-1 text-[11px] data-[state=active]:bg-white/5"
+                            >
+                              <Globe className="h-3 w-3" /> World
+                            </TabsTrigger>
+                          </TabsList>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setRightMaximized(true)}
+                            className="h-6 w-6 p-0 text-muted-foreground hover:text-violet-300"
+                            title="Maximize Panel"
+                          >
+                            <Maximize2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+
+                        <div className="min-h-0 flex-1 overflow-hidden">
+                          {rightTab === "tree" && (
+                            <FileTreePanel
+                              filesModified={filesModified}
+                              onSelectFile={onSelectFile}
+                              selectedPath={selectedFilePath}
+                              className="h-full"
+                            />
+                          )}
+                          {rightTab === "diff" && (
+                            <FileDiffViewer
+                              filesModified={filesModified}
+                              selectedPath={selectedFilePath}
+                              onSelect={setSelectedFilePath}
+                              className="h-full"
+                            />
+                          )}
+                          {rightTab === "world" && (
+                            <div className="h-full overflow-y-auto scrollbar-thin">
+                              <WorldStatePanel
+                                currentTask={currentTask}
+                                currentFile={currentFile}
+                                confidence={confidence}
+                                buildStatus={buildStatus}
+                                testStatus={testStatus}
+                                iteration={iteration}
+                                maxIterations={maxIterations}
+                                currentPhase={currentPhase}
+                                filesModified={filesModified}
+                                decisions={decisions}
+                                memory={memory}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      </Tabs>
+                    </GlassCard>
+                  </div>
+                </Panel>
+              </PanelGroup>
+            </div>
+          </Panel>
+
+          {/* ── Vertical drag handle ── */}
+          <PanelResizeHandle className="h-1 bg-transparent hover:bg-cyan-400/20 transition-colors cursor-row-resize w-full" />
+
+          {/* ── Agent status row (resizable vertically) ── */}
+          <Panel defaultSize={16} minSize={8} maxSize={30}>
+            <GlassCard className="h-full overflow-y-auto scrollbar-thin p-2.5">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  {t("mission", "agents.title") || "Agent Team"} · 11 agents
+                </span>
+                <span className="text-[10px] text-muted-foreground/60">
+                  Active:{" "}
+                  {
+                    Object.values(agentStatuses).filter(
+                      (a) => a.status === "thinking" || a.status === "acting"
+                    ).length
+                  }
+                </span>
               </div>
-            </Panel>
-          </PanelGroup>
-        </div>
-      )}
-
-      {/* Agent status row (always visible, compact) */}
-      <GlassCard className="shrink-0 p-2.5">
-        <div className="mb-2 flex items-center justify-between">
-          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            {t("mission", "agents.title") || "Agent Team"} · 11 agents
-          </span>
-          <span className="text-[10px] text-muted-foreground/60">
-            Active:{" "}
-            {
-              Object.values(agentStatuses).filter(
-                (a) => a.status === "thinking" || a.status === "acting"
-              ).length
-            }
-          </span>
-        </div>
-        <AgentStatusCards statuses={agentStatuses} compact />
-      </GlassCard>
-
-      {/* ═══ BOTTOM PANEL: Terminal / Git / Diff / Logs ═══
-          3 quick sizes: Min (32px bar) / Default (220px) / Max (70vh).
-          Toggle buttons let users switch instantly. */}
-
-      {/* Toggle buttons row */}
-      <div className="flex shrink-0 items-center justify-between px-1">
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={() => {
-            setBottomOpen(true);
-            setBottomSize("min");
-          }}
-          className="h-6 gap-1 text-[10px] text-muted-foreground"
-          title="Minimize to bar"
-        >
-          <ChevronDown className="h-3 w-3" />
-          Min
-        </Button>
-        <div className="flex items-center gap-1">
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => {
-              setBottomOpen(true);
-              setBottomSize("default");
-            }}
-            className={cn("h-6 gap-1 text-[10px]", bottomSize === "default" && bottomOpen ? "text-cyan-300" : "text-muted-foreground")}
-            title="Default size"
-          >
-            Default
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => {
-              setBottomOpen(true);
-              setBottomSize("max");
-            }}
-            className={cn("h-6 gap-1 text-[10px]", bottomSize === "max" && bottomOpen ? "text-violet-300" : "text-muted-foreground")}
-            title="Maximize (70% screen)"
-          >
-            <ChevronUp className="h-3 w-3" />
-            Max
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => setBottomOpen((v) => !v)}
-            className="h-6 gap-1 text-[10px] text-muted-foreground"
-          >
-            {bottomOpen ? (
-              <>
-                <Pause className="h-3 w-3" />
-                <span>{t("mission", "actions.collapseBottom") || "Hide"}</span>
-              </>
-            ) : (
-              <>
-                <Play className="h-3 w-3" />
-                <span>{t("mission", "actions.expandBottom") || "Show"}</span>
-              </>
-            )}
-          </Button>
-        </div>
-      </div>
-
-      <AnimatePresence initial={false} mode="wait">
-        {bottomOpen && (
-          <motion.div
-            key={bottomSize}
-            initial={{ height: 0, opacity: 0 }}
-            animate={{
-              height: bottomSize === "min" ? 36 : bottomSize === "max" ? "70vh" : 220,
-              opacity: 1,
-            }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ type: "spring", stiffness: 200, damping: 28 }}
-            className="shrink-0 overflow-hidden"
-          >
-            <GlassCard className="h-full overflow-hidden p-0">
-              {bottomSize === "min" ? (
-                <div className="flex h-9 items-center justify-between px-3 text-[11px] text-muted-foreground">
-                  <span className="font-mono truncate">
-                    {terminalOutput.length > 0
-                      ? `${terminalOutput.length} lines · last: ${(terminalOutput[terminalOutput.length - 1]?.data ?? "").slice(0, 80)}`
-                      : "Terminal ready"}
-                  </span>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setBottomSize("default")}
-                    className="h-6 gap-1 text-[10px] text-cyan-300"
-                  >
-                    <ChevronUp className="h-3 w-3" /> Expand
-                  </Button>
-                </div>
-              ) : (
-                <BottomPanel
-                  terminalOutput={terminalOutput}
-                  events={events}
-                  filesModified={filesModified}
-                  onTerminalOutput={onTerminalOutput}
-                />
-              )}
+              <AgentStatusCards statuses={agentStatuses} compact />
             </GlassCard>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          </Panel>
+
+          {/* ── Vertical drag handle ── */}
+          <PanelResizeHandle className="h-1 bg-transparent hover:bg-violet-400/20 transition-colors cursor-row-resize w-full" />
+
+          {/* ── Bottom panel: Terminal / Git / Diff / Logs (resizable vertically) ── */}
+          <Panel defaultSize={22} minSize={10} maxSize={60}>
+            <GlassCard className="h-full overflow-hidden p-0">
+              <BottomPanel
+                terminalOutput={terminalOutput}
+                events={events}
+                filesModified={filesModified}
+                onTerminalOutput={onTerminalOutput}
+              />
+            </GlassCard>
+          </Panel>
+        </PanelGroup>
+      )}
 
       <div className="flex items-center justify-center">
         <Button

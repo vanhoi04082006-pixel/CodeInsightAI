@@ -15,7 +15,6 @@ import { HistoryView } from "@/components/views/history-view";
 import { SettingsView } from "@/components/views/settings-view";
 import { ProvidersView } from "@/components/views/providers-view";
 import { PersonalitiesView } from "@/components/views/personalities-view";
-import { AgentsView } from "@/components/views/agents-view";
 import { MissionControlView } from "@/components/views/mission-control-view";
 import { CommandPalette } from "@/components/shared/command-palette";
 import { Github, Sparkles, Heart } from "lucide-react";
@@ -105,7 +104,6 @@ export default function Home() {
                   {view === "settings" && <SettingsView />}
                   {view === "providers" && <ProvidersView />}
                   {view === "personalities" && <PersonalitiesView />}
-                  {view === "agents" && <AgentsView />}
                   {view === "mission" && <MissionControlView />}
                 </motion.div>
               </AnimatePresence>
