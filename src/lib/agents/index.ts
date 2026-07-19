@@ -16,6 +16,7 @@ import { testAgent } from "./test-agent";
 import { securityAgent } from "./security-agent";
 import { performanceAgent } from "./performance-agent";
 import { devopsAgent } from "./devops-agent";
+import { reflectionAgent } from "./executive/reflection-agent";
 
 import type { TaskKind } from "./types";
 
@@ -38,6 +39,10 @@ export function registerAllAgents(): void {
   securityAgent.register(["security-audit"]);
   performanceAgent.register(["perf-audit"]);
   devopsAgent.register(["devops"]);
+  // Reflection Agent: invoked directly via reflectionAgent.reflect() by the
+  // ReAct loop; no task-kind handler is claimed so it does not shadow the
+  // orchestrator's "custom" dispatch.
+  reflectionAgent.register([]);
 
   // ── Wire task-kind handlers to the task queue ──
   // Each handler delegates to the corresponding agent via the registry.
@@ -77,7 +82,7 @@ export function registerAllAgents(): void {
   eventBus.emit({
     type: "log",
     level: "info",
-    message: "[agent-system] All 11 agents registered and wired to task queue",
+    message: "[agent-system] All 12 agents registered and wired to task queue",
   });
 }
 
@@ -105,4 +110,20 @@ export { testAgent } from "./test-agent";
 export { securityAgent } from "./security-agent";
 export { performanceAgent } from "./performance-agent";
 export { devopsAgent } from "./devops-agent";
+export { reflectionAgent } from "./executive/reflection-agent";
+export type {
+  ReflectionResult,
+  ReflectionSeverity,
+  ReflectionMemoryCategory,
+  ReflectionMemoryUpdate,
+  ReflectionRecentEvent,
+} from "./executive/reflection-agent";
+export { ConfidenceTracker, confidenceTracker } from "./executive/confidence";
+export type { ConfidenceReading, ConfidenceTrend } from "./executive/confidence";
+export { MemoryLoop, memoryLoop } from "./executive/memory-loop";
+export type {
+  MemoryCategory,
+  MemoryEntry,
+  MemoryUpdateInput,
+} from "./executive/memory-loop";
 export { prGenerator, formatPRAsMarkdown } from "./pr-generator";

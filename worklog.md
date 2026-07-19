@@ -1116,3 +1116,235 @@ Stage Summary:
 - All required shadcn/ui components reused (Button, Input, Textarea, Badge, Tabs, Select, Collapsible, ScrollArea, Progress). framer-motion throughout. GlassCard/GradientText from shared/ui.
 - Accessibility: semantic HTML (header/main/section), keyboard-accessible buttons, ARIA-friendly status badges, touch targets ≥44px on mobile.
 - Responsive: 3-column layout collapses to single column under lg breakpoint; agent grid switches from 3→2→1 columns at sm/md; bottom panel grid switches from 2-column to 1-column on mobile.
+
+---
+Task ID: phase-B-reflection-memory
+Agent: general-purpose (Reflection + Memory + Confidence)
+Task: Build Reflection Agent, Memory Loop, Confidence Tracker, wire into ReAct.
+
+Work Log:
+- Read Phase 3 + Phase A context: types.ts (MissionState/MissionEvent/ExecutiveDecision/MissionMemory), event-emitter.ts (missionEmitter singleton with recordDecision/updateMemory/updateState), react-loop.ts (existing inline reflect phase), base-agent.ts (BaseAgent abstract contract), ai-client.ts (callAI/callAIForJSON), executive-agent.ts (ExecutiveAgentImpl reusing "orchestrator" AgentId slot).
+- Extended `AgentId` union in `src/lib/agents/types.ts` with `"reflection-agent"` so the new agent has a non-colliding slot (avoids clobbering the orchestrator's "custom" task-kind dispatch).
+- Created `src/lib/agents/executive/confidence.ts` — ConfidenceTracker class + singleton.
+  • Per-mission score map (private `scores: Map<string, number>`) + per-mission history map capped at 200 readings.
+  • Spec-exact parameter-less API (`get/set/adjust/getHistory/getTrend/getColor/shouldSeekMoreContext`) operating on the active mission pointer (`setActive(missionId)`), plus explicit per-mission variants (`getFor/setFor/adjustFor/getHistoryFor/getTrendFor/getColorFor/shouldSeekMoreContextFor`) for concurrent missions.
+  • All scores clamped to [0, 100]; `setFor` mirrors to `MissionState.confidence` via missionEmitter.updateState and emits `confidence:update` MissionEvent for SSE consumers.
+  • `getTrend` uses hysteresis (±2 points) over last 5 readings to avoid jitter; `getColor` returns red <50 / yellow 50-75 / green >75 (hex); `shouldSeekMoreContext` returns true when <60%.
+- Created `src/lib/agents/executive/memory-loop.ts` — MemoryLoop class + singleton.
+  • Per-mission `entries: Map<string, MemoryEntry[]>` (key/value/category/timestamp), capped at 500 entries per mission, de-duplicated by key (latest wins).
+  • Five categories: `issue`, `fix`, `convention`, `architecture`, `error-pattern`.
+  • Mirrors each entry into the appropriate MissionMemory structured field (knownIssues / attemptedFixes / architectureNotes / conventions / keyFiles) so existing AI prompts and SSE consumers keep working unchanged. Each mirror list capped at 30 entries. Emits `memory:update` MissionEvent per update.
+  • `summarize(missionId, perCategoryLimit=12)` builds a compact prompt-ready string grouped by category ("Issues found: ... / Error patterns: ... / Fixes attempted: ... / Architecture: ... / Conventions: ...").
+  • `search(missionId, query, limit=10)` does case-insensitive substring search over key+value.
+  • `getByCategory(missionId, category)` returns matching entries.
+  • `clear(missionId)` drops all per-mission state.
+- Created `src/lib/agents/executive/reflection-agent.ts` — ReflectionAgent class + singleton.
+  • Extends BaseAgent; `id = "reflection-agent"`; info describes its role with Brain icon + violet color (#a78bfa per spec).
+  • Public `reflect(missionId, state, recentEvent, provider?, signal?)` method:
+    – Sets the ConfidenceTracker active mission pointer.
+    – Emits `agent:thinking` + `agent:status` events.
+    – When a provider is supplied: builds a structured prompt (goal/iteration/confidence/recent action/recent history/known issues/memory summary) and calls `callAIForJSON` with temperature 0.2 / maxTokens 1024; coerces the unknown response via type guards into a ReflectionResult.
+    – When no provider is supplied (or the LLM call fails): degrades gracefully to `ruleBasedReflection()` which pattern-matches the error string against a catalog of 13 common failure signatures (missing module, 'use client' missing, type errors, syntax errors, module resolution, ENOENT, EACCES, ETIMEDOUT, test failures, lint errors, circular imports, OOM, unrecognized fallback).
+    – On success path: returns analysis + proposedAction "Continue with the next planned step." + small +2 confidence bump.
+    – Applies confidence adjustment via `confidenceTracker.adjustFor()` (clamped to [-10, +10]).
+    – Mirrors `memoryUpdate` entries into MissionMemory via `memoryLoop.update()` (which also emits `memory:update` events).
+    – Emits final `agent:result` + `agent:status:done` events.
+    – Never throws — all errors degrade to rule-based reflection or a synthesized fallback result.
+  • `coerceReflectionResult()` uses `unknown` + type guards (no `any`); `clampDelta()` clamps to spec range.
+  • `execute()` (BaseAgent contract) reads missionId/state/recentEvent/provider from task.input, calls `reflect()`, returns TaskResult with metrics (confidenceAdjustment, shouldRetry, shouldReplan, memoryUpdates).
+  • Synthesizes a memoryUpdate entry for error/critical severity results when the AI omits one, so findings are never lost.
+- Wired Reflection into `src/lib/agents/executive/react-loop.ts`:
+  • Added imports: reflectionAgent, ReflectionRecentEvent, ReflectionResult, confidenceTracker.
+  • Added `lastProposedAction: string | null` and `requestedReplan: boolean` private fields.
+  • `buildThinkPrompt()` now accepts an optional `reflectionHint?: string` parameter; when present, the prompt includes a "PREVIOUS REFLECTION SUGGESTED: ..." section so the next Think iteration has the corrective-action context.
+  • `think()` now passes `this.lastProposedAction` to `buildThinkPrompt`.
+  • Replaced the inline reflect phase block (the old manual confidence update + emit) with a call to `reflectionAgent.reflect()` that:
+    – Constructs `ReflectionRecentEvent` from the just-completed Act+Verify (action/tool/result/success/error).
+    – Catches any reflection failure and synthesizes a no-op ReflectionResult.
+    – Feeds the proposed action back into `lastProposedAction` ONLY when `shouldRetry` is true (so the next Think gets the hint).
+    – Records an `ExecutiveDecision` (phase "reflect") capturing the reflection's analysis + proposedAction so the UI streams it via the `decision` MissionEvent.
+    – When `shouldReplan` is true: pushes an explanatory message into state.errors, sets `requestedReplan = true`, emits a thinking event, and breaks the loop.
+  • After the loop: if `requestedReplan` is true, sets mission status to `"planning"` (signal to caller to revise the plan); otherwise `"completed"` as before.
+  • Removed the redundant manual `ctx.updateState({ confidence: think.confidence })` + `ctx.emit({type:"confidence:update"...})` calls — the ConfidenceTracker now owns confidence updates (via recordDecision at Think phase + adjustFor at Reflect phase), eliminating duplicate emissions.
+- Registered ReflectionAgent in `src/lib/agents/index.ts`:
+  • Added `import { reflectionAgent } from "./executive/reflection-agent"`.
+  • Called `reflectionAgent.register([])` with empty handledKinds so it doesn't claim any TaskKind dispatch (the orchestrator keeps "custom"); the agent is still discoverable via `agentRegistry.get("reflection-agent")` and invokable directly through `reflectionAgent.reflect()`.
+  • Updated registration log message from "11 agents" to "12 agents".
+  • Re-exported `reflectionAgent`, `ConfidenceTracker`, `confidenceTracker`, `MemoryLoop`, `memoryLoop`, and their associated types from the package entrypoint.
+- Verified via smoke test (temporary script, then removed):
+  • Reflection on "Cannot find module" error → rootCause "Missing import", proposedAction "Add the correct import statement...", severity "error", confidenceAdjustment -5, shouldRetry true, 1 memoryUpdate entry.
+  • Confidence: 50 → 45 → 47 across two reflections; color red; shouldSeekMoreContext true at 45%.
+  • MemoryLoop.summarize produces grouped "Issues found:" output; search("module") returns the entry; getByCategory("issue") returns the entry; state.memory.knownIssues mirror verified.
+  • Reflection on success → +2 adjustment, shouldRetry false.
+- Lint: `npx eslint <my 6 files>` passes with zero errors. (4 pre-existing errors in `agent-dock.tsx` and `file-tree-panel.tsx` are untracked files unrelated to Phase B and untouched.)
+- TypeScript: `npx tsc --noEmit` passes with zero errors across the whole project.
+
+Stage Summary:
+- Phase B Reflection + Memory + Confidence complete: 3 new files (confidence.ts, memory-loop.ts, reflection-agent.ts), 3 edited files (types.ts, react-loop.ts, index.ts). ~700 LOC added.
+- The ReAct loop is now "smart": after every Act+Verify, the ReflectionAgent (LLM-backed with rule-based fallback) analyzes what happened, identifies the root cause, proposes a corrective action, adjusts Executive confidence by ±10, and persists findings into mission memory. The next Think iteration receives the proposed action as a prompt hint when shouldRetry is true.
+- Confidence tracker: per-mission 0-100 score with trend (rising/falling/stable with ±2 hysteresis), color (red/yellow/green), and a `shouldSeekMoreContext()` <60% threshold. All updates emit `confidence:update` MissionEvents for SSE consumers.
+- Memory loop: per-mission categorized entries (issue/fix/convention/architecture/error-pattern) with free-text search, category filter, and a compact `summarize()` for AI prompts. Mirrors into MissionMemory's structured fields so existing code keeps working.
+- Replan signal: when Reflection says the plan itself is wrong (e.g. circular imports, OOM), the ReAct loop breaks early and leaves the mission in `planning` status so the caller (Phase C replanner) can revise.
+- Rule-based fallback covers 13 common error patterns (missing imports, 'use client' missing, type/syntax errors, ENOENT, EACCES, ETIMEDOUT, test/lint failures, circular imports, OOM) — works fully offline without an LLM provider.
+- No `any` types in new code (uses `unknown` + type guards throughout). No circular imports. All MissionEvents wired for real-time UI updates. Zero TypeScript errors. Zero lint errors in Phase B files.
+
+---
+Task ID: phase-E-replanner-rollback
+Agent: general-purpose (Replanner + Rollback)
+Task: Build Replanner, Rollback manager, wire into ReAct loop.
+
+Work Log:
+- Read worklog.md (Phase A context), src/lib/agents/executive/types.ts (MissionState/MissionEvent/ExecutiveDecision), src/lib/agents/executive/event-emitter.ts (missionEmitter singleton + emit/subscribe/updateState/recordDecision), src/lib/agents/executive/react-loop.ts (existing Observe→Think→Act→Verify→Reflect→Decide loop — discovered Phase B had already wired in `reflectionAgent` + `confidenceTracker` and was BREAKING out of the loop on `reflection.shouldReplan`, leaving the mission in `planning` status for the caller to revise — that's the gap Phase E fills), src/lib/agents/executive/executive-agent.ts (startMission/cancelMission), src/lib/repo-editor/change-history.ts (ChangeStack with undo/redo + takeSnapshot helper), src/lib/repo-editor/file-operations.ts (readFile/writeFile/fileExists/listFiles/deleteFile), src/lib/agents/ai-client.ts (callAIForJSON + AIMessage + AIProviderConfig), src/lib/agents/executive/reflection-agent.ts (ReflectionResult with `shouldReplan` field — the source of the replan signal), src/lib/agents/executive/confidence.ts (ConfidenceTracker singleton — `setFor` syncs MissionState.confidence).
+- Edited `src/lib/agents/executive/types.ts` (+6 lines): Added three optional fields to MissionState for Phase E wiring — `subGoals?: string[]` (set by the Replanner), `revisionCount?: number` (how many times the plan has been revised), `lastSnapshotId?: string` (snapshot id taken before the most recent destructive action). All optional, fully backwards-compatible.
+- Created `src/lib/agents/executive/replanner.ts` (313 lines): `PlanRevision` interface (revisionNumber, reason, analysis, originalPlan, revisedPlan, newSubGoals, skipSteps, addedSteps, confidence, timestamp) + `Replanner` class.
+  - `replan(missionId, state, failure, provider?, signal?): Promise<PlanRevision | null>` — calls the AI with the prompt template from the task spec (goal, iteration, revisionNumber/maxRevisions, failure details, currentPlan derived from goal+subGoals+recent decisions, memorySummary from keyFiles/knownIssues/attemptedFixes/architectureNotes/conventions, recent tool history). When no provider is configured (or the AI call fails), falls back to `ruleBasedRevision()` which pattern-matches 7 error signatures: "Cannot find module 'X'" → "Install missing dependency: X" (extracts module name); "Type error" / "TS####" / "Type 'X' is not assignable" → "Fix type annotations in <file>" (extracts file:line via regex); "test" / "assert" → "Review test expectations and update fixtures"; "ENOENT" / "no such file" → "Create missing file or fix path: <path>" (extracts path); "EACCES" / "permission" → "Fix filesystem permissions or retry"; "command not found" → "Use a different command — <cmd> is not available"; "exit code" / "nonzero" → "Re-run with verbose output". Default fallback: "Re-examine the failure and try a different approach." Returns `null` when `revisionNumber > maxRevisions` (default 5) — emits an `error` event with "Replanner exhausted (N revisions) — giving up."
+  - `getHistory(missionId)`, `canReplan(missionId)` (true when count < maxRevisions), `clear(missionId)` for cleanup.
+  - Emits MissionEvents throughout: `agent:thinking` ("Replanning due to failure (revision N/M)…"), `agent:status` (thinking→done), `decision` (with the revised plan as `action: "Replan #N: <revisedPlan>"`), `memory:update` (key="currentPlan" with the full revision object), `error` (when max revisions exceeded or AI call fails).
+  - Exports both the class and a singleton `replanner = new Replanner()`.
+- Created `src/lib/agents/executive/rollback.ts` (210 lines): `RollbackSnapshot` interface (id, missionId, timestamp, reason, files: {path, content | null}[], missionState: Partial<MissionState>, confidence) + `RollbackManager` class.
+  - `snapshot(missionId, reason, files, missionState?, confidence?): Promise<string>` — reads each file's on-disk content via `readFile` from `@/lib/repo-editor/file-operations` (files that don't exist are recorded with `content === null` so rollback can recreate-or-delete them). Stores in a per-mission LRU list capped at `MAX_SNAPSHOTS_PER_MISSION = 10` (oldest dropped when over budget). Returns the snapshotId.
+  - `rollback(missionId, snapshotId?): Promise<boolean>` — for each file in the snapshot: if `content === null`, deletes the file (if it currently exists) via `deleteFile`; otherwise restores the content via `writeFile`. Captures the CURRENT on-disk content first and pushes a `Change` record onto the shared `changeStack` from `@/lib/repo-editor/change-history` so the global undo/redo history stays coherent (the Change has `oldContent` = current on-disk state and `newContent` = the snapshot's content). Drops snapshots newer than the rollback target (standard undo semantics). Emits `agent:acting` (action="rollback" with restored/created/deleted counts) and `memory:update` (key="rollback" with the snapshot details). Returns `false` if no matching snapshot exists.
+  - `listSnapshots(missionId)`, `clear(missionId)`, `canRollback(missionId)`, `latestSnapshot(missionId)`.
+  - Exports both the class and a singleton `rollbackManager = new RollbackManager()`.
+- Enhanced `src/lib/agents/executive/react-loop.ts` (was 556 lines, now 878 lines — +322 lines of Phase E integration):
+  - Imports: added `* as path from "path"`, `Replanner` from `./replanner`, `RollbackManager` from `./rollback`.
+  - `ReActLoopOptions`: added `maxRevisions?: number` (default 5) and `rollbackConfidenceDrop?: number` (default 25).
+  - `ReActLoop` class: added fields `replanner: Replanner`, `rollbackManager: RollbackManager`, `rollbackConfidenceDrop: number`, `consecutiveToolFailures: number`, `lastSnapshotId: string | null`. Constructor initializes all from options.
+  - `run()` method enhancements:
+    - At start: `confidenceTracker.setActive(this.missionId)` so the Reflection Agent's `adjustFor()` calls land in the right place.
+    - Per-iteration: reset `lastSnapshotId = null` so auto-rollback never fires against a stale snapshot from a previous iteration.
+    - **Pre-Act snapshot** (between `consecutiveErrors = 0` and the ACT phase): if `isDestructive(think.tool, think.tool_args)` returns true, calls `filesPotentiallyAffected()` to compute the list of files to capture, then `rollbackManager.snapshot(...)` with the mission state + confidence at that moment. Stores the snapshotId in `this.lastSnapshotId` and `state.lastSnapshotId`. Failures are caught and logged as recoverable errors (the loop continues without rollback safety).
+    - **VERIFY phase**: on tool success, resets `consecutiveToolFailures = 0`; on failure, increments it. (Existing `consecutiveErrors` field tracks THINK-phase failures — these are separate.)
+    - **REFLECT phase** (rewrote the existing `if (reflection.shouldReplan) { break; }` block):
+      - Captures `confidenceBefore = state.confidence` BEFORE the reflection runs (since `reflectionAgent.reflect()` calls `confidenceTracker.adjustFor()` which mutates state.confidence).
+      - If `reflection.shouldReplan === true` OR `consecutiveToolFailures >= 2`, AND `replanner.canReplan()` returns true → calls `replanner.replan()`. If the revision is non-null, updates mission state with `subGoals` and `revisionCount` and resets `consecutiveToolFailures` so we don't immediately replan again. If `replan()` returns `null` (max revisions exceeded), ends the mission with `status: "failed"` and pushes "Max replanning attempts exceeded" to errors.
+      - If `reflection.shouldReplan === true` but `replanner.canReplan()` is false → ends the mission with `status: "failed"` and pushes "Replan requested at iteration N but revision budget exhausted".
+      - **Auto-rollback**: after the replan check, computes `confidenceDelta = currentConfidence - confidenceBefore`. If `toolResult.success === true` AND `lastSnapshotId` is set AND `confidenceDelta <= -rollbackConfidenceDrop` AND `rollbackManager.canRollback()` → calls `rollbackManager.rollback()` and restores confidence to `confidenceBefore` via `confidenceTracker.setFor()`. Emits an `agent:thinking` event explaining the rollback.
+  - New helper methods at the end of the class:
+    - `isDestructive(tool, args): boolean` — `edit_file` → always true. `run_command` → regex-matches 19 write-like patterns (`rm`, `mv`, `cp`, `mkdir`, `chmod`, `chown`, `sed -i`, `tee`, `dd of=`, `>>?` shell redirection, `npm install/i`, `bun add`, `yarn add`, `git push/commit/reset/checkout/clean/rebase`, `curl -o`, `wget -o/--output-document`, `rsync`, `unlink`, `truncate`, `patch -p`). Errs on the side of "destructive" — an unnecessary snapshot is cheap, a missed destructive action means we can't roll back.
+    - `filesPotentiallyAffected(tool, args, state): string[]` — `edit_file` → resolves `args.path` relative to `state.cwd`. `run_command` → snapshots all `state.filesModified` (since the command may touch any of them) PLUS extracts path-like arguments from the command string via regex (only files with code-like extensions: ts/tsx/js/jsx/json/md/py/go/rs/java/c/cpp/h/hpp/sh/yml/yaml/toml). All paths resolved to absolute via `path.resolve(cwd, p)`.
+- Verified `npx tsc --noEmit` → exit 0 (no TypeScript errors in any file, including the new Phase E modules). Pre-existing `src/components/mission/file-tree-panel.tsx` error from an earlier run was transient (cleared on re-run).
+- Verified `bun run lint` → exit 0 (zero ESLint errors / warnings).
+- Smoke-tested via `npx tsx`:
+  1. `Replanner` rule-based fallback for 7 error patterns (Cannot find module → "Install missing dependency: lodash", Type error → "Fix type annotations in src/components/Foo.tsx", Test failure → "Review test expectations", ENOENT → "Create missing file or fix path: /tmp/missing.txt", Permission → "Fix filesystem permissions", Command not found → "Use a different command — foo is not available", Generic → default fallback).
+  2. `Replanner` max-revisions exhaustion: with `maxRevisions=3`, the 4th `replan()` call returns `null` and emits an `error` event ("Replanner exhausted (3 revisions) — giving up.").
+  3. `Replanner` event emission: 21 MissionEvents captured for 3 replan calls (mission:started, agent:thinking, agent:status, decision, memory:update, agent:acting, error) — all expected types present.
+  4. `RollbackManager` end-to-end with real files: snapshot → modify both files → rollback → both files restored to original content. ✓
+  5. `RollbackManager` create-then-rollback: snapshot (file didn't exist) → create file → rollback → file deleted. ✓
+  6. `RollbackManager` LRU cap: 12 snapshots taken, only 10 retained (oldest 2 dropped — first retained is #3, last is #12). ✓
+  7. `RollbackManager` + `changeStack` integration: after a rollback, `changeStack.size === 1` with the Change record having `type: "edit"`, `oldContent: "modified"` (current on-disk state at rollback time), `newContent: "original"` (the snapshot's content). ✓
+  8. `ReActLoop` instantiation with new Phase E options (`maxRevisions: 3`, `rollbackConfidenceDrop: 20`) — class loads cleanly, `loop.run` is a function. ✓
+
+Stage Summary:
+- **3 files created/edited, +851 lines total**:
+  - `src/lib/agents/executive/types.ts` (+6 lines) — Added `subGoals?`, `revisionCount?`, `lastSnapshotId?` optional fields to `MissionState` (backwards-compatible).
+  - `src/lib/agents/executive/replanner.ts` (313 lines, NEW) — `PlanRevision` interface + `Replanner` class with AI-backed replanning (uses the prompt template from the task spec) and a 7-pattern rule-based fallback that works without a provider. Caps revisions at 5 by default. Emits `agent:thinking`, `agent:status`, `decision`, `memory:update`, `error` MissionEvents.
+  - `src/lib/agents/executive/rollback.ts` (210 lines, NEW) — `RollbackSnapshot` interface + `RollbackManager` class. Snapshots file contents (via `readFile` from `@/lib/repo-editor/file-operations`) and restores them on rollback (via `writeFile` / `deleteFile`). Coordinates with the existing `changeStack` from `@/lib/repo-editor/change-history` — pushes a `Change` record for each restored file so the global undo/redo history stays coherent. LRU cap of 10 snapshots per mission. Emits `agent:acting`, `memory:update`, `error` MissionEvents.
+  - `src/lib/agents/executive/react-loop.ts` (+322 lines) — Enhanced the existing ReActLoop (which Phase B had wired to `break` out of the loop when `reflection.shouldReplan` was true, leaving the mission in `planning` status). Phase E replaces that break with a call to `replanner.replan()`: on success, updates mission state with new sub-goals and continues the loop; on null (max revisions), ends with `status: "failed"` and "Max replanning attempts exceeded". Also adds: pre-Act snapshots for destructive tools (`edit_file` always; `run_command` when 19 write-like regex patterns match); consecutive-tool-failure tracking (replan trigger at ≥2); auto-rollback when a successful action causes confidence to drop ≥25 points (configurable via `rollbackConfidenceDrop`). New helper methods `isDestructive()` and `filesPotentiallyAffected()`.
+- **Quality gates**: `npx tsc --noEmit` → exit 0. `bun run lint` → exit 0. All 8 smoke tests pass.
+- **No `any` types introduced** — all dynamic data flows through `unknown` + type guards (`isReplanAIResponse`, `coerceReplanResponse`, `asString` patterns inherited from existing code). The `callAIForJSON<T = any>` default in `ai-client.ts` is pre-existing and not touched.
+- **Rule-based fallbacks work without a provider**: confirmed via 7-pattern smoke test. The `Replanner` checks `provider && provider.apiKey && provider.apiKey.trim().length > 0 && provider.baseUrl` — if any are missing, it skips the AI call entirely and goes straight to `ruleBasedRevision()`.
+- **Backwards-compatible**: the new `MissionState` fields are all optional. The `ReActLoopOptions` additions are all optional with sensible defaults. Existing callers of `new ReActLoop(missionId)` or `new ReActLoop(missionId, { maxIterations, provider })` continue to work unchanged.
+- **Next actions for Phase F**: (1) expose a `/api/mission/rollback?missionId=...&snapshotId=...` endpoint so the UI can manually trigger a rollback; (2) surface the `memory:update` events with key="currentPlan" and key="rollback" in the Mission Control UI's world-state panel; (3) wire the `revisionCount` field into the ExecutiveDecision card so users see "Replan #2 of 5"; (4) consider adding a "Replan Now" button that calls `replanner.replan()` directly without waiting for the reflection signal; (5) persistence — both snapshots and revision history are in-memory only, so a server restart loses them (consider persisting to Prisma or the filesystem).
+
+---
+Task ID: phase-G-ide-workspace
+Agent: full-stack-developer (IDE Workspace)
+Task: Build FileDiffViewer, AgentDock, LiveTerminal, FileTreePanel.
+
+Work Log:
+- Read context files: worklog.md (Phase 3 + Phase A + F summaries), mission-control-view.tsx (3-column workspace), bottom-panel.tsx (4-tab Terminal/Git/Diff/Logs panel), world-state-panel.tsx (right sidebar), mission-store.ts (Zustand store with SSE + 14-event handler + demo mode), agent-meta.ts (11-agent metadata), diff-engine.ts (computeDiff + formatDiffAsHTML + FileDiff interface), executive/types.ts (MissionEvent union), git/operation API (POST endpoint supporting operation=diff), terminal/run API (POST endpoint with permission system).
+- Created `src/components/mission/file-diff-viewer.tsx` (~530 lines): Live diff viewer with mini-sidebar file list + main diff panel.
+  - Defined `FileDiffEntry` interface (path/action/additions/deletions/content?) + `FileDiffViewerProps`.
+  - Wrote `parseUnifiedDiff(diffText, targetPath)` — parses a unified-diff string into structured `ParsedLine[]` (types: add/del/ctx/hunk/meta), filtering to just the target file's hunks by matching `--- a/path` / `+++ b/path` headers. Tracks oldLine/newLine counters via `@@ -oldStart,oldCount +newStart,newCount @@` hunk headers.
+  - Wrote `buildSyntheticDiff(file)` — generates a realistic-looking synthetic preview (N green added lines, M red removed lines) when no real content is available. Caps at 60 lines per side with an overflow indicator.
+  - Wrote `buildFullFileLines(content)` — splits raw file content into ctx-typed lines for "View full file" mode.
+  - Component fetches real unified diff via POST `/api/git/operation` with `{operation:"diff", staged:false}` when a file is selected and no `content` prop is supplied. Falls back gracefully to the synthetic preview on fetch failure.
+  - Renders each line with: dual line numbers (old/new) in a 16-wide gutter, a `+`/`−`/space prefix, and the content. Background colors: `bg-emerald-500/10` for adds, `bg-rose-500/10` for dels, `bg-cyan-500/5` for hunk headers, `bg-white/[0.02]` for meta.
+  - Auto-scrolls to the first changed line via `scrollIntoView({block:"center", behavior:"smooth"})` keyed on the file path + view mode.
+  - File mini-sidebar (180px wide on md+) shows file icon + name + `+N`/`−M` counts, with active state highlighted.
+  - Header bar shows full path, action badge (Modified=violet/Added=emerald/Deleted=rose), +/− counts, Copy path button (uses `navigator.clipboard.writeText` + toast on success), and "View full file" toggle (Eye/GitCompare icons).
+  - Empty state: "Select a file to view its diff." with FileCode2 icon.
+- Created `src/components/mission/agent-dock.tsx` (~620 lines): Vertical Discord-style agent dock.
+  - Defined `AgentDockProps { agentStatuses, events, className }`.
+  - `STATUS_COLOR` map: idle=#64748b (gray), thinking=#fbbf24 (amber, pulsing), acting=#22d3ee (cyan, glowing), waiting=#a78bfa (violet), done=#34d399 (emerald), error=#f472b6 (rose).
+  - Outer `AgentDock` component manages `collapsed` (boolean) + `selectedAgent` (string|null) state. Renders two `AnimatePresence`-wrapped `motion.div` slivers: expanded (56px wide, full dock) vs collapsed (28px wide, just a PanelLeftOpen toggle button).
+  - `AgentDockInner` renders a PanelLeftClose affordance at the top + all 11 agents (from `AGENTS` array in agent-meta.ts) as 40×40px rounded buttons with the agent's colored lucide icon + a status dot (top-right). Active states (thinking/acting) get a glowing border via boxShadow + pulse animation.
+  - Each `AgentButton` is wrapped in a shadcn `Tooltip` showing agent name (colored), status (capitalized), and current detail (line-clamp-2).
+  - `AgentDrawer` slides in from the left (framer-motion `initial={{x:"-100%"}}`) with a backdrop blur. Contains:
+    - Header: agent icon + name (colored) + event count + last update time + close button.
+    - Role section: full description from `AGENT_DESCRIPTIONS` map (11 entries with 1-2 sentence role summaries).
+    - Confidence Trend (Executive only): `ConfidenceSparkline` renders an SVG sparkline of the last 12 `confidence:update` events with a gradient fill, colored by latest value (rose <50, amber 50-75, emerald >75).
+    - Artifacts section: last 8 `file:change` events with path + +/- counts.
+    - Event History: full reverse-chronological list of that agent's events (filtered via `resolveAgent(e.agent).id === agentId`), each rendered as `AgentEventRow` with the event type as a colored left-border accent + structured fields (message/action/detail/tool/path/reasoning/success badge).
+  - All useMemo hooks in `AgentDrawer` are called unconditionally before the `if (!agent) return null` early-exit, satisfying `react-hooks/rules-of-hooks`.
+- Created `src/components/mission/live-terminal.tsx` (~420 lines): Enhanced terminal with ANSI + commands.
+  - Defined `TerminalLine` interface + `LiveTerminalProps { output, onRunCommand?, history?, className }`.
+  - Wrote `parseAnsi(input)` — regex-based ANSI escape-sequence parser. Strips `\x1b[<codes>m` sequences and emits `AnsiToken[]` with `color` (mapped from SGR codes 30-37 + bright 90-97 via `ANSI_COLOR_MAP`), `bold`, `dim`, `italic` flags. Handles reset (code 0) and the 38/39 extended-color prefix gracefully.
+  - Color palette deliberately avoids indigo/blue: black→slate-600, red→rose-400, green→emerald-400, yellow→amber-400, blue→cyan-400 (rerouted), magenta→violet-400, cyan→cyan-400, white→slate-200.
+  - Main `LiveTerminal` component:
+    - Header bar with mac-style traffic-light dots + "mission@sandbox:~$" prompt + FilterButtons (All/out/err) + Clear (Trash2) button.
+    - Output panel: monospace 11px, bg-black/40, auto-scrolls to bottom on new output (pauses when user scrolls up via `onScroll` checking `scrollHeight - scrollTop - clientHeight < 24`).
+    - Empty state: TerminalIcon + "Terminal output from agents will appear here." + hint to type a command.
+    - Command input: green `$` prompt + auto-focus input + Enter to run + ArrowUp/ArrowDown for history recall + Ctrl+L to clear. Disabled state when no `onRunCommand` is supplied.
+    - Run button: Play icon + "Run" label, shows Loader2 spinner when running.
+    - History scrubber bar at the bottom: last 12 commands as clickable chips + ChevronUp/Down buttons for navigation.
+  - `LiveTerminalConnected` wrapper pre-wires `onRunCommand` to POST `/api/terminal/run`. Echoes `$ <command>` as a system line, then appends stdout/stderr/exit code as separate lines via the `onCommandRun` callback. Special-cases `clear` to emit a local "— terminal cleared —" system message.
+  - `StreamCountBadge` exported as a convenience for parents that want to show stdout/stderr line counts.
+- Created `src/components/mission/file-tree-panel.tsx` (~440 lines): File tree with change indicators.
+  - Defined `FileTreeEntry` interface (action union: modified/added/deleted) + `FileTreePanelProps`. Props accept `action: string` (broader) for compatibility with mission-store's `FileModified` type, with a `normalizeAction()` helper that coerces unknown actions (renamed/copied) to "modified".
+  - `FILE_ICONS` module-level lookup map (28 extensions → lucide icons: FileCode2 for ts/tsx/js/jsx/mjs/cjs, FileJson for json/jsonc, FileText for md/mdx/txt/rst, FileTerminal for sh/bash/zsh/fish, FileCog for yml/yaml/toml/ini/env/conf/config, FileImage for png/jpg/jpeg/gif/svg/webp/ico). Lookup is direct property access (`FILE_ICONS[ext] ?? File`) — no function call — to satisfy the `react-hooks/static-components` lint rule.
+  - `buildTree(files)` — builds a `TreeNode` hierarchy from flat file paths. Each node has `name`, `path`, `isDir`, `children: Map`, and optional `entry` (set on file leaves).
+  - `ACTION_BADGE` map: modified=M (violet), added=A (emerald), deleted=D (rose).
+  - Main `FileTreePanel`:
+    - Header with GitBranch icon + "File Tree" label + file count + "Modified" filter toggle button.
+    - Body: scrollable tree with `TreeChildren` recursive renderer. Folders sort first (alphabetical), then files. Each folder row has a collapse chevron + Folder/FolderOpen icon (amber) + name + descendant count. Each file row has the extension-specific icon + name + action badge (M/A/D in a colored 3×3 chip) + +/- counts.
+    - AnimatePresence + motion.div for smooth expand/collapse animations on folders.
+    - Empty state: File icon + "No files modified yet." + hint.
+    - Legend bar at the bottom showing M/A/D color key.
+    - "Show only modified" toggle sets `forceExpand` on all folders (auto-expands the tree so the user sees all modified files without clicking).
+  - Clicking a file calls `onSelectFile(path)` — the parent (mission-control-view) wires this to switch the right panel to the Diff tab and set the selected path.
+- Edited `src/components/mission/bottom-panel.tsx`:
+  - Added `LiveTerminalConnected` + `TerminalLine as LiveTerminalLine` imports.
+  - Added `onTerminalOutput?: (line: LiveTerminalLine) => void` to `BottomPanelProps`.
+  - Replaced the inline `TerminalTab` component (which was a basic colored-lines renderer) with a thin wrapper that renders `<LiveTerminalConnected output={lines} onCommandRun={onTerminalOutput} className="h-full" />`. The Git/FileDiff/Logs tabs are unchanged.
+  - Passed the new `onTerminalOutput` prop through `BottomPanel` → `TerminalTab`.
+- Edited `src/components/views/mission-control-view.tsx`:
+  - Added imports: `useCallback`, `ListTree`, `FileDiff as FileDiffIcon`, `Globe`, `Tabs/TabsList/TabsTrigger`, `AgentDock`, `FileDiffViewer`, `FileTreePanel`, `TerminalLine as LiveTerminalLine` type.
+  - Removed unused `Zap` import (was used by the old standalone World State panel header, no longer needed since World State is now a tab).
+  - Added state: `rightTab` ("tree" | "diff" | "world", default "tree"), `selectedFilePath` (string|undefined).
+  - Added `useEffect` that auto-populates `selectedFilePath` from `currentFile` (the file:change-driven state) when the user hasn't yet picked a file manually.
+  - Added `onTerminalOutput` useCallback that pushes terminal lines back into the mission store via `useMissionStore.getState().handleEvent({type:"terminal:output", ...})`. Special-cases the "clear" sentinel.
+  - Added `onSelectFile` useCallback that sets `selectedFilePath` AND switches `rightTab` to "diff" — so clicking a file in the tree opens it in the diff viewer.
+  - Replaced the 3-column grid `<div className="grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-cols-[260px_1fr_320px]">` with a flex row `<div className="flex min-h-0 flex-1 gap-3">` containing:
+    - `<AgentDock agentStatuses={agentStatuses} events={events} className="hidden md:flex" />` (handles its own 56px width + collapse animation).
+    - A nested `<div className="grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-cols-[240px_1fr_320px]">` with the same 3-column structure as before (missions sidebar / activity feed / right panel).
+  - Replaced the right column's single WorldStatePanel with a tabbed `GlassCard` containing 3 TabsTriggers (Files/Diff/World) and conditionally-rendered panels:
+    - "tree" → `<FileTreePanel filesModified={filesModified} onSelectFile={onSelectFile} selectedPath={selectedFilePath} className="h-full" />`
+    - "diff" → `<FileDiffViewer filesModified={filesModified} selectedPath={selectedFilePath} onSelect={setSelectedFilePath} className="h-full" />`
+    - "world" → existing `<WorldStatePanel ... />` wrapped in a scrollable div.
+  - Passed `onTerminalOutput={onTerminalOutput}` to `<BottomPanel>`.
+- Quality gates:
+  - First lint pass surfaced 4 errors: 3× `react-hooks/rules-of-hooks` in agent-dock.tsx (useMemo called after early-return in `AgentDrawer`) + 1× `react-hooks/static-components` in file-tree-panel.tsx (`const Icon = fileIcon(node.name)` — function-call returning a component triggers the rule). Fixed both: (a) moved all useMemo hooks above the `if (!agent) return null` early-exit in AgentDrawer; (b) replaced the `fileIcon(name)` function call with direct property access on a module-level `FILE_ICONS` lookup map.
+  - First tsc pass surfaced 1 error: `FileModified[]` (action: string) was not assignable to `FileTreeEntry[]` (action: "modified"|"added"|"deleted"). Fixed by widening `FileTreePanelProps.filesModified` to accept `Array<{path, action: string, ...}>` and adding a `normalizeAction()` helper that coerces unknown actions to "modified" at display time.
+  - Final `bun run lint` → exit 0 (zero errors, zero warnings).
+  - Final `npx tsc --noEmit` → exit 0 (zero TS errors).
+  - Smoke-tested dev server: page loads HTTP 200, renders ~132KB HTML, no compile errors.
+
+Stage Summary:
+- Phase G IDE Workspace complete. 4 new components + 2 edited files. The Mission Control view now feels like Cursor/Zed: a 4-column workspace (AgentDock | Missions sidebar | AI Activity Feed | tabbed File Tree / Diff / World State) + an enhanced bottom panel with a real interactive terminal.
+- **4 new files** (~2,010 lines total):
+  - `src/components/mission/file-diff-viewer.tsx` (~530 lines) — Live unified-diff viewer with mini-sidebar file list, ANSI-aware line rendering, dual line-number gutter, view-full-file toggle, copy-path button, auto-scroll to first change. Fetches real diff from `/api/git/operation` POST and falls back to a synthetic preview.
+  - `src/components/mission/agent-dock.tsx` (~620 lines) — Collapsible 56px vertical dock with all 11 agents. Each button shows colored icon + pulsing/glowing status dot. Click opens a left-slide-in drawer with the agent's role description, full event history (color-coded), confidence sparkline (Executive only), and artifacts list.
+  - `src/components/mission/live-terminal.tsx` (~420 lines) — Enhanced terminal with regex-based ANSI color parser (8-color + bright variants, no indigo/blue), command input with up/down history recall, Run button wired to POST `/api/terminal/run`, stdout/stderr filter toggle, clear button, auto-scroll with smart pause, history scrubber bar.
+  - `src/components/mission/file-tree-panel.tsx` (~440 lines) — Recursive file tree with module-level FILE_ICONS lookup (28 extensions), M/A/D action badges with color, +/- line counts, expandable folders with motion animations, "Show only modified" filter that auto-expands all folders.
+- **2 edited files**:
+  - `src/components/mission/bottom-panel.tsx` — Terminal tab now uses `LiveTerminalConnected` instead of the inline colored-lines renderer. Added `onTerminalOutput` prop passthrough.
+  - `src/components/views/mission-control-view.tsx` — Workspace is now a flex row with `AgentDock` (56px collapsible) + the existing 3-column grid (240px sidebar / 1fr feed / 320px tabbed right panel). The right panel is a 3-tab `Tabs` (Files / Diff / World) with `selectedFilePath` state lifted to the parent so FileTreePanel and FileDiffViewer stay in sync. Terminal output from the LiveTerminal is pushed back into the mission store via `handleEvent({type:"terminal:output", ...})`.
+- **Architecture decisions**:
+  - The `AgentDock` is its own self-contained component that manages its own collapse state. When collapsed, it shrinks to a 28px sliver with a `PanelLeftOpen` toggle button. When expanded, it shows a `PanelLeftClose` affordance at the top + 11 agent buttons. Both transitions animate via framer-motion `AnimatePresence` + spring transitions.
+  - The right panel's `selectedFilePath` state lives in `MissionControlView` (lifted state) so the FileTreePanel and FileDiffViewer can share it. When the user clicks a file in the tree, `onSelectFile(path)` sets the path AND switches the tab to "diff" — so the user immediately sees the diff without an extra click.
+  - The `LiveTerminalConnected` wrapper encapsulates the `/api/terminal/run` POST call, so callers just pass an `onCommandRun` callback to receive each output line. The wrapper special-cases `clear` to avoid sending it to the API.
+  - The `FileTreePanel` accepts `action: string` (not the strict union) because mission-store's `FileModified` type uses `string` for action. A `normalizeAction()` helper coerces unknown values to "modified" at display time, so the tree never crashes on unexpected action strings.
+  - The `FileDiffViewer` tries three sources in order: (1) `file.content` prop (if caller supplied raw content), (2) POST `/api/git/operation` with `{operation:"diff"}` then client-side filter by path, (3) synthetic preview using the additions/deletions counts. This makes the component useful in all contexts — with or without a real git repo.
+- **Quality**: 0 TypeScript errors, 0 ESLint errors. Color palette strictly cyan/violet/emerald/amber/rose (no indigo/blue — the ANSI blue code 34 is rerouted to cyan-400). All new components use `'use client'`, shadcn/ui primitives (Button, Tabs, Badge, Tooltip, ScrollArea), GlassCard from shared/ui, framer-motion for animations, and lucide-react for icons. Responsive: dock + sidebars + right panel all hide on mobile (`md:flex`/`lg:flex`); the activity feed + timeline + bottom panel remain visible at all breakpoints.

@@ -12,7 +12,8 @@ export type AgentId =
   | "test-agent"
   | "security-agent"
   | "performance-agent"
-  | "devops-agent";
+  | "devops-agent"
+  | "reflection-agent";
 
 export type TaskStatus =
   | "pending"

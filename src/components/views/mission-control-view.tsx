@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Rocket,
   Square,
@@ -14,11 +14,13 @@ import {
   Sparkles,
   ChevronRight,
   Github,
-  Zap,
   Wifi,
   WifiOff,
   Beaker,
   Target,
+  ListTree,
+  FileDiff as FileDiffIcon,
+  Globe,
 } from "lucide-react";
 import { GlassCard, GradientText } from "@/components/shared/ui";
 import { Button } from "@/components/ui/button";
@@ -32,6 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useMissionStore, MISSION_TEMPLATES } from "@/lib/mission-store";
 import { useProvidersStore } from "@/lib/providers-store";
 import { useAppStore } from "@/lib/store";
@@ -43,6 +46,10 @@ import { AgentStatusCards } from "@/components/mission/agent-status-cards";
 import { WorldStatePanel } from "@/components/mission/world-state-panel";
 import { MissionTimeline } from "@/components/mission/mission-timeline";
 import { BottomPanel } from "@/components/mission/bottom-panel";
+import { AgentDock } from "@/components/mission/agent-dock";
+import { FileDiffViewer } from "@/components/mission/file-diff-viewer";
+import { FileTreePanel } from "@/components/mission/file-tree-panel";
+import type { TerminalLine as LiveTerminalLine } from "@/components/mission/live-terminal";
 import type { AIProviderConfig } from "@/lib/mission-store";
 
 const STATUS_META: Record<
@@ -102,6 +109,10 @@ export function MissionControlView() {
 
   const [starting, setStarting] = useState(false);
   const [bottomOpen, setBottomOpen] = useState(true);
+  const [rightTab, setRightTab] = useState("tree");
+  const [selectedFilePath, setSelectedFilePath] = useState<string | undefined>(
+    undefined
+  );
 
   // Pre-fill repo URL when an analysis is active.
   useEffect(() => {
@@ -111,6 +122,49 @@ export function MissionControlView() {
   }, [report, repoUrl, setRepoUrl]);
 
   const hasMission = missionId !== null || demoMode;
+
+  // When a file:change event arrives, surface a subtle hint that a new file is
+  // available in the right panel — but only if the user is currently looking
+  // at the World State tab.
+  useEffect(() => {
+    if (!currentFile) return;
+    setSelectedFilePath((prev) => prev ?? currentFile);
+  }, [currentFile]);
+
+  // Push terminal output back into the mission store via handleEvent.
+  const onTerminalOutput = useCallback(
+    (line: LiveTerminalLine) => {
+      // The "clear" sentinel clears the in-memory buffer locally.
+      if (line.data === "clear" && line.stream === "system") {
+        // We can't directly clear the store's terminalOutput from here without
+        // a dedicated action; emit a no-op system message instead.
+        useMissionStore.getState().handleEvent({
+          id: `term_${Date.now().toString(36)}`,
+          type: "terminal:output",
+          timestamp: Date.now(),
+          stream: "system",
+          data: "— terminal cleared —",
+        });
+        return;
+      }
+      useMissionStore.getState().handleEvent({
+        id: `term_${Date.now().toString(36)}_${Math.random()
+          .toString(36)
+          .slice(2, 6)}`,
+        type: "terminal:output",
+        timestamp: line.timestamp,
+        stream: line.stream,
+        data: line.data,
+      });
+    },
+    []
+  );
+
+  // When the user picks a file in the FileTreePanel, switch to the Diff tab.
+  const onSelectFile = useCallback((path: string) => {
+    setSelectedFilePath(path);
+    setRightTab("diff");
+  }, []);
 
   const onStart = async () => {
     if (!goal.trim()) {
@@ -495,60 +549,121 @@ export function MissionControlView() {
         </div>
       </GlassCard>
 
-      {/* 3-column workspace */}
-      <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-cols-[260px_1fr_320px]">
-        {/* LEFT: missions sidebar */}
-        <div className="hidden min-h-0 flex-col gap-3 lg:flex">
-          <MissionsSidebar />
-        </div>
+      {/* 4-column workspace: AgentDock | Missions | Activity | Right Panel */}
+      <div className="flex min-h-0 flex-1 gap-3">
+        <AgentDock
+          agentStatuses={agentStatuses}
+          events={events}
+          className="hidden md:flex"
+        />
 
-        {/* CENTER: activity feed + timeline */}
-        <div className="flex min-h-0 flex-col gap-3">
-          <GlassCard className="min-h-0 flex-1 overflow-hidden p-0">
-            <div className="flex items-center justify-between border-b border-white/5 px-4 py-2">
-              <div className="flex items-center gap-2">
-                <Activity className="h-3.5 w-3.5 text-cyan-300" />
-                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  {t("mission", "feed.title") || "AI Activity Feed"}
+        <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-cols-[240px_1fr_320px]">
+          {/* LEFT: missions sidebar */}
+          <div className="hidden min-h-0 flex-col gap-3 lg:flex">
+            <MissionsSidebar />
+          </div>
+
+          {/* CENTER: activity feed + timeline */}
+          <div className="flex min-h-0 flex-col gap-3">
+            <GlassCard className="min-h-0 flex-1 overflow-hidden p-0">
+              <div className="flex items-center justify-between border-b border-white/5 px-4 py-2">
+                <div className="flex items-center gap-2">
+                  <Activity className="h-3.5 w-3.5 text-cyan-300" />
+                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    {t("mission", "feed.title") || "AI Activity Feed"}
+                  </span>
+                </div>
+                <span className="font-mono text-[10px] text-muted-foreground/60">
+                  {events.length} events
                 </span>
               </div>
-              <span className="font-mono text-[10px] text-muted-foreground/60">
-                {events.length} events
-              </span>
-            </div>
-            <div className="h-[calc(100%-2.25rem)] p-2">
-              <AIActivityFeed events={events} />
-            </div>
-          </GlassCard>
+              <div className="h-[calc(100%-2.25rem)] p-2">
+                <AIActivityFeed events={events} />
+              </div>
+            </GlassCard>
 
-          <MissionTimeline events={events} className="shrink-0" />
-        </div>
+            <MissionTimeline events={events} className="shrink-0" />
+          </div>
 
-        {/* RIGHT: world state */}
-        <div className="hidden min-h-0 flex-col lg:flex">
-          <GlassCard className="min-h-0 flex-1 overflow-hidden p-0">
-            <div className="flex items-center gap-2 border-b border-white/5 px-4 py-2">
-              <Zap className="h-3.5 w-3.5 text-violet-300" />
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                {t("mission", "worldState.title") || "World State"}
-              </span>
-            </div>
-            <div className="h-[calc(100%-2.25rem)]">
-              <WorldStatePanel
-                currentTask={currentTask}
-                currentFile={currentFile}
-                confidence={confidence}
-                buildStatus={buildStatus}
-                testStatus={testStatus}
-                iteration={iteration}
-                maxIterations={maxIterations}
-                currentPhase={currentPhase}
-                filesModified={filesModified}
-                decisions={decisions}
-                memory={memory}
-              />
-            </div>
-          </GlassCard>
+          {/* RIGHT: tabbed panel (File Tree | Diff | World State) */}
+          <div className="hidden min-h-0 flex-col lg:flex">
+            <GlassCard className="flex min-h-0 flex-1 flex-col overflow-hidden p-0">
+              <Tabs
+                value={rightTab}
+                onValueChange={setRightTab}
+                className="flex h-full flex-col"
+              >
+                <div className="flex items-center justify-between border-b border-white/5 px-2">
+                  <TabsList className="h-auto bg-transparent p-1">
+                    <TabsTrigger
+                      value="tree"
+                      className="gap-1.5 rounded-md px-2.5 py-1 text-[11px] data-[state=active]:bg-white/5"
+                    >
+                      <ListTree className="h-3 w-3" /> Files
+                      {filesModified.length > 0 && (
+                        <span className="ml-1 rounded-full bg-white/5 px-1 text-[9px] text-muted-foreground">
+                          {filesModified.length}
+                        </span>
+                      )}
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="diff"
+                      className="gap-1.5 rounded-md px-2.5 py-1 text-[11px] data-[state=active]:bg-white/5"
+                    >
+                      <FileDiffIcon className="h-3 w-3" /> Diff
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="world"
+                      className="gap-1.5 rounded-md px-2.5 py-1 text-[11px] data-[state=active]:bg-white/5"
+                    >
+                      <Globe className="h-3 w-3" /> World
+                    </TabsTrigger>
+                  </TabsList>
+                </div>
+
+                <div className="min-h-0 flex-1">
+                  {/* File Tree tab */}
+                  {rightTab === "tree" && (
+                    <FileTreePanel
+                      filesModified={filesModified}
+                      onSelectFile={onSelectFile}
+                      selectedPath={selectedFilePath}
+                      className="h-full"
+                    />
+                  )}
+
+                  {/* Diff tab */}
+                  {rightTab === "diff" && (
+                    <FileDiffViewer
+                      filesModified={filesModified}
+                      selectedPath={selectedFilePath}
+                      onSelect={setSelectedFilePath}
+                      className="h-full"
+                    />
+                  )}
+
+                  {/* World State tab */}
+                  {rightTab === "world" && (
+                    <div className="h-full overflow-y-auto scrollbar-thin">
+                      <WorldStatePanel
+                        currentTask={currentTask}
+                        currentFile={currentFile}
+                        confidence={confidence}
+                        buildStatus={buildStatus}
+                        testStatus={testStatus}
+                        iteration={iteration}
+                        maxIterations={maxIterations}
+                        currentPhase={currentPhase}
+                        filesModified={filesModified}
+                        decisions={decisions}
+                        memory={memory}
+                      />
+                    </div>
+                  )}
+                </div>
+              </Tabs>
+            </GlassCard>
+          </div>
         </div>
       </div>
 
@@ -585,6 +700,7 @@ export function MissionControlView() {
                 terminalOutput={terminalOutput}
                 events={events}
                 filesModified={filesModified}
+                onTerminalOutput={onTerminalOutput}
               />
             </GlassCard>
           </motion.div>

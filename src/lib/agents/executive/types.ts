@@ -53,6 +53,12 @@ export interface MissionState {
   filesModified: string[];
   buildStatus?: VerificationStatus;
   testStatus?: VerificationStatus;
+  /** Phase E: sub-goals produced by the Replanner. Cleared on each revision. */
+  subGoals?: string[];
+  /** Phase E: number of times the Replanner has produced a revised plan. */
+  revisionCount?: number;
+  /** Phase E: snapshot id taken before the most recent destructive action. */
+  lastSnapshotId?: string;
   startedAt: number;
   updatedAt: number;
 }
