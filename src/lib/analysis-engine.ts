@@ -660,7 +660,7 @@ function buildMonetization(): AnalysisReport["monetization"] {
   ];
 }
 
-function buildDocs(name: string, owner: string): AnalysisReport["documentation"] {
+function buildDocs(name: string, owner: string, profile: RepoProfile): AnalysisReport["documentation"] {
   const readme = `# ${name}
 
 > AI-generated README — produced by CodeInsight AI.
@@ -706,7 +706,80 @@ Returns a single project with its latest analysis.
 ### POST /api/analyze
 Triggers a new repository analysis. Returns a job id for polling.
 `;
-  return { readme, apiDocs };
+  const isJsStack = profile.frameworks.some(f => /next|react|vue|svelte|nuxt/i.test(f.name));
+  const primary = profile.primary ?? "Unknown";
+
+  const architectureMd = `# Architecture — ${name}
+
+## Pattern: **Layered Monolith**
+
+The codebase follows a clean separation between presentation, business logic,
+and data-access layers. Each layer depends only on the one directly below it.
+
+## Layers
+
+### Presentation
+Renders UI and handles user input. Built primarily with **${primary}**.
+
+### Domain / Services
+Contains the core business rules. Framework-agnostic and unit-testable.
+
+### Infrastructure / Persistence
+Owns database access, external APIs, and side effects.
+`;
+
+  const folderGuide = `# Folder Guide — ${name}
+
+| Folder | Responsibility |
+|--------|----------------|
+| \`src/app\` or \`src/pages\` | Application routes / screens |
+| \`src/components\` | Reusable UI components |
+| \`src/lib\` or \`src/services\` | Business logic and integrations |
+| \`src/db\` or \`prisma/\` | Database schema and access layer |
+| \`public/\` | Static assets served as-is |
+`;
+
+  const componentGuide = isJsStack
+    ? `# Component Guide — ${name}
+
+> Auto-generated overview of the main UI components.
+
+| Component | Purpose |
+|-----------|---------|
+| \`<Layout />\` | Shell with header, navigation, and footer |
+| \`<Button />\` | Shared call-to-action primitive |
+| \`<Card />\` | Container for grouped content |
+| \`<DataTable />\` | Tabular data with sorting and pagination |
+
+## Conventions
+- Components are PascalCase and one-per-file under \`src/components/\`.
+- Props are typed; co-located styles use Tailwind utility classes.
+`
+    : `# Component Guide — ${name}\n\nKho mã không dùng stack UI phổ biến (React/Vue/Svelte), nên không có component catalog tự động. Liệt kê thủ công các module giao diện chính tại đây.\n`;
+
+  const packageManager = isJsStack ? "bun" : primary === "Python" ? "pip" : "unknown";
+  const pmLabel = packageManager === "unknown" ? "(không xác định — xem tài liệu ngôn ngữ)" : packageManager;
+
+  const deploymentGuide = `# Deployment Guide — ${name}
+
+## 1. Cài đặt
+\`\`\`bash
+${packageManager === "bun" ? "bun install" : packageManager === "pip" ? "pip install -r requirements.txt" : "# Xem tài liệu của ngôn ngữ/framework"}
+\`\`\`
+
+## 2. Chạy dev
+\`\`\`bash
+${packageManager === "bun" ? "bun dev" : packageManager === "pip" ? "python -m venv .venv && source .venv/bin/activate" : "# Theo tài liệu framework"}
+\`\`\`
+
+## 3. Build & Triển khai
+- Build production theo framework được phát hiện (${profile.frameworks.map(f => f.name).join(", ") || "n/a"}).
+- Khuyến nghị: Dockerize ứng dụng và deploy lên Railway / Render / Fly.io / Vercel.
+
+> Package manager suy luận: **${pmLabel}**.
+`;
+
+  return { readme, apiDocs, architectureMd, folderGuide, componentGuide, deploymentGuide };
 }
 
 /* ---------- Code snippets ---------- */
@@ -1035,7 +1108,7 @@ export function generateReport(repoUrl: string): AnalysisReport {
     technicalDebt: buildTechnicalDebt(scores),
     roadmap: buildRoadmap(),
     monetization: buildMonetization(),
-    documentation: buildDocs(parsed.name, parsed.owner),
+    documentation: buildDocs(parsed.name, parsed.owner, profile),
     activity: buildActivity(rng),
     complexityTrend: buildComplexityTrend(rng),
   };

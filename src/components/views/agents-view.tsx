@@ -53,6 +53,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useProvidersStore } from "@/lib/providers-store";
+import { useAppStore } from "@/lib/store";
 import { useT } from "@/lib/i18n";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -264,6 +265,24 @@ function getAgentIcon(name: string): typeof Bot {
 export function AgentsView() {
   const { t } = useT();
   const [tab, setTab] = useState("dashboard");
+  const report = useAppStore((s) => s.activeReport);
+  const setView = useAppStore((s) => s.setView);
+
+  // Giống ChatView/ProjectView: Agents view chỉ hoạt động khi đã có 1 phân tích active.
+  if (!report) {
+    return (
+      <div className="mx-auto flex min-h-[60vh] max-w-xl flex-col items-center justify-center px-4 text-center">
+        <GlassCard className="p-10">
+          <Bot className="mx-auto h-10 w-10 text-cyan-300" />
+          <h2 className="mt-4 text-xl font-bold">{t("chat", "noRepo")}</h2>
+          <p className="mt-2 text-sm text-muted-foreground">{t("chat", "noRepoDesc")}</p>
+          <Button onClick={() => setView("analyze")} className="mt-4 bg-gradient-to-r from-cyan-500 to-violet-500 text-white">
+            <Sparkles className="mr-1.5 h-4 w-4" /> {t("chat", "analyzeFirst")}
+          </Button>
+        </GlassCard>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-7xl space-y-6 px-4 py-6 md:px-6">
@@ -276,6 +295,8 @@ export function AgentsView() {
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Bot className="h-4 w-4 text-cyan-300" />
             <span>Multi-Agent System</span>
+            <span>·</span>
+            <span className="font-mono">{report.repoOwner}/{report.repoName}</span>
           </div>
           <h1 className="mt-1 text-2xl font-bold md:text-3xl">
             <GradientText>{t("common", "nav.agents")}</GradientText>
@@ -310,7 +331,8 @@ export function AgentsView() {
           <DashboardTab active={tab === "dashboard"} />
         </TabsContent>
         <TabsContent value="workflow" className="mt-4">
-          <WorkflowTab />
+          {/* Workflow Runner gắn với phân tích hiện tại — repositoryUrl lấy từ activeReport */}
+          <WorkflowTab repoUrl={report.repoUrl} />
         </TabsContent>
         <TabsContent value="terminal" className="mt-4">
           <TerminalTab />
@@ -540,11 +562,10 @@ const WORKFLOW_PHASES = [
   { name: "commit-push", label: "Commit + Push", threshold: 90 },
 ];
 
-function WorkflowTab() {
+function WorkflowTab({ repoUrl }: { repoUrl: string }) {
   const providers = useProvidersStore((s) => s.providers);
   const enabledProviders = providers.filter((p) => p.enabled);
   const [goal, setGoal] = useState("");
-  const [repoUrl, setRepoUrl] = useState("");
   const [providerId, setProviderId] = useState<string>(enabledProviders[0]?.id ?? "__default__");
   const [running, setRunning] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -608,6 +629,7 @@ function WorkflowTab() {
         body: JSON.stringify({
           mode: "workflow",
           goal,
+          // Luôn gắn với phân tích hiện tại (từ activeReport.repoUrl)
           repositoryUrl: repoUrl || undefined,
           provider: toProviderConfig(selectedProvider),
           autoCommit: true,
@@ -642,7 +664,6 @@ function WorkflowTab() {
     setProgress(0);
     setProgressMsg("");
     setGoal("");
-    setRepoUrl("");
   };
 
   return (
@@ -674,15 +695,16 @@ function WorkflowTab() {
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
+              {/* Repository cố định = phân tích hiện tại (chỉ-đọc, không cho user đổi) */}
               <div className="space-y-1.5">
                 <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                  <GitBranch className="h-3 w-3 text-violet-400" /> Repository URL (optional)
+                  <GitBranch className="h-3 w-3 text-violet-400" /> Repository
                 </label>
                 <Input
                   value={repoUrl}
-                  onChange={(e) => setRepoUrl(e.target.value)}
-                  placeholder="https://github.com/owner/repo"
-                  className="bg-white/[0.03] font-mono text-xs"
+                  readOnly
+                  className="bg-white/[0.02] font-mono text-xs text-muted-foreground"
+                  title="Gắn với phân tích hiện tại"
                 />
               </div>
               <div className="space-y-1.5">

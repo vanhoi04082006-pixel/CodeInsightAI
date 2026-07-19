@@ -90,8 +90,8 @@ export function AppSidebar() {
       {/* Nav */}
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 scrollbar-thin">
         {NAV.map((item) => {
-          const active = view === item.id;
-          const disabled = item.disabled === true || ((item.id === "project" || item.id === "chat") && !activeReport);
+        const active = view === item.id;
+        const disabled = item.disabled === true || ((item.id === "project" || item.id === "chat" || item.id === "agents") && !activeReport);
           const Icon = item.icon;
           const label = t("common", item.labelKey);
           return (
@@ -170,7 +170,7 @@ export function AppTopbar() {
       <div className="hidden md:block">
         <h1 className="text-sm font-semibold">{t("common", titleKeyMap[view])}</h1>
         <p className="text-[11px] text-muted-foreground">
-          {activeReport && (view === "project" || view === "chat")
+          {activeReport && (view === "project" || view === "chat" || view === "agents")
             ? `${activeReport.repoOwner}/${activeReport.repoName}`
             : "AI-powered repository intelligence"}
         </p>
@@ -213,7 +213,7 @@ export function MobileNav() {
     <nav className="glass-strong fixed bottom-0 left-0 right-0 z-30 flex items-center justify-around border-t border-white/10 px-1 py-1.5 md:hidden">
       {items.map((item) => {
         const active = view === item.id;
-        const disabled = item.disabled === true || ((item.id === "project" || item.id === "chat") && !activeReport);
+        const disabled = item.disabled === true || ((item.id === "project" || item.id === "chat" || item.id === "agents") && !activeReport);
         const Icon = item.icon;
         const label = t("common", item.labelKey);
         return (

@@ -1,7 +1,7 @@
 // CodeInsight AI — AI Provider presets
 // 14 supported providers, each with its catalog of models & default base URL.
 
-import type { ProviderPreset } from "./types";
+import type { ProviderPreset, ProviderId } from "./types";
 
 export const PROVIDER_PRESETS: ProviderPreset[] = [
   {

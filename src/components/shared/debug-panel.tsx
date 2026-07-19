@@ -153,7 +153,7 @@ export function ModelInfoCard({ snapshot }: { snapshot: DebugSnapshot }) {
         <Row label="Personality" value={snapshot.personality} />
         <Row label="Context window" value={snapshot.contextWindow.toLocaleString()} />
         <Row label="Temperature" value={snapshot.temperature.toFixed(2)} />
-        <Row label="Max tokens" value={snapshot.maxTokens === -1 ? "∞" : snapshot.maxTokens} />
+        <Row label="Max tokens" value={snapshot.maxTokens === -1 ? "∞" : snapshot.maxTokens.toLocaleString()} />
         <Row label="Streaming" value={snapshot.streaming ? "on" : "off"} />
       </div>
     </DebugSection>
