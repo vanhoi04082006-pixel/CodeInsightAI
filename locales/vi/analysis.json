@@ -45,5 +45,12 @@
   "failedDesc": "Đã xảy ra lỗi. Repository có thể là private hoặc không truy cập được.",
   "goToDashboard": "Về dashboard",
   "logLabel": "analysis.log",
-  "working": "▍ đang xử lý…"
+  "working": "▍ đang xử lý…",
+  "analyzingHeader": "Đang phân tích",
+  "popularRepoDemos": {
+    "next": "React framework",
+    "react": "UI library",
+    "vue": "Progressive framework",
+    "tailwind": "CSS engine"
+  }
 }

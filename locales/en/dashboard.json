@@ -38,5 +38,14 @@
   "languagesCount": "Languages",
   "bugsFound": "Bugs found",
   "securityIssues": "Security issues",
-  "perfIssues": "Perf issues"
+  "perfIssues": "Perf issues",
+  "intelligence": "Intelligence",
+  "scoreLabels": {
+    "security": "Security",
+    "performance": "Performance",
+    "architecture": "Architecture",
+    "maintainability": "Maintainability",
+    "codeQuality": "Code Quality",
+    "overall": "Overall"
+  }
 }
