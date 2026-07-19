@@ -303,7 +303,7 @@ export function BottomPanel({
   return (
     <div className={cn("flex flex-col", className)}>
       <Tabs value={tab} onValueChange={setTab} className="flex h-full flex-col">
-        <div className="flex items-center justify-between border-b border-white/5 px-2">
+        <div className="panel-header">
           <TabsList className="h-auto bg-transparent p-1">
             <TabsTrigger
               value="terminal"

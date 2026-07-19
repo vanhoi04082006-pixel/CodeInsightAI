@@ -1,14 +1,13 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from "framer-motion";
 import { Crown, Clock3, Target, FileCode2, Gauge, CheckCircle2, XCircle, Loader2, FilePlus, FileMinus, Brain, ChevronDown } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type {
   FileModified,
   ExecutiveDecision,
   MissionMemoryItem,
 } from "@/lib/mission-store";
-import { GlassCard } from "@/components/shared/ui";
 import { cn } from "@/lib/utils";
 import {
   Collapsible,
@@ -60,21 +59,22 @@ function StatusBadge({
   const Icon = v.icon;
   return (
     <div
-      className="flex items-center gap-2 rounded-lg border px-3 py-2"
+      className="status-badge w-full justify-start"
       style={{
         background: `${v.color}10`,
-        borderColor: `${v.color}33`,
+        color: v.color,
+        border: `1px solid ${v.color}33`,
       }}
     >
       <Icon
-        className={cn("h-4 w-4", status === "pending" && "animate-spin")}
+        className={cn("h-3.5 w-3.5", status === "pending" && "animate-spin")}
         style={{ color: v.color }}
       />
       <div className="flex flex-col leading-tight">
-        <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+        <span className="text-[9px] uppercase tracking-wider text-muted-foreground">
           {label}
         </span>
-        <span className="text-xs font-semibold" style={{ color: v.color }}>
+        <span className="text-[11px] font-semibold" style={{ color: v.color }}>
           {v.text}
         </span>
       </div>
@@ -91,42 +91,122 @@ function SectionLabel({ icon: Icon, children }: { icon: typeof Crown; children: 
   );
 }
 
-export function WorldStatePanel(props: WorldStatePanelProps) {
-  const confColor = confidenceColor(props.confidence);
-  const radius = 52;
-  const stroke = 8;
+// ── Animated confidence ring ──
+function ConfidenceMeter({ value }: { value: number }) {
+  const size = 132;
+  const stroke = 9;
+  const radius = (size - stroke) / 2;
   const circ = 2 * Math.PI * radius;
-  const offset = circ - (props.confidence / 100) * circ;
+  const color = confidenceColor(value);
+  const offset = circ - (value / 100) * circ;
+
+  // Smooth count animation
+  const mv = useMotionValue(value);
+  const spring = useSpring(mv, { stiffness: 120, damping: 22 });
+  const display = useTransform(spring, (v) => Math.round(v));
+  const [displayVal, setDisplayVal] = useState(value);
+  useEffect(() => {
+    mv.set(value);
+    const unsub = display.on("change", (v) => setDisplayVal(v));
+    return () => unsub();
+  }, [value, mv, display]);
 
   return (
-    <div className={cn("flex h-full flex-col gap-3 overflow-y-auto scrollbar-thin p-1", props.className)}>
+    <div className="confidence-ring" style={{ width: size, height: size }}>
+      {/* Outer glow halo */}
+      <div
+        className="absolute inset-0 rounded-full blur-xl opacity-40"
+        style={{ background: `radial-gradient(circle, ${color}, transparent 70%)` }}
+      />
+      <svg width={size} height={size} className="-rotate-90 relative">
+        {/* Track */}
+        <circle
+          className="confidence-ring-track"
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          strokeWidth={stroke}
+        />
+        {/* Value */}
+        <motion.circle
+          className="confidence-ring-value"
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          stroke={color}
+          strokeWidth={stroke}
+          strokeDasharray={circ}
+          animate={{ strokeDashoffset: offset }}
+          transition={{ type: "spring", stiffness: 120, damping: 22 }}
+          style={{ filter: `drop-shadow(0 0 8px ${color}cc)` }}
+        />
+      </svg>
+      <div className="confidence-ring-label">
+        <motion.span
+          key={displayVal}
+          initial={{ opacity: 0.4, scale: 0.85 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.25 }}
+          className="confidence-ring-number"
+          style={{ color, textShadow: `0 0 16px ${color}80` }}
+        >
+          {displayVal}
+          <span className="ml-0.5 text-sm">%</span>
+        </motion.span>
+        <span className="confidence-ring-tag" style={{ color }}>
+          {confidenceLabel(value)}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+export function WorldStatePanel(props: WorldStatePanelProps) {
+  const confColor = confidenceColor(props.confidence);
+
+  return (
+    <div className={cn("flex h-full flex-col gap-3 overflow-y-auto mc-scroll p-2", props.className)}>
+      {/* Confidence meter — large */}
+      <div
+        className="relative flex flex-col items-center gap-3 rounded-xl border border-white/5 p-4"
+        style={{
+          background: `linear-gradient(135deg, ${confColor}10, transparent)`,
+        }}
+      >
+        <SectionLabel icon={Gauge}>Confidence</SectionLabel>
+        <ConfidenceMeter value={props.confidence} />
+        <p className="text-center text-[11px] leading-relaxed text-muted-foreground">
+          The Executive&apos;s belief that the chosen path will achieve the mission goal.
+        </p>
+      </div>
+
       {/* Current Task */}
-      <GlassCard className="p-3">
+      <div className="rounded-xl border border-white/5 bg-white/[0.02] p-3">
         <SectionLabel icon={Target}>Current Task</SectionLabel>
-        <p className="mt-1.5 text-sm text-foreground/90">
+        <p className="mt-1.5 text-xs leading-relaxed text-foreground/90">
           {props.currentTask || "—"}
         </p>
-      </GlassCard>
+      </div>
 
       {/* Current Phase + Iteration */}
       <div className="grid grid-cols-2 gap-2">
-        <GlassCard className="p-3">
+        <div className="rounded-xl border border-white/5 bg-white/[0.02] p-3">
           <SectionLabel icon={Clock3}>Phase</SectionLabel>
           <p className="mt-1.5 text-sm font-semibold capitalize text-cyan-300">
             {props.currentPhase}
           </p>
-        </GlassCard>
-        <GlassCard className="p-3">
+        </div>
+        <div className="rounded-xl border border-white/5 bg-white/[0.02] p-3">
           <SectionLabel icon={Gauge}>Iteration</SectionLabel>
           <p className="mt-1.5 text-sm font-semibold tabular-nums">
             <span className="text-foreground">{props.iteration}</span>
             <span className="text-muted-foreground"> / {props.maxIterations}</span>
           </p>
-        </GlassCard>
+        </div>
       </div>
 
       {/* Current File */}
-      <GlassCard className="p-3">
+      <div className="rounded-xl border border-white/5 bg-white/[0.02] p-3">
         <SectionLabel icon={FileCode2}>Current File</SectionLabel>
         {props.currentFile ? (
           <code className="mt-1.5 block truncate rounded bg-white/[0.04] px-2 py-1 font-mono text-[11px] text-violet-300">
@@ -135,64 +215,7 @@ export function WorldStatePanel(props: WorldStatePanelProps) {
         ) : (
           <p className="mt-1.5 text-xs text-muted-foreground">—</p>
         )}
-      </GlassCard>
-
-      {/* Confidence meter */}
-      <GlassCard className="p-4">
-        <SectionLabel icon={Gauge}>Confidence</SectionLabel>
-        <div className="mt-2 flex items-center gap-4">
-          <div className="relative inline-flex items-center justify-center">
-            <svg width={120} height={120} className="-rotate-90">
-              <circle
-                cx={60}
-                cy={60}
-                r={radius}
-                fill="none"
-                stroke="oklch(1 0 0 / 0.08)"
-                strokeWidth={stroke}
-              />
-              <motion.circle
-                cx={60}
-                cy={60}
-                r={radius}
-                fill="none"
-                stroke={confColor}
-                strokeWidth={stroke}
-                strokeLinecap="round"
-                strokeDasharray={circ}
-                animate={{ strokeDashoffset: offset }}
-                transition={{ type: "spring", stiffness: 120, damping: 22 }}
-                style={{ filter: `drop-shadow(0 0 6px ${confColor}80)` }}
-              />
-            </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <motion.span
-                key={props.confidence}
-                initial={{ opacity: 0, scale: 0.7 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="text-xl font-bold tabular-nums"
-                style={{ color: confColor, textShadow: `0 0 12px ${confColor}80` }}
-              >
-                {props.confidence}
-              </motion.span>
-              <span className="text-[9px] uppercase tracking-wider text-muted-foreground">
-                {confidenceLabel(props.confidence)}
-              </span>
-            </div>
-          </div>
-          <div className="flex-1 space-y-1 text-[11px] text-muted-foreground">
-            <p>
-              The Executive's current belief that the chosen path will achieve the
-              mission goal.
-            </p>
-            <p className="font-mono text-[10px]">
-              {props.confidence < 50 && "→ exploring options"}
-              {props.confidence >= 50 && props.confidence < 75 && "→ narrowing focus"}
-              {props.confidence >= 75 && "→ committed"}
-            </p>
-          </div>
-        </div>
-      </GlassCard>
+      </div>
 
       {/* Build + Test status */}
       <div className="grid grid-cols-2 gap-2">
@@ -201,13 +224,13 @@ export function WorldStatePanel(props: WorldStatePanelProps) {
       </div>
 
       {/* Files modified */}
-      <GlassCard className="p-3">
+      <div className="rounded-xl border border-white/5 bg-white/[0.02] p-3">
         <div className="flex items-center justify-between">
           <SectionLabel icon={FilePlus}>
             Files Modified ({props.filesModified.length})
           </SectionLabel>
         </div>
-        <div className="mt-2 max-h-40 space-y-1 overflow-y-auto scrollbar-thin">
+        <div className="mc-scroll mt-2 max-h-44 space-y-1 overflow-y-auto pr-1">
           <AnimatePresence initial={false}>
             {props.filesModified.length === 0 && (
               <motion.p
@@ -242,11 +265,11 @@ export function WorldStatePanel(props: WorldStatePanelProps) {
             ))}
           </AnimatePresence>
         </div>
-      </GlassCard>
+      </div>
 
       {/* Executive decisions (collapsible) */}
       <Collapsible defaultOpen>
-        <GlassCard className="p-3">
+        <div className="rounded-xl border border-white/5 bg-white/[0.02] p-3">
           <CollapsibleTrigger className="flex w-full items-center justify-between">
             <SectionLabel icon={Crown}>
               Executive Decisions ({props.decisions.length})
@@ -300,12 +323,12 @@ export function WorldStatePanel(props: WorldStatePanelProps) {
               ))}
             </div>
           </CollapsibleContent>
-        </GlassCard>
+        </div>
       </Collapsible>
 
       {/* Memory (collapsible) */}
       <Collapsible>
-        <GlassCard className="p-3">
+        <div className="rounded-xl border border-white/5 bg-white/[0.02] p-3">
           <CollapsibleTrigger className="flex w-full items-center justify-between">
             <SectionLabel icon={Brain}>
               Memory ({props.memory.length})
@@ -327,7 +350,7 @@ export function WorldStatePanel(props: WorldStatePanelProps) {
               ))}
             </div>
           </CollapsibleContent>
-        </GlassCard>
+        </div>
       </Collapsible>
     </div>
   );

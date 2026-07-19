@@ -104,7 +104,7 @@ export function MissionTimeline({ events, className }: MissionTimelineProps) {
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-xl border border-white/5 bg-white/[0.02] p-2",
+        "panel-glass relative overflow-hidden p-2",
         className
       )}
     >
@@ -124,7 +124,7 @@ export function MissionTimeline({ events, className }: MissionTimelineProps) {
       ) : (
         <div
           ref={scrollRef}
-          className="scrollbar-thin flex items-center gap-1 overflow-x-auto pb-1"
+          className="mc-scroll flex items-center gap-1 overflow-x-auto pb-1"
           style={{ minHeight: 56 }}
         >
           {/* Timeline base line */}
