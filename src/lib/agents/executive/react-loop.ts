@@ -13,10 +13,19 @@
 // UI keeps streaming. The mission is marked `failed` only if too many
 // consecutive errors accumulate or the AI cannot be reached.
 
+import * as path from "path";
 import { callAIForJSON } from "@/lib/agents/ai-client";
 import type { AIProviderConfig, AIMessage } from "@/lib/agents/ai-client";
 import { executeTool, formatToolsForAI, type ToolContext } from "./tool-registry";
 import { missionEmitter } from "./event-emitter";
+import { reflectionAgent } from "./reflection-agent";
+import type {
+  ReflectionRecentEvent,
+  ReflectionResult,
+} from "./reflection-agent";
+import { confidenceTracker } from "./confidence";
+import { Replanner } from "./replanner";
+import { RollbackManager } from "./rollback";
 import {
   isThinkResponse,
   type ExecutiveDecision,
@@ -36,6 +45,11 @@ export interface ReActLoopOptions {
   confidenceThreshold?: number;
   /** Number of consecutive tool errors after which the mission is failed. */
   maxConsecutiveErrors?: number;
+  /** Phase E: max replan attempts before the mission is failed (default 5). */
+  maxRevisions?: number;
+  /** Phase E: confidence-drop threshold (points) that triggers auto-rollback
+   *  after a successful action (default 25). */
+  rollbackConfidenceDrop?: number;
 }
 
 // ── Default fallback provider (used when none is supplied) ──────────────────
@@ -84,6 +98,7 @@ function buildThinkPrompt(
   goal: string,
   state: MissionState,
   recentHistory: ToolCall[],
+  reflectionHint?: string,
 ): string {
   const filesModified =
     state.filesModified.length > 0
@@ -110,6 +125,11 @@ function buildThinkPrompt(
           .join("\n")
       : "  (no actions yet)";
 
+  const reflectionSection =
+    reflectionHint && reflectionHint.trim().length > 0
+      ? `\n\nPREVIOUS REFLECTION SUGGESTED:\n${reflectionHint.trim()}\n`
+      : "";
+
   return `You are an Executive Agent coordinating a software engineering mission.
 
 GOAL: ${goal}
@@ -128,7 +148,7 @@ AVAILABLE TOOLS:
 ${formatToolsForAI()}
 
 RECENT HISTORY (last ${recentHistory.length} actions):
-${historyLines}
+${historyLines}${reflectionSection}
 
 Based on the above, decide your next action. Return JSON ONLY (no prose):
 {
@@ -171,7 +191,22 @@ export class ReActLoop {
   private readonly provider: AIProviderConfig;
   private readonly confidenceThreshold: number;
   private readonly maxConsecutiveErrors: number;
+  /** Phase E: dynamic replanner for when the plan goes off-track. */
+  private readonly replanner: Replanner;
+  /** Phase E: snapshot-and-restore manager for destructive actions. */
+  private readonly rollbackManager: RollbackManager;
+  /** Phase E: confidence-drop threshold (points) that triggers auto-rollback. */
+  private readonly rollbackConfidenceDrop: number;
   private consecutiveErrors = 0;
+  /** Last proposed action from Reflection — fed back into the next Think phase. */
+  private lastProposedAction: string | null = null;
+  /** Set to true when Reflection requested a replan; used after loop exit. */
+  private requestedReplan = false;
+  /** Phase E: consecutive tool-execution failures (resets on any success). */
+  private consecutiveToolFailures = 0;
+  /** Phase E: snapshot id taken before the most recent destructive action
+   *  in the current iteration. `null` if no snapshot was taken this iter. */
+  private lastSnapshotId: string | null = null;
 
   constructor(missionId: string, options: ReActLoopOptions = {}) {
     this.missionId = missionId;
@@ -179,11 +214,17 @@ export class ReActLoop {
     this.provider = options.provider ?? DEFAULT_PROVIDER;
     this.confidenceThreshold = options.confidenceThreshold ?? 85;
     this.maxConsecutiveErrors = options.maxConsecutiveErrors ?? 5;
+    this.replanner = new Replanner(options.maxRevisions ?? 5);
+    this.rollbackManager = new RollbackManager();
+    this.rollbackConfidenceDrop = options.rollbackConfidenceDrop ?? 25;
   }
 
   async run(goal: string, context: MissionContext): Promise<MissionState> {
     const ctx = context;
     ctx.updateState({ status: "executing", maxIterations: this.maxIterations });
+    // Phase E: ensure the confidence tracker points at this mission so the
+    // Reflection Agent's adjustFor() calls land in the right place.
+    confidenceTracker.setActive(this.missionId);
 
     let iteration = 0;
     let lastDecision: ExecutiveDecision | null = null;
@@ -196,6 +237,10 @@ export class ReActLoop {
         }
 
         iteration++;
+        // Phase E: reset per-iteration snapshot tracking. A snapshot is only
+        // valid for the iteration it was taken in — we never roll back to a
+        // snapshot from a previous iteration.
+        this.lastSnapshotId = null;
         ctx.updateState({ iteration, currentPhase: "observe" });
         this.emitPhase(ctx, "observe", iteration);
 
@@ -212,7 +257,7 @@ export class ReActLoop {
 
         let think: ThinkResponse;
         try {
-          think = await this.think(goal, state);
+          think = await this.think(goal, state, this.lastProposedAction);
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
           this.emitError(ctx, `Think phase failed: ${msg}`, true);
@@ -269,6 +314,42 @@ export class ReActLoop {
         }
         this.consecutiveErrors = 0;
 
+        // ── Phase E: Pre-Act snapshot ────────────────────────────────────
+        // If the chosen tool is destructive (edit_file or run_command with
+        // write semantics), snapshot the files that may be affected so we
+        // can auto-rollback if the fix makes things worse.
+        if (this.isDestructive(think.tool, think.tool_args)) {
+          const filesToSnapshot = this.filesPotentiallyAffected(
+            think.tool,
+            think.tool_args,
+            ctx.getState(),
+          );
+          if (filesToSnapshot.length > 0) {
+            try {
+              this.lastSnapshotId = await this.rollbackManager.snapshot(
+                this.missionId,
+                `Before ${think.tool}: ${think.next_action.slice(0, 80)}`,
+                filesToSnapshot,
+                {
+                  confidence: ctx.getState().confidence,
+                  iteration,
+                  subGoals: ctx.getState().subGoals,
+                },
+                ctx.getState().confidence,
+              );
+              ctx.updateState({ lastSnapshotId: this.lastSnapshotId });
+            } catch (err) {
+              const msg = err instanceof Error ? err.message : String(err);
+              this.emitError(
+                ctx,
+                `Snapshot failed (continuing without rollback safety): ${msg}`,
+                true,
+              );
+              this.lastSnapshotId = null;
+            }
+          }
+        }
+
         // ── 3. ACT ────────────────────────────────────────────────────────
         setPhase(ctx, "act");
         this.emitAgentActing(
@@ -308,32 +389,181 @@ export class ReActLoop {
 
         if (toolResult.success) {
           this.emitAgentResult(ctx, true, `${think.tool} succeeded in ${toolDuration}ms`);
+          // Phase E: reset the consecutive-tool-failure counter on any success.
+          this.consecutiveToolFailures = 0;
           // Update memory with what we learned from this tool call.
           this.assimilateMemory(ctx, think.tool, toolResult.output);
         } else {
           this.emitAgentResult(ctx, false, `${think.tool} failed: ${toolResult.error ?? "unknown error"}`);
+          // Phase E: track consecutive tool failures as a replan trigger.
+          this.consecutiveToolFailures++;
           ctx.getState().errors.push(`${think.tool}: ${toolResult.error ?? "failed"}`);
         }
 
         // ── 5. REFLECT ────────────────────────────────────────────────────
         setPhase(ctx, "reflect");
-        this.emitAgentThinking(
-          ctx,
-          toolResult.success
-            ? `Reflecting: ${think.tool} succeeded. Confidence ${think.confidence}%.`
-            : `Reflecting: ${think.tool} failed. Will try a different approach next iteration.`,
-          think.confidence,
-        );
 
-        // Update mission confidence from AI's reported confidence.
-        ctx.updateState({ confidence: think.confidence });
-        ctx.emit({
-          type: "confidence:update",
-          missionId: this.missionId,
-          confidence: think.confidence,
-          reason: think.reasoning,
+        // Phase E: capture confidence BEFORE the reflection runs, since the
+        // Reflection Agent calls confidenceTracker.adjustFor() which mutates
+        // state.confidence. We need the pre-reflection value to detect
+        // significant drops that warrant an auto-rollback.
+        const confidenceBefore = ctx.getState().confidence;
+
+        // Make sure the ConfidenceTracker is pointing at this mission.
+        confidenceTracker.setActive(this.missionId);
+
+        const recentEvent: ReflectionRecentEvent = {
+          action: think.next_action,
+          tool: think.tool,
+          result: toolResult.output,
+          success: toolResult.success,
+          error: toolResult.error,
+        };
+
+        let reflection: ReflectionResult;
+        try {
+          reflection = await reflectionAgent.reflect(
+            this.missionId,
+            ctx.getState(),
+            recentEvent,
+            this.provider,
+            ctx.signal,
+          );
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          this.emitError(ctx, `Reflection failed: ${msg}`, true);
+          reflection = {
+            analysis: `Reflection failed: ${msg}`,
+            rootCause: msg,
+            severity: "warning",
+            proposedAction: "Continue with the next planned step.",
+            confidenceAdjustment: 0,
+            shouldRetry: false,
+            shouldReplan: false,
+            memoryUpdate: [],
+          };
+        }
+
+        // Feed the proposed action back into the next Think phase if a retry is suggested.
+        this.lastProposedAction =
+          reflection.shouldRetry && reflection.proposedAction
+            ? reflection.proposedAction
+            : null;
+
+        // Emit a decision event capturing the reflection's analysis so the
+        // UI can stream it in real time.
+        const reflectionDecision: ExecutiveDecision = {
+          id: missionEmitter.nextId("decision"),
+          iteration,
+          phase: "reflect",
+          reasoning: reflection.analysis,
+          action: reflection.proposedAction,
+          confidence: ctx.getState().confidence,
           timestamp: Date.now(),
-        });
+        };
+        ctx.recordDecision(reflectionDecision);
+
+        // ── Phase E: Dynamic Replanning ──────────────────────────────────
+        // If the Reflection Agent says the plan itself is wrong, OR we've
+        // hit multiple consecutive tool failures, ask the Replanner for a
+        // revised plan and continue the loop with the new sub-goals (instead
+        // of breaking out and leaving the mission in `planning` status).
+        const shouldReplan =
+          (reflection.shouldReplan || this.consecutiveToolFailures >= 2) &&
+          this.replanner.canReplan(this.missionId);
+
+        if (shouldReplan) {
+          const replanReason = reflection.shouldReplan
+            ? `Reflection Agent signaled shouldReplan (${reflection.rootCause || reflection.analysis.slice(0, 80)})`
+            : `${this.consecutiveToolFailures} consecutive tool failures`;
+          this.emitAgentThinking(
+            ctx,
+            `Replanning due to: ${replanReason}`,
+            ctx.getState().confidence,
+          );
+          const revision = await this.replanner.replan(
+            this.missionId,
+            ctx.getState(),
+            {
+              action: think.next_action,
+              error:
+                toolResult.error ??
+                reflection.rootCause ??
+                "no error (plan-level issue)",
+              iteration,
+            },
+            this.provider,
+            ctx.signal,
+          );
+          if (revision === null) {
+            // Max revisions exceeded — end the mission.
+            ctx.getState().errors.push("Max replanning attempts exceeded");
+            this.emitError(
+              ctx,
+              "Max replanning attempts exceeded — giving up.",
+              false,
+            );
+            ctx.updateState({ status: "failed" });
+            break;
+          }
+          // Apply the revised plan to mission state so the next THINK
+          // prompt sees the new sub-goals.
+          ctx.updateState({
+            subGoals: revision.newSubGoals,
+            revisionCount: revision.revisionNumber,
+          });
+          // Reset the tool-failure counter so we don't immediately replan
+          // again on the next iteration.
+          this.consecutiveToolFailures = 0;
+          // Remember that we replanned at least once for post-loop reporting.
+          this.requestedReplan = false;
+        } else if (reflection.shouldReplan && !this.replanner.canReplan(this.missionId)) {
+          // Reflection wants to replan but we've exhausted the budget — fail.
+          ctx.getState().errors.push(
+            `Replan requested at iteration ${iteration} but revision budget exhausted: ${
+              reflection.rootCause || reflection.analysis
+            }`,
+          );
+          this.emitError(
+            ctx,
+            "Replan requested but revision budget exhausted — giving up.",
+            false,
+          );
+          ctx.updateState({ status: "failed" });
+          break;
+        }
+
+        // ── Phase E: Auto-Rollback ───────────────────────────────────────
+        // If a successful action made confidence drop significantly
+        // (>= rollbackConfidenceDrop points), restore the pre-action file
+        // state. This catches the case where a fix looked good to the AI
+        // but actually broke something downstream.
+        const currentConfidence = ctx.getState().confidence;
+        const confidenceDelta = currentConfidence - confidenceBefore;
+        if (
+          toolResult.success &&
+          this.lastSnapshotId &&
+          confidenceDelta <= -this.rollbackConfidenceDrop &&
+          this.rollbackManager.canRollback(this.missionId)
+        ) {
+          this.emitAgentThinking(
+            ctx,
+            `Auto-rollback triggered: confidence dropped ${-confidenceDelta}pts (from ${confidenceBefore}% to ${currentConfidence}%) after a successful action. Restoring previous state.`,
+            confidenceBefore,
+          );
+          const rolled = await this.rollbackManager.rollback(
+            this.missionId,
+            this.lastSnapshotId,
+          );
+          if (rolled) {
+            // Restore confidence to the pre-action value.
+            confidenceTracker.setFor(
+              this.missionId,
+              confidenceBefore,
+              `Auto-rollback restored confidence to pre-action value (${confidenceBefore}%).`,
+            );
+          }
+        }
 
         // ── 6. DECIDE (continue loop) ─────────────────────────────────────
         // Already emitted `react:phase` for decide above for the early-exit
@@ -342,7 +572,13 @@ export class ReActLoop {
 
       // Loop ended — finalize.
       if (!ctx.signal.aborted && ctx.getState().status !== "failed") {
-        ctx.updateState({ status: "completed", currentPhase: "decide" });
+        if (this.requestedReplan) {
+          // Reflection flagged that the plan itself is wrong — leave the
+          // mission in `planning` so the caller can revise.
+          ctx.updateState({ status: "planning", currentPhase: "decide" });
+        } else {
+          ctx.updateState({ status: "completed", currentPhase: "decide" });
+        }
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -450,9 +686,18 @@ export class ReActLoop {
   }
 
   // ── Call the AI for the THINK phase ──────────────────────────────────────
-  private async think(goal: string, state: MissionState): Promise<ThinkResponse> {
+  private async think(
+    goal: string,
+    state: MissionState,
+    reflectionHint?: string | null,
+  ): Promise<ThinkResponse> {
     const recentHistory = state.toolHistory.slice(-5);
-    const prompt = buildThinkPrompt(goal, state, recentHistory);
+    const prompt = buildThinkPrompt(
+      goal,
+      state,
+      recentHistory,
+      reflectionHint ?? undefined,
+    );
 
     const messages: AIMessage[] = [
       {
@@ -539,5 +784,94 @@ export class ReActLoop {
     }
 
     // For other tools, no special assimilation — the AI sees raw output.
+  }
+
+  // ── Phase E: Destructive-action detection ────────────────────────────────
+  /**
+   * Heuristic: does this tool mutate the filesystem (and therefore warrant
+   * a rollback snapshot)?
+   *   - `edit_file` is always destructive.
+   *   - `run_command` is destructive when the command contains write-like
+   *     operations (rm, mv, cp, redirection, npm install, git push, etc.).
+   */
+  private isDestructive(tool: string, args: Record<string, unknown>): boolean {
+    if (tool === "edit_file") return true;
+    if (tool === "run_command") {
+      const cmd =
+        typeof args.command === "string" ? args.command.toLowerCase() : "";
+      if (!cmd) return false;
+      // Regex catalog of write-like shell operations. Erring on the side of
+      // "destructive" is safe — an unnecessary snapshot is cheap, but a
+      // missed destructive action means we can't roll back.
+      const writePatterns: RegExp[] = [
+        /\brm\b/,
+        /\bmv\b/,
+        /\bcp\b/,
+        /\bmkdir\b/,
+        /\bchmod\b/,
+        /\bchown\b/,
+        /\bsed\s+-i\b/,
+        /\btee\b/,
+        /\bdd\s+of=/,
+        />>?/, // > or >> (shell redirection)
+        /\bnpm\s+(install|i)\b/,
+        /\bbun\s+add\b/,
+        /\byarn\s+add\b/,
+        /\bgit\s+(push|commit|reset|checkout|clean|rebase)\b/,
+        /\bcurl\s+-o\b/,
+        /\bwget\s+(?:-o|--output-document)/,
+        /\brsync\b/,
+        /\bunlink\b/,
+        /\btruncate\b/,
+        /\bpatch\s+-p\d+\b/,
+      ];
+      return writePatterns.some((re) => re.test(cmd));
+    }
+    return false;
+  }
+
+  /**
+   * Compute the list of file paths that may be affected by the upcoming tool
+   * call. Used to decide which files to snapshot before a destructive action.
+   *   - `edit_file` → the file in `args.path` (resolved to absolute).
+   *   - `run_command` → we can't reliably parse arbitrary shell commands, so
+   *     we snapshot all previously-modified files as a safety net.
+   */
+  private filesPotentiallyAffected(
+    tool: string,
+    args: Record<string, unknown>,
+    state: MissionState,
+  ): string[] {
+    const cwd = state.cwd;
+    const files = new Set<string>();
+
+    const resolve = (p: string): string =>
+      path.isAbsolute(p) ? p : path.resolve(cwd, p);
+
+    if (tool === "edit_file" && typeof args.path === "string" && args.path) {
+      files.add(resolve(args.path));
+    }
+
+    if (tool === "run_command") {
+      // Snapshot all previously-modified files since the command may touch
+      // any of them. Also try to extract any path-like arguments from the
+      // command string as a best-effort guess.
+      for (const f of state.filesModified) {
+        if (f) files.add(resolve(f));
+      }
+      const cmd = typeof args.command === "string" ? args.command : "";
+      // Match relative/absolute paths in the command (very rough heuristic).
+      const pathMatch = /(?:^|\s)(\.?\/?(?:[A-Za-z0-9_.\-/]+\/[A-Za-z0-9_.\-/]+))/g;
+      let m: RegExpExecArray | null;
+      while ((m = pathMatch.exec(cmd)) !== null) {
+        const candidate = m[1];
+        // Only snapshot files with code-like extensions to avoid noise.
+        if (/\.(ts|tsx|js|jsx|json|md|py|go|rs|java|c|cpp|h|hpp|sh|yml|yaml|toml)$/.test(candidate)) {
+          files.add(resolve(candidate));
+        }
+      }
+    }
+
+    return Array.from(files);
   }
 }

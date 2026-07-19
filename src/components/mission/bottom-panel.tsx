@@ -18,61 +18,33 @@ import type {
   FileModified,
 } from "@/lib/mission-store";
 import { cn } from "@/lib/utils";
+import {
+  LiveTerminalConnected,
+  type TerminalLine as LiveTerminalLine,
+} from "./live-terminal";
 
 interface BottomPanelProps {
   terminalOutput: TerminalLine[];
   events: MissionEvent[];
   filesModified: FileModified[];
+  /** Called when the user runs a command in the terminal — pushes the line(s) into the upstream store. */
+  onTerminalOutput?: (line: LiveTerminalLine) => void;
   className?: string;
 }
 
-function TerminalTab({ lines }: { lines: TerminalLine[] }) {
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const el = ref.current;
-    if (el) el.scrollTop = el.scrollHeight;
-  }, [lines.length]);
-
+function TerminalTab({
+  lines,
+  onTerminalOutput,
+}: {
+  lines: TerminalLine[];
+  onTerminalOutput?: (line: LiveTerminalLine) => void;
+}) {
   return (
-    <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b border-white/5 px-3 py-1.5">
-        <div className="flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full bg-rose-400/80" />
-          <span className="h-2 w-2 rounded-full bg-amber-400/80" />
-          <span className="h-2 w-2 rounded-full bg-emerald-400/80" />
-          <span className="ml-2 font-mono text-[11px] text-muted-foreground">
-            mission@sandbox:~$
-          </span>
-        </div>
-        <span className="font-mono text-[10px] text-muted-foreground/60">
-          {lines.length} lines
-        </span>
-      </div>
-      <div
-        ref={ref}
-        className="scrollbar-thin h-full overflow-y-auto bg-black/40 p-3 font-mono text-[11px] leading-relaxed"
-      >
-        {lines.length === 0 ? (
-          <p className="text-muted-foreground/60">
-            Terminal output from agents (test runs, build logs) will appear here.
-          </p>
-        ) : (
-          lines.map((l, i) => (
-            <div
-              key={i}
-              className={cn(
-                "whitespace-pre-wrap break-words",
-                l.stream === "stderr" && "text-rose-300",
-                l.stream === "stdout" && "text-emerald-200/90",
-                l.stream === "system" && "text-cyan-300/80"
-              )}
-            >
-              {l.data}
-            </div>
-          ))
-        )}
-      </div>
-    </div>
+    <LiveTerminalConnected
+      output={lines}
+      onCommandRun={onTerminalOutput}
+      className="h-full"
+    />
   );
 }
 
@@ -323,6 +295,7 @@ export function BottomPanel({
   terminalOutput,
   events,
   filesModified,
+  onTerminalOutput,
   className,
 }: BottomPanelProps) {
   const [tab, setTab] = useState("terminal");
@@ -387,7 +360,10 @@ export function BottomPanel({
           className="min-h-0 flex-1"
         >
           <TabsContent value="terminal" className="mt-0 h-full">
-            <TerminalTab lines={terminalOutput} />
+            <TerminalTab
+              lines={terminalOutput}
+              onTerminalOutput={onTerminalOutput}
+            />
           </TabsContent>
           <TabsContent value="git" className="mt-0 h-full">
             <GitTab filesModified={filesModified} />
