@@ -560,21 +560,21 @@ export function MissionControlView() {
       </GlassCard>
 
       {/* 4-column workspace: AgentDock | Missions | Activity | Right Panel */}
-      <div className="flex min-h-0 flex-1 gap-3">
+      <div className="flex min-h-0 flex-1 gap-2">
         <AgentDock
           agentStatuses={agentStatuses}
           events={events}
           className="hidden md:flex"
         />
 
-        <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-cols-[240px_1fr_320px]">
+        <div className="grid min-w-0 flex-1 grid-cols-1 gap-2 lg:grid-cols-[200px_1fr_280px]">
           {/* LEFT: missions sidebar */}
-          <div className="hidden min-h-0 flex-col gap-3 lg:flex">
+          <div className="hidden min-h-0 flex-col gap-2 lg:flex">
             <MissionsSidebar />
           </div>
 
           {/* CENTER: activity feed + timeline */}
-          <div className="flex min-h-0 flex-col gap-3">
+          <div className="flex min-h-0 min-w-0 flex-col gap-2">
             <GlassCard className="min-h-0 flex-1 overflow-hidden p-0">
               <div className="flex items-center justify-between border-b border-white/5 px-4 py-2">
                 <div className="flex items-center gap-2">
@@ -596,7 +596,7 @@ export function MissionControlView() {
           </div>
 
           {/* RIGHT: agent network graph (collapsible) + tabbed panel */}
-          <div className="hidden min-h-0 flex-col gap-3 lg:flex">
+          <div className="hidden min-h-0 min-w-0 flex-col gap-2 lg:flex">
             <Collapsible defaultOpen className="shrink-0">
               <GlassCard className="p-3">
                 <CollapsibleTrigger className="flex w-full items-center justify-between rounded-md px-1 py-0.5 transition hover:bg-white/[0.02]">
@@ -696,8 +696,8 @@ export function MissionControlView() {
         </div>
       </div>
 
-      {/* Agent status row (always visible) */}
-      <GlassCard className="shrink-0 p-3">
+      {/* Agent status row (always visible, compact) */}
+      <GlassCard className="shrink-0 p-2.5">
         <div className="mb-2 flex items-center justify-between">
           <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             {t("mission", "agents.title") || "Agent Team"} · 11 agents

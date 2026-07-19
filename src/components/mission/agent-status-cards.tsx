@@ -147,7 +147,13 @@ function AgentCard({
 
 export function AgentStatusCards({ statuses, className, compact }: AgentStatusCardsProps) {
   return (
-    <div className={cn("grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3", className)}>
+    <div className={cn(
+      "grid gap-2",
+      // 11 agents: use responsive grid that fits nicely
+      // mobile: 2 cols (6 rows), sm: 3 cols (4 rows), lg: 4 cols (3 rows), xl: 6 cols (2 rows)
+      "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6",
+      className
+    )}>
       {AGENTS.map((agent) => {
         // Match by name OR by partial lowercase match.
         const status = statuses[agent.name] ??
