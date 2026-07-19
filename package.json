@@ -1,24 +1,17 @@
 {
-  "name": "codeinsight-ai",
+  "name": "nextjs_tailwind_shadcn_ts",
   "version": "0.2.0",
   "private": true,
-  "engines": {
-    "node": ">=18.18"
-  },
   "scripts": {
     "dev": "next dev -p 3000",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint .",
     "db:push": "prisma db push",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:reset": "prisma migrate reset",
-    "db:push:prod": "prisma db push --schema prisma/schema.prod.prisma",
-    "db:generate:prod": "prisma generate --schema prisma/schema.prod.prisma",
-    "db:migrate:prod": "prisma migrate dev --schema prisma/schema.prod.prisma",
-    "db:deploy": "prisma migrate deploy --schema prisma/schema.prod.prisma",
-    "vercel-build": "prisma generate --schema prisma/schema.prod.prisma && next build"
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
