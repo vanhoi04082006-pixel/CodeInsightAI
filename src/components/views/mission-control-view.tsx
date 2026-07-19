@@ -75,38 +75,41 @@ export function MissionControlView() {
   const { t } = useT();
   const report = useAppStore((s) => s.activeReport);
 
-  const {
-    goal,
-    repoUrl,
-    provider,
-    maxIterations,
-    setGoal,
-    setRepoUrl,
-    setProvider,
-    setMaxIterations,
-    missionId,
-    status,
-    currentPhase,
-    iteration,
-    confidence,
-    events,
-    agentStatuses,
-    currentTask,
-    currentFile,
-    filesModified,
-    buildStatus,
-    testStatus,
-    decisions,
-    memory,
-    terminalOutput,
-    connected,
-    demoMode,
-    history,
-    startMission,
-    cancelMission,
-    startDemoMode,
-    reset,
-  } = useMissionStore();
+  // Use selective subscriptions to avoid re-rendering on every event.
+  // The previous code destructured the entire store, causing infinite re-renders
+  // because `events` changes reference on every handleEvent() call.
+  const goal = useMissionStore((s) => s.goal);
+  const repoUrl = useMissionStore((s) => s.repoUrl);
+  const provider = useMissionStore((s) => s.provider);
+  const maxIterations = useMissionStore((s) => s.maxIterations);
+  const setGoal = useMissionStore((s) => s.setGoal);
+  const setRepoUrl = useMissionStore((s) => s.setRepoUrl);
+  const setProvider = useMissionStore((s) => s.setProvider);
+  const setMaxIterations = useMissionStore((s) => s.setMaxIterations);
+  const missionId = useMissionStore((s) => s.missionId);
+  const status = useMissionStore((s) => s.status);
+  const currentPhase = useMissionStore((s) => s.currentPhase);
+  const iteration = useMissionStore((s) => s.iteration);
+  const confidence = useMissionStore((s) => s.confidence);
+  const currentTask = useMissionStore((s) => s.currentTask);
+  const currentFile = useMissionStore((s) => s.currentFile);
+  const buildStatus = useMissionStore((s) => s.buildStatus);
+  const testStatus = useMissionStore((s) => s.testStatus);
+  const connected = useMissionStore((s) => s.connected);
+  const demoMode = useMissionStore((s) => s.demoMode);
+  const startMission = useMissionStore((s) => s.startMission);
+  const cancelMission = useMissionStore((s) => s.cancelMission);
+  const startDemoMode = useMissionStore((s) => s.startDemoMode);
+  const reset = useMissionStore((s) => s.reset);
+
+  // These change frequently — subscribe with shallow comparison
+  const events = useMissionStore((s) => s.events);
+  const agentStatuses = useMissionStore((s) => s.agentStatuses);
+  const filesModified = useMissionStore((s) => s.filesModified);
+  const decisions = useMissionStore((s) => s.decisions);
+  const memory = useMissionStore((s) => s.memory);
+  const terminalOutput = useMissionStore((s) => s.terminalOutput);
+  const history = useMissionStore((s) => s.history);
 
   const providers = useProvidersStore((s) => s.providers);
   const enabledProviders = useMemo(
