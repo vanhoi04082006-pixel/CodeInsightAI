@@ -6,7 +6,6 @@ import {
   Rocket,
   Square,
   Pause,
-  Play,
   Circle,
   Loader2,
   Activity,
@@ -24,11 +23,11 @@ import {
   Maximize2,
   Minimize2,
   ChevronDown,
-  ChevronUp,
   Network as NetworkIcon,
+  Users,
 } from "lucide-react";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
-import { GlassCard, GradientText } from "@/components/shared/ui";
+import { GradientText } from "@/components/shared/ui";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -40,7 +39,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { useMissionStore, MISSION_TEMPLATES } from "@/lib/mission-store";
 import { useProvidersStore } from "@/lib/providers-store";
 import { useAppStore } from "@/lib/store";
@@ -58,22 +61,17 @@ import { FileTreePanel } from "@/components/mission/file-tree-panel";
 import { AgentNetworkGraph } from "@/components/mission/agent-network-graph";
 import type { TerminalLine as LiveTerminalLine } from "@/components/mission/live-terminal";
 import type { AIProviderConfig } from "@/lib/mission-store";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 
 const STATUS_META: Record<
   string,
-  { color: string; label: string; icon: typeof Circle }
+  { color: string; label: string; icon: typeof Circle; animating: boolean }
 > = {
-  idle: { color: "#64748b", label: "Idle", icon: Circle },
-  planning: { color: "#fbbf24", label: "Planning", icon: Loader2 },
-  executing: { color: "#22d3ee", label: "Executing", icon: Activity },
-  verifying: { color: "#a78bfa", label: "Verifying", icon: Loader2 },
-  completed: { color: "#34d399", label: "Completed", icon: Sparkles },
-  failed: { color: "#f472b6", label: "Failed", icon: Pause },
+  idle: { color: "#64748b", label: "Idle", icon: Circle, animating: false },
+  planning: { color: "#fbbf24", label: "Planning", icon: Loader2, animating: true },
+  executing: { color: "#22d3ee", label: "Executing", icon: Activity, animating: true },
+  verifying: { color: "#a78bfa", label: "Verifying", icon: Loader2, animating: true },
+  completed: { color: "#34d399", label: "Completed", icon: Sparkles, animating: false },
+  failed: { color: "#f472b6", label: "Failed", icon: Pause, animating: false },
 };
 
 export function MissionControlView() {
@@ -82,8 +80,6 @@ export function MissionControlView() {
   const setView = useAppStore((s) => s.setView);
 
   // Use selective subscriptions to avoid re-rendering on every event.
-  // The previous code destructured the entire store, causing infinite re-renders
-  // because `events` changes reference on every handleEvent() call.
   const goal = useMissionStore((s) => s.goal);
   const repoUrl = useMissionStore((s) => s.repoUrl);
   const provider = useMissionStore((s) => s.provider);
@@ -124,12 +120,10 @@ export function MissionControlView() {
   );
 
   const [starting, setStarting] = useState(false);
-  const [bottomOpen, setBottomOpen] = useState(true);
-  const [rightTab, setRightTab] = useState("tree");
+  const [rightTab, setRightTab] = useState<"tree" | "diff" | "world">("world");
   const [rightMaximized, setRightMaximized] = useState(false);
   const [feedMaximized, setFeedMaximized] = useState(false);
   const [networkMaximized, setNetworkMaximized] = useState(false);
-  const [bottomSize, setBottomSize] = useState<"min" | "default" | "max">("default");
   const [selectedFilePath, setSelectedFilePath] = useState<string | undefined>(
     undefined
   );
@@ -154,10 +148,7 @@ export function MissionControlView() {
   // Push terminal output back into the mission store via handleEvent.
   const onTerminalOutput = useCallback(
     (line: LiveTerminalLine) => {
-      // The "clear" sentinel clears the in-memory buffer locally.
       if (line.data === "clear" && line.stream === "system") {
-        // We can't directly clear the store's terminalOutput from here without
-        // a dedicated action; emit a no-op system message instead.
         useMissionStore.getState().handleEvent({
           id: `term_${Date.now().toString(36)}`,
           type: "terminal:output",
@@ -180,7 +171,6 @@ export function MissionControlView() {
     []
   );
 
-  // When the user picks a file in the FileTreePanel, switch to the Diff tab.
   const onSelectFile = useCallback((path: string) => {
     setSelectedFilePath(path);
     setRightTab("diff");
@@ -241,12 +231,14 @@ export function MissionControlView() {
     setProvider(cfg);
   };
 
-  // ── Render: Empty state (no active analysis — like ProjectView/ChatView) ──
+  // ── Render: Empty state (no active analysis) ──────────────────────────────
   if (!report) {
     return (
-      <div className="mx-auto flex min-h-[60vh] max-w-xl flex-col items-center justify-center px-4 text-center">
-        <GlassCard className="p-10">
-          <Rocket className="mx-auto h-10 w-10 text-cyan-300" />
+      <div className="mission-canvas relative flex min-h-[80vh] items-center justify-center px-4 py-10">
+        <div className="panel-glass mx-auto max-w-xl p-10 text-center">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-xl border border-cyan-400/30 bg-cyan-400/[0.06]">
+            <Rocket className="h-6 w-6 text-cyan-300" />
+          </div>
           <h2 className="mt-4 text-xl font-bold">
             {t("mission", "empty.title") || "No Repository Selected"}
           </h2>
@@ -254,7 +246,7 @@ export function MissionControlView() {
             {t("mission", "empty.description") ||
               "Select an analysis from History or analyze a new repository to start a mission. Mission Control binds to the active analysis — just like AI Chat and AI Report."}
           </p>
-          <div className="mt-4 flex items-center justify-center gap-2">
+          <div className="mt-5 flex items-center justify-center gap-2">
             <Button
               onClick={() => setView("history")}
               variant="outline"
@@ -271,18 +263,18 @@ export function MissionControlView() {
               {t("mission", "empty.analyzeButton") || "Analyze Repo"}
             </Button>
           </div>
-        </GlassCard>
+        </div>
       </div>
     );
   }
 
-  // ── Render: Start Mission form (when no active mission) ──────────────────
+  // ── Render: Start Mission form ────────────────────────────────────────────
   if (!hasMission) {
     return (
-      <div className="mx-auto max-w-5xl space-y-6 px-4 py-6 md:px-6">
+      <div className="mission-canvas relative mx-auto max-w-5xl space-y-6 px-4 py-6 md:px-6">
         <MissionHeader />
 
-        <GlassCard className="overflow-hidden">
+        <div className="panel-glass">
           <div className="border-b border-white/5 bg-gradient-to-r from-cyan-500/5 to-violet-500/5 px-6 py-4">
             <div className="flex items-center gap-2">
               <Target className="h-4 w-4 text-cyan-300" />
@@ -401,7 +393,7 @@ export function MissionControlView() {
                   <button
                     key={tpl.id}
                     onClick={() => onApplyTemplate(tpl.goal)}
-                    className="group flex items-start gap-2 rounded-xl border border-white/5 bg-white/[0.02] p-3 text-left transition hover:border-cyan-400/30 hover:bg-white/[0.04]"
+                    className="group mc-lift flex items-start gap-2 rounded-xl border border-white/5 bg-white/[0.02] p-3 text-left transition hover:border-cyan-400/30 hover:bg-white/[0.04]"
                   >
                     <span
                       className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[10px] font-bold"
@@ -460,11 +452,11 @@ export function MissionControlView() {
               </div>
             </div>
           </div>
-        </GlassCard>
+        </div>
 
         {/* History */}
         {history.length > 0 && (
-          <GlassCard className="p-4">
+          <div className="panel-glass p-4">
             <div className="mb-3 flex items-center gap-2">
               <History className="h-4 w-4 text-muted-foreground" />
               <h3 className="text-sm font-semibold">
@@ -513,7 +505,7 @@ export function MissionControlView() {
                 </div>
               ))}
             </div>
-          </GlassCard>
+          </div>
         )}
       </div>
     );
@@ -522,227 +514,295 @@ export function MissionControlView() {
   // ── Render: Live Mission Workspace ───────────────────────────────────────
   const statusMeta = STATUS_META[status] ?? STATUS_META.idle;
   const StatusIcon = statusMeta.icon;
+  const confColor =
+    confidence < 50 ? "#f472b6" : confidence < 75 ? "#fbbf24" : "#34d399";
+  const activeAgentsCount = Object.values(agentStatuses).filter(
+    (a) => a.status === "thinking" || a.status === "acting"
+  ).length;
 
   return (
-    <div className="relative flex h-[calc(100vh-4rem)] flex-col gap-2 px-3 py-2 md:px-4 md:py-3">
-      {/* Top bar */}
-      <GlassCard strong className="shrink-0 px-3 py-2.5 md:px-4 md:py-3">
-        <div className="flex items-center gap-2 md:gap-3">
-          {/* Left: mission info (truncates) */}
-          <div className="flex min-w-0 flex-1 items-center gap-2 md:gap-3">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-400/30 to-violet-500/30 md:h-9 md:w-9">
-              <Rocket className="h-4 w-4 text-cyan-300" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <span className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.2em] text-cyan-300">
-                  Mission
-                </span>
-                {demoMode && (
-                  <span className="shrink-0 rounded-full border border-amber-400/30 bg-amber-400/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-amber-300">
-                    Demo
-                  </span>
-                )}
-                {connected ? (
-                  <span className="flex shrink-0 items-center gap-1 text-[10px] text-emerald-400">
-                    <Wifi className="h-3 w-3" /> Live
-                  </span>
-                ) : (
-                  !demoMode && (
-                    <span className="flex shrink-0 items-center gap-1 text-[10px] text-muted-foreground">
-                      <WifiOff className="h-3 w-3" /> Disconnected
-                    </span>
-                  )
-                )}
-              </div>
-              <p className="mt-0.5 truncate text-sm font-semibold">
-                {goal || "Untitled mission"}
-              </p>
-              <div className="mt-0.5 flex items-center gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
-                {repoUrl && (
-                  <span className="truncate font-mono">
-                    {repoUrl.replace(/^https?:\/\//, "").replace(/\.git$/, "")}
-                  </span>
-                )}
-                <span className="shrink-0 capitalize">phase: {currentPhase}</span>
-                <span className="shrink-0">iter: {iteration}/{maxIterations}</span>
-              </div>
-            </div>
+    <div className="mission-canvas relative flex h-[calc(100vh-4rem)] flex-col gap-2 px-2 py-2 md:px-3 md:py-2.5">
+      {/* ═════ COMMAND BAR (top, full-width glassmorphic) ═════ */}
+      <div className="command-bar shrink-0">
+        {/* Left: mission icon + goal + repo */}
+        <div className="flex min-w-0 flex-1 items-center gap-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-400/25 to-violet-500/25 border border-cyan-400/20">
+            <Rocket className="h-4 w-4 text-cyan-300" />
           </div>
-
-          {/* Right: status + actions (never wraps) */}
-          <div className="flex shrink-0 items-center gap-1.5 md:gap-2">
-            <Badge
-              variant="outline"
-              className="gap-1 border-transparent px-2 py-0.5 text-[11px] md:px-3 md:py-1 md:text-xs"
-              style={{
-                background: `${statusMeta.color}1a`,
-                color: statusMeta.color,
-                boxShadow: `0 0 0 1px ${statusMeta.color}33`,
-              }}
-            >
-              <StatusIcon
-                className={cn(
-                  "h-3 w-3",
-                  (status === "planning" ||
-                    status === "executing" ||
-                    status === "verifying") &&
-                    "animate-spin"
-                )}
-              />
-              <span className="hidden sm:inline">{statusMeta.label}</span>
-            </Badge>
-
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={onStop}
-              className="gap-1.5 border-rose-400/30 text-rose-300 hover:bg-rose-400/10"
-            >
-              <Square className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">{t("mission", "actions.stop") || "Stop"}</span>
-            </Button>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <span className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.2em] text-cyan-300">
+                Mission
+              </span>
+              {demoMode && (
+                <span className="shrink-0 rounded-full border border-amber-400/30 bg-amber-400/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-amber-300">
+                  Demo
+                </span>
+              )}
+              {connected ? (
+                <span className="flex shrink-0 items-center gap-1 text-[10px] text-emerald-400">
+                  <Wifi className="h-3 w-3" /> Live
+                </span>
+              ) : (
+                !demoMode && (
+                  <span className="flex shrink-0 items-center gap-1 text-[10px] text-muted-foreground">
+                    <WifiOff className="h-3 w-3" /> Disconnected
+                  </span>
+                )
+              )}
+            </div>
+            <p className="mt-0.5 truncate text-sm font-semibold text-foreground">
+              {goal || "Untitled mission"}
+            </p>
+            {repoUrl && (
+              <p className="mt-0.5 truncate font-mono text-[11px] text-muted-foreground">
+                {repoUrl.replace(/^https?:\/\//, "").replace(/\.git$/, "")}
+              </p>
+            )}
           </div>
         </div>
-      </GlassCard>
 
-      {/* ═══ RESIZABLE WORKSPACE ═══
-          Uses react-resizable-panels for drag-to-resize columns + rows.
-          Panels can be maximized (absolute inset-0 z-50) for full-screen view.
-          All panels have min-h-0 + overflow-y-auto for independent scrolling. */}
+        {/* Center: status + phase + iteration */}
+        <div className="hidden items-center gap-2 md:flex">
+          <span
+            className="status-badge"
+            style={{
+              background: `${statusMeta.color}1a`,
+              color: statusMeta.color,
+              border: `1px solid ${statusMeta.color}40`,
+              boxShadow: statusMeta.animating
+                ? `0 0 12px ${statusMeta.color}40`
+                : undefined,
+            }}
+          >
+            <StatusIcon
+              className={cn(
+                "h-3 w-3",
+                statusMeta.animating && "animate-spin"
+              )}
+            />
+            <span className="status-badge-dot-animated hidden sm:inline-block" style={{ background: statusMeta.color }} />
+            <span>{statusMeta.label}</span>
+          </span>
+          <span className="phase-pill">
+            <Activity className="h-3 w-3" />
+            <span className="capitalize">{currentPhase}</span>
+          </span>
+          <span className="iter-pill">
+            <span>{iteration}</span>
+            <span className="opacity-50">/</span>
+            <span>{maxIterations}</span>
+          </span>
+        </div>
 
-      {/* Maximized Network Graph overlay */}
+        {/* Right: confidence + stop */}
+        <div className="flex shrink-0 items-center gap-2">
+          {/* Confidence mini-meter */}
+          <div className="hidden items-center gap-2 sm:flex">
+            <div className="relative flex h-9 w-9 items-center justify-center">
+              <svg width={36} height={36} className="-rotate-90">
+                <circle
+                  cx={18}
+                  cy={18}
+                  r={15}
+                  fill="none"
+                  stroke="oklch(1 0 0 / 0.08)"
+                  strokeWidth={2.5}
+                />
+                <motion.circle
+                  cx={18}
+                  cy={18}
+                  r={15}
+                  fill="none"
+                  stroke={confColor}
+                  strokeWidth={2.5}
+                  strokeLinecap="round"
+                  strokeDasharray={2 * Math.PI * 15}
+                  animate={{
+                    strokeDashoffset:
+                      2 * Math.PI * 15 - (confidence / 100) * 2 * Math.PI * 15,
+                  }}
+                  transition={{ type: "spring", stiffness: 120, damping: 22 }}
+                  style={{ filter: `drop-shadow(0 0 4px ${confColor}aa)` }}
+                />
+              </svg>
+              <span
+                className="absolute text-[10px] font-bold tabular-nums"
+                style={{ color: confColor }}
+              >
+                {confidence}
+              </span>
+            </div>
+            <div className="hidden flex-col leading-tight lg:flex">
+              <span className="text-[9px] uppercase tracking-wider text-muted-foreground">
+                Confidence
+              </span>
+              <span className="text-[10px] font-semibold" style={{ color: confColor }}>
+                {confidence < 30 ? "Exploring" : confidence < 60 ? "Building" : confidence < 85 ? "Confident" : "Trusted"}
+              </span>
+            </div>
+          </div>
+
+          <button onClick={onStop} className="stop-btn">
+            <Square className="h-3 w-3 fill-current" />
+            <span className="hidden sm:inline">
+              {t("mission", "actions.stop") || "Stop"}
+            </span>
+          </button>
+
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={reset}
+            className="gap-1.5 text-[11px] text-muted-foreground hover:text-foreground"
+            title="Start a new mission"
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            <span className="hidden lg:inline">
+              {t("mission", "actions.newMission") || "New"}
+            </span>
+          </Button>
+        </div>
+      </div>
+
+      {/* ═══ Maximized overlays ═══ */}
       <AnimatePresence>
         {networkMaximized && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 z-50 flex flex-col gap-2 p-3"
+            className="absolute inset-0 z-50 flex flex-col gap-2 p-2"
           >
-            <GlassCard className="flex min-h-0 flex-1 flex-col overflow-hidden p-3">
-              <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                <div className="flex items-center gap-2">
-                  <NetworkIcon className="h-4 w-4 text-cyan-300" />
-                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Agent Network Graph (Fullscreen)
-                  </span>
+            <div className="panel-glass min-h-0 flex-1 p-3">
+              <div className="panel-header">
+                <div className="panel-header-title">
+                  <NetworkIcon className="h-3.5 w-3.5 text-cyan-300" />
+                  Agent Network Graph (Fullscreen)
                 </div>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setNetworkMaximized(false)}
-                  className="h-7 gap-1.5 text-[11px]"
-                >
-                  <Minimize2 className="h-3.5 w-3.5" />
-                  Exit Fullscreen
-                </Button>
+                <div className="panel-header-actions">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setNetworkMaximized(false)}
+                    className="h-7 gap-1.5 text-[11px]"
+                  >
+                    <Minimize2 className="h-3.5 w-3.5" />
+                    Exit Fullscreen
+                  </Button>
+                </div>
               </div>
               <div className="min-h-0 flex-1 py-2">
                 <AgentNetworkGraph />
               </div>
-            </GlassCard>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Maximized Feed overlay (absolute, covers everything) */}
       <AnimatePresence>
         {feedMaximized && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 z-50 flex flex-col gap-2 p-3"
+            className="absolute inset-0 z-50 flex flex-col gap-2 p-2"
           >
-            <GlassCard className="flex min-h-0 flex-1 flex-col overflow-hidden p-0">
-              <div className="flex items-center justify-between border-b border-white/5 px-4 py-2">
-                <div className="flex items-center gap-2">
+            <div className="panel-glass min-h-0 flex-1 p-0">
+              <div className="panel-header">
+                <div className="panel-header-title">
                   <Activity className="h-3.5 w-3.5 text-cyan-300" />
-                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    {t("mission", "feed.title") || "AI Activity Feed"}
-                  </span>
-                  <span className="font-mono text-[10px] text-muted-foreground/60">
+                  {t("mission", "feed.title") || "AI Activity Feed"}
+                  <span className="ml-2 font-mono text-[10px] text-muted-foreground/60 normal-case">
                     {events.length} events
                   </span>
                 </div>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setFeedMaximized(false)}
-                  className="h-7 gap-1.5 text-[11px]"
-                >
-                  <Minimize2 className="h-3.5 w-3.5" />
-                  Exit Fullscreen
-                </Button>
+                <div className="panel-header-actions">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setFeedMaximized(false)}
+                    className="h-7 gap-1.5 text-[11px]"
+                  >
+                    <Minimize2 className="h-3.5 w-3.5" />
+                    Exit Fullscreen
+                  </Button>
+                </div>
               </div>
               <div className="min-h-0 flex-1 p-2">
                 <AIActivityFeed events={events} />
               </div>
-            </GlassCard>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Maximized Right Panel overlay */}
       <AnimatePresence>
         {rightMaximized && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 z-50 flex flex-col gap-2 p-3"
+            className="absolute inset-0 z-50 flex flex-col gap-2 p-2"
           >
-            <GlassCard className="flex min-h-0 flex-1 flex-col overflow-hidden p-0">
-              <div className="flex items-center justify-between border-b border-white/5 px-2 py-1.5">
-                <div className="flex items-center gap-1 p-1">
+            <div className="panel-glass min-h-0 flex-1 p-0">
+              <div className="panel-header">
+                <div className="flex items-center gap-1">
                   <button
                     onClick={() => setRightTab("tree")}
-                    className={cn(
-                      "flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[11px] transition",
-                      rightTab === "tree" ? "bg-white/5 text-foreground" : "text-muted-foreground hover:text-foreground"
-                    )}
+                    data-state={rightTab === "tree" ? "active" : "inactive"}
+                    className="mc-tab"
                   >
                     <ListTree className="h-3 w-3" /> Files
                     {filesModified.length > 0 && (
-                      <span className="ml-1 rounded-full bg-white/5 px-1 text-[9px] text-muted-foreground">{filesModified.length}</span>
+                      <span className="ml-1 rounded-full bg-white/5 px-1 text-[9px] text-muted-foreground">
+                        {filesModified.length}
+                      </span>
                     )}
                   </button>
                   <button
                     onClick={() => setRightTab("diff")}
-                    className={cn(
-                      "flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[11px] transition",
-                      rightTab === "diff" ? "bg-white/5 text-foreground" : "text-muted-foreground hover:text-foreground"
-                    )}
+                    data-state={rightTab === "diff" ? "active" : "inactive"}
+                    className="mc-tab"
                   >
                     <FileDiffIcon className="h-3 w-3" /> Diff
                   </button>
                   <button
                     onClick={() => setRightTab("world")}
-                    className={cn(
-                      "flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[11px] transition",
-                      rightTab === "world" ? "bg-white/5 text-foreground" : "text-muted-foreground hover:text-foreground"
-                    )}
+                    data-state={rightTab === "world" ? "active" : "inactive"}
+                    className="mc-tab"
                   >
                     <Globe className="h-3 w-3" /> World
                   </button>
                 </div>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setRightMaximized(false)}
-                  className="h-7 gap-1.5 text-[11px]"
-                >
-                  <Minimize2 className="h-3.5 w-3.5" />
-                  Exit Fullscreen
-                </Button>
+                <div className="panel-header-actions">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setRightMaximized(false)}
+                    className="h-7 gap-1.5 text-[11px]"
+                  >
+                    <Minimize2 className="h-3.5 w-3.5" />
+                    Exit Fullscreen
+                  </Button>
+                </div>
               </div>
-              <div className="min-h-0 flex-1 overflow-y-auto scrollbar-thin">
+              <div className="mc-scroll min-h-0 flex-1 overflow-y-auto">
                 {rightTab === "tree" && (
-                  <FileTreePanel filesModified={filesModified} onSelectFile={onSelectFile} selectedPath={selectedFilePath} className="h-full" />
+                  <FileTreePanel
+                    filesModified={filesModified}
+                    onSelectFile={onSelectFile}
+                    selectedPath={selectedFilePath}
+                    className="h-full"
+                  />
                 )}
                 {rightTab === "diff" && (
-                  <FileDiffViewer filesModified={filesModified} selectedPath={selectedFilePath} onSelect={setSelectedFilePath} className="h-full" />
+                  <FileDiffViewer
+                    filesModified={filesModified}
+                    selectedPath={selectedFilePath}
+                    onSelect={setSelectedFilePath}
+                    className="h-full"
+                  />
                 )}
                 {rightTab === "world" && (
                   <WorldStatePanel
@@ -760,81 +820,71 @@ export function MissionControlView() {
                   />
                 )}
               </div>
-            </GlassCard>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* ═══ FULLY RESIZABLE WORKSPACE ═══
-          Vertical PanelGroup: Workspace (flex) | Agent Status Row | Bottom Panel
-          Horizontal PanelGroup inside Workspace: Dock | Sidebar | Feed | Right
-          ALL panels resizable via drag handles. */}
-
-      {/* Normal resizable workspace (hidden when any panel is maximized) */}
+      {/* ═══ FULLY RESIZABLE WORKSPACE ═══ */}
       {!feedMaximized && !rightMaximized && !networkMaximized && (
         <PanelGroup direction="vertical" className="min-h-0 flex-1">
           {/* ── Main workspace row (horizontal resizable) ── */}
           <Panel defaultSize={62} minSize={30}>
             <div className="flex h-full min-h-0 gap-2">
+              {/* Agent Dock (collapsible, left) */}
               <AgentDock
                 agentStatuses={agentStatuses}
                 events={events}
                 className="hidden md:flex"
               />
 
-              {/* Horizontal resizable: Sidebar | Feed | Right */}
+              {/* Horizontal resizable: Feed | Right */}
               <PanelGroup direction="horizontal" className="min-h-0 flex-1">
-                {/* LEFT: Missions sidebar (resizable, scrollable) */}
-                <Panel defaultSize={18} minSize={12} maxSize={30} className="hidden lg:block">
-                  <div className="h-full min-h-0 overflow-y-auto scrollbar-thin pr-1">
-                    <MissionsSidebar />
-                  </div>
-                </Panel>
-
-                <PanelResizeHandle className="hidden lg:block w-1 bg-transparent hover:bg-cyan-400/20 transition-colors cursor-col-resize" />
-
-                {/* CENTER: Activity Feed + Timeline (resizable, scrollable) */}
-                <Panel defaultSize={42} minSize={25}>
+                {/* CENTER: Activity Feed + Timeline */}
+                <Panel defaultSize={55} minSize={25}>
                   <div className="flex h-full min-h-0 flex-col gap-2">
-                    <GlassCard className="flex min-h-0 flex-1 flex-col overflow-hidden p-0">
-                      <div className="flex items-center justify-between border-b border-white/5 px-4 py-2">
-                        <div className="flex items-center gap-2">
+                    <div className="panel-glass min-h-0 flex-1 p-0">
+                      <div className="panel-header">
+                        <div className="panel-header-title">
                           <Activity className="h-3.5 w-3.5 text-cyan-300" />
-                          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                            {t("mission", "feed.title") || "AI Activity Feed"}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono text-[10px] text-muted-foreground/60">
+                          {t("mission", "feed.title") || "AI Activity Feed"}
+                          <span className="ml-2 font-mono text-[10px] text-muted-foreground/60 normal-case">
                             {events.length} events
                           </span>
-                          <Button
-                            size="sm"
-                            variant="ghost"
+                        </div>
+                        <div className="panel-header-actions">
+                          <button
                             onClick={() => setFeedMaximized(true)}
-                            className="h-6 w-6 p-0 text-muted-foreground hover:text-cyan-300"
+                            className="panel-max-btn"
                             title="Maximize Activity Feed"
+                            aria-label="Maximize Activity Feed"
                           >
                             <Maximize2 className="h-3 w-3" />
-                          </Button>
+                          </button>
                         </div>
                       </div>
                       <div className="min-h-0 flex-1 p-2">
                         <AIActivityFeed events={events} />
                       </div>
-                    </GlassCard>
+                    </div>
 
                     <MissionTimeline events={events} className="shrink-0" />
                   </div>
                 </Panel>
 
-                <PanelResizeHandle className="hidden lg:block w-1 bg-transparent hover:bg-violet-400/20 transition-colors cursor-col-resize" />
+                <PanelResizeHandle className="mc-resize-h hidden lg:block" />
 
-                {/* RIGHT: Network Graph + Files/Diff/World (resizable, scrollable, maximizable) */}
-                <Panel defaultSize={30} minSize={20} maxSize={50} className="hidden lg:block">
+                {/* RIGHT: Network Graph + Files/Diff/World */}
+                <Panel
+                  defaultSize={35}
+                  minSize={20}
+                  maxSize={55}
+                  className="hidden lg:block"
+                >
                   <div className="flex h-full min-h-0 flex-col gap-2">
+                    {/* Agent Network Graph (collapsible) */}
                     <Collapsible defaultOpen className="shrink-0">
-                      <GlassCard className="p-3">
+                      <div className="panel-glass p-3">
                         <div className="flex items-center justify-between">
                           <CollapsibleTrigger className="flex items-center gap-1.5 rounded-md px-1 py-0.5 transition hover:bg-white/[0.02]">
                             <NetworkIcon className="h-3.5 w-3.5 text-cyan-300" />
@@ -843,104 +893,100 @@ export function MissionControlView() {
                             </span>
                             <ChevronDown className="h-3.5 w-3.5 text-muted-foreground transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
                           </CollapsibleTrigger>
-                          <Button
-                            size="sm"
-                            variant="ghost"
+                          <button
                             onClick={() => setNetworkMaximized(true)}
-                            className="h-6 w-6 p-0 text-muted-foreground hover:text-cyan-300"
+                            className="panel-max-btn"
                             title="Maximize Network Graph"
+                            aria-label="Maximize Network Graph"
                           >
                             <Maximize2 className="h-3 w-3" />
-                          </Button>
+                          </button>
                         </div>
                         <CollapsibleContent>
                           <div className="mt-2">
                             <AgentNetworkGraph />
                           </div>
                         </CollapsibleContent>
-                      </GlassCard>
+                      </div>
                     </Collapsible>
 
-                    <GlassCard className="flex min-h-0 flex-1 flex-col overflow-hidden p-0">
-                      <Tabs
-                        value={rightTab}
-                        onValueChange={setRightTab}
-                        className="flex h-full flex-col"
-                      >
-                        <div className="flex items-center justify-between border-b border-white/5 px-2">
-                          <TabsList className="h-auto bg-transparent p-1">
-                            <TabsTrigger
-                              value="tree"
-                              className="gap-1.5 rounded-md px-2.5 py-1 text-[11px] data-[state=active]:bg-white/5"
-                            >
-                              <ListTree className="h-3 w-3" /> Files
-                              {filesModified.length > 0 && (
-                                <span className="ml-1 rounded-full bg-white/5 px-1 text-[9px] text-muted-foreground">
-                                  {filesModified.length}
-                                </span>
-                              )}
-                            </TabsTrigger>
-                            <TabsTrigger
-                              value="diff"
-                              className="gap-1.5 rounded-md px-2.5 py-1 text-[11px] data-[state=active]:bg-white/5"
-                            >
-                              <FileDiffIcon className="h-3 w-3" /> Diff
-                            </TabsTrigger>
-                            <TabsTrigger
-                              value="world"
-                              className="gap-1.5 rounded-md px-2.5 py-1 text-[11px] data-[state=active]:bg-white/5"
-                            >
-                              <Globe className="h-3 w-3" /> World
-                            </TabsTrigger>
-                          </TabsList>
-                          <Button
-                            size="sm"
-                            variant="ghost"
+                    {/* Tabs: Files | Diff | World */}
+                    <div className="panel-glass min-h-0 flex-1 p-0">
+                      <div className="panel-header">
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => setRightTab("tree")}
+                            data-state={rightTab === "tree" ? "active" : "inactive"}
+                            className="mc-tab"
+                          >
+                            <ListTree className="h-3 w-3" /> Files
+                            {filesModified.length > 0 && (
+                              <span className="ml-1 rounded-full bg-white/5 px-1 text-[9px] text-muted-foreground">
+                                {filesModified.length}
+                              </span>
+                            )}
+                          </button>
+                          <button
+                            onClick={() => setRightTab("diff")}
+                            data-state={rightTab === "diff" ? "active" : "inactive"}
+                            className="mc-tab"
+                          >
+                            <FileDiffIcon className="h-3 w-3" /> Diff
+                          </button>
+                          <button
+                            onClick={() => setRightTab("world")}
+                            data-state={rightTab === "world" ? "active" : "inactive"}
+                            className="mc-tab"
+                          >
+                            <Globe className="h-3 w-3" /> World
+                          </button>
+                        </div>
+                        <div className="panel-header-actions">
+                          <button
                             onClick={() => setRightMaximized(true)}
-                            className="h-6 w-6 p-0 text-muted-foreground hover:text-violet-300"
+                            className="panel-max-btn"
                             title="Maximize Panel"
+                            aria-label="Maximize Panel"
                           >
                             <Maximize2 className="h-3 w-3" />
-                          </Button>
+                          </button>
                         </div>
+                      </div>
 
-                        <div className="min-h-0 flex-1 overflow-hidden">
-                          {rightTab === "tree" && (
-                            <FileTreePanel
-                              filesModified={filesModified}
-                              onSelectFile={onSelectFile}
-                              selectedPath={selectedFilePath}
-                              className="h-full"
-                            />
-                          )}
-                          {rightTab === "diff" && (
-                            <FileDiffViewer
-                              filesModified={filesModified}
-                              selectedPath={selectedFilePath}
-                              onSelect={setSelectedFilePath}
-                              className="h-full"
-                            />
-                          )}
-                          {rightTab === "world" && (
-                            <div className="h-full overflow-y-auto scrollbar-thin">
-                              <WorldStatePanel
-                                currentTask={currentTask}
-                                currentFile={currentFile}
-                                confidence={confidence}
-                                buildStatus={buildStatus}
-                                testStatus={testStatus}
-                                iteration={iteration}
-                                maxIterations={maxIterations}
-                                currentPhase={currentPhase}
-                                filesModified={filesModified}
-                                decisions={decisions}
-                                memory={memory}
-                              />
-                            </div>
-                          )}
-                        </div>
-                      </Tabs>
-                    </GlassCard>
+                      <div className="min-h-0 flex-1 overflow-hidden">
+                        {rightTab === "tree" && (
+                          <FileTreePanel
+                            filesModified={filesModified}
+                            onSelectFile={onSelectFile}
+                            selectedPath={selectedFilePath}
+                            className="h-full"
+                          />
+                        )}
+                        {rightTab === "diff" && (
+                          <FileDiffViewer
+                            filesModified={filesModified}
+                            selectedPath={selectedFilePath}
+                            onSelect={setSelectedFilePath}
+                            className="h-full"
+                          />
+                        )}
+                        {rightTab === "world" && (
+                          <WorldStatePanel
+                            currentTask={currentTask}
+                            currentFile={currentFile}
+                            confidence={confidence}
+                            buildStatus={buildStatus}
+                            testStatus={testStatus}
+                            iteration={iteration}
+                            maxIterations={maxIterations}
+                            currentPhase={currentPhase}
+                            filesModified={filesModified}
+                            decisions={decisions}
+                            memory={memory}
+                          />
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </Panel>
               </PanelGroup>
@@ -948,56 +994,45 @@ export function MissionControlView() {
           </Panel>
 
           {/* ── Vertical drag handle ── */}
-          <PanelResizeHandle className="h-1 bg-transparent hover:bg-cyan-400/20 transition-colors cursor-row-resize w-full" />
+          <PanelResizeHandle className="mc-resize-v w-full" />
 
-          {/* ── Agent status row (resizable vertically) ── */}
+          {/* ── Agent status row ── */}
           <Panel defaultSize={16} minSize={8} maxSize={30}>
-            <GlassCard className="h-full overflow-y-auto scrollbar-thin p-2.5">
+            <div className="panel-glass h-full overflow-hidden p-3">
               <div className="mb-2 flex items-center justify-between">
-                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <div className="panel-header-title">
+                  <Users className="h-3.5 w-3.5 text-cyan-300" />
                   {t("mission", "agents.title") || "Agent Team"} · 11 agents
-                </span>
-                <span className="text-[10px] text-muted-foreground/60">
-                  Active:{" "}
-                  {
-                    Object.values(agentStatuses).filter(
-                      (a) => a.status === "thinking" || a.status === "acting"
-                    ).length
-                  }
-                </span>
+                </div>
+                <div className="flex items-center gap-2 text-[10px] text-muted-foreground/80">
+                  <span className="flex items-center gap-1">
+                    <span className="h-1.5 w-1.5 rounded-full bg-cyan-400" style={{ boxShadow: "0 0 6px #22d3ee" }} />
+                    Active: {activeAgentsCount}
+                  </span>
+                </div>
               </div>
-              <AgentStatusCards statuses={agentStatuses} compact />
-            </GlassCard>
+              <div className="mc-scroll h-[calc(100%-1.75rem)] overflow-y-auto pr-1">
+                <AgentStatusCards statuses={agentStatuses} compact />
+              </div>
+            </div>
           </Panel>
 
           {/* ── Vertical drag handle ── */}
-          <PanelResizeHandle className="h-1 bg-transparent hover:bg-violet-400/20 transition-colors cursor-row-resize w-full" />
+          <PanelResizeHandle className="mc-resize-v w-full" />
 
-          {/* ── Bottom panel: Terminal / Git / Diff / Logs (resizable vertically) ── */}
+          {/* ── Bottom panel: Terminal / Git / Diff / Logs ── */}
           <Panel defaultSize={22} minSize={10} maxSize={60}>
-            <GlassCard className="h-full overflow-hidden p-0">
+            <div className="panel-glass h-full overflow-hidden">
               <BottomPanel
                 terminalOutput={terminalOutput}
                 events={events}
                 filesModified={filesModified}
                 onTerminalOutput={onTerminalOutput}
               />
-            </GlassCard>
+            </div>
           </Panel>
         </PanelGroup>
       )}
-
-      <div className="flex items-center justify-center">
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={reset}
-          className="ml-2 gap-1.5 text-[11px] text-muted-foreground"
-        >
-          <Sparkles className="h-3 w-3" />
-          <span>{t("mission", "actions.newMission") || "New Mission"}</span>
-        </Button>
-      </div>
     </div>
   );
 }
@@ -1026,105 +1061,5 @@ function MissionHeader() {
         </p>
       </div>
     </motion.div>
-  );
-}
-
-function MissionsSidebar() {
-  const { t } = useT();
-  const { history, status, goal, missionId, demoMode, reset } = useMissionStore();
-
-  return (
-    <GlassCard className="flex min-h-0 flex-1 flex-col p-3">
-      <div className="mb-2 flex items-center gap-2">
-        <Activity className="h-3.5 w-3.5 text-cyan-300" />
-        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          {t("mission", "sidebar.title") || "Missions"}
-        </span>
-      </div>
-
-      {/* Active mission */}
-      {(missionId || demoMode) && (
-        <div className="mb-3 rounded-lg border border-cyan-400/20 bg-cyan-400/[0.04] p-2">
-          <div className="flex items-center gap-1.5">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-cyan-400" />
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-cyan-300">
-              Active
-            </span>
-          </div>
-          <p className="mt-1 line-clamp-2 text-xs text-foreground/90">{goal}</p>
-          <p className="mt-1 text-[10px] capitalize text-muted-foreground">
-            {status}
-          </p>
-          <button
-            onClick={reset}
-            className="mt-2 w-full rounded-md border border-white/5 bg-white/[0.02] px-2 py-1 text-[10px] text-muted-foreground transition hover:bg-white/5"
-          >
-            Discard
-          </button>
-        </div>
-      )}
-
-      {/* History */}
-      <div className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-        {t("mission", "sidebar.history") || "History"}
-      </div>
-      <div className="scrollbar-thin min-h-0 flex-1 space-y-1 overflow-y-auto">
-        {history.length === 0 ? (
-          <p className="px-1 py-2 text-[11px] text-muted-foreground/60">
-            No past missions yet.
-          </p>
-        ) : (
-          history.slice(0, 10).map((h) => (
-            <button
-              key={h.missionId}
-              className="w-full rounded-lg border border-white/5 bg-white/[0.02] px-2 py-1.5 text-left transition hover:bg-white/[0.04]"
-            >
-              <div className="flex items-center gap-1.5">
-                <span
-                  className="h-1.5 w-1.5 shrink-0 rounded-full"
-                  style={{
-                    background:
-                      h.status === "completed"
-                        ? "#34d399"
-                        : h.status === "failed"
-                        ? "#f472b6"
-                        : "#fbbf24",
-                  }}
-                />
-                <span className="truncate text-[11px] text-foreground/80">
-                  {h.goal}
-                </span>
-              </div>
-              <p className="mt-0.5 pl-3 text-[9px] text-muted-foreground/60">
-                {new Date(h.startedAt).toLocaleDateString()} ·{" "}
-                {h.filesModified} files
-              </p>
-            </button>
-          ))
-        )}
-      </div>
-
-      {/* Templates */}
-      <div className="mt-3 mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-        {t("mission", "sidebar.templates") || "Templates"}
-      </div>
-      <div className="space-y-1">
-        {MISSION_TEMPLATES.slice(0, 4).map((tpl) => (
-          <button
-            key={tpl.id}
-            onClick={() => useMissionStore.getState().setGoal(tpl.goal)}
-            className="flex w-full items-center gap-2 rounded-lg border border-white/5 bg-white/[0.02] px-2 py-1.5 text-left transition hover:bg-white/[0.04]"
-          >
-            <span
-              className="h-1.5 w-1.5 shrink-0 rounded-full"
-              style={{ background: tpl.accent }}
-            />
-            <span className="truncate text-[11px] text-foreground/80">
-              {tpl.title}
-            </span>
-          </button>
-        ))}
-      </div>
-    </GlassCard>
   );
 }

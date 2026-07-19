@@ -1766,3 +1766,97 @@ Files Modified:
 - locales/en/landing.json (added nested nav/hero/trust/stats/feature/how/providers/pricing/finalCta/footer objects)
 - locales/vi/landing.json (same structure, Vietnamese translations)
 - agent-ctx/redesign-landing-cinematic-cinematic-landing-page.md (work record)
+
+---
+Task ID: redesign-mission-control
+Agent: full-stack-developer (Mission Control Redesign)
+Task: Redesign Mission Control as premium AI command center.
+
+Work Log:
+- Read worklog.md, mission-control-view.tsx (1130 lines), all 11 mission components (agent-dock, ai-activity-feed, world-state-panel, agent-status-cards, executive-decision-card, mission-timeline, bottom-panel, file-tree-panel, file-diff-viewer, agent-network-graph, live-terminal), mission-store.ts (Zustand), globals.css.
+- Added ~480 lines of premium Mission Control CSS to globals.css:
+  • `.mission-canvas` — deep-black canvas with radial cyan/violet/emerald gradients
+  • `.command-bar` — glassmorphic top bar with blur(24px), saturate(180%), subtle bottom edge glow
+  • `.panel-glass` — glass panel with subtle border + hover glow (cyan tint)
+  • `.panel-header` / `.panel-header-title` / `.panel-header-actions` — consistent header layout
+  • `.agent-glow` — breathing glow keyframe animation using `color-mix()` for dynamic --agent-color
+  • `.confidence-ring` + `.confidence-ring-track/value/label/number/tag` — circular meter classes
+  • `.status-badge` + `.status-badge-dot-animated` — animated status pill with pulsing dot
+  • `.feed-item` — event card with hover translateX
+  • `.decision-card` + `.decision-card-inner` — executive decision with animated gradient border
+  • `.mc-scroll` — cyan-themed thin scrollbar (6px)
+  • `.mc-resize-h` / `.mc-resize-v` — resize handles with cyan→violet gradient on hover
+  • `.dock-tile` — 40×40px dock icon container with hover scale
+  • `.feed-new-pill` — gradient "N new events" pill shown when scrolled up
+  • `.phase-pill` / `.iter-pill` — small status pills (cyan / violet)
+  • `.stop-btn` — red glow button with hover lift
+  • `.panel-max-btn` — 24×24 maximize button with cyan hover
+  • `.mc-tab` — tab trigger with active gradient state
+  • `.feed-slide-in` + `.mc-line-clamp-2` + `.mc-lift` — animation/utility helpers
+- Enhanced `agent-dock.tsx`:
+  • Wider dock (60px), uses `panel-glass` background
+  • Active agents get `.agent-glow` breathing animation (via `--agent-color` CSS var)
+  • Active agent tiles: gradient background tinted with agent color
+  • Status dot glows for active/done/error states
+  • Active agent count badge at top of dock (cyan pill)
+  • Drawer: full deep-black backdrop, agent color tinted header gradient, larger 11×11 icon
+- Enhanced `ai-activity-feed.tsx`:
+  • Replaced fragile `setState-in-effect` pattern with computed `newCount` (autoScroll + lastSeenLength)
+  • Feed items use `.feed-item` class with left-edge color inset shadow (color-coded by event type)
+  • Empty state: cyan glow orb placeholder
+  • "N new events" pill appears when user scrolls up — click to jump to bottom
+  • Slide-in animation preserved via framer-motion `layout` + initial x:-12
+- Enhanced `world-state-panel.tsx`:
+  • Large 132×132 confidence meter with halo glow, animated count via `useMotionValue/useSpring/useTransform`
+  • Confidence color: pink<50, amber<75, green≥75; label: Exploring/Building/Confident/Trusted
+  • Status badges use `.status-badge` class (full-width Build/Tests)
+  • All sections in uniform rounded-xl border-white/5 cards
+  • Files modified: max-h-44 scroll with violet/emerald/rose icons
+- Enhanced `agent-status-cards.tsx`:
+  • Active agents get `.agent-glow` breathing animation (via `--agent-color` CSS var)
+  • Inset radial gradient background for active cards
+  • Pinging pulse dot in top-right corner for active states
+  • Responsive grid: 2/3/4/6 columns (mobile→xl)
+- Enhanced `executive-decision-card.tsx`:
+  • Uses `.decision-card` + `.decision-card-inner` for animated gradient border (violet→cyan→emerald, 12s shift)
+  • Premium dark inner background with backdrop blur
+- Enhanced `mission-timeline.tsx`:
+  • Uses `.panel-glass` background, `.mc-scroll` scrollbar
+- Enhanced `bottom-panel.tsx`:
+  • Uses `.panel-header` for consistent styling
+- Rewrote `mission-control-view.tsx` (1130→~700 lines):
+  • Wrapped entire view in `.mission-canvas` deep-black background
+  • New COMMAND BAR (full-width glassmorphic top bar):
+    - Left: mission icon (cyan-violet gradient) + Mission label + Demo/Live badges + goal (truncate) + repo URL (mono)
+    - Center: status badge (animated, colored by status) + phase pill (cyan) + iteration pill (violet)
+    - Right: mini confidence ring (36px SVG, animated) + confidence label + Stop button (red glow) + New Mission button
+  • 3-column workspace via react-resizable-panels (horizontal PanelGroup inside vertical PanelGroup):
+    - Agent Dock (collapsible, 60px) — premium glow on active agents
+    - Mission Feed (55% default) — `.panel-glass` with `.panel-header` (icon + title + count + maximize button), AI Activity Feed + Mission Timeline below
+    - Right Panel (35% default) — Collapsible Agent Network Graph on top, then Tabs (Files | Diff | World) using `.mc-tab` styling with `.panel-max-btn` maximize
+  • Agent Status Grid below workspace (16% default height, resizable) — header with active count badge, scrollable grid of 11 cards
+  • Bottom Panel (22% default height, resizable) — Terminal/Git/File Diff/Logs tabs
+  • All resize handles use `.mc-resize-h` / `.mc-resize-v` (cyan→violet gradient on hover)
+  • 3 maximize overlays (network, feed, right) preserved with `.panel-glass` styling
+  • Default right tab changed to "world" (more visually impressive on first load)
+  • Removed redundant MissionsSidebar from live workspace (history now accessible via "New" button → start form which shows history)
+  • Removed unused imports (GlassCard, Crown, Gauge, Play)
+- Fixed lint error: `setState-in-effect` in ai-activity-feed.tsx — refactored to compute newCount from state instead.
+
+Stage Summary:
+- bun run lint: 0 errors, 0 warnings ✓
+- npx tsc --noEmit: exit 0 ✓
+- Dev server compiles successfully (186ms, 301ms)
+- All existing functionality preserved: resizable panels, maximize overlays, SSE events via Zustand, terminal output pushing, file selection, demo mode, mission start/stop/reset
+- Premium AI command center aesthetic achieved: deep black canvas, cyan/green/violet neon accents, glassmorphic panels, breathing glow on active agents, animated confidence meter, gradient-bordered decision cards
+- Layout issues fixed: proper `min-h-0` everywhere, `overflow-hidden` on panels, independent scroll containers with `.mc-scroll`, no overlap or clipping
+- Files touched:
+  1. `src/app/globals.css` — +480 lines Mission Control premium CSS
+  2. `src/components/mission/agent-dock.tsx` — premium glow, wider dock, cleaner drawer
+  3. `src/components/mission/ai-activity-feed.tsx` — color-coded feed items, new-events pill, fixed setState-in-effect
+  4. `src/components/mission/world-state-panel.tsx` — large animated confidence meter, premium badges
+  5. `src/components/mission/agent-status-cards.tsx` — agent-glow breathing animation
+  6. `src/components/mission/executive-decision-card.tsx` — gradient border via .decision-card class
+  7. `src/components/mission/mission-timeline.tsx` — panel-glass styling
+  8. `src/components/mission/bottom-panel.tsx` — panel-header styling
+  9. `src/components/views/mission-control-view.tsx` — full rewrite with command bar + 3-column workspace + agent grid + bottom panel

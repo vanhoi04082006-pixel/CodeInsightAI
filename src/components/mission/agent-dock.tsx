@@ -61,7 +61,7 @@ export function AgentDock({
         {!collapsed && (
           <motion.div
             initial={{ width: 0, opacity: 0 }}
-            animate={{ width: 56, opacity: 1 }}
+            animate={{ width: 60, opacity: 1 }}
             exit={{ width: 0, opacity: 0 }}
             transition={{ type: "spring", stiffness: 260, damping: 28 }}
             className={cn(
@@ -123,14 +123,18 @@ function AgentDockInner({
   onSelect: (id: string) => void;
   onCollapse: () => void;
 }) {
+  const activeCount = Object.values(agentStatuses).filter(
+    (a) => a.status === "thinking" || a.status === "acting"
+  ).length;
+
   return (
-    <div className="flex h-full w-14 flex-col items-center gap-1 border-r border-white/5 bg-white/[0.02] py-2">
+    <div className="panel-glass flex h-full w-[60px] flex-col items-center gap-1 py-2.5">
       {/* Collapse affordance */}
       <Tooltip>
         <TooltipTrigger asChild>
           <button
             onClick={onCollapse}
-            className="mb-1 flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition hover:bg-white/5 hover:text-foreground"
+            className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition hover:bg-white/5 hover:text-foreground"
             aria-label="Hide agent dock"
           >
             <PanelLeftClose className="h-3.5 w-3.5" />
@@ -140,8 +144,18 @@ function AgentDockInner({
       </Tooltip>
       <div className="mb-1 h-px w-6 bg-white/5" />
 
+      {/* Agent count badge */}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="mb-1 flex h-5 min-w-[20px] items-center justify-center rounded-full border border-cyan-400/20 bg-cyan-400/[0.08] px-1 text-[9px] font-bold text-cyan-300">
+            {activeCount}
+          </div>
+        </TooltipTrigger>
+        <TooltipContent side="right">Active agents</TooltipContent>
+      </Tooltip>
+
       {/* Agent buttons */}
-      <div className="scrollbar-thin flex min-h-0 flex-1 flex-col items-center gap-1 overflow-y-auto">
+      <div className="mc-scroll flex min-h-0 flex-1 flex-col items-center gap-1.5 overflow-y-auto pr-0.5">
         {AGENTS.map((agent) => {
           const status = agentStatuses[agent.name]?.status ?? "idle";
           const detail = agentStatuses[agent.name]?.detail;
@@ -174,6 +188,8 @@ function AgentButton({
   const Icon = agent.icon;
   const color = STATUS_COLOR[status];
   const isActive = status === "thinking" || status === "acting";
+  const isDone = status === "done";
+  const isError = status === "error";
 
   return (
     <Tooltip>
@@ -181,37 +197,40 @@ function AgentButton({
         <button
           onClick={onClick}
           className={cn(
-            "group relative flex h-10 w-10 items-center justify-center rounded-xl border transition",
-            "border-white/5 bg-white/[0.02] hover:bg-white/[0.06] hover:border-white/10"
+            "dock-tile group relative",
+            isActive && "agent-glow"
           )}
           style={
-            isActive
-              ? {
-                  boxShadow: `0 0 0 1px ${color}55, 0 0 12px ${color}33`,
-                  borderColor: `${color}55`,
-                }
-              : undefined
+            {
+              "--agent-color": color,
+              borderColor: isActive
+                ? `color-mix(in oklch, ${color} 45%, transparent)`
+                : undefined,
+              background: isActive
+                ? `linear-gradient(135deg, color-mix(in oklch, ${color} 18%, transparent), color-mix(in oklch, ${color} 8%, transparent))`
+                : undefined,
+            } as React.CSSProperties
           }
         >
           <Icon
             className="h-4 w-4 transition-transform group-hover:scale-110"
-            style={{ color: agent.color }}
+            style={{ color: isActive ? color : agent.color }}
           />
           {/* Status dot */}
           <span
             className={cn(
-              "absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border border-black/40",
-              status === "thinking" && "animate-pulse",
-              status === "acting" && "animate-pulse"
+              "absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border border-black/50",
+              isActive && "animate-pulse"
             )}
             style={{
               background: color,
-              boxShadow:
-                status === "acting"
-                  ? `0 0 6px ${color}, 0 0 12px ${color}`
-                  : status === "thinking"
-                  ? `0 0 4px ${color}`
-                  : undefined,
+              boxShadow: isActive
+                ? `0 0 6px ${color}, 0 0 12px ${color}`
+                : isDone
+                ? `0 0 4px ${color}`
+                : isError
+                ? `0 0 6px ${color}`
+                : undefined,
             }}
           />
         </button>
@@ -296,7 +315,7 @@ function AgentDrawer({
       onClick={onClose}
     >
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
 
       {/* Drawer panel */}
       <motion.div
@@ -305,15 +324,21 @@ function AgentDrawer({
         exit={{ x: "-100%" }}
         transition={{ type: "spring", stiffness: 260, damping: 30 }}
         onClick={(e) => e.stopPropagation()}
-        className="relative z-10 flex h-full w-full max-w-md flex-col border-r border-white/10 bg-background/95 shadow-2xl"
+        className="relative z-10 flex h-full w-full max-w-md flex-col border-r border-white/10 bg-[#050507]/95 shadow-2xl"
       >
         {/* Header */}
-        <div className="flex items-center gap-3 border-b border-white/5 px-4 py-3">
+        <div
+          className="flex items-center gap-3 border-b border-white/5 px-4 py-3"
+          style={{
+            background: `linear-gradient(135deg, ${agent.color}14, transparent 60%)`,
+          }}
+        >
           <div
-            className="flex h-10 w-10 items-center justify-center rounded-xl border"
+            className="flex h-11 w-11 items-center justify-center rounded-xl border"
             style={{
               background: `${agent.color}1a`,
-              borderColor: `${agent.color}33`,
+              borderColor: `${agent.color}40`,
+              boxShadow: `0 0 16px ${agent.color}40`,
             }}
           >
             <Icon className="h-5 w-5" style={{ color: agent.color }} />
@@ -338,14 +363,14 @@ function AgentDrawer({
             size="sm"
             variant="ghost"
             onClick={onClose}
-            className="h-7 w-7 p-0 text-muted-foreground"
+            className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
           >
             <X className="h-4 w-4" />
           </Button>
         </div>
 
         {/* Body */}
-        <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto p-4">
+        <div className="mc-scroll min-h-0 flex-1 overflow-y-auto p-4">
           {/* Description */}
           <section className="mb-4">
             <SectionLabel icon={FileText}>Role</SectionLabel>

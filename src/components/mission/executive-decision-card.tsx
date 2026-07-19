@@ -19,13 +19,9 @@ export function ExecutiveDecisionCard({ event }: ExecutiveDecisionCardProps) {
       animate={{ opacity: 1, scale: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
       transition={{ type: "spring", stiffness: 260, damping: 24 }}
-      className="relative overflow-hidden rounded-xl p-[1px]"
-      style={{
-        background:
-          "linear-gradient(135deg, oklch(0.7 0.22 300 / 0.6), oklch(0.82 0.16 195 / 0.6), oklch(0.65 0.24 145 / 0.4))",
-      }}
+      className="decision-card"
     >
-      <div className="rounded-[11px] bg-background/95 p-4 backdrop-blur">
+      <div className="decision-card-inner p-4">
         {/* Header */}
         <div className="flex items-center gap-2">
           <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-400/15 text-violet-300">

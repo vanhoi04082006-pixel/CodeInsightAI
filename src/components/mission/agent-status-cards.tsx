@@ -70,14 +70,19 @@ function AgentCard({
       }}
       transition={{ type: "spring", stiffness: 280, damping: 26 }}
       className={cn(
-        "relative overflow-hidden rounded-xl border bg-white/[0.02] p-3",
-        active ? "border-transparent" : "border-white/5"
+        "relative overflow-hidden rounded-xl border bg-white/[0.02] p-3 transition-colors",
+        active ? "border-transparent agent-glow" : "border-white/5"
       )}
+      style={
+        {
+          "--agent-color": visual.color,
+        } as React.CSSProperties
+      }
     >
       {/* Glow background */}
       {active && (
         <div
-          className="pointer-events-none absolute inset-0 opacity-20"
+          className="pointer-events-none absolute inset-0 opacity-25"
           style={{
             background: `radial-gradient(circle at 50% 0%, ${visual.color}, transparent 70%)`,
           }}
@@ -116,7 +121,7 @@ function AgentCard({
             {visual.label}
           </p>
           {!compact && status?.detail && (
-            <p className="mt-1 line-clamp-2 text-[11px] text-muted-foreground/80">
+            <p className="mc-line-clamp-2 mt-1 text-[11px] text-muted-foreground/80">
               {status.detail}
             </p>
           )}

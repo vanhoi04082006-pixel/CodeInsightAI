@@ -1,7 +1,8 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { ArrowDown } from "lucide-react";
 import type { MissionEvent } from "@/lib/mission-store";
 import { resolveAgent } from "./agent-meta";
 import { ExecutiveDecisionCard } from "./executive-decision-card";
@@ -57,12 +58,12 @@ function EventRow({ event }: { event: MissionEvent }) {
       animate={{ opacity: 1, x: 0, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
       transition={{ type: "spring", stiffness: 280, damping: 28 }}
-      className={cn(
-        "group relative flex items-start gap-3 rounded-xl border p-3 transition-colors",
-        "border-white/5 bg-white/[0.02] hover:bg-white/[0.04]"
-      )}
+      className="feed-item group"
       style={{
-        boxShadow: event.type === "error" ? `inset 0 0 0 1px ${accent}33` : undefined,
+        boxShadow:
+          event.type === "error"
+            ? `inset 0 0 0 1px ${accent}40, 0 0 12px -4px ${accent}60`
+            : `inset 2px 0 0 ${accent}40`,
       }}
     >
       {/* Agent avatar */}
@@ -85,7 +86,7 @@ function EventRow({ event }: { event: MissionEvent }) {
             {agent.name}
           </span>
           <span
-            className="text-[10px] uppercase tracking-wider"
+            className="text-[10px] uppercase tracking-wider font-semibold"
             style={{ color: accent }}
           >
             {labelForType(event.type)}
@@ -117,35 +118,35 @@ function EventRow({ event }: { event: MissionEvent }) {
 function labelForType(type: MissionEvent["type"]): string {
   switch (type) {
     case "agent:thinking":
-      return "💭 Thinking";
+      return "Thinking";
     case "agent:acting":
-      return "⚡ Acting";
+      return "Acting";
     case "agent:status":
-      return "📊 Status";
+      return "Status";
     case "agent:result":
-      return "✓ Result";
+      return "Result";
     case "tool:call":
-      return "🔧 Tool";
+      return "Tool";
     case "tool:result":
-      return "← Tool Result";
+      return "Tool Result";
     case "file:change":
-      return "📝 File";
+      return "File";
     case "terminal:output":
-      return "🖥 Terminal";
+      return "Terminal";
     case "confidence:update":
-      return "📈 Confidence";
+      return "Confidence";
     case "error":
-      return "⚠️ Error";
+      return "Error";
     case "phase:change":
-      return "🔄 Phase";
+      return "Phase";
     case "iteration:start":
-      return "🔁 Iteration";
+      return "Iteration";
     case "mission:start":
-      return "🚀 Start";
+      return "Start";
     case "mission:end":
-      return "🏁 End";
+      return "End";
     default:
-      return "• Event";
+      return "Event";
   }
 }
 
@@ -248,39 +249,56 @@ function EventBody({ event, accent }: { event: MissionEvent; accent: string }) {
 
 export function AIActivityFeed({ events, className }: AIActivityFeedProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const autoScroll = useRef(true);
+  const [autoScroll, setAutoScroll] = useState(true);
+  const [lastSeenLength, setLastSeenLength] = useState(events.length);
 
-  // Auto-scroll to bottom on new events unless the user scrolled up.
+  // Auto-scroll to bottom when new events arrive while autoScroll is on.
+  // Side-effect only — no setState inside.
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    if (autoScroll.current) {
+    if (autoScroll) {
       el.scrollTop = el.scrollHeight;
     }
-  }, [events.length]);
+  }, [events.length, autoScroll]);
 
   const onScroll = () => {
     const el = scrollRef.current;
     if (!el) return;
     const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
-    autoScroll.current = atBottom;
+    if (atBottom !== autoScroll) {
+      setAutoScroll(atBottom);
+      if (atBottom) setLastSeenLength(events.length);
+    }
   };
+
+  const jumpToBottom = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+    setAutoScroll(true);
+    setLastSeenLength(events.length);
+  };
+
+  const newCount = autoScroll ? 0 : Math.max(0, events.length - lastSeenLength);
 
   return (
     <div
       className={cn(
-        "relative flex h-full flex-col overflow-hidden rounded-2xl",
+        "relative flex h-full flex-col overflow-hidden",
         className
       )}
     >
       <div
         ref={scrollRef}
         onScroll={onScroll}
-        className="scrollbar-thin h-full overflow-y-auto px-1 py-2"
+        className="mc-scroll h-full overflow-y-auto px-2 py-2"
       >
         {events.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center gap-2 px-6 py-12 text-center">
-            <div className="h-10 w-10 rounded-full border border-white/5 bg-white/[0.02]" />
+            <div className="flex h-12 w-12 items-center justify-center rounded-full border border-cyan-400/15 bg-cyan-400/[0.04]">
+              <span className="h-2 w-2 rounded-full bg-cyan-400/60" />
+            </div>
             <p className="text-sm text-muted-foreground">No activity yet.</p>
             <p className="text-xs text-muted-foreground/60">
               Start a mission to see live agent events stream in here.
@@ -296,6 +314,23 @@ export function AIActivityFeed({ events, className }: AIActivityFeedProps) {
           </div>
         )}
       </div>
+
+      {/* "New events" pill */}
+      <AnimatePresence>
+        {newCount > 0 && (
+          <motion.button
+            initial={{ opacity: 0, y: 8, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 8, scale: 0.9 }}
+            transition={{ type: "spring", stiffness: 320, damping: 24 }}
+            onClick={jumpToBottom}
+            className="feed-new-pill"
+          >
+            <ArrowDown className="h-3 w-3" />
+            {newCount} new event{newCount === 1 ? "" : "s"}
+          </motion.button>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
