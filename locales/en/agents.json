@@ -1,0 +1,151 @@
+{
+  "title": "AI Agents",
+  "subtitle": "Multi-Agent System",
+  "description": "11 specialized AI agents that plan, analyze, fix, and ship code autonomously.",
+
+  "tabs": {
+    "dashboard": "Dashboard",
+    "workflow": "Workflow Runner",
+    "terminal": "Terminal",
+    "git": "Git"
+  },
+
+  "emptyState": {
+    "title": "No analysis selected",
+    "description": "Analyze a repository first, then open AI Agents to run workflows, execute commands, or manage Git for that repo.",
+    "cta": "Go to Analyze"
+  },
+
+  "dashboard": {
+    "queueStats": "Queue Stats",
+    "recentEvents": "Recent Events",
+    "agents": "Agents",
+    "capabilities": "Capabilities",
+    "noEvents": "No events yet. Run a workflow to see agent activity.",
+    "noAgents": "No agents registered."
+  },
+
+  "queue": {
+    "pending": "Pending",
+    "running": "Running",
+    "completed": "Completed",
+    "failed": "Failed",
+    "cancelled": "Cancelled",
+    "retrying": "Retrying",
+    "total": "Total"
+  },
+
+  "workflow": {
+    "title": "Autonomous Workflow Runner",
+    "description": "Describe a goal in plain English. The 11-agent pipeline will plan, execute, build, test, fix, and commit autonomously.",
+    "goalLabel": "Goal",
+    "goalPlaceholder": "Add Google Login to this project",
+    "repoLabel": "Repository (bound to active analysis)",
+    "providerLabel": "AI Provider",
+    "providerDefault": "Built-in (no provider)",
+    "providerHint": "No enabled providers — the workflow will run with the built-in rule-based fallbacks. Add a provider in the Providers tab for AI-powered planning.",
+    "runButton": "Run Workflow",
+    "running": "Running workflow…",
+    "progressStart": "Starting autonomous workflow…",
+    "progressDone": "Workflow complete",
+    "phases": {
+      "planning": "Planning + Execution",
+      "writeArtifacts": "Write Artifacts",
+      "buildTestLint": "Build / Test / Lint",
+      "commitPush": "Commit + Push"
+    },
+    "hints": {
+      "planning": "Planning task breakdown…",
+      "analyzing": "Analyzing repository structure…",
+      "executing": "Executing agent tasks…",
+      "staticAnalysis": "Running static analyzers…",
+      "generatingCode": "Generating code changes…",
+      "writingFiles": "Writing file artifacts…",
+      "runningTsc": "Running tsc --noEmit…",
+      "runningLint": "Running bun run lint…",
+      "runningTests": "Running tests…",
+      "commitMessage": "Generating commit message…",
+      "committing": "Committing changes…",
+      "pushing": "Pushing to remote…"
+    },
+    "result": {
+      "title": "Workflow Result",
+      "statusCompleted": "Completed",
+      "statusFailed": "Failed",
+      "duration": "Duration",
+      "tasksCompleted": "Tasks completed",
+      "tasksFailed": "Tasks failed",
+      "phases": "Phases",
+      "summary": "Summary",
+      "buildTestLint": "Build / Test / Lint",
+      "typeScript": "TypeScript",
+      "lint": "Lint",
+      "tests": "Tests",
+      "fixAttempts": "Fix attempts",
+      "finalPassed": "All passed",
+      "finalFailed": "Still failing",
+      "git": "Git",
+      "committed": "Committed",
+      "pushed": "Pushed",
+      "sha": "SHA",
+      "message": "Message",
+      "filesChanged": "Files changed",
+      "error": "Error",
+      "artifacts": "Artifacts",
+      "errors": "Errors",
+      "runAnother": "Run Another"
+    }
+  },
+
+  "terminal": {
+    "title": "Sandboxed Terminal",
+    "description": "Run shell commands. Each call is permission-checked and recorded by the terminal module.",
+    "placeholder": "bun run lint",
+    "runButton": "Run",
+    "output": "Output",
+    "exitCode": "Exit code",
+    "duration": "Duration",
+    "history": "History",
+    "clear": "Clear",
+    "noOutput": "No output yet. Run a command to see results.",
+    "noHistory": "No command history yet.",
+    "permissionDenied": "Permission denied",
+    "running": "Running…"
+  },
+
+  "git": {
+    "status": "Git Status",
+    "branch": "Branch",
+    "ahead": "Ahead",
+    "behind": "Behind",
+    "staged": "Staged",
+    "unstaged": "Unstaged",
+    "untracked": "Untracked",
+    "stageAll": "Stage All",
+    "unstageAll": "Unstage All",
+    "stage": "Stage",
+    "unstage": "Unstage",
+    "noChanges": "No changes detected. Working tree is clean.",
+    "noStaged": "No staged changes.",
+    "noUnstaged": "No unstaged changes.",
+    "noUntracked": "No untracked files.",
+    "failedLoad": "Failed to load git status.",
+    "aiCommit": "AI Commit",
+    "aiCommitDesc": "Generate a Conventional Commit message from the staged diff using AI.",
+    "generateCommit": "Generate + Commit",
+    "reviewDiff": "Review Staged Diff",
+    "push": "Push to remote",
+    "recentCommits": "Recent Commits",
+    "noCommits": "No commits yet.",
+    "commitMessage": "Commit Message",
+    "confirmCommit": "Confirm Commit",
+    "diffReview": "Diff Review",
+    "score": "Score",
+    "issues": "Issues",
+    "suggestions": "Suggestions",
+    "noIssues": "No issues found — clean diff!",
+    "pushed": "Pushed successfully",
+    "pushFailed": "Push failed",
+    "committed": "Committed successfully"
+  }
+}

@@ -274,10 +274,10 @@ export function AgentsView() {
       <div className="mx-auto flex min-h-[60vh] max-w-xl flex-col items-center justify-center px-4 text-center">
         <GlassCard className="p-10">
           <Bot className="mx-auto h-10 w-10 text-cyan-300" />
-          <h2 className="mt-4 text-xl font-bold">{t("chat", "noRepo")}</h2>
-          <p className="mt-2 text-sm text-muted-foreground">{t("chat", "noRepoDesc")}</p>
+          <h2 className="mt-4 text-xl font-bold">{t("agents", "emptyState.title")}</h2>
+          <p className="mt-2 text-sm text-muted-foreground">{t("agents", "emptyState.description")}</p>
           <Button onClick={() => setView("analyze")} className="mt-4 bg-gradient-to-r from-cyan-500 to-violet-500 text-white">
-            <Sparkles className="mr-1.5 h-4 w-4" /> {t("chat", "analyzeFirst")}
+            <Sparkles className="mr-1.5 h-4 w-4" /> {t("agents", "emptyState.cta")}
           </Button>
         </GlassCard>
       </div>
@@ -294,7 +294,7 @@ export function AgentsView() {
         <div>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Bot className="h-4 w-4 text-cyan-300" />
-            <span>Multi-Agent System</span>
+            <span>{t("agents", "subtitle")}</span>
             <span>·</span>
             <span className="font-mono">{report.repoOwner}/{report.repoName}</span>
           </div>
@@ -302,7 +302,7 @@ export function AgentsView() {
             <GradientText>{t("common", "nav.agents")}</GradientText>
           </h1>
           <p className="text-sm text-muted-foreground">
-            11 specialized AI agents that plan, analyze, fix, and ship code autonomously.
+            {t("agents", "description")}
           </p>
         </div>
       </motion.div>
@@ -311,19 +311,19 @@ export function AgentsView() {
         <TabsList className="bg-white/[0.03] border border-white/10 h-auto flex-wrap">
           <TabsTrigger value="dashboard" className="gap-1.5">
             <Activity className="h-3.5 w-3.5" />
-            <span>Dashboard</span>
+            <span>{t("agents", "tabs.dashboard")}</span>
           </TabsTrigger>
           <TabsTrigger value="workflow" className="gap-1.5">
             <Workflow className="h-3.5 w-3.5" />
-            <span>Workflow Runner</span>
+            <span>{t("agents", "tabs.workflow")}</span>
           </TabsTrigger>
           <TabsTrigger value="terminal" className="gap-1.5">
             <TerminalIcon className="h-3.5 w-3.5" />
-            <span>Terminal</span>
+            <span>{t("agents", "tabs.terminal")}</span>
           </TabsTrigger>
           <TabsTrigger value="git" className="gap-1.5">
             <GitBranch className="h-3.5 w-3.5" />
-            <span>Git</span>
+            <span>{t("agents", "tabs.git")}</span>
           </TabsTrigger>
         </TabsList>
 
@@ -348,6 +348,7 @@ export function AgentsView() {
 // ── Tab 1: Dashboard ──────────────────────────────────────────────────────────
 
 function DashboardTab({ active }: { active: boolean }) {
+  const { t } = useT();
   const [status, setStatus] = useState<AgentStatusResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -408,12 +409,12 @@ function DashboardTab({ active }: { active: boolean }) {
     <div className="space-y-4">
       {/* Queue stats */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        <QueueStat label="Pending" value={queue.pending} color="#fbbf24" icon={Clock} />
-        <QueueStat label="Running" value={queue.running} color="#22d3ee" icon={Loader2} spin={queue.running > 0} />
-        <QueueStat label="Completed" value={queue.completed} color="#34d399" icon={CheckCircle} />
-        <QueueStat label="Failed" value={queue.failed} color="#f87171" icon={XCircle} />
-        <QueueStat label="Cancelled" value={queue.cancelled} color="#94a3b8" icon={XCircle} />
-        <QueueStat label="Total" value={queue.total} color="#a78bfa" icon={Activity} />
+        <QueueStat label={t("agents", "queue.pending")} value={queue.pending} color="#fbbf24" icon={Clock} />
+        <QueueStat label={t("agents", "queue.running")} value={queue.running} color="#22d3ee" icon={Loader2} spin={queue.running > 0} />
+        <QueueStat label={t("agents", "queue.completed")} value={queue.completed} color="#34d399" icon={CheckCircle} />
+        <QueueStat label={t("agents", "queue.failed")} value={queue.failed} color="#f87171" icon={XCircle} />
+        <QueueStat label={t("agents", "queue.cancelled")} value={queue.cancelled} color="#94a3b8" icon={XCircle} />
+        <QueueStat label={t("agents", "queue.total")} value={queue.total} color="#a78bfa" icon={Activity} />
       </div>
 
       {/* Agents grid */}
@@ -479,12 +480,12 @@ function DashboardTab({ active }: { active: boolean }) {
       {/* Recent events */}
       <div>
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          Recent Events (last 20)
+          {t("agents", "dashboard.recentEvents")} (last 20)
         </h2>
         <GlassCard className="overflow-hidden">
           {status.recentEvents.length === 0 ? (
             <div className="p-8 text-center text-sm text-muted-foreground">
-              No events yet — agents will emit task lifecycle events here.
+              {t("agents", "dashboard.noEvents")}
             </div>
           ) : (
             <div className="max-h-96 overflow-y-auto scrollbar-thin divide-y divide-white/5">
@@ -556,13 +557,14 @@ function QueueStat({
 // ── Tab 2: Workflow Runner ────────────────────────────────────────────────────
 
 const WORKFLOW_PHASES = [
-  { name: "planning-execution", label: "Planning + Execution", threshold: 5 },
-  { name: "write-artifacts", label: "Write Artifacts", threshold: 62 },
-  { name: "build-test-lint", label: "Build / Test / Lint", threshold: 68 },
-  { name: "commit-push", label: "Commit + Push", threshold: 90 },
+  { name: "planning-execution", labelKey: "workflow.phases.planning", threshold: 5 },
+  { name: "write-artifacts", labelKey: "workflow.phases.writeArtifacts", threshold: 62 },
+  { name: "build-test-lint", labelKey: "workflow.phases.buildTestLint", threshold: 68 },
+  { name: "commit-push", labelKey: "workflow.phases.commitPush", threshold: 90 },
 ];
 
 function WorkflowTab({ repoUrl }: { repoUrl: string }) {
+  const { t } = useT();
   const providers = useProvidersStore((s) => s.providers);
   const enabledProviders = providers.filter((p) => p.enabled);
   const [goal, setGoal] = useState("");
@@ -582,7 +584,7 @@ function WorkflowTab({ repoUrl }: { repoUrl: string }) {
     setRunning(true);
     setResult(null);
     setProgress(0);
-    setProgressMsg("Starting autonomous workflow…");
+    setProgressMsg(t("agents", "workflow.progressStart"));
 
     // Simulate incremental progress while the synchronous API call runs.
     // Cap at 90% — the real 100% only arrives when the API responds.
@@ -602,24 +604,24 @@ function WorkflowTab({ repoUrl }: { repoUrl: string }) {
     // Also update the progress message with rotating status hints so the
     // user knows the workflow is still active (the API is synchronous and
     // can't stream real progress yet).
-    const statusHints = [
-      "Planning task breakdown…",
-      "Analyzing repository structure…",
-      "Executing agent tasks…",
-      "Running static analyzers…",
-      "Generating code changes…",
-      "Writing file artifacts…",
-      "Running tsc --noEmit…",
-      "Running bun run lint…",
-      "Running tests…",
-      "Generating commit message…",
-      "Committing changes…",
-      "Pushing to remote…",
+    const statusHintKeys = [
+      "workflow.hints.planning",
+      "workflow.hints.analyzing",
+      "workflow.hints.executing",
+      "workflow.hints.staticAnalysis",
+      "workflow.hints.generatingCode",
+      "workflow.hints.writingFiles",
+      "workflow.hints.runningTsc",
+      "workflow.hints.runningLint",
+      "workflow.hints.runningTests",
+      "workflow.hints.commitMessage",
+      "workflow.hints.committing",
+      "workflow.hints.pushing",
     ];
     let hintIdx = 0;
     const hintTimer = setInterval(() => {
-      hintIdx = (hintIdx + 1) % statusHints.length;
-      setProgressMsg(statusHints[hintIdx]);
+      hintIdx = (hintIdx + 1) % statusHintKeys.length;
+      setProgressMsg(t("agents", statusHintKeys[hintIdx]));
     }, 3000);
 
     try {
@@ -642,7 +644,7 @@ function WorkflowTab({ repoUrl }: { repoUrl: string }) {
       const wf = data.result as WorkflowResult;
       setResult(wf);
       setProgress(100);
-      setProgressMsg("Workflow complete");
+      setProgressMsg(t("agents", "workflow.progressDone"));
       if (wf.success) {
         toast.success("Workflow completed successfully!");
       } else {
@@ -672,10 +674,10 @@ function WorkflowTab({ repoUrl }: { repoUrl: string }) {
         <GlassCard strong className="p-5">
           <div className="flex items-center gap-2">
             <Workflow className="h-4 w-4 text-cyan-300" />
-            <h2 className="text-sm font-semibold">Autonomous Workflow Runner</h2>
+            <h2 className="text-sm font-semibold">{t("agents", "workflow.title")}</h2>
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
-            Describe a goal in plain English. The 11-agent pipeline will plan, execute, build, test, fix, and commit autonomously.
+            {t("agents", "workflow.description")}
           </p>
 
           <NeonDivider className="my-4" />
@@ -683,12 +685,12 @@ function WorkflowTab({ repoUrl }: { repoUrl: string }) {
           <div className="space-y-4">
             <div className="space-y-1.5">
               <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                <Sparkles className="h-3 w-3 text-cyan-300" /> Goal
+                <Sparkles className="h-3 w-3 text-cyan-300" /> {t("agents", "workflow.goalLabel")}
               </label>
               <Textarea
                 value={goal}
                 onChange={(e) => setGoal(e.target.value)}
-                placeholder="Add Google Login to this project"
+                placeholder={t("agents", "workflow.goalPlaceholder")}
                 className="bg-white/[0.03] font-mono text-sm"
                 rows={3}
               />
@@ -698,7 +700,7 @@ function WorkflowTab({ repoUrl }: { repoUrl: string }) {
               {/* Repository cố định = phân tích hiện tại (chỉ-đọc, không cho user đổi) */}
               <div className="space-y-1.5">
                 <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                  <GitBranch className="h-3 w-3 text-violet-400" /> Repository
+                  <GitBranch className="h-3 w-3 text-violet-400" /> {t("agents", "workflow.repoLabel")}
                 </label>
                 <Input
                   value={repoUrl}
@@ -709,14 +711,14 @@ function WorkflowTab({ repoUrl }: { repoUrl: string }) {
               </div>
               <div className="space-y-1.5">
                 <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                  <Bot className="h-3 w-3 text-emerald-400" /> AI Provider
+                  <Bot className="h-3 w-3 text-emerald-400" /> {t("agents", "workflow.providerLabel")}
                 </label>
                 <Select value={providerId} onValueChange={setProviderId}>
                   <SelectTrigger className="bg-white/[0.03] text-xs">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="__default__">Built-in (no provider)</SelectItem>
+                    <SelectItem value="__default__">{t("agents", "workflow.providerDefault")}</SelectItem>
                     {enabledProviders.map((p) => (
                       <SelectItem key={p.id} value={p.id}>
                         {p.label} — {p.model}
@@ -729,7 +731,7 @@ function WorkflowTab({ repoUrl }: { repoUrl: string }) {
 
             {enabledProviders.length === 0 && (
               <p className="rounded-lg border border-amber-500/20 bg-amber-500/[0.04] p-3 text-xs text-amber-300">
-                No enabled providers — the workflow will run with the built-in rule-based fallbacks. Add a provider in the Providers tab for AI-powered planning.
+                {t("agents", "workflow.providerHint")}
               </p>
             )}
 
@@ -741,12 +743,12 @@ function WorkflowTab({ repoUrl }: { repoUrl: string }) {
               {running ? (
                 <>
                   <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-                  Running workflow…
+                  {t("agents", "workflow.running")}
                 </>
               ) : (
                 <>
                   <Play className="mr-1.5 h-4 w-4" />
-                  Run Workflow
+                  {t("agents", "workflow.runButton")}
                 </>
               )}
             </Button>
@@ -779,7 +781,7 @@ function WorkflowTab({ repoUrl }: { repoUrl: string }) {
                           )}
                         >
                           {active ? <CheckCircle className="mb-1 h-3 w-3" /> : <Clock className="mb-1 h-3 w-3" />}
-                          <p className="font-medium">{phase.label}</p>
+                          <p className="font-medium">{t("agents", phase.labelKey)}</p>
                         </div>
                       );
                     })}
@@ -797,6 +799,7 @@ function WorkflowTab({ repoUrl }: { repoUrl: string }) {
 }
 
 function WorkflowResultView({ result, onReset }: { result: WorkflowResult; onReset: () => void }) {
+  const { t } = useT();
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -809,7 +812,7 @@ function WorkflowResultView({ result, onReset }: { result: WorkflowResult; onRes
           )}
           <div className="min-w-0 flex-1">
             <h2 className="text-sm font-semibold">
-              Workflow {result.success ? "Completed" : "Failed"}
+              {t("agents", "workflow.result.title")} {result.success ? t("agents", "workflow.result.statusCompleted") : t("agents", "workflow.result.statusFailed")}
             </h2>
             <p className="truncate text-xs text-muted-foreground">{result.goal}</p>
           </div>
@@ -824,14 +827,14 @@ function WorkflowResultView({ result, onReset }: { result: WorkflowResult; onRes
             </Badge>
           </div>
           <Button size="sm" variant="outline" onClick={onReset}>
-            <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Run Another
+            <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> {t("agents", "workflow.result.runAnother")}
           </Button>
         </div>
       </GlassCard>
 
       {/* Phase breakdown */}
       <GlassCard className="p-4">
-        <h3 className="text-sm font-semibold">Phase Breakdown</h3>
+        <h3 className="text-sm font-semibold">{t("agents", "workflow.result.phases")}</h3>
         <NeonDivider className="my-3" />
         <div className="space-y-2">
           {result.phases.map((phase, i) => (
@@ -856,23 +859,23 @@ function WorkflowResultView({ result, onReset }: { result: WorkflowResult; onRes
       {/* Build / Test / Lint */}
       {result.buildResult && (
         <GlassCard className="p-4">
-          <h3 className="text-sm font-semibold">Build / Test / Lint</h3>
+          <h3 className="text-sm font-semibold">{t("agents", "workflow.result.buildTestLint")}</h3>
           <NeonDivider className="my-3" />
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <BuildStat label="TypeScript" passed={result.buildResult.buildPassed} />
-            <BuildStat label="Lint" passed={result.buildResult.lintPassed} />
-            <BuildStat label="Tests" passed={result.buildResult.testPassed} />
+            <BuildStat label={t("agents", "workflow.result.typeScript")} passed={result.buildResult.buildPassed} />
+            <BuildStat label={t("agents", "workflow.result.lint")} passed={result.buildResult.lintPassed} />
+            <BuildStat label={t("agents", "workflow.result.tests")} passed={result.buildResult.testPassed} />
             <div className="rounded-lg border border-white/5 bg-white/[0.02] p-3 text-center">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Fix Attempts</p>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("agents", "workflow.result.fixAttempts")}</p>
               <p className="text-lg font-bold tabular-nums text-amber-300">{result.buildResult.fixAttempts}</p>
             </div>
           </div>
           <div className="mt-3 flex items-center gap-2 text-xs">
             <span className="text-muted-foreground">Final status:</span>
             {result.buildResult.finalBuildPassed ? (
-              <Badge className="border-emerald-400/30 bg-emerald-400/[0.1] text-emerald-300">All passed</Badge>
+              <Badge className="border-emerald-400/30 bg-emerald-400/[0.1] text-emerald-300">{t("agents", "workflow.result.finalPassed")}</Badge>
             ) : (
-              <Badge className="border-rose-400/30 bg-rose-400/[0.1] text-rose-300">Still failing</Badge>
+              <Badge className="border-rose-400/30 bg-rose-400/[0.1] text-rose-300">{t("agents", "workflow.result.finalFailed")}</Badge>
             )}
           </div>
         </GlassCard>
@@ -881,11 +884,11 @@ function WorkflowResultView({ result, onReset }: { result: WorkflowResult; onRes
       {/* Commit / Push */}
       {result.commitResult && (
         <GlassCard className="p-4">
-          <h3 className="text-sm font-semibold">Commit / Push</h3>
+          <h3 className="text-sm font-semibold">{t("agents", "workflow.result.git")}</h3>
           <NeonDivider className="my-3" />
           <div className="space-y-2 text-xs">
             <div className="flex items-center gap-2">
-              <span className="w-20 text-muted-foreground">Committed:</span>
+              <span className="w-20 text-muted-foreground">{t("agents", "workflow.result.committed")}:</span>
               {result.commitResult.committed ? (
                 <CheckCircle className="h-3.5 w-3.5 text-emerald-400" />
               ) : (
@@ -894,18 +897,18 @@ function WorkflowResultView({ result, onReset }: { result: WorkflowResult; onRes
             </div>
             {result.commitResult.sha && (
               <div className="flex items-center gap-2">
-                <span className="w-20 text-muted-foreground">SHA:</span>
+                <span className="w-20 text-muted-foreground">{t("agents", "workflow.result.sha")}:</span>
                 <code className="rounded bg-white/5 px-1.5 py-0.5 font-mono text-[10px]">{result.commitResult.sha.slice(0, 12)}</code>
               </div>
             )}
             {result.commitResult.message && (
               <div className="flex items-center gap-2">
-                <span className="w-20 text-muted-foreground">Message:</span>
+                <span className="w-20 text-muted-foreground">{t("agents", "workflow.result.message")}:</span>
                 <span className="truncate">{result.commitResult.message}</span>
               </div>
             )}
             <div className="flex items-center gap-2">
-              <span className="w-20 text-muted-foreground">Pushed:</span>
+              <span className="w-20 text-muted-foreground">{t("agents", "workflow.result.pushed")}:</span>
               {result.commitResult.pushed ? (
                 <CheckCircle className="h-3.5 w-3.5 text-emerald-400" />
               ) : (
@@ -913,7 +916,7 @@ function WorkflowResultView({ result, onReset }: { result: WorkflowResult; onRes
               )}
             </div>
             <div className="flex items-center gap-2">
-              <span className="w-20 text-muted-foreground">Files:</span>
+              <span className="w-20 text-muted-foreground">{t("agents", "workflow.result.filesChanged")}:</span>
               <span className="font-mono">{result.commitResult.filesChanged}</span>
             </div>
             {result.commitResult.error && (
@@ -928,7 +931,7 @@ function WorkflowResultView({ result, onReset }: { result: WorkflowResult; onRes
       {/* Artifacts */}
       {result.artifacts.length > 0 && (
         <GlassCard className="p-4">
-          <h3 className="text-sm font-semibold">Artifacts ({result.artifacts.length})</h3>
+          <h3 className="text-sm font-semibold">{t("agents", "workflow.result.artifacts")} ({result.artifacts.length})</h3>
           <NeonDivider className="my-3" />
           <div className="space-y-2">
             {result.artifacts.map((a, i) => (
@@ -962,7 +965,7 @@ function WorkflowResultView({ result, onReset }: { result: WorkflowResult; onRes
       {result.errors.length > 0 && (
         <GlassCard className="border-rose-400/20 p-4">
           <h3 className="flex items-center gap-2 text-sm font-semibold text-rose-300">
-            <AlertTriangle className="h-4 w-4" /> Errors ({result.errors.length})
+            <AlertTriangle className="h-4 w-4" /> {t("agents", "workflow.result.errors")} ({result.errors.length})
           </h3>
           <NeonDivider className="my-3" />
           <div className="space-y-1">
@@ -1022,6 +1025,7 @@ interface CommandHistoryEntry {
 }
 
 function TerminalTab() {
+  const { t } = useT();
   const [command, setCommand] = useState("");
   const [running, setRunning] = useState(false);
   const [output, setOutput] = useState<TerminalResult | null>(null);
@@ -1103,15 +1107,15 @@ function TerminalTab() {
         <GlassCard strong className="p-4">
           <div className="flex items-center gap-2">
             <TerminalIcon className="h-4 w-4 text-cyan-300" />
-            <h2 className="text-sm font-semibold">Sandboxed Terminal</h2>
+            <h2 className="text-sm font-semibold">{t("agents", "terminal.title")}</h2>
             {permissionDenied && (
               <Badge className="ml-auto border-rose-400/30 bg-rose-400/[0.1] text-rose-300">
-                <ShieldAlert className="mr-1 h-2.5 w-2.5" /> Permission denied
+                <ShieldAlert className="mr-1 h-2.5 w-2.5" /> {t("agents", "terminal.permissionDenied")}
               </Badge>
             )}
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
-            Run shell commands. Each call is permission-checked and recorded by the terminal module.
+            {t("agents", "terminal.description")}
           </p>
 
           <NeonDivider className="my-3" />
@@ -1128,7 +1132,7 @@ function TerminalTab() {
                     run();
                   }
                 }}
-                placeholder="bun run lint"
+                placeholder={t("agents", "terminal.placeholder")}
                 className="bg-white/[0.03] pl-6 font-mono text-sm"
               />
             </div>
@@ -1138,7 +1142,7 @@ function TerminalTab() {
               className="bg-gradient-to-r from-cyan-500 to-violet-500 text-white hover:opacity-90"
             >
               {running ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Play className="mr-1.5 h-4 w-4" />}
-              Run
+              {t("agents", "terminal.runButton")}
             </Button>
             <Button variant="outline" onClick={clearOutput} disabled={!output && !permissionDenied}>
               <Trash2 className="h-3.5 w-3.5" />
@@ -1151,7 +1155,7 @@ function TerminalTab() {
           <GlassCard className="overflow-hidden">
             <div className="flex items-center gap-2 border-b border-white/5 px-3 py-2">
               <TerminalIcon className="h-3.5 w-3.5 text-cyan-300" />
-              <span className="font-mono text-[11px] text-muted-foreground">output</span>
+              <span className="font-mono text-[11px] text-muted-foreground">{t("agents", "terminal.output").toLowerCase()}</span>
               <div className="ml-auto flex items-center gap-2">
                 <Badge
                   variant="outline"
@@ -1162,7 +1166,7 @@ function TerminalTab() {
                       : "text-rose-300"
                   )}
                 >
-                  exit: {output.exitCode}
+                  {t("agents", "terminal.exitCode")}: {output.exitCode}
                 </Badge>
                 {output.durationMs > 0 && (
                   <Badge variant="outline" className="border-white/10 bg-white/[0.03] font-mono text-[10px] text-muted-foreground">
@@ -1195,7 +1199,7 @@ function TerminalTab() {
           <GlassCard className="p-8 text-center">
             <TerminalIcon className="mx-auto h-8 w-8 text-muted-foreground" />
             <p className="mt-2 text-sm text-muted-foreground">
-              Run a command to see its output here.
+              {t("agents", "terminal.noOutput")}
             </p>
           </GlassCard>
         )}
@@ -1206,7 +1210,7 @@ function TerminalTab() {
         <GlassCard className="p-4">
           <div className="flex items-center justify-between">
             <h3 className="flex items-center gap-1.5 text-sm font-semibold">
-              <Clock className="h-3.5 w-3.5 text-violet-400" /> Command History
+              <Clock className="h-3.5 w-3.5 text-violet-400" /> {t("agents", "terminal.history")}
             </h3>
             {history.length > 0 && (
               <Button size="sm" variant="ghost" onClick={() => setHistory([])} className="h-7 text-xs">
@@ -1217,7 +1221,7 @@ function TerminalTab() {
           <NeonDivider className="my-3" />
           {history.length === 0 ? (
             <p className="py-6 text-center text-xs text-muted-foreground">
-              No commands yet.
+              {t("agents", "terminal.noHistory")}
             </p>
           ) : (
             <div className="max-h-96 space-y-1 overflow-y-auto scrollbar-thin">
@@ -1249,6 +1253,7 @@ function TerminalTab() {
 // ── Tab 4: Git ────────────────────────────────────────────────────────────────
 
 function GitTab() {
+  const { t } = useT();
   const providers = useProvidersStore((s) => s.providers);
   const enabledProviders = providers.filter((p) => p.enabled);
   const [providerId, setProviderId] = useState<string>(enabledProviders[0]?.id ?? "__default__");
@@ -1377,11 +1382,11 @@ function GitTab() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error ?? `HTTP ${res.status}`);
-      toast.success("Pushed to remote.");
+      toast.success(t("agents", "git.pushed"));
       refreshStatus();
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      toast.error(`Push failed: ${msg}`);
+      toast.error(`${t("agents", "git.pushFailed")}: ${msg}`);
     } finally {
       setPushing(false);
     }
@@ -1415,7 +1420,7 @@ function GitTab() {
         <GlassCard strong className="p-4">
           <div className="flex flex-wrap items-center gap-2">
             <GitBranch className="h-4 w-4 text-cyan-300" />
-            <h2 className="text-sm font-semibold">Git Status</h2>
+            <h2 className="text-sm font-semibold">{t("agents", "git.status")}</h2>
             {status && (
               <Badge variant="outline" className="border-white/10 bg-white/[0.03] font-mono text-[10px]">
                 {status.branch}
@@ -1451,33 +1456,33 @@ function GitTab() {
           ) : status ? (
             <div className="space-y-3">
               <FileSection
-                title="Staged"
+                title={t("agents", "git.staged")}
                 files={status.staged.map((f) => ({ path: f.path, status: f.status }))}
-                emptyText="No staged changes."
-                actionLabel="Unstage"
+                emptyText={t("agents", "git.noStaged")}
+                actionLabel={t("agents", "git.unstage")}
                 onAction={(path) => unstage([path])}
                 accent="#34d399"
               />
               <FileSection
-                title="Unstaged"
+                title={t("agents", "git.unstaged")}
                 files={status.unstaged.map((f) => ({ path: f.path, status: f.status }))}
-                emptyText="No unstaged changes."
-                actionLabel="Stage"
+                emptyText={t("agents", "git.noUnstaged")}
+                actionLabel={t("agents", "git.stage")}
                 onAction={(path) => stage([path])}
                 accent="#fbbf24"
               />
               <FileSection
-                title="Untracked"
+                title={t("agents", "git.untracked")}
                 files={status.untracked.map((p) => ({ path: p, status: "added" as const }))}
-                emptyText="No untracked files."
-                actionLabel="Stage"
+                emptyText={t("agents", "git.noUntracked")}
+                actionLabel={t("agents", "git.stage")}
                 onAction={(path) => stage([path])}
                 accent="#a78bfa"
               />
             </div>
           ) : (
             <p className="py-6 text-center text-xs text-muted-foreground">
-              Failed to load git status.
+              {t("agents", "git.failedLoad")}
             </p>
           )}
         </GlassCard>
@@ -1486,7 +1491,7 @@ function GitTab() {
         <GlassCard className="p-4">
           <div className="flex flex-wrap items-center gap-2">
             <Sparkles className="h-4 w-4 text-cyan-300" />
-            <h3 className="text-sm font-semibold">AI Commit</h3>
+            <h3 className="text-sm font-semibold">{t("agents", "git.aiCommit")}</h3>
             <div className="ml-auto">
               <Select value={providerId} onValueChange={setProviderId}>
                 <SelectTrigger size="sm" className="h-7 w-48 bg-white/[0.03] text-[11px]">
@@ -1519,12 +1524,12 @@ function GitTab() {
               </div>
               <p className="text-[11px] text-emerald-300">
                 <CheckCircle className="mr-1 inline h-3 w-3" />
-                Committed successfully.
+                {t("agents", "git.committed")}
               </p>
             </div>
           ) : (
             <p className="text-xs text-muted-foreground">
-              Generate a Conventional Commit message from the staged diff using AI.
+              {t("agents", "git.aiCommitDesc")}
             </p>
           )}
           <Button
@@ -1540,7 +1545,7 @@ function GitTab() {
             ) : (
               <>
                 <GitCommitHorizontal className="mr-1.5 h-4 w-4" />
-                Generate + Commit
+                {t("agents", "git.generateCommit")}
               </>
             )}
           </Button>
@@ -1550,7 +1555,7 @@ function GitTab() {
         <GlassCard className="p-4">
           <div className="flex flex-wrap items-center gap-2">
             <Eye className="h-4 w-4 text-violet-400" />
-            <h3 className="text-sm font-semibold">AI Diff Review</h3>
+            <h3 className="text-sm font-semibold">{t("agents", "git.diffReview")}</h3>
             <Button
               size="sm"
               variant="outline"
@@ -1559,7 +1564,7 @@ function GitTab() {
               className="ml-auto"
             >
               {reviewing ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Eye className="mr-1.5 h-3.5 w-3.5" />}
-              Review Staged Diff
+              {t("agents", "git.reviewDiff")}
             </Button>
           </div>
           <NeonDivider className="my-3" />
@@ -1576,7 +1581,7 @@ function GitTab() {
               {review.issues.length > 0 && (
                 <div>
                   <p className="mb-1 text-[10px] uppercase tracking-wider text-muted-foreground">
-                    Issues ({review.issues.length})
+                    {t("agents", "git.issues")} ({review.issues.length})
                   </p>
                   <div className="max-h-48 space-y-1 overflow-y-auto scrollbar-thin">
                     {review.issues.map((issue, i) => (
@@ -1595,7 +1600,7 @@ function GitTab() {
               )}
               {review.suggestions.length > 0 && (
                 <div>
-                  <p className="mb-1 text-[10px] uppercase tracking-wider text-muted-foreground">Suggestions</p>
+                  <p className="mb-1 text-[10px] uppercase tracking-wider text-muted-foreground">{t("agents", "git.suggestions")}</p>
                   <ul className="space-y-1">
                     {review.suggestions.map((s, i) => (
                       <li key={i} className="flex items-start gap-2 text-[11px] text-muted-foreground">
@@ -1624,14 +1629,14 @@ function GitTab() {
               className="w-full justify-start"
             >
               {pushing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ArrowUp className="mr-2 h-4 w-4 text-emerald-400" />}
-              Push to remote
+              {t("agents", "git.push")}
             </Button>
           </div>
         </GlassCard>
 
         <GlassCard className="p-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold">Recent Commits</h3>
+            <h3 className="text-sm font-semibold">{t("agents", "git.recentCommits")}</h3>
             <Button size="sm" variant="ghost" onClick={refreshCommits} disabled={loadingCommits} className="h-7">
               <RefreshCw className={cn("h-3.5 w-3.5", loadingCommits && "animate-spin")} />
             </Button>
@@ -1642,7 +1647,7 @@ function GitTab() {
               <Loader2 className="h-4 w-4 animate-spin text-cyan-300" />
             </div>
           ) : commits.length === 0 ? (
-            <p className="py-4 text-center text-xs text-muted-foreground">No commits yet.</p>
+            <p className="py-4 text-center text-xs text-muted-foreground">{t("agents", "git.noCommits")}</p>
           ) : (
             <div className="max-h-96 space-y-2 overflow-y-auto scrollbar-thin">
               {commits.map((c) => (

@@ -1,0 +1,151 @@
+{
+  "title": "AI Agents",
+  "subtitle": "Hệ thống Multi-Agent",
+  "description": "11 AI agent chuyên biệt tự động lập kế hoạch, phân tích, sửa lỗi và ship code.",
+
+  "tabs": {
+    "dashboard": "Dashboard",
+    "workflow": "Workflow Runner",
+    "terminal": "Terminal",
+    "git": "Git"
+  },
+
+  "emptyState": {
+    "title": "Chưa chọn phân tích",
+    "description": "Phân tích một repository trước, sau đó mở AI Agents để chạy workflow, thực thi lệnh, hoặc quản lý Git cho repo đó.",
+    "cta": "Đi đến Analyze"
+  },
+
+  "dashboard": {
+    "queueStats": "Thống kê Queue",
+    "recentEvents": "Sự kiện gần đây",
+    "agents": "Agents",
+    "capabilities": "Khả năng",
+    "noEvents": "Chưa có sự kiện. Chạy workflow để xem hoạt động của agents.",
+    "noAgents": "Chưa có agent nào được đăng ký."
+  },
+
+  "queue": {
+    "pending": "Đang chờ",
+    "running": "Đang chạy",
+    "completed": "Hoàn thành",
+    "failed": "Lỗi",
+    "cancelled": "Đã hủy",
+    "retrying": "Đang thử lại",
+    "total": "Tổng"
+  },
+
+  "workflow": {
+    "title": "Autonomous Workflow Runner",
+    "description": "Mô tả mục tiêu bằng tiếng Việt hoặc tiếng Anh. Pipeline 11-agent sẽ tự động lập kế hoạch, thực thi, build, test, sửa lỗi, và commit.",
+    "goalLabel": "Mục tiêu",
+    "goalPlaceholder": "Thêm Google Login vào project này",
+    "repoLabel": "Repository (gắn với phân tích hiện tại)",
+    "providerLabel": "AI Provider",
+    "providerDefault": "Built-in (không dùng provider)",
+    "providerHint": "Chưa có provider nào được bật — workflow sẽ chạy với fallback rule-based. Thêm provider trong tab Providers để dùng AI.",
+    "runButton": "Chạy Workflow",
+    "running": "Đang chạy workflow…",
+    "progressStart": "Bắt đầu autonomous workflow…",
+    "progressDone": "Workflow hoàn tất",
+    "phases": {
+      "planning": "Lập kế hoạch + Thực thi",
+      "writeArtifacts": "Ghi file",
+      "buildTestLint": "Build / Test / Lint",
+      "commitPush": "Commit + Push"
+    },
+    "hints": {
+      "planning": "Đang phân chia task…",
+      "analyzing": "Đang phân tích cấu trúc repository…",
+      "executing": "Đang thực thi agent tasks…",
+      "staticAnalysis": "Đang chạy static analyzers…",
+      "generatingCode": "Đang sinh code changes…",
+      "writingFiles": "Đang ghi file artifacts…",
+      "runningTsc": "Đang chạy tsc --noEmit…",
+      "runningLint": "Đang chạy bun run lint…",
+      "runningTests": "Đang chạy tests…",
+      "commitMessage": "Đang sinh commit message…",
+      "committing": "Đang commit changes…",
+      "pushing": "Đang push lên remote…"
+    },
+    "result": {
+      "title": "Kết quả Workflow",
+      "statusCompleted": "Hoàn thành",
+      "statusFailed": "Lỗi",
+      "duration": "Thời gian",
+      "tasksCompleted": "Task hoàn thành",
+      "tasksFailed": "Task lỗi",
+      "phases": "Các phase",
+      "summary": "Tóm tắt",
+      "buildTestLint": "Build / Test / Lint",
+      "typeScript": "TypeScript",
+      "lint": "Lint",
+      "tests": "Tests",
+      "fixAttempts": "Lần thử fix",
+      "finalPassed": "Tất cả pass",
+      "finalFailed": "Vẫn lỗi",
+      "git": "Git",
+      "committed": "Đã commit",
+      "pushed": "Đã push",
+      "sha": "SHA",
+      "message": "Message",
+      "filesChanged": "File thay đổi",
+      "error": "Lỗi",
+      "artifacts": "Artifacts",
+      "errors": "Lỗi",
+      "runAnother": "Chạy lại"
+    }
+  },
+
+  "terminal": {
+    "title": "Terminal Sandbox",
+    "description": "Chạy shell command. Mỗi lệnh được kiểm tra quyền và ghi lịch sử.",
+    "placeholder": "bun run lint",
+    "runButton": "Chạy",
+    "output": "Output",
+    "exitCode": "Exit code",
+    "duration": "Thời gian",
+    "history": "Lịch sử",
+    "clear": "Xóa",
+    "noOutput": "Chưa có output. Chạy lệnh để xem kết quả.",
+    "noHistory": "Chưa có lịch sử lệnh.",
+    "permissionDenied": "Không có quyền",
+    "running": "Đang chạy…"
+  },
+
+  "git": {
+    "status": "Git Status",
+    "branch": "Branch",
+    "ahead": "Ahead",
+    "behind": "Behind",
+    "staged": "Đã stage",
+    "unstaged": "Chưa stage",
+    "untracked": "Untracked",
+    "stageAll": "Stage tất cả",
+    "unstageAll": "Unstage tất cả",
+    "stage": "Stage",
+    "unstage": "Unstage",
+    "noChanges": "Không có thay đổi. Working tree sạch.",
+    "noStaged": "Không có thay đổi đã stage.",
+    "noUnstaged": "Không có thay đổi chưa stage.",
+    "noUntracked": "Không có file untracked.",
+    "failedLoad": "Không tải được git status.",
+    "aiCommit": "AI Commit",
+    "aiCommitDesc": "Sinh Conventional Commit message từ staged diff bằng AI.",
+    "generateCommit": "Sinh + Commit",
+    "reviewDiff": "Review Staged Diff",
+    "push": "Push lên remote",
+    "recentCommits": "Commit gần đây",
+    "noCommits": "Chưa có commit.",
+    "commitMessage": "Commit Message",
+    "confirmCommit": "Xác nhận Commit",
+    "diffReview": "Diff Review",
+    "score": "Điểm",
+    "issues": "Issues",
+    "suggestions": "Gợi ý",
+    "noIssues": "Không có issue — diff sạch!",
+    "pushed": "Push thành công",
+    "pushFailed": "Push thất bại",
+    "committed": "Commit thành công"
+  }
+}
