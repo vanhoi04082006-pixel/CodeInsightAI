@@ -11,6 +11,7 @@
     "providers": "Nhà cung cấp AI",
     "personalities": "Tính cách AI",
     "agents": "AI Agents",
+    "mission": "Mission Control",
     "settings": "Cài đặt"
   },
   "actions": {

@@ -14,6 +14,7 @@ import {
   Command,
   Plug,
   Bot,
+  Rocket,
 } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { useProvidersStore } from "@/lib/providers-store";
@@ -34,6 +35,7 @@ const NAV: { id: View; labelKey: string; icon: typeof LayoutDashboard; disabled?
   { id: "providers", labelKey: "nav.providers", icon: Plug },
   { id: "personalities", labelKey: "nav.personalities", icon: Bot },
   { id: "agents", labelKey: "nav.agents", icon: Bot, disabled: false },
+  { id: "mission", labelKey: "nav.mission", icon: Rocket },
   { id: "settings", labelKey: "nav.settings", icon: Settings },
 ];
 
@@ -152,6 +154,7 @@ export function AppTopbar() {
     providers: "nav.providers",
     personalities: "nav.personalities",
     agents: "nav.agents",
+    mission: "nav.mission",
   };
 
   return (
@@ -172,6 +175,8 @@ export function AppTopbar() {
         <p className="text-[11px] text-muted-foreground">
           {activeReport && (view === "project" || view === "chat" || view === "agents")
             ? `${activeReport.repoOwner}/${activeReport.repoName}`
+            : view === "mission"
+            ? "AI Operating System"
             : "AI-powered repository intelligence"}
         </p>
       </div>
