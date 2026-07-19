@@ -16,7 +16,7 @@ import {
   Loader2,
   AlertCircle,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { GlassCard, GradientText } from "@/components/shared/ui";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,6 +49,14 @@ export function AnalyzeView() {
   const [report, setReport] = useState<AnalysisReport | null>(null);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
+  // Smooth progress animation: separate target (from API) vs displayed (interpolated).
+  // The API polls every 1s and gives chunky jumps (5→10→15). We interpolate
+  // between displayed and target every animation frame (60fps) for smooth 1-2-3-4-5.
+  const [displayProgress, setDisplayProgress] = useState(0);
+  const targetProgress = useRef(0);
+  const rafId = useRef<number | null>(null);
+  const lastFrameTime = useRef<number>(0);
+
   const setView = useAppStore((s) => s.setView);
   const setActiveReport = useAppStore((s) => s.setActiveReport);
   const setActiveAnalysisId = useAppStore((s) => s.setActiveAnalysisId);
@@ -59,7 +67,54 @@ export function AnalyzeView() {
     timers.current.forEach(clearTimeout);
     timers.current = [];
   };
-  useEffect(() => () => clearTimers(), []);
+
+  // requestAnimationFrame loop — interpolates displayed progress toward target.
+  // Speed: covers ~1.5% per frame at 60fps ≈ 90%/s, but slows near target
+  // (easeOut) so it never overshoots.
+  const animateProgress = useCallback((timestamp: number) => {
+    if (lastFrameTime.current === 0) lastFrameTime.current = timestamp;
+    const deltaMs = timestamp - lastFrameTime.current;
+    lastFrameTime.current = timestamp;
+
+    setDisplayProgress((current) => {
+      const target = targetProgress.current;
+      if (Math.abs(target - current) < 0.1) {
+        return target;  // snapped to target
+      }
+      // Ease toward target. Scale by delta time so it's frame-rate independent.
+      // At 60fps, deltaMs ≈ 16ms. We want ~1.2%/frame when far, slowing near target.
+      const distance = target - current;
+      const speed = Math.max(0.4, Math.abs(distance) * 0.12) * (deltaMs / 16.67);
+      const next = current + Math.sign(distance) * Math.min(Math.abs(distance), speed);
+      return Math.round(next * 10) / 10;  // 1 decimal place
+    });
+
+    rafId.current = requestAnimationFrame(animateProgress);
+  }, []);
+
+  const startProgressAnimation = useCallback(() => {
+    if (rafId.current !== null) return;  // already running
+    lastFrameTime.current = 0;
+    rafId.current = requestAnimationFrame(animateProgress);
+  }, [animateProgress]);
+
+  const stopProgressAnimation = useCallback(() => {
+    if (rafId.current !== null) {
+      cancelAnimationFrame(rafId.current);
+      rafId.current = null;
+    }
+  }, []);
+
+  // Set the target progress (called from poll). The animation loop will
+  // smoothly catch up.
+  const setTargetProgress = useCallback((p: number) => {
+    targetProgress.current = Math.max(0, Math.min(100, p));
+  }, []);
+
+  useEffect(() => () => {
+    clearTimers();
+    stopProgressAnimation();
+  }, []);
 
   const start = async () => {
     const parsed = parseRepoUrl(url);
@@ -71,7 +126,10 @@ export function AnalyzeView() {
     setPhase("running");
     setStageIdx(0);
     setStageProgress(0);
+    setDisplayProgress(0);
+    targetProgress.current = 0;
     clearTimers();
+    startProgressAnimation();  // begin smooth interpolation loop
 
     // Start real async analysis with job polling
     try {
@@ -117,28 +175,43 @@ export function AnalyzeView() {
               return;
             }
 
-            // Map job progress to visual stages
+            // Map job progress to visual stages.
+            // We set the TARGET progress — the rAF loop interpolates the
+            // DISPLAYED progress smoothly (1-2-3-4-5 instead of 5-10-15 jumps).
             const progress = job.progress || 0;
+            setTargetProgress(progress);
+            // Stages update based on target (so stage transitions happen at
+            // the right moment even before the bar catches up visually).
             const sIdx = Math.min(Math.floor((progress / 100) * ANALYSIS_STAGES.length), ANALYSIS_STAGES.length - 1);
             setStageIdx(sIdx);
-            setStageProgress(((progress * ANALYSIS_STAGES.length) % 100));
+            const stagePct = ((progress / (100 / ANALYSIS_STAGES.length)) % 1) * 100;
+            setStageProgress(stagePct);
 
             if (job.status === "completed" && job.result) {
-              setReport(job.result.report);
-              setActiveAnalysisId(job.result.id ?? null);
-              clearChat();
-              setPhase("done");
-              const score = job.result.report?.scores?.overall ?? 0;
-              toast.success(`Analysis complete — ${score}/100`);
+              setTargetProgress(100);
+              setStageIdx(ANALYSIS_STAGES.length - 1);
+              setStageProgress(100);
+              // Give the animation ~600ms to reach 100% before switching view.
+              setTimeout(() => {
+                setReport(job.result.report);
+                setActiveAnalysisId(job.result.id ?? null);
+                clearChat();
+                setPhase("done");
+                stopProgressAnimation();
+                const score = job.result.report?.scores?.overall ?? 0;
+                toast.success(`Analysis complete — ${score}/100`);
+              }, 600);
             } else if (job.status === "failed") {
+              stopProgressAnimation();
               setPhase("error");
               toast.error(job.error || "Analysis failed");
             } else if (job.status === "cancelled") {
+              stopProgressAnimation();
               setPhase("error");
               toast.error("Analysis cancelled");
             } else {
-              // Still running — poll again after 1s
-              timers.current.push(setTimeout(poll, 1000));
+              // Still running — poll again after 500ms (faster for smoother UX)
+              timers.current.push(setTimeout(poll, 500));
             }
           } catch (e) {
             console.error("Poll error:", e);
@@ -172,11 +245,14 @@ export function AnalyzeView() {
 
   const reset = () => {
     clearTimers();
+    stopProgressAnimation();
     setPhase("input");
     setUrl("");
     setReport(null);
     setStageIdx(0);
     setStageProgress(0);
+    setDisplayProgress(0);
+    targetProgress.current = 0;
   };
 
   /* ---------- INPUT PHASE ---------- */
@@ -261,7 +337,8 @@ export function AnalyzeView() {
   if (phase === "running") {
     const current = ANALYSIS_STAGES[stageIdx];
     const Icon = ICONS[current.icon] ?? Sparkles;
-    const overallProgress = ((stageIdx + stageProgress / 100) / ANALYSIS_STAGES.length) * 100;
+    // Use displayProgress (smoothly interpolated) for the overall bar.
+    const overallProgress = displayProgress;
 
     return (
       <div className="relative mx-auto max-w-5xl px-4 py-10">
