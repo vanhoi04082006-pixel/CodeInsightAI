@@ -45,5 +45,12 @@
   "failedDesc": "Something went wrong. The repository may be private or unreachable.",
   "goToDashboard": "Go to dashboard",
   "logLabel": "analysis.log",
-  "working": "▍ working…"
+  "working": "▍ working…",
+  "analyzingHeader": "Analyzing",
+  "popularRepoDemos": {
+    "next": "React framework",
+    "react": "UI library",
+    "vue": "Progressive framework",
+    "tailwind": "CSS engine"
+  }
 }

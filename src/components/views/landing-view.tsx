@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, useScroll, useTransform, AnimatePresence, type Variants } from "framer-motion";
-import dynamic from "next/dynamic";
+import { useMemo } from "react";
 import {
   ArrowRight,
   Sparkles,
@@ -59,15 +59,6 @@ import { LanguageSwitcher } from "@/components/shared/language-switcher";
 import { AnimatedCounter } from "@/components/shared/ui";
 import { useIsMobile } from "@/hooks/use-mobile";
 
-// Lazy-load the new 3D Scene — R3F must be client-only.
-const Scene3D = dynamic(
-  () => import("@/components/3d/scene").then((m) => m.Scene),
-  {
-    ssr: false,
-    loading: () => <Hero3DFallback />,
-  }
-);
-
 /* ---------------------------------------------------------------
    Shared animation variants
    --------------------------------------------------------------- */
@@ -84,18 +75,6 @@ const staggerContainer: Variants = {
   hidden: {},
   visible: { transition: { staggerChildren: 0.1 } },
 };
-
-/* ---------------------------------------------------------------
-   Hero 3D loading fallback — gradient shimmer sphere
-   --------------------------------------------------------------- */
-function Hero3DFallback() {
-  return (
-    <div className="relative h-full w-full">
-      <div className="absolute left-1/2 top-1/2 h-48 w-48 -translate-x-1/2 -translate-y-1/2 animate-pulse-glow rounded-full bg-cyan-400/20 blur-3xl" />
-      <div className="absolute left-1/2 top-1/2 h-32 w-32 -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-br from-cyan-400/40 to-violet-500/30" />
-    </div>
-  );
-}
 
 /* ---------------------------------------------------------------
    1. Cinematic Navigation — fixed top, transparent → glass on scroll
@@ -230,12 +209,6 @@ function HeroSection() {
   const [focused, setFocused] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
 
-  // Morph state: 0 = torus (cyan ring), 1 = sphere (green wireframe)
-  // When user focuses input → morph toward sphere (0.7)
-  // When user clicks Analyze → full sphere (1.0) then navigate
-  const [morphState, setMorphState] = useState(0);
-  const animLevel = usePersonalizationStore((s) => s.animation);
-
   const heroRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({
     target: heroRef,
@@ -243,8 +216,6 @@ function HeroSection() {
   });
   const contentY = useTransform(scrollYProgress, [0, 1], [0, -60]);
   const contentOpacity = useTransform(scrollYProgress, [0, 0.8], [1, 0]);
-  const threeY = useTransform(scrollYProgress, [0, 1], [0, 80]);
-  const threeScale = useTransform(scrollYProgress, [0, 1], [1, 1.08]);
 
   const startAnalysis = () => {
     const parsed = parseRepoUrl(url);
@@ -254,20 +225,12 @@ function HeroSection() {
     }
     setError("");
     setAnalyzing(true);
-    // Cinematic morph: torus → sphere → navigate
-    setMorphState(1); // full sphere (green wireframe)
-    setTimeout(() => setView("analyze"), 1500);
+    // Brief delay for visual feedback, then navigate
+    setTimeout(() => setView("analyze"), 800);
   };
 
-  // Drive morph from input focus
-  const onInputFocus = () => {
-    setFocused(true);
-    if (!analyzing) setMorphState(0.7); // partial morph toward sphere
-  };
-  const onInputBlur = () => {
-    setFocused(false);
-    if (!analyzing) setMorphState(0); // back to torus
-  };
+  const onInputFocus = () => setFocused(true);
+  const onInputBlur = () => setFocused(false);
 
   const heroBadges = [
     { icon: KeyRound, label: t("landing", "hero.badgeKeys") },
@@ -281,19 +244,65 @@ function HeroSection() {
       ref={heroRef}
       className="relative flex min-h-screen items-center overflow-hidden"
     >
-      {/* ═══ FULL-BLEED 3D BACKGROUND ═══
-          The 3D scene fills the ENTIRE hero section — no container box.
-          Particles are the background, content overlays on top.
-          This matches the reference video: seamless, integrated, immersive. */}
-      <div className="absolute inset-0 z-0">
-        <Scene3D
-          morph={morphState}
-          active={analyzing}
-          className="h-full w-full"
+      {/* ═══ FULL-BLEED BACKGROUND ═══
+          Simple CSS-based network grid + glowing orb.
+          No R3F/Three.js — lightweight, no flickering, always 60fps. */}
+      <div className="absolute inset-0 z-0 overflow-hidden">
+        {/* Deep space gradient */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background: "radial-gradient(ellipse 70% 50% at 50% 40%, rgba(6,40,60,0.6), transparent 70%), radial-gradient(ellipse 40% 30% at 80% 70%, rgba(0,255,100,0.05), transparent 60%)",
+          }}
         />
+        {/* Network grid — animated SVG lines */}
+        <svg className="absolute inset-0 h-full w-full opacity-20" preserveAspectRatio="none">
+          <defs>
+            <pattern id="netgrid" width="60" height="60" patternUnits="userSpaceOnUse">
+              <path d="M 60 0 L 0 0 0 60" fill="none" stroke="#22d3ee" strokeWidth="0.5" />
+              <circle cx="0" cy="0" r="1.5" fill="#22d3ee" opacity="0.6" />
+              <circle cx="60" cy="0" r="1" fill="#22d3ee" opacity="0.3" />
+              <circle cx="0" cy="60" r="1" fill="#22d3ee" opacity="0.3" />
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#netgrid)" />
+        </svg>
+        {/* Glowing orb — centered, breathing */}
+        <motion.div
+          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+          animate={{
+            scale: [1, 1.08, 1],
+            opacity: [0.6, 0.8, 0.6],
+          }}
+          transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
+        >
+          <div
+            className="h-64 w-64 rounded-full blur-2xl"
+            style={{
+              background: focused || analyzing
+                ? "radial-gradient(circle, rgba(0,255,100,0.3), transparent 70%)"
+                : "radial-gradient(circle, rgba(34,211,238,0.25), transparent 70%)",
+            }}
+          />
+        </motion.div>
+        {/* Inner orb core */}
+        <motion.div
+          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+          animate={{ rotate: 360 }}
+          transition={{ repeat: Infinity, duration: 20, ease: "linear" }}
+        >
+          <div
+            className="h-32 w-32 rounded-full border opacity-40"
+            style={{
+              borderColor: focused || analyzing ? "#00ff66" : "#22d3ee",
+              borderWidth: "1px",
+              boxShadow: `0 0 40px ${focused || analyzing ? "rgba(0,255,100,0.3)" : "rgba(34,211,238,0.3)"}`,
+            }}
+          />
+        </motion.div>
       </div>
 
-      {/* Radial gradient overlay for text readability (subtle, doesn't hide 3D) */}
+      {/* Radial gradient overlay for text readability */}
       <div
         className="pointer-events-none absolute inset-0 z-1"
         style={{
@@ -454,7 +463,7 @@ function HeroSection() {
         </div>
         <div className="flex items-end justify-between">
           <span className="font-mono text-[9px] uppercase tracking-wider text-cyan-300/30">
-            {analyzing ? "MORPH: SPHERE → GRID" : focused ? "MORPH: TORUS → SPHERE" : "MORPH: TORUS · IDLE"}
+            {analyzing ? "STATUS: ANALYZING" : focused ? "STATUS: FOCUSED" : "STATUS: IDLE"}
           </span>
           <span className="font-mono text-[9px] uppercase tracking-wider text-cyan-300/30">
             60,000 PARTICLES · BLOOM ON
@@ -625,22 +634,24 @@ function MultiAgentFeature() {
 }
 
 // Agent network visualization — pure SVG with animated connections
+// Pre-computed positions to avoid hydration mismatch (Math.cos/sin produce
+// different float precision on server vs client).
+const AGENT_POSITIONS = [
+  { name: "Repo", icon: Github, color: "#22d3ee", x: 260, y: 150 },
+  { name: "Security", icon: ShieldCheck, color: "#f472b6", x: 243, y: 210 },
+  { name: "Perf", icon: Gauge, color: "#34d399", x: 196, y: 250 },
+  { name: "BugFix", icon: Bug, color: "#fbbf24", x: 135, y: 260 },
+  { name: "Test", icon: FlaskConical, color: "#a78bfa", x: 73, y: 243 },
+  { name: "Docs", icon: FileText, color: "#22d3ee", x: 33, y: 196 },
+  { name: "DevOps", icon: Server, color: "#34d399", x: 23, y: 135 },
+  { name: "Refactor", icon: Code2, color: "#fb923c", x: 40, y: 73 },
+  { name: "PR", icon: GitMerge, color: "#a78bfa", x: 87, y: 33 },
+  { name: "Review", icon: Check, color: "#f472b6", x: 148, y: 23 },
+  { name: "Brain", icon: Brain, color: "#22d3ee", x: 210, y: 40 },
+];
+const VIZ_CX = 150, VIZ_CY = 150;
+
 function AgentNetworkViz() {
-  // 11 agents positioned around a central executive
-  const agents = [
-    { name: "Repo", icon: Github, angle: 0, color: "#22d3ee" },
-    { name: "Security", icon: ShieldCheck, angle: 32.7, color: "#f472b6" },
-    { name: "Perf", icon: Gauge, angle: 65.5, color: "#34d399" },
-    { name: "BugFix", icon: Bug, angle: 98.2, color: "#fbbf24" },
-    { name: "Test", icon: FlaskConical, angle: 130.9, color: "#a78bfa" },
-    { name: "Docs", icon: FileText, angle: 163.6, color: "#22d3ee" },
-    { name: "DevOps", icon: Server, angle: 196.4, color: "#34d399" },
-    { name: "Refactor", icon: Code2, angle: 229.1, color: "#fb923c" },
-    { name: "PR", icon: GitMerge, angle: 261.8, color: "#a78bfa" },
-    { name: "Review", icon: Check, angle: 294.5, color: "#f472b6" },
-    { name: "Brain", icon: Brain, angle: 327.3, color: "#22d3ee" },
-  ];
-  const cx = 150, cy = 150, r = 110;
   return (
     <svg viewBox="0 0 300 300" className="h-full w-full">
       <defs>
@@ -649,64 +660,54 @@ function AgentNetworkViz() {
           <stop offset="100%" stopColor="#22d3ee" stopOpacity="0" />
         </radialGradient>
       </defs>
-      <circle cx={cx} cy={cy} r="60" fill="url(#execGlow)" />
+      <circle cx={VIZ_CX} cy={VIZ_CY} r="60" fill="url(#execGlow)" />
       {/* Connection lines */}
-      {agents.map((a, i) => {
-        const rad = (a.angle * Math.PI) / 180;
-        const x = cx + Math.cos(rad) * r;
-        const y = cy + Math.sin(rad) * r;
-        return (
-          <motion.line
-            key={`line-${i}`}
-            x1={cx}
-            y1={cy}
-            x2={x}
-            y2={y}
-            stroke={a.color}
-            strokeWidth="1"
-            strokeOpacity="0.3"
-            initial={{ pathLength: 0, strokeOpacity: 0 }}
-            whileInView={{ pathLength: 1, strokeOpacity: 0.4 }}
-            viewport={{ once: true }}
-            transition={{ duration: 1, delay: i * 0.06 }}
-          />
-        );
-      })}
+      {AGENT_POSITIONS.map((a, i) => (
+        <motion.line
+          key={`line-${i}`}
+          x1={VIZ_CX}
+          y1={VIZ_CY}
+          x2={a.x}
+          y2={a.y}
+          stroke={a.color}
+          strokeWidth="1"
+          strokeOpacity="0.3"
+          initial={{ pathLength: 0, strokeOpacity: 0 }}
+          whileInView={{ pathLength: 1, strokeOpacity: 0.4 }}
+          viewport={{ once: true }}
+          transition={{ duration: 1, delay: i * 0.06 }}
+        />
+      ))}
       {/* Center executive */}
       <motion.circle
-        cx={cx}
-        cy={cy}
+        cx={VIZ_CX}
+        cy={VIZ_CY}
         r="14"
         fill="#22d3ee"
         animate={{ scale: [1, 1.15, 1] }}
         transition={{ repeat: Infinity, duration: 2 }}
-        style={{ transformOrigin: `${cx}px ${cy}px` }}
+        style={{ transformOrigin: `${VIZ_CX}px ${VIZ_CY}px` }}
       />
-      <text x={cx} y={cy + 4} textAnchor="middle" fontSize="9" fill="#050507" fontWeight="700">EX</text>
+      <text x={VIZ_CX} y={VIZ_CY + 4} textAnchor="middle" fontSize="9" fill="#050507" fontWeight="700">EX</text>
       {/* Agent nodes */}
-      {agents.map((a, i) => {
-        const rad = (a.angle * Math.PI) / 180;
-        const x = cx + Math.cos(rad) * r;
-        const y = cy + Math.sin(rad) * r;
-        return (
-          <motion.g
-            key={`node-${i}`}
-            initial={{ opacity: 0, scale: 0 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.3 + i * 0.05, type: "spring", stiffness: 200 }}
-          >
-            <circle cx={x} cy={y} r="11" fill="#0a0a0a" stroke={a.color} strokeWidth="1.5" />
-            <circle cx={x} cy={y} r="3" fill={a.color} />
-          </motion.g>
-        );
-      })}
+      {AGENT_POSITIONS.map((a, i) => (
+        <motion.g
+          key={`node-${i}`}
+          initial={{ opacity: 0, scale: 0 }}
+          whileInView={{ opacity: 1, scale: 1 }}
+          viewport={{ once: true }}
+          transition={{ delay: 0.3 + i * 0.05, type: "spring", stiffness: 200 }}
+        >
+          <circle cx={a.x} cy={a.y} r="11" fill="#0a0a0a" stroke={a.color} strokeWidth="1.5" />
+          <circle cx={a.x} cy={a.y} r="3" fill={a.color} />
+        </motion.g>
+      ))}
       {/* Pulse rings traveling outward */}
       {[0, 1, 2].map((i) => (
         <motion.circle
           key={`pulse-${i}`}
-          cx={cx}
-          cy={cy}
+          cx={VIZ_CX}
+          cy={VIZ_CY}
           r="14"
           fill="none"
           stroke="#22d3ee"
@@ -1487,24 +1488,34 @@ function FAQSection() {
 function FinalCTA() {
   const setView = useAppStore((s) => s.setView);
   const { t } = useT();
+  // Pre-computed particle positions (avoid Math.random hydration mismatch)
+  const particles = useMemo(
+    () => Array.from({ length: 30 }).map((_, i) => ({
+      left: ((i * 37 + 13) % 100),
+      top: ((i * 71 + 29) % 100),
+      duration: 2 + ((i * 3) % 4),
+      delay: (i * 0.3) % 2,
+    })),
+    []
+  );
   return (
     <section className="relative overflow-hidden py-32">
       <div className="cinematic-cta-bg absolute inset-0" />
       {/* Particle-like dots */}
       <div className="absolute inset-0 opacity-30">
-        {Array.from({ length: 30 }).map((_, i) => (
+        {particles.map((p, i) => (
           <motion.div
             key={i}
             className="absolute h-1 w-1 rounded-full bg-cyan-300"
             style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
+              left: `${p.left}%`,
+              top: `${p.top}%`,
             }}
             animate={{ opacity: [0, 1, 0], scale: [0.5, 1.5, 0.5] }}
             transition={{
               repeat: Infinity,
-              duration: 2 + Math.random() * 3,
-              delay: Math.random() * 2,
+              duration: p.duration,
+              delay: p.delay,
             }}
           />
         ))}

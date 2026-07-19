@@ -14,8 +14,11 @@
     "title": "Define Your Mission",
     "description": "Describe what you want your AI team to accomplish. They'll plan, execute, verify, and ship.",
     "goalLabel": "Mission Goal",
+    "goalPlaceholder": "e.g., Add Google OAuth login with JWT session handling and write tests for the new auth flow",
     "repoLabel": "Repository URL",
     "providerLabel": "AI Provider",
+    "providerPlaceholder": "Select an enabled provider",
+    "builtinProvider": "Built-in (no AI provider)",
     "noProviders": "No enabled providers — workflow will use built-in fallbacks. Add one in Providers.",
     "maxIterations": "Max Iterations",
     "iterationsHint": "Each iteration = one observe → think → act → verify → reflect cycle. The Executive may stop earlier if confidence is high.",
@@ -27,15 +30,196 @@
   },
 
   "feed": {
-    "title": "AI Activity Feed"
+    "title": "AI Activity Feed",
+    "eventsCount": "{count} events",
+    "empty": "No activity yet.",
+    "emptyHint": "Start a mission to see live agent events stream in here.",
+    "newEvent": "{count} new event",
+    "newEvent_plural": "{count} new events",
+    "labels": {
+      "thinking": "Thinking",
+      "acting": "Acting",
+      "status": "Status",
+      "result": "Result",
+      "tool": "Tool",
+      "toolResult": "Tool Result",
+      "file": "File",
+      "terminal": "Terminal",
+      "confidence": "Confidence",
+      "error": "Error",
+      "phase": "Phase",
+      "iteration": "Iteration",
+      "start": "Start",
+      "end": "End",
+      "event": "Event"
+    },
+    "body": {
+      "done": "Done",
+      "confidenceUpdated": "Confidence updated to",
+      "phaseLabel": "Phase:",
+      "iterationStarted": "Iteration #{n} started"
+    }
   },
 
   "worldState": {
-    "title": "World State"
+    "title": "World State",
+    "confidence": "Confidence",
+    "confidenceDesc": "The Executive's belief that the chosen path will achieve the mission goal.",
+    "currentTask": "Current Task",
+    "phase": "Phase",
+    "iteration": "Iteration",
+    "currentFile": "Current File",
+    "filesModified": "Files Modified",
+    "executiveDecisions": "Executive Decisions",
+    "memory": "Memory",
+    "noFilesModified": "No files modified yet.",
+    "noDecisions": "No decisions logged yet.",
+    "noMemory": "Key findings will appear here.",
+    "buildLabel": "Build",
+    "testLabel": "Tests",
+    "pass": "Pass",
+    "fail": "Fail",
+    "pending": "Pending",
+    "confidenceLabels": {
+      "exploring": "Exploring",
+      "building": "Building",
+      "confident": "Confident",
+      "trusted": "Trusted"
+    }
   },
 
   "agents": {
-    "title": "Agent Team"
+    "title": "Agent Team",
+    "agentCount": "{count} agents",
+    "activeLabel": "Active: {count}",
+    "statuses": {
+      "idle": "Idle",
+      "thinking": "Thinking",
+      "acting": "Acting",
+      "waiting": "Waiting",
+      "done": "Done",
+      "error": "Error"
+    },
+    "descriptions": {
+      "executive": "The Executive orchestrates the mission: it observes state, reasons about next steps, decides which specialist agent or tool to invoke, and verifies the outcome. Confidence and decisions flow from here.",
+      "planner": "Breaks the mission goal into ordered sub-tasks, identifies dependencies, and emits a phased plan that the Executive dispatches.",
+      "repo-analyst": "Clones (if needed) and walks the repository: extracts structure, language stats, frameworks, entry points, and architectural notes.",
+      "code-reviewer": "Reviews diffs and existing code for quality, conventions, complexity, and anti-patterns. Emits severity-tagged issues.",
+      "bug-fixer": "Investigates reported bugs, locates root causes, and applies minimal patches with regression coverage.",
+      "refactoring": "Proposes and applies structural refactors (extract function, rename, move module) while preserving behaviour.",
+      "documentation": "Generates and updates README, API docs, ADRs, and inline JSDoc/TSDoc.",
+      "test": "Writes unit, integration, and e2e tests; runs the suite; surfaces failing cases for the Bug Fixer.",
+      "security": "Audits dependencies and code for vulnerabilities (OWASP Top 10), suggests mitigations.",
+      "performance": "Profiles hot paths, identifies bottlenecks, and proposes/validates optimizations.",
+      "devops": "Handles CI/CD pipelines, containerisation, deployment configs, and observability hooks.",
+      "default": "Specialist agent in the CodeInsight AI multi-agent system."
+    }
+  },
+
+  "dock": {
+    "hideDock": "Hide dock",
+    "showDock": "Show agent dock",
+    "hideAgentDock": "Hide agent dock",
+    "activeAgents": "Active agents",
+    "role": "Role",
+    "confidenceTrend": "Confidence Trend",
+    "eventHistory": "Event History",
+    "artifacts": "Artifacts",
+    "noEvents": "No events from this agent yet.",
+    "noConfidenceReadings": "No confidence readings yet.",
+    "eventsCount": "{count} events",
+    "lastLabel": "last:",
+    "startLabel": "start:",
+    "latestLabel": "latest:",
+    "success": "success",
+    "failed": "failed"
+  },
+
+  "networkGraph": {
+    "title": "Agent Network Graph",
+    "fullscreen": "Agent Network Graph (Fullscreen)",
+    "ariaLabel": "Agent network graph showing 11 agents and their collaboration links"
+  },
+
+  "statusMeta": {
+    "idle": "Idle",
+    "planning": "Planning",
+    "executing": "Executing",
+    "verifying": "Verifying",
+    "completed": "Completed",
+    "failed": "Failed"
+  },
+
+  "commandBar": {
+    "missionLabel": "Mission",
+    "demoLabel": "Demo",
+    "live": "Live",
+    "disconnected": "Disconnected",
+    "untitledMission": "Untitled mission",
+    "newMissionTitle": "Start a new mission",
+    "maximizeActivityFeed": "Maximize Activity Feed",
+    "maximizeNetworkGraph": "Maximize Network Graph",
+    "maximizePanel": "Maximize Panel",
+    "exitFullscreen": "Exit Fullscreen"
+  },
+
+  "tabs": {
+    "files": "Files",
+    "diff": "Diff",
+    "world": "World",
+    "terminal": "Terminal",
+    "git": "Git",
+    "fileDiff": "File Diff",
+    "logs": "Logs"
+  },
+
+  "fileTree": {
+    "title": "File Tree",
+    "showOnlyModified": "Show only modified files",
+    "modified": "Modified",
+    "empty": "No files modified yet.",
+    "emptyHint": "Files edited by the AI team will appear here.",
+    "legend": {
+      "modified": "Modified",
+      "added": "Added",
+      "deleted": "Deleted"
+    }
+  },
+
+  "fileDiff": {
+    "noFileSelected": "No file selected",
+    "selectFileHint": "Select a file to view its diff.",
+    "loadingDiff": "Loading diff…",
+    "noDiffLines": "No diff lines available.",
+    "files": "Files",
+    "modifiedEmpty": "No modified files yet.",
+    "copyFilePath": "Copy file path",
+    "toggleFullFile": "Toggle full-file view",
+    "diff": "Diff",
+    "full": "Full",
+    "pathCopiedToast": "File path copied",
+    "clipboardErrorToast": "Clipboard unavailable",
+    "actions": {
+      "modified": "Modified",
+      "added": "Added",
+      "deleted": "Deleted",
+      "renamed": "Renamed"
+    }
+  },
+
+  "bottomPanel": {
+    "rawEventLog": "Raw Event Log",
+    "copyJson": "Copy JSON",
+    "copied": "Copied!",
+    "noEventsLogged": "No events logged.",
+    "changedFiles": "Changed files",
+    "noChangesYet": "No changes yet.",
+    "selectFileLeft": "Select a file on the left to view its diff.",
+    "loadingDiff": "Loading diff…",
+    "filesModified": "Files Modified",
+    "noFileSelected": "No file selected.",
+    "refresh": "Refresh",
+    "clear": "Clear"
   },
 
   "sidebar": {
@@ -45,13 +229,24 @@
   },
 
   "history": {
-    "title": "Mission History"
+    "title": "Mission History",
+    "iterationsUnit": "iterations",
+    "filesUnit": "files"
   },
 
   "actions": {
     "stop": "Stop",
     "collapseBottom": "Collapse Panel",
     "expandBottom": "Expand Panel",
-    "newMission": "New Mission"
+    "newMission": "New Mission",
+    "newMissionShort": "New"
+  },
+
+  "toasts": {
+    "describeGoal": "Please describe a mission goal first.",
+    "dispatched": "Mission dispatched.",
+    "startFailed": "Failed to start mission.",
+    "demoStarted": "Demo mode started — simulating agent events.",
+    "stopped": "Mission stopped."
   }
 }
