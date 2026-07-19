@@ -127,6 +127,7 @@ export function MissionControlView() {
   const [rightTab, setRightTab] = useState("tree");
   const [rightMaximized, setRightMaximized] = useState(false);
   const [feedMaximized, setFeedMaximized] = useState(false);
+  const [networkMaximized, setNetworkMaximized] = useState(false);
   const [bottomSize, setBottomSize] = useState<"min" | "default" | "max">("default");
   const [selectedFilePath, setSelectedFilePath] = useState<string | undefined>(
     undefined
@@ -487,31 +488,32 @@ export function MissionControlView() {
   const StatusIcon = statusMeta.icon;
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] flex-col gap-3 px-3 py-3 md:px-4">
+    <div className="relative flex h-[calc(100vh-4rem)] flex-col gap-2 px-3 py-2 md:px-4 md:py-3">
       {/* Top bar */}
-      <GlassCard strong className="shrink-0 px-4 py-3">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex min-w-0 flex-1 items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-400/30 to-violet-500/30">
+      <GlassCard strong className="shrink-0 px-3 py-2.5 md:px-4 md:py-3">
+        <div className="flex items-center gap-2 md:gap-3">
+          {/* Left: mission info (truncates) */}
+          <div className="flex min-w-0 flex-1 items-center gap-2 md:gap-3">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-400/30 to-violet-500/30 md:h-9 md:w-9">
               <Rocket className="h-4 w-4 text-cyan-300" />
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-cyan-300">
+                <span className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.2em] text-cyan-300">
                   Mission
                 </span>
                 {demoMode && (
-                  <span className="rounded-full border border-amber-400/30 bg-amber-400/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-amber-300">
+                  <span className="shrink-0 rounded-full border border-amber-400/30 bg-amber-400/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-amber-300">
                     Demo
                   </span>
                 )}
                 {connected ? (
-                  <span className="flex items-center gap-1 text-[10px] text-emerald-400">
+                  <span className="flex shrink-0 items-center gap-1 text-[10px] text-emerald-400">
                     <Wifi className="h-3 w-3" /> Live
                   </span>
                 ) : (
                   !demoMode && (
-                    <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                    <span className="flex shrink-0 items-center gap-1 text-[10px] text-muted-foreground">
                       <WifiOff className="h-3 w-3" /> Disconnected
                     </span>
                   )
@@ -520,22 +522,23 @@ export function MissionControlView() {
               <p className="mt-0.5 truncate text-sm font-semibold">
                 {goal || "Untitled mission"}
               </p>
-              <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
+              <div className="mt-0.5 flex items-center gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
                 {repoUrl && (
-                  <span className="font-mono">
+                  <span className="truncate font-mono">
                     {repoUrl.replace(/^https?:\/\//, "").replace(/\.git$/, "")}
                   </span>
                 )}
-                <span className="capitalize">phase: {currentPhase}</span>
-                <span>iter: {iteration}/{maxIterations}</span>
+                <span className="shrink-0 capitalize">phase: {currentPhase}</span>
+                <span className="shrink-0">iter: {iteration}/{maxIterations}</span>
               </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          {/* Right: status + actions (never wraps) */}
+          <div className="flex shrink-0 items-center gap-1.5 md:gap-2">
             <Badge
               variant="outline"
-              className="gap-1.5 border-transparent px-3 py-1 text-xs"
+              className="gap-1 border-transparent px-2 py-0.5 text-[11px] md:px-3 md:py-1 md:text-xs"
               style={{
                 background: `${statusMeta.color}1a`,
                 color: statusMeta.color,
@@ -551,7 +554,7 @@ export function MissionControlView() {
                     "animate-spin"
                 )}
               />
-              {statusMeta.label}
+              <span className="hidden sm:inline">{statusMeta.label}</span>
             </Badge>
 
             <Button
@@ -561,7 +564,7 @@ export function MissionControlView() {
               className="gap-1.5 border-rose-400/30 text-rose-300 hover:bg-rose-400/10"
             >
               <Square className="h-3.5 w-3.5" />
-              <span>{t("mission", "actions.stop") || "Stop"}</span>
+              <span className="hidden sm:inline">{t("mission", "actions.stop") || "Stop"}</span>
             </Button>
           </div>
         </div>
@@ -571,6 +574,41 @@ export function MissionControlView() {
           Uses react-resizable-panels for drag-to-resize columns + rows.
           Panels can be maximized (absolute inset-0 z-50) for full-screen view.
           All panels have min-h-0 + overflow-y-auto for independent scrolling. */}
+
+      {/* Maximized Network Graph overlay */}
+      <AnimatePresence>
+        {networkMaximized && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 z-50 flex flex-col gap-2 p-3"
+          >
+            <GlassCard className="flex min-h-0 flex-1 flex-col overflow-hidden p-3">
+              <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                <div className="flex items-center gap-2">
+                  <NetworkIcon className="h-4 w-4 text-cyan-300" />
+                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Agent Network Graph (Fullscreen)
+                  </span>
+                </div>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setNetworkMaximized(false)}
+                  className="h-7 gap-1.5 text-[11px]"
+                >
+                  <Minimize2 className="h-3.5 w-3.5" />
+                  Exit Fullscreen
+                </Button>
+              </div>
+              <div className="min-h-0 flex-1 py-2">
+                <AgentNetworkGraph />
+              </div>
+            </GlassCard>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Maximized Feed overlay (absolute, covers everything) */}
       <AnimatePresence>
@@ -691,8 +729,8 @@ export function MissionControlView() {
         )}
       </AnimatePresence>
 
-      {/* Normal resizable workspace (hidden when either panel is maximized) */}
-      {!feedMaximized && !rightMaximized && (
+      {/* Normal resizable workspace (hidden when any panel is maximized) */}
+      {!feedMaximized && !rightMaximized && !networkMaximized && (
         <div className="flex min-h-0 flex-1 gap-2">
           <AgentDock
             agentStatuses={agentStatuses}
@@ -753,15 +791,24 @@ export function MissionControlView() {
               <div className="flex h-full min-h-0 flex-col gap-2">
                 <Collapsible defaultOpen className="shrink-0">
                   <GlassCard className="p-3">
-                    <CollapsibleTrigger className="flex w-full items-center justify-between rounded-md px-1 py-0.5 transition hover:bg-white/[0.02]">
-                      <div className="flex items-center gap-1.5">
+                    <div className="flex items-center justify-between">
+                      <CollapsibleTrigger className="flex items-center gap-1.5 rounded-md px-1 py-0.5 transition hover:bg-white/[0.02]">
                         <NetworkIcon className="h-3.5 w-3.5 text-cyan-300" />
                         <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                           Agent Network Graph
                         </span>
-                      </div>
-                      <ChevronDown className="h-3.5 w-3.5 text-muted-foreground transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
-                    </CollapsibleTrigger>
+                        <ChevronDown className="h-3.5 w-3.5 text-muted-foreground transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
+                      </CollapsibleTrigger>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setNetworkMaximized(true)}
+                        className="h-6 w-6 p-0 text-muted-foreground hover:text-cyan-300"
+                        title="Maximize Network Graph"
+                      >
+                        <Maximize2 className="h-3 w-3" />
+                      </Button>
+                    </div>
                     <CollapsibleContent>
                       <div className="mt-2">
                         <AgentNetworkGraph />
