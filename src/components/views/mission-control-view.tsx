@@ -621,20 +621,38 @@ export function MissionControlView() {
           >
             <GlassCard className="flex min-h-0 flex-1 flex-col overflow-hidden p-0">
               <div className="flex items-center justify-between border-b border-white/5 px-2 py-1.5">
-                <TabsList className="h-auto bg-transparent p-1">
-                  <TabsTrigger value="tree" className="gap-1.5 rounded-md px-2.5 py-1 text-[11px] data-[state=active]:bg-white/5" onClick={() => setRightTab("tree")}>
+                <div className="flex items-center gap-1 p-1">
+                  <button
+                    onClick={() => setRightTab("tree")}
+                    className={cn(
+                      "flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[11px] transition",
+                      rightTab === "tree" ? "bg-white/5 text-foreground" : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
                     <ListTree className="h-3 w-3" /> Files
                     {filesModified.length > 0 && (
                       <span className="ml-1 rounded-full bg-white/5 px-1 text-[9px] text-muted-foreground">{filesModified.length}</span>
                     )}
-                  </TabsTrigger>
-                  <TabsTrigger value="diff" className="gap-1.5 rounded-md px-2.5 py-1 text-[11px] data-[state=active]:bg-white/5" onClick={() => setRightTab("diff")}>
+                  </button>
+                  <button
+                    onClick={() => setRightTab("diff")}
+                    className={cn(
+                      "flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[11px] transition",
+                      rightTab === "diff" ? "bg-white/5 text-foreground" : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
                     <FileDiffIcon className="h-3 w-3" /> Diff
-                  </TabsTrigger>
-                  <TabsTrigger value="world" className="gap-1.5 rounded-md px-2.5 py-1 text-[11px] data-[state=active]:bg-white/5" onClick={() => setRightTab("world")}>
+                  </button>
+                  <button
+                    onClick={() => setRightTab("world")}
+                    className={cn(
+                      "flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[11px] transition",
+                      rightTab === "world" ? "bg-white/5 text-foreground" : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
                     <Globe className="h-3 w-3" /> World
-                  </TabsTrigger>
-                </TabsList>
+                  </button>
+                </div>
                 <Button
                   size="sm"
                   variant="ghost"
