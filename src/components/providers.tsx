@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { ThemeManager } from "@/components/shared/theme-manager";
 import { useI18nStore, type Locale } from "@/lib/i18n";
-import { SessionProvider } from "next-auth/react"; // <-- Import SessionProvider
+import { SessionProvider } from "next-auth/react";
 
 export function Providers({
   children,
@@ -31,7 +31,13 @@ export function Providers({
   }, [initialLocale]);
 
   return (
-    <SessionProvider>
+    <SessionProvider
+      // Suppress CLIENT_FETCH_ERROR when /api/auth/session is unavailable
+      // (e.g. dev server starting up, network issues, or DB not yet pushed).
+      // The session will retry automatically; errors are non-fatal.
+      refetchOnWindowFocus={false}
+      refetchInterval={0}
+    >
       <QueryClientProvider client={client}>
         <ThemeManager />
         {children}
