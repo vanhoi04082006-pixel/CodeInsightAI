@@ -245,6 +245,7 @@ class MissionEventEmitter {
       tool: call.tool,
       args: call.args,
       timestamp: call.timestamp,
+      meta: call.meta,
     });
     this.emit({
       type: "tool:result",
@@ -254,6 +255,7 @@ class MissionEventEmitter {
       result: call.result,
       durationMs: call.durationMs,
       timestamp: call.timestamp,
+      meta: call.meta,
     });
     entry.state.updatedAt = Date.now();
   }

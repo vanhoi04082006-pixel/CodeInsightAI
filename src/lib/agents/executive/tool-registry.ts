@@ -22,7 +22,11 @@ import { commandRunner } from "@/lib/terminal/command-runner";
 import { gitOps } from "@/lib/git-intelligence/git-operations";
 import { agentRegistry } from "@/lib/agents/agent-registry";
 import { taskQueue } from "@/lib/agents/task-queue";
+import type { AIProviderConfig } from "@/lib/agents/ai-client";
 import type { AgentId, Task, TaskKind, TaskResult } from "@/lib/agents/types";
+import { missionEmitter } from "./event-emitter";
+import { debateOrchestrator } from "./debate";
+import { detectTopic } from "./consensus";
 import type { ToolCallResult, ToolDefinition } from "./types";
 
 // ── Tool execution context ─────────────────────────────────────────────────
@@ -39,6 +43,9 @@ export interface ToolContext {
     additions: number,
     deletions: number,
   ) => void;
+  /** Optional AI provider — required by AI-driven tools like `debate`.
+   *  When absent, those tools degrade gracefully (debate returns null). */
+  provider?: AIProviderConfig;
 }
 
 // ── Type guards for safe argument extraction ────────────────────────────────
@@ -252,6 +259,25 @@ export const TOOL_CATALOG: ToolDefinition[] = [
       },
     },
     category: "execute",
+  },
+  {
+    name: "debate",
+    description:
+      "Trigger a structured multi-agent DEBATE on a controversial question. Each participant submits a proposal, reviews others' proposals, votes (support/oppose/neutral) with confidence, and the Executive makes a final call. Use this ONLY when you're genuinely uncertain or when specialist agents disagree — debates cost ~10 AI calls each. Capped at 5 per mission.",
+    parameters: {
+      question: {
+        type: "string",
+        description:
+          "The specific question to debate (e.g. \"Should we use eval or Function constructor for dynamic code parsing?\").",
+        required: true,
+      },
+      participants: {
+        type: "object",
+        description:
+          "Array of agent IDs to participate (3-5 recommended). The Executive is always included. Example: [\"security-agent\", \"performance-agent\", \"code-reviewer\"].",
+      },
+    },
+    category: "analyze",
   },
 ];
 
@@ -685,6 +711,121 @@ async function tool_invoke_agent(
   }
 }
 
+// ── tool_debate: trigger a multi-agent debate on a controversial question ────
+async function tool_debate(
+  args: Record<string, unknown>,
+  ctx: ToolContext,
+): Promise<ToolCallResult> {
+  const start = Date.now();
+  try {
+    const question = asString(args.question, "question");
+    if (!question) {
+      return {
+        success: false,
+        output: null,
+        error: "Missing required parameter 'question'",
+        durationMs: Date.now() - start,
+      };
+    }
+
+    // Participants: from args, or auto-select based on detected topic.
+    const rawParticipants = Array.isArray(args.participants)
+      ? args.participants.filter((p): p is string => typeof p === "string" && p.length > 0)
+      : [];
+
+    // If the caller didn't supply participants, auto-select a sensible group:
+    //   - Executive (always)
+    //   - The topic expert (if one is detected)
+    //   - 1-2 generalist reviewers
+    let participants = rawParticipants;
+    if (participants.length === 0) {
+      const expert = detectTopic(question);
+      participants = ["orchestrator"];
+      if (expert) participants.push(expert);
+      participants.push("code-reviewer");
+      if (expert !== "bug-fixer") participants.push("bug-fixer");
+    }
+
+    // Look up mission state for the debate context.
+    const state = missionEmitter.getState(ctx.missionId);
+    const goal = state?.goal ?? "(unknown goal)";
+    const memory = state
+      ? [
+          `knownIssues: ${state.memory.knownIssues.length}`,
+          `architectureNotes: ${state.memory.architectureNotes.length}`,
+          `attemptedFixes: ${state.memory.attemptedFixes.length}`,
+          `keyFiles: ${state.memory.keyFiles.size}`,
+          state.memory.knownIssues.slice(-3).join(" | "),
+        ]
+          .filter((s) => s.trim().length > 0)
+          .join("; ")
+      : "(no mission state)";
+    const recentActions = state
+      ? state.toolHistory.slice(-5).map(
+          (t) => `${t.tool}(${JSON.stringify(t.args).slice(0, 80)}) → ${t.success ? "OK" : "FAIL"}`,
+        )
+      : [];
+
+    const result = await debateOrchestrator.debate(
+      ctx.missionId,
+      question,
+      participants,
+      { goal, memory, recentActions },
+      ctx.provider,
+      ctx.signal,
+    );
+
+    if (!result) {
+      return {
+        success: true, // Not an error — debate was skipped (cap reached or no provider)
+        output: {
+          skipped: true,
+          reason:
+            "Debate was skipped (no provider configured, debate cap reached, or no participants).",
+          question,
+        },
+        durationMs: Date.now() - start,
+      };
+    }
+
+    return {
+      success: true,
+      output: {
+        skipped: false,
+        question: result.question,
+        winner: result.winner
+          ? {
+              id: result.winner.id,
+              agentId: result.winner.agentId,
+              proposal: result.winner.proposal,
+              reasoning: result.winner.reasoning,
+              confidence: result.winner.confidence,
+              tradeoffs: result.winner.tradeoffs,
+            }
+          : null,
+        consensusLevel: result.consensusLevel,
+        overridden: result.overridden,
+        executiveDecision: result.executiveDecision,
+        proposalCount: result.proposals.length,
+        opinionCount: result.opinions.length,
+        proposals: result.proposals.map((p) => ({
+          agentId: p.agentId,
+          proposal: p.proposal,
+          confidence: p.confidence,
+        })),
+      },
+      durationMs: Date.now() - start,
+    };
+  } catch (err) {
+    return {
+      success: false,
+      output: null,
+      error: err instanceof Error ? err.message : String(err),
+      durationMs: Date.now() - start,
+    };
+  }
+}
+
 // ── Dispatch table ──────────────────────────────────────────────────────────
 const IMPLEMENTATIONS: Record<
   string,
@@ -700,6 +841,7 @@ const IMPLEMENTATIONS: Record<
   web_search: tool_web_search,
   analyze_ast: tool_analyze_ast,
   invoke_agent: tool_invoke_agent,
+  debate: tool_debate,
 };
 
 /**

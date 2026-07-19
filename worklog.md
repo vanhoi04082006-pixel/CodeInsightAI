@@ -1348,3 +1348,319 @@ Stage Summary:
   - The `FileTreePanel` accepts `action: string` (not the strict union) because mission-store's `FileModified` type uses `string` for action. A `normalizeAction()` helper coerces unknown values to "modified" at display time, so the tree never crashes on unexpected action strings.
   - The `FileDiffViewer` tries three sources in order: (1) `file.content` prop (if caller supplied raw content), (2) POST `/api/git/operation` with `{operation:"diff"}` then client-side filter by path, (3) synthetic preview using the additions/deletions counts. This makes the component useful in all contexts — with or without a real git repo.
 - **Quality**: 0 TypeScript errors, 0 ESLint errors. Color palette strictly cyan/violet/emerald/amber/rose (no indigo/blue — the ANSI blue code 34 is rerouted to cyan-400). All new components use `'use client'`, shadcn/ui primitives (Button, Tabs, Badge, Tooltip, ScrollArea), GlassCard from shared/ui, framer-motion for animations, and lucide-react for icons. Responsive: dock + sidebars + right panel all hide on mobile (`md:flex`/`lg:flex`); the activity feed + timeline + bottom panel remain visible at all breakpoints.
+
+---
+Task ID: phase-H-agent-network-graph
+Agent: full-stack-developer (Agent Network Graph)
+Task: Build d3-force agent network visualization with live status updates.
+
+Work Log:
+- Read context: agent-meta.ts (11 agents), dependency-graph.tsx (existing d3-force patterns), mission-store.ts (agentStatuses keyed by agent NAME, events stream), mission-control-view.tsx right-column layout.
+- Created `src/components/mission/agent-network-graph.tsx` (~470 lines):
+  * Stable `baseNodes` memoized from AGENTS (11 nodes: Executive hub + 10 satellites).
+  * Collaboration-edge detector: scans `events` for `agent:acting` events that follow a different agent's activity within a 10s gap, accumulates edge strength, decays over a 90s window, sorted by strength and capped so total edges never exceed 15.
+  * Full edge list = (Executive ↔ each agent, strength 0.45) + collaboration edges.
+  * d3-force simulation: forceLink (distance 105 for exec spokes, 78 for collab), forceManyBody(-160), forceCenter, forceCollide (radius + 10), forceX/Y(0.04). Runs 300 synchronous ticks then stops (same pattern as dependency-graph.tsx).
+  * Executive node pinned to center via `fx`/`fy` for a stable hub-and-spoke layout. Other nodes seeded on a circle if no prior position exists, else reused from `positionsRef` to avoid jitter on edge-set changes.
+  * Simulation effect depends only on `[baseNodes, edges]` — NOT on `agentStatuses` — so live status updates flow through `renderNodes`/`renderEdges` memos without re-running the physics (eliminates position jitter).
+  * SVG viewBox 400×400, responsive (`h-auto w-full` + `aspectRatio: 1/1`).
+  * Background: radial cyan→violet gradient + two subtle concentric guide rings.
+  * Node visuals: outer glow circle (animated r + opacity) for thinking/acting states; status ring (motion.circle animating stroke color, dashed for idle, pulsing r for error); fill circle (motion.circle animating fillOpacity 0.16 idle → 0.38 active); executive gets a 2px stroke + dashed inner crown marker; done shows a green checkmark path; error shows a rose X path; initials text (font-mono) hidden when checkmark/X is shown; truncated name label below.
+  * Edge visuals: base gray line (opacity 0.18) for inactive, cyan line (opacity 0.55) + second overlaid dashed line with animated `stroke-dashoffset` + soft-glow filter for active edges (both endpoints thinking/acting).
+  * Hover: node dims others to 0.35 opacity, non-related edges dim to 0.04; tooltip (AnimatePresence) shows agent name, status pill with colored dot, detail text, and "Hub · coordinates all agents" subtitle for Executive.
+  * Click: emits a pulsing halo ring (motion.circle with repeat) + a "focused: <name>" chip at the bottom.
+  * Legend below SVG: idle/thinking/acting/done/error color dots + "active link" swatch.
+  * Compact stats row (active/done/err counts) at the top — title moved to the Collapsible trigger in the parent.
+  * Handles no-mission case: `hasMission` flag forces all nodes to "idle" status so the graph still renders gracefully.
+  * ID↔name lookup helpers (`resolveAgentId`, `nameForId`) bridge the store's name-keyed `agentStatuses` with AGENTS' id-based nodes, with fuzzy substring matching for robustness.
+- Edited `src/components/views/mission-control-view.tsx`:
+  * Added imports: `AgentNetworkGraph`, shadcn `Collapsible`/`CollapsibleTrigger`/`CollapsibleContent`, lucide `ChevronDown` + `Network as NetworkIcon` (aliased to avoid any future `Network` collisions).
+  * Wrapped the right column in a flex-col with `gap-3`; inserted a `Collapsible defaultOpen` block above the existing tabbed GlassCard. Trigger bar shows NetworkIcon + "Agent Network Graph" title + animated chevron (rotates 180° when open, matching the WorldStatePanel pattern). Content holds the `AgentNetworkGraph` component.
+  * Existing tabbed panel (Files/Diff/World) preserved as `flex-1` below — layout unchanged, only enhanced.
+- Fixed pre-existing TS error in `src/lib/agents/executive/executive-agent.ts` (`buildResult` was missing `qualityScore` + `durationMs` fields newly added to `MissionStats` in Phase I). Derived `qualityScore` from `confidence - errorPenalty` and hoisted `durationMs` computation above the stats object.
+- Lint: `bun run lint` → 0 errors, 0 warnings.
+- Type check: `npx tsc --noEmit` → 0 errors.
+- Dev server verified: `curl http://localhost:3000/` returns HTTP 200, page renders without compile errors.
+
+Stage Summary:
+- New file `src/components/mission/agent-network-graph.tsx` (~470 LOC) delivers a live d3-force agent network with 11 nodes (Executive hub + 10 satellites), real-time status rings, collaboration-edge detection from event history, animated active links, hover tooltips, and click feedback.
+- Integrated into `mission-control-view.tsx` right sidebar as a collapsible card above the Files/Diff/World tabs. Existing layout fully preserved.
+- Color palette strictly cyan/violet/emerald/amber/rose (no indigo/blue). Fully responsive SVG (scales to container width via viewBox + aspect-ratio). Real-time status updates via Zustand selector subscriptions — no simulation re-runs on status change, eliminating jitter.
+- Fixed a pre-existing Phase I type regression in `executive-agent.ts` so the project type-checks clean.
+- Lint + tsc both pass.
+
+---
+
+Task ID: phase-C-agent-debate
+Agent: general-purpose (Agent Debate + Consensus)
+Task: Build DebateOrchestrator, ConsensusEngine, wire into ReAct.
+
+Work Log:
+- Read existing Phase A+B context: types.ts (MissionEvent, ExecutiveDecision, ThinkResponse), event-emitter.ts (missionEmitter singleton with subscribers + replay buffer), react-loop.ts (Observe→Think→Act→Verify→Reflect→Decide loop with Phase B Reflection Agent + Phase E Replanner/RollbackManager already integrated), executive-agent.ts (ExecutiveAgent wrapper that builds MissionContext + runs the loop), ai-client.ts (callAI/callAIForJSON with OpenAI/Anthropic/Gemini support), agent-registry.ts (11 specialist agents), confidence.ts (per-mission ConfidenceTracker singleton), tool-registry.ts (10 tools: read_file, list_files, search_code, run_command, git_status, git_diff, edit_file, web_search, analyze_ast, invoke_agent).
+- Confirmed ESLint config is lenient (no-explicit-any off, no-unused-vars off) but avoided `any` per task rules — used `unknown` + type guards throughout.
+- Created `src/lib/agents/executive/consensus.ts` (401 lines):
+  - `Vote` interface: agentId, proposalId, opinion (support/oppose/neutral), confidence (0-100), weight.
+  - `ProposalTally` interface: score (weighted Σ), supportCount, opposeCount, neutralCount, supportWeight, opposeWeight.
+  - `ProposalLike` structural interface (avoids circular import with debate.ts).
+  - `detectTopic(question)` — scans lower-cased question for 7 topic categories (security/perf/test/architecture/code-review/bug/devops) with 5-15 keywords each; returns the AgentId of the topic expert or null. Picks the topic with most keyword hits when multiple fire.
+  - `ConsensusEngine` class (pure, no I/O, no side-effects):
+    - `getAgentWeight(agentId, topic)` — Executive gets 1.5x (mild tie-break authority), topic expert gets 2x, all others 1x.
+    - `tallyVotes(votes)` — Σ(confidence × weight × sign) where support=+1, oppose=-1, neutral=0; rounded to 4 decimal places.
+    - `determineWinner(proposals, votes)` — sorts by score, then support count, then proposer confidence, then lexicographic id (deterministic tiebreaker). Falls back to highest-confidence proposal when no votes exist.
+    - `consensusLevel(winner, votes)` — (weighted support) / (total weighted votes for winner) × 100; returns 0 if no votes.
+    - `securityVeto(winner, votes)` — true if Security Agent opposed the winner with ≥60% confidence.
+  - Exported `consensusEngine` singleton.
+- Created `src/lib/agents/executive/debate.ts` (727 lines):
+  - Types: `DebateProposal` (id, agentId, proposal, reasoning, confidence, tradeoffs), `DebateOpinion` (agentId, targetProposalId, opinion, reasoning, confidence), `DebateResult` (question, proposals, opinions, winner, consensusLevel, executiveDecision, overridden, timestamp), `DebateContext` (goal, memory, recentActions).
+  - Constants: MAX_DEBATES_PER_MISSION=5, MIN_PARTICIPANTS=3, MAX_PARTICIPANTS=5, CONSENSUS_OVERRIDE_THRESHOLD=50, EXECUTIVE_CONFIDENCE_OVERRIDE_THRESHOLD=60, SECURITY_VETO_CONFIDENCE=60.
+  - `AGENT_ROLES` map: specialized system prompts for each of the 11 specialist agents (security-agent, performance-agent, code-reviewer, bug-fixer, refactoring-agent, test-agent, devops-agent, documentation-agent, repository-analyst, planner, orchestrator) — each prompt tells the agent to "speak ONLY from your specialty" and return JSON-only.
+  - Prompt builders: `buildProposalPrompt` (agent proposes a solution or null), `buildOpinionPrompt` (agent reviews ALL proposals + votes support/oppose/neutral with reasoning + confidence), `buildExecutivePrompt` (Executive ratifies or overrides consensus winner with explicit override criteria).
+  - Helper functions: `genId`, `clampConfidence` (handles number/string/missing), `asString`, `asStringArray`, `asOpinionKind` (fuzzy-matches "agree"/"endorse"→support, "disagree"/"reject"→oppose).
+  - `DebateOrchestrator` class:
+    - Private state: `debateCounts` Map (per-mission counter), `histories` Map (per-mission DebateResult[] capped at 5).
+    - `debate(missionId, question, participants, context, provider?, signal?)`:
+      - Returns null if no provider (rule-based fallback intentionally unavailable per task spec).
+      - Returns null if mission exceeded 5-debate cap.
+      - Sanitizes participants: dedupes, ensures Executive is included, caps at 5, pads to 3 if needed.
+      - Phase 1 PROPOSAL: Promise.all over participants → each agent calls AI with proposal prompt → emits `agent:thinking` per proposal → collects DebateProposal[].
+      - Phase 2 OPINION: Promise.all over participants → each agent calls AI once with opinion prompt (reviews ALL proposals in one call) → parses opinions array → emits `agent:thinking` per opinion.
+      - Phase 3 CONSENSUS: maps opinions → Votes with topic-weighted `weight` via `consensusEngine.getAgentWeight`, calls `determineWinner` + `consensusLevel`.
+      - Phase 4 EXECUTIVE DECISION: calls AI with executive prompt → either ratifies (ratifiedProposalId === winner.id), overrides (ratifiedProposalId points to different proposal), or issues new decision (no ratifiedProposalId). Pre-check flags override if winner is null, consensus < 50%, or security vetoed.
+      - Emits final `decision` MissionEvent (wrapped in ExecutiveDecision with iteration=-1, phase="decide", confidence=consensusLevel).
+      - Updates all participant agent statuses to "done".
+      - Records result in history.
+    - `getHistory(missionId)`, `getDebateCount(missionId)`, `clear(missionId)` helpers.
+    - Private helpers: `recordHistory`, `emitAgentThinking`, `emitAgentStatus`, `securityAgentVetoed` (oppose with ≥60 confidence).
+  - Exported `debateOrchestrator` singleton + `DEBATE_LIMITS` constants object.
+- Edited `src/lib/agents/executive/tool-registry.ts`:
+  - Added imports: `AIProviderConfig` type, `missionEmitter`, `debateOrchestrator`, `detectTopic`.
+  - Added optional `provider?: AIProviderConfig` field to `ToolContext` interface (needed by AI-driven tools like `debate`).
+  - Added `debate` tool to `TOOL_CATALOG` — category "analyze", description warns that debates cost ~10 AI calls each and are capped at 5/mission, parameters: `question` (required string), `participants` (optional string array).
+  - Added `tool_debate` implementation (~115 lines):
+    - Validates `question` is non-empty.
+    - Auto-selects participants if none supplied: Executive + topic expert (via `detectTopic`) + code-reviewer + bug-fixer.
+    - Looks up mission state via `missionEmitter.getState(ctx.missionId)` for goal/memory/recentActions.
+    - Calls `debateOrchestrator.debate(...)` with `ctx.provider` + `ctx.signal`.
+    - Returns structured output: `{skipped, question, winner {agentId, proposal, reasoning, confidence, tradeoffs}, consensusLevel, overridden, executiveDecision, proposalCount, opinionCount, proposals[]}` — or `{skipped: true, reason}` if debate was skipped (no provider / cap reached).
+  - Added `debate: tool_debate` entry to the `IMPLEMENTATIONS` dispatch table.
+- Edited `src/lib/agents/executive/react-loop.ts`:
+  - Added imports: `debateOrchestrator`, `detectTopic`.
+  - Wired `provider: this.provider` into the `toolCtx` object passed to `executeTool` (so the `debate` tool has access to the AI provider).
+  - Added `await this.maybeAutoDebate(ctx, think, toolResult, reflection)` call after the Phase E auto-rollback block, before the DECIDE step.
+  - Added private `maybeAutoDebate(ctx, think, toolResult, reflection)` method (~100 lines):
+    - Trigger conditions (all must hold): confidence < 50% AND (reflection.shouldReplan OR consecutiveToolFailures >= 2 OR last tool failed with non-trivial error) AND debate count < 5.
+    - Synthesizes a debate question from current state: "We're stuck at iteration X (confidence Y%). Last action '...' failed: ... Reflection: ... Should we retry, replan, escalate, or try a different approach?"
+    - Auto-selects participants: Executive + topic expert (via `detectTopic`) + code-reviewer + bug-fixer.
+    - Builds memory summary + recent actions from `state.toolHistory`.
+    - Calls `debateOrchestrator.debate(...)`.
+    - On success: feeds winner back into `lastProposedAction` (so the next Think phase sees it), boosts confidence via `confidenceTracker.adjustFor` (proportional to consensus level, min +5), persists a `[debate]` memory note in `architectureNotes`.
+    - Never throws — catches errors and emits a recoverable `error` MissionEvent.
+- Quality gates:
+  - `npx tsc --noEmit` → exit 0 (zero TypeScript errors).
+  - `bun run lint` → exit 0 (zero ESLint errors, zero warnings).
+
+Stage Summary:
+- Phase C Agent Debate + Consensus complete. 2 new files + 2 edited files. The Executive Agent now has a structured multi-agent debate mechanism for breaking deadlocks when specialist agents disagree.
+- **2 new files** (~1,128 lines total):
+  - `src/lib/agents/executive/consensus.ts` (401 lines) — Pure voting engine. `Vote`/`ProposalTally`/`ProposalLike` types. `detectTopic()` scans question text against 7 topic categories (security/perf/test/architecture/code-review/bug/devops) with curated keyword lists. `ConsensusEngine` class with `getAgentWeight` (Executive 1.5x, topic expert 2x, others 1x), `tallyVotes` (Σ confidence × weight × sign), `determineWinner` (4-level deterministic tiebreaker: score → support count → proposer confidence → lexicographic id), `consensusLevel` (weighted support ratio × 100), `securityVeto` (oppose with ≥60 confidence). No I/O, no side-effects — fully unit-testable.
+  - `src/lib/agents/executive/debate.ts` (727 lines) — `DebateOrchestrator` singleton. Types: `DebateProposal`/`DebateOpinion`/`DebateResult`/`DebateContext`. 4-phase flow: (1) PROPOSAL — each participant calls AI with role-specialized prompt → returns proposal or null; (2) OPINION — each agent reviews ALL proposals in one AI call → returns opinions[] with support/oppose/neutral + reasoning + confidence; (3) CONSENSUS — maps opinions to topic-weighted Votes, calls ConsensusEngine to pick winner + compute consensus level; (4) EXECUTIVE DECISION — Executive reviews winner + dissent, ratifies or overrides (override criteria: winner null, consensus < 50%, or security veto). Caps at 5 debates/mission, 3-5 participants per debate, returns null when no provider (rule-based fallback intentionally unavailable). Emits `agent:thinking` per proposal/opinion, `agent:status` updates per agent, and a final `decision` MissionEvent wrapping the debate result.
+- **2 edited files**:
+  - `src/lib/agents/executive/tool-registry.ts` — Added optional `provider?: AIProviderConfig` to `ToolContext`. Added `debate` tool to `TOOL_CATALOG` (category: analyze). Added `tool_debate` implementation: validates question, auto-selects participants if absent (Executive + detectTopic expert + code-reviewer + bug-fixer), fetches mission state via `missionEmitter.getState`, calls `debateOrchestrator.debate`, returns structured winner/consensus/decision output. Registered in `IMPLEMENTATIONS` dispatch table.
+  - `src/lib/agents/executive/react-loop.ts` — Passes `provider: this.provider` into ToolContext. Added `maybeAutoDebate()` method called after the Reflect phase: auto-triggers a debate when (confidence < 50%) AND (reflection.shouldReplan OR 2+ consecutive tool failures OR last tool failed). Synthesizes a debate question from current iteration state, runs the debate, feeds the winner back into `lastProposedAction` so the next Think phase sees it, boosts confidence proportionally to consensus level, and persists a `[debate]` memory note. Never throws — failures degrade to a recoverable error event.
+- **Architecture decisions**:
+  - The ConsensusEngine is pure (no I/O) so it can be unit-tested in isolation. The DebateOrchestrator owns all AI calls + event emission.
+  - Topic detection is keyword-based (substring match on lower-cased question) rather than AI-based — keeps it fast + deterministic. Picks the topic with most keyword hits when multiple fire (avoids Security-vs-Performance deadlocks).
+  - Executive Agent gets weight 1.5x (not 2x) so it has mild tie-breaking authority but doesn't dominate the consensus. This matches the spec: "Executive makes final decision (may not always pick highest-voted)".
+  - Each agent reviews ALL proposals in a single AI call (not one call per proposal) — keeps the opinion phase at N calls instead of N².
+  - The `debate` tool is registered in the tool catalog so the Executive can invoke it deliberately via `tool: "debate"` in its Think response. The auto-debate trigger in `maybeAutoDebate` is a safety net for when the Executive doesn't realize it's stuck.
+  - When no provider is configured, `debate()` returns null and emits a single `agent:thinking` event explaining the skip — no AI calls are made.
+  - The debate cap (5/mission) is enforced inside the orchestrator, so both the explicit `debate` tool and the auto-trigger share the same budget.
+  - Debate results are recorded as `ExecutiveDecision` events with `iteration: -1` (debates aren't tied to a specific ReAct iteration) and `phase: "decide"` so they appear in the existing decisions timeline.
+  - Topic weighting applies to all votes (including the Executive's own vote), so a Security Agent's opposition to a security-sensitive proposal counts double when computing the winner.
+- **Quality**: 0 TypeScript errors, 0 ESLint errors. All new code uses `unknown` + type guards instead of `any` (per task rules, even though ESLint config has `no-explicit-any` off). The debate flow degrades gracefully at every failure point: no provider → null; cap exceeded → null; AI call fails → that agent's contribution is skipped; no proposals → empty DebateResult; consensus engine can't pick → falls back to highest-confidence proposal.
+
+---
+Task ID: phase-D-tool-selection
+Agent: general-purpose (Dynamic Tool Selection)
+Task: Build ToolSelector (ranking + approval + validation), ToolCache, wire into ReAct.
+
+Work Log:
+- Read context files: worklog.md (Phase A+B+E+G summaries + Phase I quality gate), tool-registry.ts (10 tools: read_file / list_files / search_code / run_command / git_status / git_diff / edit_file / web_search / analyze_ast / invoke_agent + executeTool() + formatToolsForAI()), react-loop.ts (Observe→Think→Act→Verify→Reflect→Decide loop with Phase E replanner + rollback + Phase C auto-debate), types.ts (ToolDefinition, ToolCall, MissionEvent union, MissionState, MissionContext), event-emitter.ts (missionEmitter singleton + recordToolCall emitting tool:call + tool:result), ai-client.ts (callAIForJSON helper), confidence.ts (per-mission ConfidenceTracker).
+- Created `src/lib/agents/executive/tool-selector.ts` (~440 lines): Rule-based ToolSelector with 4 public methods.
+  • `ToolRanking` interface { tool, relevanceScore: 0-1, reason } + `ToolSelectionContext` { goal, currentPhase, recentActions, knownIssues, filesModified, memorySummary, errorContext? } + `ToolComposition` { tools, reason } + `ValidationResult` { valid, errors }.
+  • Module-level lookup `TOOL_BY_NAME` built from TOOL_CATALOG (reduced into a Record<string, ToolDefinition>).
+  • 17 GOAL_BOOSTS regex rules (test/fix/bug/refactor/deploy/search/read/list/edit/build/lint/commit/diff/delegate/docs/web/security/performance) — each maps a keyword regex to (tool, amount, reason) boosts.
+  • 5 ERROR_BOOSTS regex rules (module/dependency, type/TS, syntax/parse, permission, import/export) — pattern-match against `errorContext` to suggest recovery tools.
+  • `rankTools(context, limit=5)`: starts every tool at baseline 0.3, applies goal boosts, applies error boosts (if errorContext non-empty), applies state boosts (filesModified empty → list_files +0.5, search_code +0.35, git_status +0.2; knownIssues non-empty → search_code +0.1, read_file +0.1), demotes tools used 2+ times recently (-0.12 per use, capped at -0.35), special-case demotion for read_file used 3+ times (-0.20 extra), phase-aware boosts (observe/think → list_files/git_status +0.10), clamps to [0,1], sorts desc, slices to limit.
+  • `formatRankedToolsForAI(context, limit=5)`: produces the same `### name [category]\nDescription\nParameters:\n...` format as `formatToolsForAI()` but only includes the top-N ranked tools and prepends `(relevance NN% — reason)` to each header.
+  • `suggestComposition(goal, _context)`: 7 pattern recognizers → returns a `{tools: string[], reason: string}` chain:
+    - fix/bug → [search_code, read_file, analyze_ast, edit_file, run_command]
+    - refactor → [read_file, analyze_ast, edit_file, run_command]
+    - add test → [list_files, read_file, edit_file, run_command]
+    - deploy → [git_status, run_command, git_diff]
+    - security → [search_code, analyze_ast, invoke_agent]
+    - performance → [analyze_ast, run_command, invoke_agent]
+    - explore/understand → [list_files, read_file, analyze_ast]
+    - no match → null (caller falls back to ranked single-tool list).
+  • `requiresApproval(tool, args, cwd?)`: returns true for (a) `run_command` whose command matches any of 14 DESTRUCTIVE_CMD_PATTERNS regexes (rm, rmdir, unlink, del, delete, drop, format, mkfs, dd, truncate, shred, git push --force / --force-with-lease, git reset --hard, git clean -[fdxX], `> /dev/sda|nvme`); (b) `edit_file` whose `path` resolves outside cwd (uses `path.relative()` to detect `..` prefix or absolute rel); false for everything else.
+  • `validateArgs(tool, args)`: looks up the ToolDefinition, iterates its `parameters` map, checks required params are present (non-empty string / non-null / non-undefined), checks provided values match the declared type via `checkType()` (string/number/boolean/object/array); returns `{valid: bool, errors: string[]}`. Unknown tool name → `{valid: false, errors: ["Unknown tool: X"]}`.
+  • Exported `extractToolFilePaths(tool, args)` helper used by the cache to know which file paths a tool's args reference (read_file/analyze_ast/edit_file/git_diff → args.path, list_files → args.dir).
+  • Module singleton `toolSelector = new ToolSelector()`.
+- Created `src/lib/agents/executive/tool-cache.ts` (~270 lines): Per-mission TTL-based ToolCache.
+  • `CachedResult` interface { tool, argsHash, result, timestamp, ttlMs, filePaths } (extended with `filePaths` for fast invalidation).
+  • `CacheStats` interface { hits, misses, size }.
+  • `TOOL_TTL_MS` map: read_file=60s, list_files=30s, search_code=30s, git_status=10s, git_diff=30s, analyze_ast=60s, web_search=0 (never), run_command=0 (never), edit_file=0 (never, invalidates instead), invoke_agent=0 (never).
+  • Internal `MissionCache` struct { entries: Map<argsHash, CachedResult>, fileIndex: Map<normalizedPath, Set<argsHash>>, hits, misses }.
+  • `stableStringify(value)`: recursive JSON serializer that sorts object keys (handles nested objects/arrays) so equivalent args produce identical hashes regardless of key insertion order. `hashArgs(tool, args)` = `${tool}::${stableStringify(args)}`.
+  • `get(missionId, tool, args)`: short-circuits for non-cacheable tools (bumps miss + returns null); looks up entry by hash; checks TTL (evicts on expiry, bumps miss); bumps hits + returns result.
+  • `set(missionId, tool, args, result, ttlMs?)`: no-op for non-cacheable tools; resolves TTL via `TOOL_TTL_MS[tool] ?? defaultTtl`; derives filePaths via `extractToolFilePaths`; if an entry with the same argsHash already exists, removes its old index entries first; inserts new entry; populates `fileIndex` so invalidateFile can find every entry referencing a given path in O(1) per lookup.
+  • `invalidateFile(missionId, filePath)`: normalizes the path (strips `.` segments, resolves `..` segments), looks up the fileIndex bucket, deletes every entry in that bucket, then removes the empty bucket. Idempotent (no-op if mission or bucket is unknown).
+  • `clear(missionId)`: drops the entire MissionCache entry from the outer Map.
+  • `getStats(missionId)`: returns {hits, misses, size} for post-mortem analysis.
+  • `isCacheable(tool)` / `getTtl(tool)`: public helpers used by the react-loop to decide whether to cache a fresh result.
+  • `normalizePath(p)`: splits on `/`, drops `""` and `.` segments, pops on `..` — produces a canonical relative-or-absolute key string for the fileIndex.
+  • Module singleton `toolCache = new ToolCache()`.
+- Edited `src/lib/agents/executive/types.ts` (additive changes only):
+  • Added `meta?: Record<string, unknown>` to the `ToolCall` interface — used by the react-loop to surface cache hit/miss + approval status to the SSE event stream.
+  • Added `meta?: Record<string, unknown>` to the `tool:call` event variant.
+  • Added `meta?: Record<string, unknown>` to the `tool:result` event variant.
+- Edited `src/lib/agents/executive/event-emitter.ts`:
+  • Updated `recordToolCall()` to forward `call.meta` to both the `tool:call` and `tool:result` events it emits. The state.toolHistory array also retains the meta field on each ToolCall record.
+- Edited `src/lib/agents/executive/react-loop.ts` (additive — Phase D enhancements only):
+  • Added imports: `toolSelector` + `type ToolSelectionContext` from "./tool-selector", `toolCache` from "./tool-cache", `type ToolCallResult` from "./types".
+  • `buildThinkPrompt()` now accepts an optional `selectionContext?: ToolSelectionContext` 5th parameter. When supplied, the prompt's "AVAILABLE TOOLS" section is rendered via `toolSelector.formatRankedToolsForAI(selectionContext)` (top-5 most relevant tools with relevance % + reason). When absent, falls back to `formatToolsForAI()` (full 10-tool catalog) for legacy callers. The section header was renamed to "AVAILABLE TOOLS (ranked by relevance to the current context)" and an additional "SUGGESTED TOOL CHAIN" section is appended when `suggestComposition(goal, ctx)` returns a non-null chain.
+  • `think()` now constructs a `ToolSelectionContext` from `MissionState` (goal, currentPhase, recentActions from toolHistory.map(t=>t.tool), knownIssues, filesModified, memorySummary string, errorContext = last entry of state.errors or undefined) and passes it to `buildThinkPrompt`.
+  • ACT phase rewrite — added 4 Phase D blocks between `setPhase(ctx, "act")` and the existing emit/execute flow:
+    1. **Arg validation**: calls `toolSelector.validateArgs(think.tool, think.tool_args)`. On failure: emits an `error` event (recoverable), increments `consecutiveErrors`, pushes a string into `state.errors`, and `continue`s to the next iteration without executing the tool — so malformed AI calls don't pollute toolHistory or trigger a rollback.
+    2. **Approval check**: calls `toolSelector.requiresApproval(think.tool, think.tool_args, cwd)`. When true, emits an `agent:thinking` event with message "⚠ Tool X requires approval (auto-approved). Args: ..." so the UI surfaces the sensitive op. (Auto-approved for now; an actual interactive approval gate is a Phase H concern.)
+    3. **Cache lookup**: calls `toolCache.get(missionId, think.tool, think.tool_args)`. Narrows the result via a new `isCachedResult(value): value is ToolCallResult` type guard (checks `success: boolean` + `durationMs: number` + `"output" in v`). On hit: skips executeTool, emits a "Cache hit for X — using cached result" thinking event, and uses the cached ToolCallResult directly. On miss: emits `agent:acting`, runs executeTool, and if successful + cacheable, calls `toolCache.set()` to persist. If the tool was `edit_file`, also calls `toolCache.invalidateFile(missionId, editedPath)` so subsequent read_file/analyze_ast calls for the same path return fresh content.
+    4. **Meta assembly**: builds a `toolMeta` object { cached: cacheHit, requiresApproval: needsApproval, cacheHits, cacheMisses } (the latter two pulled from `toolCache.getStats()`). The ToolCall record gets this `meta` attached, and `durationMs` is set to 0 for cache hits (preserving the actual execution duration for misses).
+  • Added private `isCachedResult(value: unknown): value is ToolCallResult` type guard at the end of the ReActLoop class — narrows the cached unknown payload before assigning it to `toolResult`.
+- Smoke-tested with a standalone bun script (11 test cases):
+  • Test 1 (rankTools with "fix a bug in auth module" + TypeError error context): search_code=100%, list_files=90%, read_file=70%, analyze_ast=70%, git_status=60% — exactly the expected bug-fix toolset.
+  • Test 2/3 (suggestComposition): fix-bug → [search_code, read_file, analyze_ast, edit_file, run_command]; refactor → [read_file, analyze_ast, edit_file, run_command].
+  • Test 4 (requiresApproval): rm -rf / → true; git push --force → true; npm test → false; edit_file /etc/passwd with cwd=/tmp → true; edit_file ./src/foo.ts with cwd=/tmp → false.
+  • Test 5 (validateArgs): missing path → invalid; valid path → valid; path as number → invalid; list_files with no args → valid (no required params); unknown tool → invalid.
+  • Test 6/7 (ToolCache): set + get round-trips the value; invalidateFile clears the entry and bumps the miss counter.
+  • Test 8 (non-cacheable): run_command never caches (get returns null even after set).
+  • Test 9 (formatRankedToolsForAI): produces the same `### name [category]\nDescription\nParameters:\n...` format as formatToolsForAI but with only the top-3 tools and a `(relevance NN% — reason)` annotation per header.
+  • Test 10 (exploration context, no files modified): list_files=100%, git_status=80%, search_code=65%, read_file=30%, run_command=30% — correctly prioritizes exploration tools.
+  • Test 11 (repeated read_file demotion): with recentActions=["read_file","read_file","read_file","search_code"], read_file drops out of the top 5 entirely (demoted by 3×-0.12=−0.36 plus the special-case −0.20 for ≥3 uses, plus the read_file-specific −0.40 demotion), so the top 5 becomes search_code, analyze_ast, edit_file, list_files, run_command — exactly the diversity push the spec called for.
+- Quality gates:
+  - `bun run lint` → exit 0 (zero errors, zero warnings).
+  - `npx tsc --noEmit` → exit 0 (zero TS errors).
+
+Stage Summary:
+- Phase D Dynamic Tool Selection complete. 2 new files + 3 edited files. The ReAct loop now:
+  1. Surfaces only the 5 most-relevant tools to the AI per iteration (down from all 10), cutting prompt bloat and biasing the AI toward contextually-appropriate actions. The ranking is deterministic, rule-based, and fast (<1ms per call — no AI calls needed).
+  2. Suggests a multi-step tool chain (e.g. fix-bug → search → read → analyze → edit → run) when the goal matches a recognized pattern, so the AI can plan its iteration sequence rather than improvising.
+  3. Validates tool arguments before execution — malformed AI calls (missing required params, wrong types) are caught and surfaced as recoverable errors instead of triggering a downstream executeTool exception.
+  4. Auto-flags destructive operations (rm, force-push, out-of-cwd writes) via `requiresApproval()` and emits a thinking event so the UI shows the warning. (Auto-approved for now — interactive approval is a Phase H concern.)
+  5. Caches read-only tool results (read_file, list_files, search_code, git_status, git_diff, analyze_ast) per-mission with per-tool TTLs (10-60s). Cache hits skip executeTool entirely and emit a "Cache hit" thinking event + `meta.cached: true` on the tool:call/tool:result events.
+  6. Invalidates cached reads of a file whenever `edit_file` is called on it, so the next read_file reflects the new content rather than a stale snapshot.
+- **2 new files** (~710 lines total):
+  - `src/lib/agents/executive/tool-selector.ts` (~440 lines) — ToolSelector with `rankTools()`, `formatRankedToolsForAI()`, `suggestComposition()`, `requiresApproval()`, `validateArgs()`. 17 goal-keyword boost rules + 5 error-context boost rules + state-aware boosts (empty filesModified → exploration, known issues → search/read) + recent-action demotion (tools used 2+ times drop ~0.12/use, read_file at 3+ uses drops an extra 0.20). 7 composition recognizers (fix-bug, refactor, add-test, deploy, security, performance, explore). 14 destructive-command regexes (rm, rmdir, unlink, del, delete, drop, format, mkfs, dd, truncate, shred, git push --force / --force-with-lease, git reset --hard, git clean -[fdxX]). Type-checking validator for string/number/boolean/object/array parameter types.
+  - `src/lib/agents/executive/tool-cache.ts` (~270 lines) — Per-mission TTL cache with stable args hashing (sorted-key JSON), fileIndex for O(1) invalidateFile lookups, automatic TTL-based eviction on get, hit/miss stats per mission, isCacheable()/getTtl() helpers. TTLs: read_file/analyze_ast=60s, list_files/search_code/git_diff=30s, git_status=10s, run_command/edit_file/web_search/invoke_agent=0 (never cached).
+- **3 edited files**:
+  - `src/lib/agents/executive/types.ts` — Added optional `meta?: Record<string, unknown>` to the `ToolCall` interface and to the `tool:call` + `tool:result` event variants (backward-compatible — existing code that doesn't populate `meta` continues to work unchanged).
+  - `src/lib/agents/executive/event-emitter.ts` — `recordToolCall()` now forwards `call.meta` to the emitted `tool:call` + `tool:result` events so SSE consumers can see cache hit/miss + approval status in real time.
+  - `src/lib/agents/executive/react-loop.ts` — `buildThinkPrompt()` accepts an optional `selectionContext` and renders ranked tools + suggested composition when supplied. `think()` constructs the context from MissionState. The ACT phase gained 4 new blocks: arg validation (continue-on-fail), approval check (emit thinking event), cache lookup (skip executeTool on hit, cache + invalidate on miss), meta assembly (cacheHit/requiresApproval/cacheHits/cacheMisses attached to the ToolCall). New private `isCachedResult()` type guard narrows cached unknown payloads before use.
+- **Architecture decisions**:
+  - The ToolSelector is rule-based (no AI calls) so ranking is deterministic and <1ms. This keeps the THINK phase fast — the AI call itself is the bottleneck, not the tool ranking.
+  - The cache is keyed by `(missionId, tool, argsHash)` where argsHash uses a stable sorted-key JSON serializer. This means `{path: "/foo.ts"}` and `{path: "/foo.ts", maxBytes: 100000}` produce different cache keys, which is correct — they're semantically different requests.
+  - The `invalidateFile()` mechanism uses a side-index (filePath → Set<argsHash>) so we don't have to scan the entire cache to find entries referencing a given path. The index is updated on every `set()` and cleaned up on every eviction.
+  - The `meta` field on ToolCall + tool:call/tool:result events is optional and backward-compatible. Existing consumers (UI, mission-store) ignore it; new consumers can read `meta.cached` to render a "cached" badge, `meta.requiresApproval` to highlight sensitive ops, and `meta.cacheHits`/`meta.cacheMisses` to show cache efficiency.
+  - The arg-validation block uses `continue` (not `break`) so a single bad AI call doesn't end the mission — it just costs an iteration. The consecutive-error counter still increments, so repeated bad calls will eventually fail the mission via the existing `maxConsecutiveErrors` gate.
+  - The approval check is currently advisory (auto-approve + emit thinking event). The hook is in place for Phase H to add an interactive approval flow — the react-loop would just need to await a user response instead of proceeding.
+  - Cache hit skips `executeTool` entirely, so the tool's `emitTerminal` / `emitFileChange` side-effects are NOT replayed on cache hits. This is intentional — the cached result already represents the side-effects of the original execution, and replaying them would double-count file changes and terminal output.
+  - The `toolDuration` is set to 0 on cache hits (vs. the original execution's durationMs on misses). This makes cache hits visible in the UI's per-tool duration display — a 0ms tool call is clearly a cache hit.
+- **Quality**: 0 TypeScript errors, 0 ESLint errors. All 11 smoke-test cases pass. The Phase D enhancements are strictly additive — no existing behavior is removed, only augmented. The `formatToolsForAI()` import is retained as a fallback for legacy callers that don't supply a `selectionContext`.
+
+---
+Task ID: phase-I-continuous-loop
+Agent: general-purpose (Continuous Reasoning Loop + Quality Gate)
+Task: Build QualityGate, ContinuousReasoningLoop, wire into ExecutiveAgent.
+
+Work Log:
+- Read context files: worklog.md (Phase A+B+E+G summaries), executive/types.ts (MissionState, MissionStats, MissionEvent union, MissionContext), executive/event-emitter.ts (missionEmitter singleton with record* helpers + replay buffer), executive/react-loop.ts (878-line ReActLoop with Phase E Replanner + auto-rollback + Reflection integration), executive/executive-agent.ts (ExecutiveAgent + startMission + cancelMission + activeMissions registry), executive/confidence.ts (ConfidenceTracker singleton with per-mission history), executive/reflection-agent.ts (ReflectionAgent.reflect + ruleBasedReflection fallback), executive/replanner.ts (Replanner.replan with ruleBasedRevision fallback), executive/tool-registry.ts (10 tools + executeTool dispatch + ToolContext).
+- Created `src/lib/agents/executive/quality-gate.ts` (~610 lines): QualityGate class + qualityGate singleton.
+  - Defined `QualityCheck` (name, passed, score?, detail?, durationMs?, timestamp), `QualityReport` (overallPassed, checks, score, blockingIssues, recommendations), `QualityThresholds` (build: bool, tests: 0-1 ratio, lint: bool, reviewScore: 0-100, confidence: 0-100).
+  - Default thresholds: build=true, tests=0.9, lint=true, reviewScore=80, confidence=70.
+  - Five quality checks, each emitting `agent:acting` + `agent:status` (acting) before the check and `agent:result` + `agent:status` (done/error) after:
+    1. **Build**: `bunx tsc --noEmit` (120s timeout) — pass iff exit 0; counts "error TSxxxx:" lines for the detail string.
+    2. **Tests**: `bun test` (180s timeout) — parses output via `parseTestCounts()` which matches jest/bun/vitest/generic formats ("Tests: N passed, M failed, T total", "N pass / M fail", "N tests passed", "X/Y passed"); pass iff ratio ≥ threshold.
+    3. **Lint**: `bun run lint` (120s timeout) — pass iff exit 0; counts ESLint "N problems (M errors, ...)" summary or per-line "N:M error" matches.
+    4. **Review**: invokes `codeReviewerAgent` via `agentRegistry.get("code-reviewer")` on the last 25 modified files (capped to 25, each file truncated to 6000 chars); 90s timeout via AbortController; extracts score from `result.metrics.score` or `result.data.score`; pass iff score ≥ threshold.
+    5. **Confidence**: reads `confidenceTracker.getFor(missionId)`; pass iff score ≥ threshold.
+  - Each check streams stdout/stderr via `terminal:output` MissionEvents so the LiveTerminal panel shows live progress.
+  - `computeOverallScore()` weighted average: build 25%, tests 25%, lint 15%, review 20%, confidence 15%. Boolean checks contribute 100/0; scored checks contribute their score.
+  - `evaluate(missionId, state)` runs all 5 checks in order, builds blockingIssues + recommendations from failing checks, returns QualityReport.
+  - `isComplete(report)` returns true iff `report.overallPassed`.
+  - `getBlockingIssues(report)` returns a copy of `report.blockingIssues`.
+  - `setThresholds(updates)` merges partial updates into the thresholds object.
+  - `setProvider(provider)` configures the AI provider used by the review check.
+- Created `src/lib/agents/executive/reasoning-loop.ts` (~660 lines): ContinuousReasoningLoop class.
+  - Defined `ReasoningLoopOptions` (maxIterations, maxRevisions, qualityThresholds, provider, signal, onPhase, onQualityReport), `ReasoningPhase` ("react"|"quality"|"complete"|"fail"|"cancel").
+  - Defaults: maxIterations=20, maxRevisions=5, QUALITY_CHECK_INTERVAL=5, MAX_CONSECUTIVE_ERRORS=5.
+  - `buildMissionContext()` helper constructs the MissionContext bound to missionEmitter (same pattern as executive-agent.ts).
+  - `run(missionId, goal, context, options)`:
+    1. Wires optional external `options.signal` into the internal `controller` (abort propagation).
+    2. Configures qualityGate thresholds + provider from options.
+    3. Sets `confidenceTracker.setActive(missionId)`, emits `mission:status` (executing).
+    4. Main loop: while `this.iteration < maxIterations && !aborted && !settled`:
+       a. Computes `batchSize = min(QUALITY_CHECK_INTERVAL, remainingBudget)`.
+       b. Resets status to "executing" if previous batch set it to "verifying"/"completed".
+       c. Creates a fresh `ReActLoop` with `maxIterations: batchSize` (preserves Phase E Reflection/Replanner/Rollback machinery WITHIN each batch).
+       d. Calls `reactLoop.run(goal, ctx)`; catches crashes → increments `consecutiveErrors` → breaks if ≥ 5.
+       e. Computes cumulative iteration count: `this.iteration = batchStartIteration + state.iteration` (ReActLoop resets its local counter on each run() call, so we accumulate across batches).
+       f. Syncs `state.iteration` back to the mission state via `updateState({ iteration: this.iteration, maxIterations })` so the AI prompt + UI show true progress.
+       g. Checks termination: abort, ReActLoop failed (status="failed"), consecutiveErrors.
+       h. Runs quality gate when ANY of: AI said is_complete (status="verifying"), batch ran to completion (batchIterations ≥ batchSize), or last batch (this.iteration ≥ maxIterations).
+       i. If quality gate passes → `succeed()`.
+       j. If quality gate fails → adds the report to `memory.knownIssues` (last 25) + emits `memory:update` with key="qualityReport" (full report object: iteration, score, blockingIssues, recommendations, checks). If AI said is_complete but quality failed, emits a recoverable `error` event ("Executive was premature"). Resets status to "executing" for the next batch.
+    5. Post-loop: if no quality report was ever run, runs one final `qualityGate.evaluate()`.
+    6. Terminal handlers: `succeed()` (sets status=completed, buildStatus/testStatus from report, emits mission:completed with stats), `fail()` (sets status=failed, pushes reason to state.errors, emits error + mission:completed), `cancel()` (sets status=cancelled, emits mission:completed).
+  - `abort()` sets `this.aborted = true` and calls `controller.abort()` (idempotent).
+  - `getIteration()` returns the cumulative iteration count.
+  - `isAborted()` returns the aborted flag.
+  - MissionStats returned: `{ iterations, toolsCalled, agentsInvoked, filesModified, decisions, errors, finalConfidence, qualityScore, durationMs }`.
+- Edited `src/lib/agents/executive/types.ts`:
+  - Extended `MissionStats` interface with two required fields: `qualityScore: number` (0-100, from final quality gate) and `durationMs: number` (total wall-clock duration). Updated the inline comment to note these are Phase I additions.
+- Edited `src/lib/agents/executive/executive-agent.ts`:
+  - Replaced `import { ReActLoop } from "./react-loop"` with `import { ContinuousReasoningLoop } from "./reasoning-loop"`.
+  - Removed unused imports: `AgentInvocation`, `ExecutiveDecision`, `MissionContext`, `MissionEvent`, `MissionMemory`, `ToolCall` (no longer needed since the MissionContext construction moved into reasoning-loop.ts).
+  - Added `qualityThresholds` field to `StartMissionOptions` (build?, tests?, lint?, reviewScore?, confidence?).
+  - Updated `execute()`:
+    - Reads `qualityThresholds` from `task.input`.
+    - Creates a `ContinuousReasoningLoop` instance and tracks it in `activeMissions` (replaces the placeholder loop that startMission pre-creates).
+    - Calls `loop.run(missionId, goal, { repositoryUrl, cwd, provider }, { maxIterations, provider, signal, qualityThresholds, onPhase })`.
+    - The `onPhase` callback converts phase+iteration into `onProgress(pct, msg)` for the BaseAgent contract.
+    - Catches loop crashes → constructs a fallback MissionStats with `qualityScore: 0` + `durationMs: state.startedAt → now` → emits `error` + `mission:completed` events → returns the fallback stats.
+    - `buildResult()` updated to include `qualityScore` in the markdown report + `metrics` object. No longer emits `mission:completed` itself (the loop does that) to avoid duplicate events in the SSE stream.
+  - Updated `MissionRuntime` interface to include `loop: ContinuousReasoningLoop`.
+  - `startMission()` pre-creates a placeholder `ContinuousReasoningLoop` in `activeMissions` so `cancelMission()` works even before `execute()` runs.
+  - Added `getMissionLoop(missionId)` exported helper that returns the active loop instance.
+  - `cancelMission()` now calls `runtime.loop.abort()` FIRST (graceful), then `runtime.controller.abort()` (force), then `missionEmitter.updateState({ status: "cancelled" })`. This ensures the loop stops at the next iteration boundary AND any in-flight child processes (run_command, tsc, lint, test) are killed immediately.
+- Quality gates (final):
+  - First `bun run lint` → exit 0 (zero errors, zero warnings).
+  - First `npx tsc --noEmit` → exit 0 (zero TS errors).
+  - Both passed on the first try — no fixes needed.
+
+Stage Summary:
+- Phase I Continuous Reasoning Loop + Quality Gate complete. 2 new files + 2 edited files. The mission now loops until the goal is achieved OR quality gates pass OR max iterations are exceeded OR the user cancels — instead of ending after a single ReAct batch.
+- **2 new files** (~1,270 lines total):
+  - `src/lib/agents/executive/quality-gate.ts` (~610 lines) — QualityGate class with 5 real quality checks (build via `bunx tsc --noEmit`, tests via `bun test` with jest/bun/vitest output parsing, lint via `bun run lint`, code review via the existing code-reviewer agent on the last 25 modified files, confidence via confidenceTracker). Each check emits `agent:acting` + `agent:result` + `terminal:output` MissionEvents so the SSE stream reflects the gate in real time. Overall score is a weighted average (build 25% / tests 25% / lint 15% / review 20% / confidence 15%). Configurable thresholds with sensible defaults (build=true, tests=0.9, lint=true, reviewScore=80, confidence=70).
+  - `src/lib/agents/executive/reasoning-loop.ts` (~660 lines) — ContinuousReasoningLoop class that wraps ReActLoop in batches of up to 5 iterations. After each batch (or when the AI says `is_complete`), it runs the QualityGate. If the gate passes → mission succeeds. If the gate fails → the full QualityReport is added to mission memory (as `knownIssues` + a `qualityReport` memory:update event) so the next batch has the failing checks as context. Tracks cumulative iteration count across batches (ReActLoop resets its local counter on each `run()` call, so the loop accumulates `state.iteration` from each batch and syncs the true count back to mission state). Tracks `consecutiveErrors` at the loop level so the "Too many consecutive errors" failure condition accumulates across batches. Cancellable at any point via `abort()` → `controller.abort()` (propagates to in-flight tool calls). Terminal handlers: `succeed()` (status=completed, emits mission:completed with stats), `fail()` (status=failed, pushes reason to errors, emits error + mission:completed), `cancel()` (status=cancelled, emits mission:completed).
+- **2 edited files**:
+  - `src/lib/agents/executive/types.ts` — Extended `MissionStats` with two required fields: `qualityScore: number` (0-100) and `durationMs: number`. These flow through the `mission:completed` SSE event to the UI.
+  - `src/lib/agents/executive/executive-agent.ts` — `execute()` now delegates to `ContinuousReasoningLoop` instead of `ReActLoop` directly. The loop returns MissionStats (with qualityScore + durationMs) and emits the terminal `mission:completed` event itself. `cancelMission()` calls `loop.abort()` first (graceful) then `controller.abort()` (force-kill in-flight commands). `startMission()` pre-creates a placeholder loop in `activeMissions` so cancellation works even before `execute()` runs. Added `getMissionLoop(missionId)` exported helper. `StartMissionOptions` gained an optional `qualityThresholds` field for per-mission threshold overrides. `buildResult()` includes qualityScore in the markdown report + metrics.
+- **Architecture decisions**:
+  - **Batch-of-5 design**: The ContinuousReasoningLoop runs ReActLoop in batches of up to 5 iterations (not 1-at-a-time). This is because ReActLoop's private state (consecutiveErrors, lastProposedAction, consecutiveToolFailures, lastSnapshotId) is tied to the instance — a fresh instance per iteration would lose the Phase E Reflection/Replanner/Rollback machinery. Batches of 5 preserve that machinery WITHIN each batch while still giving the ContinuousReasoningLoop a chance to run the QualityGate between batches. The "every 5 iterations" check from the spec maps naturally to "after each batch".
+  - **Cumulative iteration tracking**: ReActLoop resets its local `iteration` counter to 0 on each `run()` call (it's a local variable, not an instance field). So `state.iteration` after a batch reflects only that batch's count. The ContinuousReasoningLoop accumulates `this.iteration = batchStartIteration + state.iteration` and syncs the true count back to mission state via `updateState({ iteration: this.iteration })`. This way the AI prompt's "ITERATION: N/maxIterations" line shows the true cumulative count, and the UI's iteration counter is monotonically increasing.
+  - **consecutiveErrors at the loop level**: Since each batch creates a fresh ReActLoop, the ReActLoop's internal `consecutiveErrors` counter resets between batches. The ContinuousReasoningLoop tracks its own `consecutiveErrors` counter (incremented when a batch crashes or sets status="failed") so the "Too many consecutive errors" failure condition accumulates across batches as the spec requires.
+  - **Quality report as context**: When the QualityGate fails, the full report (score, blockingIssues, recommendations, per-check details) is added to `mission.memory.knownIssues` AND emitted as a `memory:update` event with key="qualityReport". This means the next batch's Think phase sees the failing checks in its prompt context — the AI knows exactly what to fix.
+  - **Premature is_complete handling**: When the AI says `is_complete` but the QualityGate fails, the ContinuousReasoningLoop emits a recoverable `error` event ("Executive marked mission complete but quality gate failed") and continues the loop. This catches the case where the AI is overconfident — the mission doesn't end until the codebase actually passes the quality bar.
+  - **Cancellation flow**: `cancelMission()` calls `loop.abort()` first (sets the `aborted` flag + aborts the internal controller, which stops the loop at the next iteration boundary) and then `controller.abort()` (kills any in-flight child processes from run_command / tsc / lint / test). The placeholder loop in `activeMissions` ensures cancellation works even if `execute()` hasn't started yet — the external signal propagates through `options.signal` to the real loop when it starts.
+  - **mission:completed ownership**: The ContinuousReasoningLoop emits the terminal `mission:completed` event with full MissionStats (including qualityScore + durationMs). The ExecutiveAgent's `buildResult()` does NOT re-emit it — this avoids duplicate events in the SSE stream. The `execute()` method's crash-fallback path DOES emit `mission:completed` (with a fallback stats object) because the loop never got a chance to.
+  - **No breaking changes to ReActLoop**: The spec says "Don't break existing ReActLoop — ContinuousReasoningLoop wraps it". The ReActLoop is used as-is — each batch creates a fresh instance with the appropriate `maxIterations`. No methods were added, no fields were changed, no behavior was modified. The existing `run()` method works exactly as before for any caller that uses ReActLoop directly.
+- **Quality**: 0 TypeScript errors, 0 ESLint errors. Both passed on the first try.

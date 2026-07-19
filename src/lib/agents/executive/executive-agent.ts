@@ -2,11 +2,21 @@
 // Phase A: The main agent that drives the ReAct loop. Extends BaseAgent and
 // exposes a `startMission()` entry-point used by the /api/mission/* routes.
 //
-// The Executive Agent is registered with the agent registry under the
-// "orchestrator" id (reused — the legacy orchestrator remains available via
-// the existing `runAutonomousWorkflow` import). The new agent is invoked
-// directly by the API route via `startMission()`, not through the task queue,
-// so that mission lifecycle + SSE streaming are easy to control.
+// Phase I: The Executive Agent now delegates to a ContinuousReasoningLoop
+// instead of calling ReActLoop directly. The continuous loop:
+//   - Runs ReAct cycles in batches of 1 (preserving ReActLoop's internal
+//     state for the Phase E Reflection/Replanner/Rollback machinery).
+//   - Runs a QualityGate every 5 iterations (and when the AI says
+//     is_complete, and on the final iteration).
+//   - Emits `mission:completed` with MissionStats (including qualityScore
+//     and durationMs) when the gate passes.
+//   - Is cancellable at any point via `cancelMission()` → `loop.abort()`.
+//
+// The agent is registered with the agent registry under the "orchestrator"
+// id (reused — the legacy orchestrator remains available via the existing
+// `runAutonomousWorkflow` import). The new agent is invoked directly by the
+// API route via `startMission()`, not through the task queue, so that
+// mission lifecycle + SSE streaming are easy to control.
 
 import type {
   AgentCapability,
@@ -20,16 +30,10 @@ import { registerAllAgents } from "../index";
 import type { AIProviderConfig } from "../ai-client";
 
 import { missionEmitter } from "./event-emitter";
-import { ReActLoop } from "./react-loop";
+import { ContinuousReasoningLoop } from "./reasoning-loop";
 import type {
-  AgentInvocation,
-  ExecutiveDecision,
-  MissionContext,
-  MissionEvent,
-  MissionMemory,
   MissionState,
   MissionStats,
-  ToolCall,
 } from "./types";
 
 // ── Public startMission options ─────────────────────────────────────────────
@@ -39,6 +43,14 @@ export interface StartMissionOptions {
   cwd?: string;
   provider?: AIProviderConfig;
   maxIterations?: number;
+  /** Phase I: override the default quality thresholds. */
+  qualityThresholds?: {
+    build?: boolean;
+    tests?: number;
+    lint?: boolean;
+    reviewScore?: number;
+    confidence?: number;
+  };
 }
 
 export interface StartMissionResult {
@@ -50,6 +62,8 @@ interface MissionRuntime {
   controller: AbortController;
   startedAt: number;
   promise: Promise<MissionState>;
+  /** Phase I: the continuous reasoning loop driving this mission. */
+  loop: ContinuousReasoningLoop;
 }
 
 const activeMissions = new Map<string, MissionRuntime>();
@@ -61,12 +75,12 @@ class ExecutiveAgentImpl extends BaseAgent {
     id: "orchestrator",
     name: "Executive Agent",
     description:
-      "Autonomous agent that uses a ReAct loop (Observe→Think→Act→Verify→Reflect→Decide) to coordinate the 11 specialist agents and complete software-engineering missions.",
+      "Autonomous agent that uses a continuous ReAct loop (Observe→Think→Act→Verify→Reflect→Quality Gate) to coordinate the 11 specialist agents and complete software-engineering missions.",
     capabilities: [
       {
         kind: "custom",
         description:
-          "Run an autonomous mission with dynamic tool selection via the ReAct loop",
+          "Run an autonomous mission with dynamic tool selection via the continuous ReAct loop",
       },
     ] as AgentCapability[],
     icon: "Cpu",
@@ -95,6 +109,15 @@ class ExecutiveAgentImpl extends BaseAgent {
       typeof task.input.maxIterations === "number"
         ? task.input.maxIterations
         : 25;
+    const qualityThresholds = task.input.qualityThresholds as
+      | {
+          build?: boolean;
+          tests?: number;
+          lint?: boolean;
+          reviewScore?: number;
+          confidence?: number;
+        }
+      | undefined;
 
     // Initialize mission state in the emitter.
     const missionId = task.id;
@@ -108,84 +131,114 @@ class ExecutiveAgentImpl extends BaseAgent {
 
     onProgress(5, "Mission started");
 
-    // Build the MissionContext that the loop will use.
-    const ctx: MissionContext = {
-      missionId,
-      goal,
-      repositoryUrl,
-      cwd,
-      provider,
-      signal,
-      emit: (event: MissionEvent) => missionEmitter.emit(event),
-      getState: () => missionEmitter.getState(missionId)!,
-      updateState: (updates) => missionEmitter.updateState(missionId, updates),
-      updateMemory: (updates: Partial<MissionMemory>) =>
-        missionEmitter.updateMemory(missionId, updates),
-      recordToolCall: (call: ToolCall) =>
-        missionEmitter.recordToolCall(missionId, call),
-      recordAgentInvocation: (inv: AgentInvocation) =>
-        missionEmitter.recordAgentInvocation(missionId, inv),
-      recordDecision: (decision: ExecutiveDecision) =>
-        missionEmitter.recordDecision(missionId, decision),
-      recordFileChange: (p, action, additions, deletions) =>
-        missionEmitter.recordFileChange(missionId, p, action, additions, deletions),
-      recordTerminalOutput: (stream, data) =>
-        missionEmitter.recordTerminalOutput(missionId, stream, data),
-    };
+    // ── Phase I: Continuous Reasoning Loop ──────────────────────────────
+    // The loop wraps the existing ReActLoop and adds the QualityGate. It
+    // returns MissionStats (with qualityScore + durationMs) and emits the
+    // terminal `mission:completed` event itself.
+    const loop = new ContinuousReasoningLoop();
+    // Track the loop so cancelMission() can abort it.
+    const runtime = activeMissions.get(missionId);
+    if (runtime) {
+      // Replace the placeholder runtime with one that knows about the loop.
+      activeMissions.set(missionId, {
+        controller: runtime.controller,
+        startedAt: runtime.startedAt,
+        promise: runtime.promise,
+        loop,
+      });
+    }
 
-    const loop = new ReActLoop(missionId, {
-      maxIterations,
-      provider,
-    });
+    onProgress(10, "Continuous reasoning loop starting");
 
-    onProgress(10, "ReAct loop starting");
-    const finalState = await loop.run(goal, ctx);
+    let stats: MissionStats;
+    try {
+      stats = await loop.run(
+        missionId,
+        goal,
+        { repositoryUrl, cwd, provider },
+        {
+          maxIterations,
+          provider,
+          signal,
+          qualityThresholds,
+          onPhase: (phase, iteration) => {
+            const pct = Math.min(95, 10 + Math.round((iteration / maxIterations) * 80));
+            onProgress(
+              pct,
+              `Phase: ${phase} (iteration ${iteration}/${maxIterations})`,
+            );
+          },
+        },
+      );
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      const state = missionEmitter.getState(missionId);
+      const fallback: MissionStats = {
+        iterations: state?.iteration ?? 0,
+        toolsCalled: state?.toolHistory.length ?? 0,
+        agentsInvoked: state?.agentHistory.length ?? 0,
+        filesModified: state?.filesModified.length ?? 0,
+        decisions: state?.decisions.length ?? 0,
+        errors: (state?.errors.length ?? 0) + 1,
+        finalConfidence: state?.confidence ?? 0,
+        qualityScore: 0,
+        durationMs: state ? Date.now() - state.startedAt : 0,
+      };
+      missionEmitter.updateState(missionId, { status: "failed" });
+      missionEmitter.getState(missionId)?.errors.push(`Loop crashed: ${msg}`);
+      missionEmitter.emit({
+        type: "error",
+        missionId,
+        message: `Loop crashed: ${msg}`,
+        recoverable: false,
+        timestamp: Date.now(),
+      });
+      missionEmitter.emit({
+        type: "mission:completed",
+        missionId,
+        success: false,
+        summary: `Mission crashed: ${msg}`,
+        durationMs: fallback.durationMs,
+        stats: fallback,
+        timestamp: Date.now(),
+      });
+      stats = fallback;
+    }
 
+    const finalState = missionEmitter.getState(missionId);
     onProgress(
       100,
-      finalState.status === "completed"
-        ? `Mission completed (${finalState.iteration} iterations, confidence ${finalState.confidence}%)`
-        : `Mission ${finalState.status}`,
+      finalState?.status === "completed"
+        ? `Mission completed (${stats.iterations} iterations, confidence ${stats.finalConfidence}%, quality ${stats.qualityScore}/100)`
+        : `Mission ${finalState?.status ?? "unknown"}`,
     );
 
-    return this.buildResult(finalState, goal);
+    return this.buildResult(finalState ?? null, goal, stats);
   }
 
-  private buildResult(state: MissionState, goal: string): TaskResult {
-    const stats: MissionStats = {
-      iterations: state.iteration,
-      toolsCalled: state.toolHistory.length,
-      agentsInvoked: state.agentHistory.length,
-      filesModified: state.filesModified.length,
-      decisions: state.decisions.length,
-      errors: state.errors.length,
-      finalConfidence: state.confidence,
-    };
+  private buildResult(
+    state: MissionState | null,
+    goal: string,
+    stats: MissionStats,
+  ): TaskResult {
+    const durationMs = stats.durationMs;
+    const success = state?.status === "completed";
+    const summary = success
+      ? `Mission completed in ${durationMs}ms across ${stats.iterations} iterations (confidence ${stats.finalConfidence}%, quality ${stats.qualityScore}/100). Tools called: ${stats.toolsCalled}. Files modified: ${stats.filesModified}.`
+      : `Mission ${state?.status ?? "unknown"} after ${durationMs}ms (${stats.iterations} iterations). Errors: ${stats.errors}. Quality score: ${stats.qualityScore}/100.`;
 
-    const durationMs = Date.now() - state.startedAt;
-    const summary =
-      state.status === "completed"
-        ? `Mission completed in ${durationMs}ms across ${state.iteration} iterations (confidence ${state.confidence}%). Tools called: ${stats.toolsCalled}. Files modified: ${stats.filesModified}.`
-        : `Mission ${state.status} after ${durationMs}ms (${state.iteration} iterations). Errors: ${state.errors.length}.`;
-
-    // Emit a final mission:completed event for SSE consumers.
-    missionEmitter.emit({
-      type: "mission:completed",
-      missionId: state.missionId,
-      success: state.status === "completed",
-      summary,
-      durationMs,
-      stats,
-      timestamp: Date.now(),
-    });
+    // Note: the ContinuousReasoningLoop already emits the terminal
+    // `mission:completed` event with full MissionStats. We do NOT re-emit
+    // here to avoid duplicate events in the SSE stream.
 
     const report = [
       "# Mission Report",
       "",
       `**Goal:** ${goal}`,
-      `**Status:** ${state.status}`,
-      `**Iterations:** ${state.iteration}/${state.maxIterations}`,
-      `**Confidence:** ${state.confidence}%`,
+      `**Status:** ${state?.status ?? "unknown"}`,
+      `**Iterations:** ${stats.iterations}/${state?.maxIterations ?? "?"}`,
+      `**Confidence:** ${stats.finalConfidence}%`,
+      `**Quality Score:** ${stats.qualityScore}/100`,
       `**Duration:** ${durationMs}ms`,
       `**Tools called:** ${stats.toolsCalled}`,
       `**Agents invoked:** ${stats.agentsInvoked}`,
@@ -194,12 +247,12 @@ class ExecutiveAgentImpl extends BaseAgent {
       `**Errors:** ${stats.errors}`,
       "",
       "## Files Modified",
-      state.filesModified.length === 0
+      !state || state.filesModified.length === 0
         ? "(none)"
         : state.filesModified.map((f) => `- ${f}`).join("\n"),
       "",
       "## Decisions",
-      state.decisions.length === 0
+      !state || state.decisions.length === 0
         ? "(none)"
         : state.decisions
             .slice(-20)
@@ -210,16 +263,18 @@ class ExecutiveAgentImpl extends BaseAgent {
             .join("\n"),
       "",
       "## Errors",
-      state.errors.length === 0 ? "(none)" : state.errors.map((e) => `- ${e}`).join("\n"),
+      !state || state.errors.length === 0
+        ? "(none)"
+        : state.errors.map((e) => `- ${e}`).join("\n"),
     ].join("\n");
 
     return {
-      success: state.status === "completed",
+      success,
       data: {
-        missionId: state.missionId,
-        status: state.status,
+        missionId: state?.missionId ?? "",
+        status: state?.status ?? "failed",
         stats,
-        state,
+        state: state ?? null,
       },
       summary,
       artifacts: [
@@ -236,6 +291,7 @@ class ExecutiveAgentImpl extends BaseAgent {
         agentsInvoked: stats.agentsInvoked,
         filesModified: stats.filesModified,
         finalConfidence: stats.finalConfidence,
+        qualityScore: stats.qualityScore,
       },
     };
   }
@@ -247,8 +303,9 @@ export const executiveAgent = new ExecutiveAgentImpl();
 // ── Public entry-point used by API routes ───────────────────────────────────
 /**
  * Start a mission in the background. Returns immediately with the missionId;
- * the actual ReAct loop runs detached. Subscribe via `missionEmitter.subscribe`
- * or GET /api/mission/stream?missionId=... to follow progress.
+ * the actual ContinuousReasoningLoop runs detached. Subscribe via
+ * `missionEmitter.subscribe` or GET /api/mission/stream?missionId=... to
+ * follow progress.
  */
 export async function startMission(
   options: StartMissionOptions,
@@ -290,6 +347,7 @@ export async function startMission(
       cwd: options.cwd ?? process.cwd(),
       provider: options.provider,
       maxIterations: options.maxIterations ?? 25,
+      qualityThresholds: options.qualityThresholds,
     },
     createdAt: startedAt,
     startedAt,
@@ -319,10 +377,15 @@ export async function startMission(
       return missionEmitter.getState(missionId)!;
     });
 
+  // Pre-register a placeholder runtime so cancelMission() works even before
+  // execute() has had a chance to swap in the loop instance. The placeholder
+  // has a no-op loop wrapper.
+  const placeholderLoop = new ContinuousReasoningLoop();
   activeMissions.set(missionId, {
     controller,
     startedAt,
     promise,
+    loop: placeholderLoop,
   });
 
   // Clean up the activeMissions entry once it settles.
@@ -343,10 +406,24 @@ export async function getMissionState(
   return missionEmitter.getState(missionId);
 }
 
-/** Cancel a running mission. */
+/** Get the ContinuousReasoningLoop driving a mission (if active). */
+export function getMissionLoop(
+  missionId: string,
+): ContinuousReasoningLoop | undefined {
+  return activeMissions.get(missionId)?.loop;
+}
+
+/**
+ * Cancel a running mission. Calls `continuousLoop.abort()` so the loop
+ * stops at the next iteration boundary, and aborts the controller so any
+ * in-flight tool calls (run_command, etc.) are killed immediately.
+ */
 export function cancelMission(missionId: string): boolean {
   const runtime = activeMissions.get(missionId);
   if (!runtime) return false;
+  // Phase I: ask the continuous loop to abort gracefully first, then abort
+  // the controller to kill any in-flight child processes.
+  runtime.loop.abort();
   runtime.controller.abort();
   missionEmitter.updateState(missionId, { status: "cancelled" });
   return true;

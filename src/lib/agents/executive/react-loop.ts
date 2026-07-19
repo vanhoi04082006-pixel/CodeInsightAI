@@ -17,6 +17,9 @@ import * as path from "path";
 import { callAIForJSON } from "@/lib/agents/ai-client";
 import type { AIProviderConfig, AIMessage } from "@/lib/agents/ai-client";
 import { executeTool, formatToolsForAI, type ToolContext } from "./tool-registry";
+import { toolSelector, type ToolSelectionContext } from "./tool-selector";
+import { toolCache } from "./tool-cache";
+import type { ToolCallResult } from "./types";
 import { missionEmitter } from "./event-emitter";
 import { reflectionAgent } from "./reflection-agent";
 import type {
@@ -26,6 +29,8 @@ import type {
 import { confidenceTracker } from "./confidence";
 import { Replanner } from "./replanner";
 import { RollbackManager } from "./rollback";
+import { debateOrchestrator } from "./debate";
+import { detectTopic } from "./consensus";
 import {
   isThinkResponse,
   type ExecutiveDecision,
@@ -99,6 +104,7 @@ function buildThinkPrompt(
   state: MissionState,
   recentHistory: ToolCall[],
   reflectionHint?: string,
+  selectionContext?: ToolSelectionContext,
 ): string {
   const filesModified =
     state.filesModified.length > 0
@@ -130,6 +136,22 @@ function buildThinkPrompt(
       ? `\n\nPREVIOUS REFLECTION SUGGESTED:\n${reflectionHint.trim()}\n`
       : "";
 
+  // Phase D: surface only the top-relevance tools to the AI. If no selection
+  // context is supplied (e.g. legacy callers), fall back to the full catalog.
+  const toolsSection = selectionContext
+    ? toolSelector.formatRankedToolsForAI(selectionContext)
+    : formatToolsForAI();
+
+  // Phase D: when the selector recognizes a complex multi-step goal, suggest
+  // a tool chain so the AI can plan its iteration sequence.
+  let compositionSection = "";
+  if (selectionContext) {
+    const composition = toolSelector.suggestComposition(goal, selectionContext);
+    if (composition) {
+      compositionSection = `\n\nSUGGESTED TOOL CHAIN (for this kind of goal):\n${composition.tools.join(" → ")}\nReason: ${composition.reason}\n`;
+    }
+  }
+
   return `You are an Executive Agent coordinating a software engineering mission.
 
 GOAL: ${goal}
@@ -144,8 +166,8 @@ CURRENT STATE:
 ${knownIssues}
 - Memory: ${memorySummary}
 
-AVAILABLE TOOLS:
-${formatToolsForAI()}
+AVAILABLE TOOLS (ranked by relevance to the current context):
+${toolsSection}${compositionSection}
 
 RECENT HISTORY (last ${recentHistory.length} actions):
 ${historyLines}${reflectionSection}
@@ -352,35 +374,117 @@ export class ReActLoop {
 
         // ── 3. ACT ────────────────────────────────────────────────────────
         setPhase(ctx, "act");
-        this.emitAgentActing(
-          ctx,
+
+        // Phase D: validate tool args before execution. If invalid, surface
+        // the error and continue the loop without consuming a tool-call slot.
+        const validation = toolSelector.validateArgs(think.tool, think.tool_args);
+        if (!validation.valid) {
+          this.emitError(
+            ctx,
+            `Tool arg validation failed for ${think.tool}: ${validation.errors.join("; ")}`,
+            true,
+          );
+          this.consecutiveErrors++;
+          ctx.getState().errors.push(
+            `Arg validation: ${think.tool}: ${validation.errors.join("; ")}`,
+          );
+          continue;
+        }
+
+        // Phase D: check whether this tool call requires human approval.
+        // (For now we auto-approve but emit a thinking event so the UI shows
+        //  that a sensitive operation is about to run — wiring in an actual
+        //  approval gate is a Phase H task.)
+        const cwd = ctx.getState().cwd;
+        const needsApproval = toolSelector.requiresApproval(
           think.tool,
-          `${think.next_action} — args: ${JSON.stringify(think.tool_args).slice(0, 200)}`,
+          think.tool_args,
+          cwd,
         );
+        if (needsApproval) {
+          this.emitAgentThinking(
+            ctx,
+            `⚠ Tool ${think.tool} requires approval (auto-approved). Args: ${JSON.stringify(think.tool_args).slice(0, 160)}`,
+          );
+        }
 
-        const toolCtx: ToolContext = {
-          missionId: this.missionId,
-          cwd: ctx.getState().cwd,
-          signal: ctx.signal,
-          emitTerminal: (stream, data) =>
-            ctx.recordTerminalOutput(stream, data),
-          emitFileChange: (p, action, additions, deletions) =>
-            ctx.recordFileChange(p, action, additions, deletions),
+        // Phase D: check the result cache before executing.
+        const cachedRaw = toolCache.get(this.missionId, think.tool, think.tool_args);
+        const cachedResult =
+          cachedRaw !== null && this.isCachedResult(cachedRaw) ? cachedRaw : null;
+        const cacheHit = cachedResult !== null;
+        let toolResult: ToolCallResult;
+        if (cacheHit) {
+          toolResult = cachedResult;
+          this.emitAgentThinking(
+            ctx,
+            `Cache hit for ${think.tool} — using cached result (skipping execution).`,
+          );
+        } else {
+          this.emitAgentActing(
+            ctx,
+            think.tool,
+            `${think.next_action} — args: ${JSON.stringify(think.tool_args).slice(0, 200)}`,
+          );
+
+          const toolCtx: ToolContext = {
+            missionId: this.missionId,
+            cwd,
+            signal: ctx.signal,
+            provider: this.provider,
+            emitTerminal: (stream, data) =>
+              ctx.recordTerminalOutput(stream, data),
+            emitFileChange: (p, action, additions, deletions) =>
+              ctx.recordFileChange(p, action, additions, deletions),
+          };
+
+          toolResult = await executeTool(think.tool, think.tool_args, toolCtx);
+
+          // Phase D: cache the fresh result if the tool is cacheable.
+          if (toolResult.success && toolCache.isCacheable(think.tool)) {
+            toolCache.set(
+              this.missionId,
+              think.tool,
+              think.tool_args,
+              toolResult,
+            );
+          }
+
+          // Phase D: edit_file invalidates any cached reads of that path so
+          // the next read_file reflects the new content.
+          if (
+            think.tool === "edit_file" &&
+            typeof think.tool_args.path === "string" &&
+            think.tool_args.path
+          ) {
+            const editedPath = path.isAbsolute(think.tool_args.path)
+              ? think.tool_args.path
+              : path.resolve(cwd, think.tool_args.path);
+            toolCache.invalidateFile(this.missionId, editedPath);
+          }
+        }
+
+        // Phase D: metadata to surface cache hit/miss + approval status.
+        const toolMeta: Record<string, unknown> = {
+          cached: cacheHit,
+          requiresApproval: needsApproval,
         };
+        const cacheStats = toolCache.getStats(this.missionId);
+        toolMeta.cacheHits = cacheStats.hits;
+        toolMeta.cacheMisses = cacheStats.misses;
 
-        const toolStart = Date.now();
-        const toolResult = await executeTool(think.tool, think.tool_args, toolCtx);
-        const toolDuration = Date.now() - toolStart;
+        const toolDuration = cacheHit ? 0 : toolResult.durationMs;
 
         const toolCall: ToolCall = {
           id: missionEmitter.nextId("tool"),
           tool: think.tool,
           args: think.tool_args,
           result: toolResult.output,
-          timestamp: toolStart,
+          timestamp: Date.now(),
           success: toolResult.success,
           durationMs: toolDuration,
           error: toolResult.error,
+          meta: toolMeta,
         };
 
         // ── 4. VERIFY ─────────────────────────────────────────────────────
@@ -565,6 +669,14 @@ export class ReActLoop {
           }
         }
 
+        // ── Phase C: Auto-Debate Trigger ──────────────────────────────────
+        // When the mission is stuck (low confidence + repeated tool failures
+        // OR the Reflection Agent says the plan is wrong), automatically
+        // trigger a multi-agent debate to break the impasse. The debate cap
+        // (5 per mission) is enforced inside the orchestrator, so this call
+        // is safe to attempt every iteration.
+        await this.maybeAutoDebate(ctx, think, toolResult, reflection);
+
         // ── 6. DECIDE (continue loop) ─────────────────────────────────────
         // Already emitted `react:phase` for decide above for the early-exit
         // case. Here we just continue to the next iteration.
@@ -692,11 +804,32 @@ export class ReActLoop {
     reflectionHint?: string | null,
   ): Promise<ThinkResponse> {
     const recentHistory = state.toolHistory.slice(-5);
+
+    // Phase D: build a tool-selection context from mission state so the
+    // selector can rank tools by relevance to the current situation.
+    const selectionContext: ToolSelectionContext = {
+      goal,
+      currentPhase: state.currentPhase,
+      recentActions: state.toolHistory.map((t) => t.tool),
+      knownIssues: state.memory.knownIssues,
+      filesModified: state.filesModified,
+      memorySummary: [
+        `keyFiles=${state.memory.keyFiles.size}`,
+        `archNotes=${state.memory.architectureNotes.length}`,
+        `attempted=${state.memory.attemptedFixes.length}`,
+      ].join(" "),
+      errorContext:
+        state.errors.length > 0
+          ? state.errors[state.errors.length - 1]
+          : undefined,
+    };
+
     const prompt = buildThinkPrompt(
       goal,
       state,
       recentHistory,
       reflectionHint ?? undefined,
+      selectionContext,
     );
 
     const messages: AIMessage[] = [
@@ -786,6 +919,125 @@ export class ReActLoop {
     // For other tools, no special assimilation — the AI sees raw output.
   }
 
+  // ── Phase C: Auto-debate trigger ──────────────────────────────────────────
+  /**
+   * If the mission is stuck (low confidence + repeated failures OR the
+   * Reflection Agent says the plan itself is wrong), automatically trigger a
+   * multi-agent debate to break the impasse. The debate winner + reasoning
+   * is fed back into the next Think phase via `lastProposedAction` so the
+   * Executive considers the debate outcome before its next move.
+   *
+   * Conditions (all must hold):
+   *   - Confidence < 50%
+   *   - AND (reflection.shouldReplan OR consecutiveToolFailures >= 2 OR
+   *          last tool failed with a non-trivial error)
+   *   - AND a debate cap slot is available (orchestrator enforces this)
+   *   - AND a provider is configured
+   *
+   * Never throws — failures degrade silently (the loop continues normally).
+   */
+  private async maybeAutoDebate(
+    ctx: MissionContext,
+    think: ThinkResponse,
+    toolResult: { success: boolean; error?: string; output: unknown },
+    reflection: ReflectionResult,
+  ): Promise<void> {
+    const state = ctx.getState();
+    const confidence = state.confidence;
+    const stuckSignal =
+      reflection.shouldReplan ||
+      this.consecutiveToolFailures >= 2 ||
+      (!toolResult.success && !!toolResult.error);
+
+    if (confidence >= 50 || !stuckSignal) return;
+    if (debateOrchestrator.getDebateCount(this.missionId) >= 5) return;
+
+    // Build a focused debate question from the current situation.
+    const lastAction = think.next_action || "(no action)";
+    const failureMode = toolResult.success
+      ? "succeeded but confidence remains low"
+      : `failed: ${toolResult.error ?? "unknown error"}`;
+    const reflectionHint = reflection.rootCause || reflection.analysis.slice(0, 120);
+    const question =
+      `We're stuck at iteration ${state.iteration} (confidence ${confidence}%). ` +
+      `Last action "${lastAction}" ${failureMode}. ` +
+      `Reflection: ${reflectionHint}. ` +
+      `Should we retry, replan, escalate, or try a different approach?`;
+
+    // Auto-select participants: Executive + topic expert + 2 generalists.
+    const expert = detectTopic(question);
+    const participants = ["orchestrator"];
+    if (expert) participants.push(expert);
+    participants.push("code-reviewer", "bug-fixer");
+
+    const memorySummary = [
+      `knownIssues: ${state.memory.knownIssues.length}`,
+      `architectureNotes: ${state.memory.architectureNotes.length}`,
+      `attemptedFixes: ${state.memory.attemptedFixes.length}`,
+      `keyFiles: ${state.memory.keyFiles.size}`,
+      state.memory.knownIssues.slice(-3).join(" | "),
+    ]
+      .filter((s) => s.trim().length > 0)
+      .join("; ");
+    const recentActions = state.toolHistory
+      .slice(-5)
+      .map(
+        (t) =>
+          `${t.tool}(${JSON.stringify(t.args).slice(0, 80)}) → ${t.success ? "OK" : "FAIL"}`,
+      );
+
+    this.emitAgentThinking(
+      ctx,
+      `Auto-debate triggered (confidence ${confidence}%, stuck signal: ${
+        reflection.shouldReplan
+          ? "shouldReplan"
+          : `${this.consecutiveToolFailures} tool failures`
+      }). Question: "${question.slice(0, 100)}"`,
+      confidence,
+    );
+
+    try {
+      const result = await debateOrchestrator.debate(
+        this.missionId,
+        question,
+        participants,
+        {
+          goal: state.goal || ctx.goal || "(unknown goal)",
+          memory: memorySummary,
+          recentActions,
+        },
+        this.provider,
+        ctx.signal,
+      );
+      if (result && result.winner) {
+        // Feed the debate winner back into the next Think phase so the
+        // Executive Agent reasons about it explicitly. We also nudge
+        // confidence upward to reflect that the team reached consensus.
+        this.lastProposedAction =
+          `Per debate (consensus ${result.consensusLevel}%): ${result.winner.proposal} — ${result.executiveDecision}`;
+        confidenceTracker.adjustFor(
+          this.missionId,
+          Math.max(5, Math.round(result.consensusLevel / 10)),
+          `Debate reached ${result.consensusLevel}% consensus — boosting confidence.`,
+        );
+        // Persist a memory note about the debate outcome.
+        const notes = [...state.memory.architectureNotes];
+        notes.push(
+          `[debate] Q: ${question.slice(0, 80)} → A: ${result.winner.proposal.slice(0, 120)} (${result.consensusLevel}% consensus)`,
+        );
+        ctx.updateMemory({ architectureNotes: notes.slice(-25) });
+      } else if (result) {
+        // Debate ran but produced no winner — note it.
+        this.lastProposedAction = null;
+      }
+      // If result is null, the debate was skipped (cap or no provider) —
+      // do nothing and let the loop continue normally.
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      this.emitError(ctx, `Auto-debate failed (continuing): ${msg}`, true);
+    }
+  }
+
   // ── Phase E: Destructive-action detection ────────────────────────────────
   /**
    * Heuristic: does this tool mutate the filesystem (and therefore warrant
@@ -873,5 +1125,21 @@ export class ReActLoop {
     }
 
     return Array.from(files);
+  }
+
+  // ── Phase D: cached-result type guard ──────────────────────────────────────
+  /**
+   * Narrow an unknown cached value to a `ToolCallResult`. The cache only ever
+   * stores `ToolCallResult` objects (set exclusively by this loop), but we
+   * still type-guard at retrieval time to be safe against future producers.
+   */
+  private isCachedResult(value: unknown): value is ToolCallResult {
+    if (!value || typeof value !== "object") return false;
+    const v = value as Record<string, unknown>;
+    return (
+      typeof v.success === "boolean" &&
+      typeof v.durationMs === "number" &&
+      "output" in v
+    );
   }
 }
