@@ -24,6 +24,7 @@ import { useAppStore } from "@/lib/store";
 import type { AnalysisReport } from "@/lib/types";
 import { useT } from "@/lib/i18n";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 interface HistoryItem {
   id: string;
@@ -52,6 +53,7 @@ export function HistoryView() {
   const setView = useAppStore((s) => s.setView);
   const setActiveReport = useAppStore((s) => s.setActiveReport);
   const [filter, setFilter] = useState("");
+  const [sortBy, setSortBy] = useState<"date" | "score" | "name">("date");
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
   const { data, isLoading, refetch } = useQuery({
@@ -63,12 +65,18 @@ export function HistoryView() {
     },
   });
 
-  const items = (data ?? []).filter(
-    (i) =>
-      !filter ||
-      `${i.repoOwner}/${i.repoName}`.toLowerCase().includes(filter.toLowerCase()) ||
-      (i.primaryLanguage ?? "").toLowerCase().includes(filter.toLowerCase())
-  );
+  const items = (data ?? [])
+    .filter(
+      (i) =>
+        !filter ||
+        `${i.repoOwner}/${i.repoName}`.toLowerCase().includes(filter.toLowerCase()) ||
+        (i.primaryLanguage ?? "").toLowerCase().includes(filter.toLowerCase())
+    )
+    .sort((a, b) => {
+      if (sortBy === "score") return b.overallScore - a.overallScore;
+      if (sortBy === "name") return `${a.repoOwner}/${a.repoName}`.localeCompare(`${b.repoOwner}/${b.repoName}`);
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
 
   const open = async (item: HistoryItem) => {
     try {
@@ -131,8 +139,8 @@ export function HistoryView() {
         </Button>
       </motion.div>
 
-      <div className="mt-5">
-        <div className="relative">
+      <div className="mt-5 flex flex-wrap items-center gap-2">
+        <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={filter}
@@ -140,6 +148,24 @@ export function HistoryView() {
             placeholder={t("history", "searchPlaceholder")}
             className="bg-white/[0.03] pl-9"
           />
+        </div>
+        <div className="flex items-center gap-1 rounded-lg border border-white/10 bg-white/[0.02] p-0.5">
+          {([
+            { id: "date", label: "Date" },
+            { id: "score", label: "Score" },
+            { id: "name", label: "Name" },
+          ] as const).map((s) => (
+            <button
+              key={s.id}
+              onClick={() => setSortBy(s.id)}
+              className={cn(
+                "rounded-md px-2.5 py-1 text-xs transition",
+                sortBy === s.id ? "bg-white/5 text-cyan-300" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {s.label}
+            </button>
+          ))}
         </div>
       </div>
 

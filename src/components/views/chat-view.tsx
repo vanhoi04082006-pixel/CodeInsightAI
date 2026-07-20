@@ -16,6 +16,8 @@ import {
   Gauge,
   Network,
   Code2,
+  Check,
+  Copy,
 } from "lucide-react";
 import { GlassCard, GradientText } from "@/components/shared/ui";
 import { DeveloperPanel, LogViewer } from "@/components/shared/debug-panel";
@@ -453,25 +455,83 @@ function Avatar({ role }: { role: "user" | "assistant" }) {
 
 /* Lightweight markdown renderer */
 function MarkdownLite({ content }: { content: string }) {
-  const lines = content.split("\n");
+  const blocks = parseCodeBlocks(content);
   return (
     <div className="space-y-1.5">
-      {lines.map((line, i) => {
-        if (line.startsWith("### ")) return <h4 key={i} className="mt-2 text-sm font-bold">{line.slice(4)}</h4>;
-        if (line.startsWith("## ")) return <h3 key={i} className="mt-2 text-base font-bold">{line.slice(3)}</h3>;
-        if (line.startsWith("# ")) return <h2 key={i} className="mt-2 text-lg font-bold">{line.slice(2)}</h2>;
-        if (line.startsWith("- ") || line.startsWith("* ")) {
-          return (
-            <div key={i} className="flex gap-2">
-              <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-cyan-400" />
-              <span>{renderInline(line.slice(2))}</span>
-            </div>
-          );
+      {blocks.map((block, i) => {
+        if (block.type === "code") {
+          return <CodeBlock key={i} code={block.content} lang={block.lang || "text"} />;
         }
-        if (line.startsWith("```")) return null;
-        if (line.trim() === "") return <div key={i} className="h-1" />;
-        return <p key={i} className="leading-relaxed">{renderInline(line)}</p>;
+        // It's text — render line by line
+        const lines = block.content.split("\n");
+        return (
+          <div key={i} className="space-y-1.5">
+            {lines.map((line, j) => {
+              const key = `${i}-${j}`;
+              if (line.startsWith("### ")) return <h4 key={key} className="mt-2 text-sm font-bold">{renderInline(line.slice(4))}</h4>;
+              if (line.startsWith("## ")) return <h3 key={key} className="mt-2 text-base font-bold">{renderInline(line.slice(3))}</h3>;
+              if (line.startsWith("# ")) return <h2 key={key} className="mt-2 text-lg font-bold">{renderInline(line.slice(2))}</h2>;
+              if (line.startsWith("- ") || line.startsWith("* ")) {
+                return (
+                  <div key={key} className="flex gap-2">
+                    <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-cyan-400" />
+                    <span>{renderInline(line.slice(2))}</span>
+                  </div>
+                );
+              }
+              if (line.startsWith("> ")) {
+                return <blockquote key={key} className="border-l-2 border-cyan-400/40 pl-3 text-muted-foreground">{renderInline(line.slice(2))}</blockquote>;
+              }
+              if (line.trim() === "") return <div key={key} className="h-1" />;
+              return <p key={key} className="leading-relaxed">{renderInline(line)}</p>;
+            })}
+          </div>
+        );
       })}
+    </div>
+  );
+}
+
+// Parse content into text blocks and code blocks
+function parseCodeBlocks(content: string): { type: "text" | "code"; content: string; lang?: string }[] {
+  const blocks: { type: "text" | "code"; content: string; lang?: string }[] = [];
+  const regex = /```(\w*)\n?([\s\S]*?)```/g;
+  let last = 0;
+  let m: RegExpExecArray | null;
+
+  while ((m = regex.exec(content)) !== null) {
+    if (m.index > last) {
+      blocks.push({ type: "text", content: content.slice(last, m.index) });
+    }
+    blocks.push({ type: "code", lang: m[1] || "text", content: m[2].trim() });
+    last = m.index + m[0].length;
+  }
+  if (last < content.length) {
+    blocks.push({ type: "text", content: content.slice(last) });
+  }
+  return blocks.length > 0 ? blocks : [{ type: "text", content }];
+}
+
+// Code block with copy button + syntax highlighting
+function CodeBlock({ code, lang }: { code: string; lang: string }) {
+  const [copied, setCopied] = useState(false);
+  const copy = () => {
+    navigator.clipboard.writeText(code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  return (
+    <div className="my-2 overflow-hidden rounded-xl border border-white/10 bg-black/40">
+      <div className="flex items-center justify-between border-b border-white/5 px-3 py-1.5">
+        <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">{lang}</span>
+        <button onClick={copy} className="flex items-center gap-1 text-[10px] text-muted-foreground transition hover:text-cyan-300">
+          {copied ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+          {copied ? "Copied" : "Copy"}
+        </button>
+      </div>
+      <pre className="overflow-x-auto p-3 text-[12px] leading-relaxed scrollbar-thin">
+        <code className="font-mono text-cyan-100/90">{code}</code>
+      </pre>
     </div>
   );
 }
