@@ -543,10 +543,75 @@ button:active:not(:disabled) {
   animation: glow-pulse 2s ease-in-out infinite;
 }
 
+/* ═══ Custom Cursor — hide default cursor on desktop ═══ */
+@media (hover: hover) and (pointer: fine) {
+  * {
+    cursor: none !important;
+  }
+}
+
 /* Ripple effect on click */
 @keyframes ripple {
   to {
     transform: scale(4);
     opacity: 0;
   }
+}
+
+/* Button ripple — pseudo-element ripple on active */
+.btn-ripple {
+  position: relative;
+  overflow: hidden;
+}
+.btn-ripple:active::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translate(-50%, -50%) scale(0);
+  animation: ripple 0.5s ease-out;
+  pointer-events: none;
+}
+
+/* Shimmer effect for loading/skeletons */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.02) 25%,
+    rgba(255, 255, 255, 0.06) 50%,
+    rgba(255, 255, 255, 0.02) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Glow pulse for active elements */
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(34, 211, 238, 0.2); }
+  50% { box-shadow: 0 0 20px rgba(34, 211, 238, 0.4); }
+}
+.glow-pulse {
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
+/* Card hover lift */
+.card-lift {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease;
+}
+.card-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px -8px rgba(34, 211, 238, 0.15);
+}
+
+/* Smooth scroll for whole page */
+html {
+  scroll-behavior: smooth;
 }

@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useAppStore } from "@/lib/store";
 import { useT } from "@/lib/i18n";
 import { AnimatedBackground } from "@/components/shared/animated-background";
+import { CustomCursor } from "@/components/shared/custom-cursor";
 import { AppSidebar, AppTopbar, MobileNav } from "@/components/shared/app-shell";
 import dynamic from "next/dynamic";
 import { LandingView } from "@/components/views/landing-view";
@@ -178,6 +179,7 @@ export default function Home() {
 
       <MobileNav />
       <CommandPalette />
+      <CustomCursor />
     </div>
   );
 }

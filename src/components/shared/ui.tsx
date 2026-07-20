@@ -20,13 +20,13 @@ export function GlassCard({
 }) {
   return (
     <motion.div
-      whileHover={hover ? { y: -6, scale: 1.01, transition: { duration: 0.3, ease: [0.16, 1, 0.3, 1] } } : undefined}
+      whileHover={hover ? { y: -4, transition: { duration: 0.25, ease: [0.16, 1, 0.3, 1] } } : undefined}
       className={cn(
         strong ? "glass-strong" : "glass-card",
-        "group relative overflow-hidden rounded-2xl transition-shadow duration-300",
+        "group relative overflow-hidden rounded-2xl transition-all duration-300",
         glow === "cyan" && "neon-glow-cyan",
         glow === "violet" && "neon-glow-violet",
-        hover && "hover:shadow-2xl",
+        hover && "card-lift hover:shadow-2xl hover:border-cyan-400/20",
         className
       )}
     >
