@@ -84,7 +84,6 @@
   "faqA5": "OpenRouter, OpenAI, Anthropic (Claude), Google Gemini, DeepSeek, Groq, Ollama, LM Studio, Azure OpenAI, Together AI, Fireworks AI, Mistral, xAI (Grok), và bất kỳ custom endpoint tương thích OpenAI. Bạn có thể kết nối không giới hạn provider.",
   "faqQ6": "Tôi có thể phân tích private repository không?",
   "faqA6": "Có. Vì phân tích chạy qua API key của riêng bạn và chạy local, private repo không bao giờ đi qua SaaS bên thứ ba. Clone repo local và trỏ CodeInsight vào, hoặc dán URL mà provider có thể truy cập.",
-
   "nav": {
     "features": "Tính năng",
     "howItWorks": "Cách hoạt động",
@@ -93,7 +92,6 @@
     "launch": "Khởi động App",
     "openMenu": "Mở menu"
   },
-
   "hero": {
     "badge": "Hệ điều hành AI",
     "headline": "Dán GitHub Repo. AI Hiểu Tất Cả.",
@@ -107,18 +105,15 @@
     "badgeNoSubs": "Không Subscription",
     "badgeProviders": "14 Providers"
   },
-
   "trust": {
     "label": "ĐƯỢC DEVELOPER TIN DÙNG"
   },
-
   "stats": {
     "agents": "AI Agent",
     "providers": "Provider",
     "rules": "Quy tắc phân tích",
     "subscriptions": "Subscription"
   },
-
   "feature": {
     "multiagent": {
       "title": "Hệ thống Multi-Agent",
@@ -155,7 +150,6 @@
       "architectureDesc": "Circular dependency, dead code, module coupling, và đồ thị dependency đầy đủ."
     }
   },
-
   "how": {
     "step1": {
       "title": "Dán URL Repository",
@@ -170,12 +164,10 @@
       "desc": "Score, issue, diagram, và AI CTO sẵn sàng chat về code. Ship fix với một cú click."
     }
   },
-
   "providers": {
     "connect": "Kết nối",
     "viewAll": "Xem tất cả provider"
   },
-
   "pricing": {
     "title": "Bảng giá cho mọi team",
     "desc": "Không subscription, không billing — mang AI key của bạn. Bảng giá dưới đây là mức bạn sẽ trả nếu chúng tôi tính phí. Hôm nay: hoàn toàn miễn phí.",
@@ -204,13 +196,11 @@
     "enterpriseF3": "Custom agent pipeline",
     "enterpriseF4": "Audit log & SSO ready"
   },
-
   "finalCta": {
     "title": "Sẵn sàng Ship Code với AI?",
     "desc": "Khởi động CodeInsight AI, dán repo, và xem 11 agent làm việc của một team engineering cấp cao — trong 60 giây.",
     "button": "Khởi động CodeInsight AI"
   },
-
   "footer": {
     "tagline": "Nền tảng phát triển AI local-first.",
     "product": "Sản phẩm",
@@ -234,5 +224,7 @@
     "legalSecurity": "Bảo mật",
     "legalLicense": "License",
     "copyright": "© 2026 CodeInsight AI. Xây cho developer, bởi developer."
-  }
+  },
+  "pricingEyebrow": "Bảng giá",
+  "pricingDesc": "CodeInsight AI là local-first. Mang API key của bạn. Không phí ẩn."
 }

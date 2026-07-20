@@ -496,6 +496,86 @@ export function LandingView() {
         </div>
       </section>
 
+      {/* ============ PRICING ============ */}
+      <section className="relative px-4 py-24">
+        <div className="mx-auto max-w-5xl">
+          <SectionTitle
+            center
+            eyebrow={t("landing", "pricingEyebrow") || "Pricing"}
+            title={<>Free forever. <GradientText>No subscriptions.</GradientText></>}
+            description={t("landing", "pricingDesc") || "CodeInsight AI is local-first. Bring your own AI keys. No hidden fees."}
+          />
+          <div className="mt-14 grid gap-5 md:grid-cols-3">
+            {[
+              {
+                name: "Free",
+                price: "$0",
+                desc: "Everything you need",
+                features: ["All 11 AI agents", "Unlimited analyses", "66 analysis rules", "14 AI providers", "Local SQLite DB", "Mission Control"],
+                color: "#22d3ee",
+                highlight: false,
+              },
+              {
+                name: "Self-Hosted",
+                price: "$0",
+                desc: "Full control",
+                features: ["Everything in Free", "Custom personalities", "Plugin SDK", "Developer Mode", "Git Intelligence", "Terminal sandbox"],
+                color: "#a78bfa",
+                highlight: true,
+              },
+              {
+                name: "Enterprise",
+                price: "Contact",
+                desc: "For teams",
+                features: ["Everything in Self-Hosted", "Team shared analyses", "SSO + Audit logs", "Priority support", "Custom integrations", "On-premise deploy"],
+                color: "#34d399",
+                highlight: false,
+              },
+            ].map((plan, i) => (
+              <motion.div
+                key={plan.name}
+                initial={{ opacity: 0, y: 24 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-80px" }}
+                transition={{ duration: 0.5, delay: i * 0.08 }}
+              >
+                <GlassCard
+                  className={`relative h-full p-6 ${plan.highlight ? "border-violet-400/40" : ""}`}
+                  glow={plan.highlight ? "violet" : "none"}
+                >
+                  {plan.highlight && (
+                    <span
+                      className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full px-3 py-0.5 text-[10px] font-bold uppercase tracking-wider"
+                      style={{ background: plan.color, color: "#050507" }}
+                    >
+                      Popular
+                    </span>
+                  )}
+                  <h3 className="text-lg font-bold" style={{ color: plan.color }}>{plan.name}</h3>
+                  <p className="mt-1 text-3xl font-bold">{plan.price}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{plan.desc}</p>
+                  <div className="mt-4 space-y-2">
+                    {plan.features.map((f) => (
+                      <div key={f} className="flex items-center gap-2 text-sm">
+                        <Check className="h-3.5 w-3.5 shrink-0" style={{ color: plan.color }} />
+                        <span className="text-muted-foreground">{f}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <Button
+                    onClick={() => setView("analyze")}
+                    variant="outline"
+                    className={`mt-6 w-full ${plan.highlight ? "border-violet-400/40 text-violet-300 hover:bg-violet-400/10" : ""}`}
+                  >
+                    {plan.price === "Contact" ? "Contact Us" : "Get Started"}
+                  </Button>
+                </GlassCard>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ============ FAQ ============ */}
       <section className="relative px-4 py-24">
         <div className="mx-auto max-w-3xl">

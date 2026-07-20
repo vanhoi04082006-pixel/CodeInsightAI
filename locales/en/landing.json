@@ -84,7 +84,6 @@
   "faqA5": "OpenRouter, OpenAI, Anthropic (Claude), Google Gemini, DeepSeek, Groq, Ollama, LM Studio, Azure OpenAI, Together AI, Fireworks AI, Mistral, xAI (Grok), and any OpenAI-compatible custom endpoint. You can connect unlimited providers.",
   "faqQ6": "Can I analyze private repositories?",
   "faqA6": "Yes. Because the analysis runs through your own AI keys and runs locally, private repos never pass through a third-party SaaS. Clone the repo locally and point CodeInsight at it, or paste a URL your provider can reach.",
-
   "nav": {
     "features": "Features",
     "howItWorks": "How It Works",
@@ -93,7 +92,6 @@
     "launch": "Launch App",
     "openMenu": "Open menu"
   },
-
   "hero": {
     "badge": "AI Operating System",
     "headline": "Paste a GitHub Repo. AI Understands Everything.",
@@ -107,18 +105,15 @@
     "badgeNoSubs": "No Subscriptions",
     "badgeProviders": "14 Providers"
   },
-
   "trust": {
     "label": "TRUSTED BY DEVELOPERS"
   },
-
   "stats": {
     "agents": "AI Agents",
     "providers": "Providers",
     "rules": "Analysis Rules",
     "subscriptions": "Subscriptions"
   },
-
   "feature": {
     "multiagent": {
       "title": "Multi-Agent System",
@@ -155,7 +150,6 @@
       "architectureDesc": "Circular dependencies, dead code, module coupling, and a full dependency graph."
     }
   },
-
   "how": {
     "step1": {
       "title": "Paste Repository URL",
@@ -170,12 +164,10 @@
       "desc": "Scores, issues, diagrams, and an AI CTO ready to chat about your code. Ship fixes with one click."
     }
   },
-
   "providers": {
     "connect": "Connect",
     "viewAll": "View all providers"
   },
-
   "pricing": {
     "title": "Pricing for every team",
     "desc": "No subscriptions, no billing — bring your own AI keys. Pricing below is what you'd pay if we ever charged. Today: it's free.",
@@ -204,13 +196,11 @@
     "enterpriseF3": "Custom agent pipelines",
     "enterpriseF4": "Audit logs & SSO ready"
   },
-
   "finalCta": {
     "title": "Ready to Ship Code with AI?",
     "desc": "Launch CodeInsight AI, paste a repo, and watch eleven agents do the work of a senior engineering team — in 60 seconds.",
     "button": "Launch CodeInsight AI"
   },
-
   "footer": {
     "tagline": "Local-first AI development platform.",
     "product": "Product",
@@ -234,5 +224,7 @@
     "legalSecurity": "Security",
     "legalLicense": "License",
     "copyright": "© 2026 CodeInsight AI. Built for developers, by developers."
-  }
+  },
+  "pricingEyebrow": "Pricing",
+  "pricingDesc": "CodeInsight AI is local-first. Bring your own AI keys. No hidden fees."
 }
