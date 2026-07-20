@@ -1,113 +1,37 @@
-// CodeInsight AI — Prisma schema (LOCAL — SQLite)
-//
-// This is the DEFAULT schema used for local development. It targets SQLite so
-// the app runs offline with zero setup — Prisma creates the DB file on first
-// `bun run db:push`. Set DATABASE_URL="file:./db/local.db" in your local .env.
-//
-// For PRODUCTION (Vercel + Neon Postgres), the equivalent PostgreSQL schema
-// lives in `prisma/schema.prod.prisma`. The Vercel build switches to it via
-// the PRISMA_SCHEMA env var — see vercel.json and DEPLOY.md.
-//
-// IMPORTANT: when you add/remove/rename a model or field here, mirror the
-// change in `prisma/schema.prod.prisma`. Keep the two files in sync.
-
+// CodeInsight AI — Prisma schema (PostgreSQL for production/SaaS)
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-model Analysis {
-  id                 String   @id @default(cuid())
-  repoUrl            String
-  repoOwner          String
-  repoName           String
-  repoBranch         String   @default("main")
-  status             String   @default("completed") // completed | analyzing | failed
-  
-  // Scores
-  overallScore       Int      @default(0)
-  securityScore      Int      @default(0)
-  performanceScore   Int      @default(0)
-  architectureScore  Int      @default(0)
-  maintainabilityScore Int    @default(0)
-  codeQualityScore   Int      @default(0)
-  
-  // Metadata
-  primaryLanguage    String?
-  totalFiles         Int      @default(0)
-  totalLines         Int      @default(0)
-  languages          String   @default("[]") // JSON array
-  frameworks         String   @default("[]") // JSON array
-  
-  // Full report JSON
-  report             String   @default("{}") // JSON blob of full analysis
-  
-  // Parsed repo data (structured memory)
-  parsedData         String? // JSON of ParsedRepository
-  
-  // Timestamps
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
-
-  messages           ChatMessage[]
-  fileSummaries      FileSummary[]
-
-  @@index([repoUrl])
-  @@index([createdAt])
-  @@index([repoOwner, repoName])
-}
-
-model ChatMessage {
-  id          String   @id @default(cuid())
-  analysisId  String
-  role        String   // user | assistant
-  content     String
-  createdAt   DateTime @default(now())
-
-  analysis    Analysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
-
-  @@index([analysisId])
-}
-
-// Structured file-level memory — persists per-file summaries + symbols
-model FileSummary {
-  id          String   @id @default(cuid())
-  analysisId  String
-  path        String
-  language    String
-  lines       Int      @default(0)
-  complexity  Int      @default(0)
-  description String   @default("")
-  imports     String   @default("[]")  // JSON array
-  exports     String   @default("[]")  // JSON array
-  functions   String   @default("[]")  // JSON array
-  classes     String   @default("[]")  // JSON array
-  components  String   @default("[]")  // JSON array
-  routes      String   @default("[]")  // JSON array
-  issues      Int      @default(0)
-  createdAt   DateTime @default(now())
-
-  analysis    Analysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
-
-  @@index([analysisId])
-  @@index([path])
-}
-
-// User settings persistence (survives reload)
-model UserSettings {
-  id          String   @id @default(cuid())
-  key         String   @unique
-  value       String   // JSON
-  updatedAt   DateTime @updatedAt
-}
-
 // ==========================================
-// THÊM: NEXTAUTH MODELS (Dùng để quản lý User & Token đăng nhập)
+// USER & AUTH (NextAuth.js)
 // ==========================================
+
+model User {
+  id              String    @id @default(cuid())
+  name            String?
+  email           String?   @unique
+  emailVerified   DateTime?
+  image           String?
+  // SaaS fields
+  plan            String    @default("free") // free | pro | team | enterprise
+  stripeCustomerId String?
+  trialEndsAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  accounts        Account[]
+  sessions        Session[]
+  analyses        Analysis[]
+  credentials     ProviderCredential[]
+  usageRecords    UsageRecord[]
+  settings        UserSettings[]
+}
 
 model Account {
   id                 String  @id @default(cuid())
@@ -136,16 +60,6 @@ model Session {
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String?   @unique
-  emailVerified DateTime?
-  image         String?
-  accounts      Account[]
-  sessions      Session[]
-}
-
 model VerificationToken {
   identifier String
   token      String   @unique
@@ -155,15 +69,152 @@ model VerificationToken {
 }
 
 // ==========================================
-// PHASE 3: KNOWLEDGE BASE & AGENT MEMORY
+// ANALYSIS & CHAT (multi-tenant via userId)
+// ==========================================
+
+model Analysis {
+  id                 String   @id @default(cuid())
+  userId             String?
+  repoUrl            String
+  repoOwner          String
+  repoName           String
+  repoBranch         String   @default("main")
+  status             String   @default("completed")
+
+  overallScore       Int      @default(0)
+  securityScore      Int      @default(0)
+  performanceScore   Int      @default(0)
+  architectureScore  Int      @default(0)
+  maintainabilityScore Int    @default(0)
+  codeQualityScore   Int      @default(0)
+
+  primaryLanguage    String?
+  totalFiles         Int      @default(0)
+  totalLines         Int      @default(0)
+  languages          String   @default("[]")
+  frameworks         String   @default("[]")
+  report             String   @default("{}")
+  parsedData         String?
+
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  user               User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages           ChatMessage[]
+  fileSummaries      FileSummary[]
+
+  @@index([userId])
+  @@index([repoUrl])
+  @@index([createdAt])
+  @@index([repoOwner, repoName])
+}
+
+model ChatMessage {
+  id          String   @id @default(cuid())
+  analysisId  String
+  role        String
+  content     String
+  createdAt   DateTime @default(now())
+
+  analysis    Analysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+
+  @@index([analysisId])
+}
+
+model FileSummary {
+  id          String   @id @default(cuid())
+  analysisId  String
+  path        String
+  language    String
+  lines       Int      @default(0)
+  complexity  Int      @default(0)
+  description String   @default("")
+  imports     String   @default("[]")
+  exports     String   @default("[]")
+  functions   String   @default("[]")
+  classes     String   @default("[]")
+  components  String   @default("[]")
+  routes      String   @default("[]")
+  issues      Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  analysis    Analysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+
+  @@index([analysisId])
+  @@index([path])
+}
+
+// ==========================================
+// USER SETTINGS (multi-tenant)
+// ==========================================
+
+model UserSettings {
+  id          String   @id @default(cuid())
+  userId      String?
+  key         String
+  value       String
+  updatedAt   DateTime @updatedAt
+
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, key])
+  @@index([userId])
+}
+
+// ==========================================
+// PROVIDER CREDENTIALS (server-side encrypted API keys)
+// ==========================================
+
+model ProviderCredential {
+  id              String   @id @default(cuid())
+  userId          String
+  providerId      String   // openrouter | openai | anthropic | etc.
+  label           String
+  encryptedApiKey String   // AES-256 encrypted
+  baseUrl         String
+  model           String
+  temperature     Float    @default(0.7)
+  maxTokens       Int      @default(4096)
+  streaming       Boolean  @default(true)
+  enabled         Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@unique([userId, providerId, label])
+}
+
+// ==========================================
+// USAGE TRACKING (quota enforcement)
+// ==========================================
+
+model UsageRecord {
+  id          String   @id @default(cuid())
+  userId      String
+  type        String   // analysis | chat | agent_task
+  month       String   // "2026-07" format
+  count       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, month])
+  @@unique([userId, type, month])
+}
+
+// ==========================================
+// AGENT MEMORY & EVENTS
 // ==========================================
 
 model MemoryEntry {
   id          String   @id @default(cuid())
-  category    String   // repository | conversation | coding-style | previous-fix | architecture-decision
+  category    String
   key         String
-  value       String   @default("{}") // JSON
-  tags        String   @default("[]") // JSON array
+  value       String   @default("{}")
+  tags        String   @default("[]")
   repoUrl     String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -180,11 +231,11 @@ model AgentTask {
   taskId      String   @unique
   kind        String
   title       String
-  status      String   // pending | running | completed | failed | cancelled | retrying
+  status      String
   assignedAgent String?
   priority    String   @default("medium")
-  input       String   @default("{}") // JSON
-  output      String?  // JSON
+  input       String   @default("{}")
+  output      String?
   error       String?
   progress    Int      @default(0)
   attempts    Int      @default(0)
@@ -204,8 +255,8 @@ model AgentEvent {
   agentId     String?
   type        String
   message     String
-  level       String   @default("info") // info | warn | error | debug
-  data        String?  // JSON
+  level       String   @default("info")
+  data        String?
   createdAt   DateTime @default(now())
 
   @@index([taskId])

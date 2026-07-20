@@ -1,0 +1,8 @@
+{
+  "buildCommand": "prisma generate && next build",
+  "framework": "nextjs",
+  "regions": ["sin1"],
+  "env": {
+    "NEXTAUTH_URL": "https://codeinsight-ai.vercel.app"
+  }
+}

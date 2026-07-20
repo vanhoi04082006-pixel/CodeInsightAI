@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
     if (!key) return NextResponse.json({ error: "key is required" }, { status: 400 });
 
     const saved = await db.userSettings.upsert({
-      where: { key },
+      where: { userId_key: { userId: null as any, key } },
       create: { key, value: JSON.stringify(value) },
       update: { value: JSON.stringify(value) },
     });
@@ -44,7 +44,7 @@ export async function DELETE(req: NextRequest) {
   try {
     const key = req.nextUrl.searchParams.get("key");
     if (!key) return NextResponse.json({ error: "key is required" }, { status: 400 });
-    await db.userSettings.delete({ where: { key } });
+    await db.userSettings.delete({ where: { userId_key: { userId: null as any, key } } });
     return NextResponse.json({ success: true });
   } catch (e) {
     return NextResponse.json({ error: "Failed to delete setting" }, { status: 500 });
