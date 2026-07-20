@@ -3,6 +3,7 @@
 import { motion, useScroll, useTransform } from "framer-motion";
 import {
   ArrowRight,
+  Bot,
   ShieldCheck,
   Gauge,
   Network,
@@ -626,6 +627,168 @@ export function LandingView() {
               </Button>
             </div>
           </GlassCard>
+        </div>
+      </section>
+
+      {/* ============ TESTIMONIALS ============ */}
+      <section className="relative px-4 py-24">
+        <div className="mx-auto max-w-5xl">
+          <SectionTitle
+            center
+            eyebrow="TESTIMONIALS"
+            title={<>Loved by <GradientText>developers</GradientText></>}
+            description="What developers say about CodeInsight AI"
+          />
+          <div className="mt-14 grid gap-5 md:grid-cols-3">
+            {[
+              { name: "Alex Chen", role: "Staff Engineer @ Vercel", text: "The multi-agent system is incredible. It caught 3 security issues our team missed for months.", color: "#22d3ee" },
+              { name: "Sarah Kim", role: "CTO @ StartupOS", text: "Mission Control feels like having a Senior Engineer on call 24/7. Game changer for code reviews.", color: "#a78bfa" },
+              { name: "Marcus Lee", role: "Open Source Maintainer", text: "Local-first with BYO keys — exactly what I wanted. No subscriptions, no data leaving my machine.", color: "#34d399" },
+            ].map((tst, i) => (
+              <motion.div
+                key={tst.name}
+                initial={{ opacity: 0, y: 24 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-80px" }}
+                transition={{ duration: 0.5, delay: i * 0.08 }}
+              >
+                <GlassCard hover className="h-full p-6">
+                  <div className="mb-4 flex gap-1">
+                    {[0,1,2,3,4].map(s => (
+                      <span key={s} className="text-amber-400 text-sm">★</span>
+                    ))}
+                  </div>
+                  <p className="text-sm leading-relaxed text-foreground/90">"{tst.text}"</p>
+                  <div className="mt-4 flex items-center gap-3">
+                    <div
+                      className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold"
+                      style={{ background: `${tst.color}1a`, color: tst.color }}
+                    >
+                      {tst.name[0]}
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold">{tst.name}</p>
+                      <p className="text-[11px] text-muted-foreground">{tst.role}</p>
+                    </div>
+                  </div>
+                </GlassCard>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ============ PIPELINE VISUAL ============ */}
+      <section className="relative px-4 py-24">
+        <div className="mx-auto max-w-5xl">
+          <SectionTitle
+            center
+            eyebrow="HOW IT WORKS"
+            title={<>From URL to <GradientText>full report</GradientText> in 60 seconds</>}
+            description="Watch the 8-stage pipeline analyze any repository"
+          />
+          <div className="mt-14">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              {[
+                { n: "01", label: "Clone", icon: Github, color: "#22d3ee" },
+                { n: "02", label: "Scan", icon: ScanSearch, color: "#a78bfa" },
+                { n: "03", label: "AST", icon: Code2, color: "#f472b6" },
+                { n: "04", label: "Deps", icon: Network, color: "#34d399" },
+                { n: "05", label: "Embed", icon: Brain, color: "#fbbf24" },
+                { n: "06", label: "Static", icon: ShieldCheck, color: "#22d3ee" },
+                { n: "07", label: "AI", icon: Sparkles, color: "#a78bfa" },
+                { n: "08", label: "Report", icon: FileText, color: "#34d399" },
+              ].map((s, i) => {
+                const Icon = s.icon;
+                return (
+                  <motion.div
+                    key={s.n}
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    whileInView={{ opacity: 1, scale: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: i * 0.08 }}
+                    className="group flex flex-1 flex-col items-center gap-2"
+                  >
+                    <div
+                      className="flex h-12 w-12 items-center justify-center rounded-xl border transition-all group-hover:scale-110"
+                      style={{ borderColor: `${s.color}33`, background: `${s.color}0a` }}
+                    >
+                      <Icon className="h-5 w-5" style={{ color: s.color }} />
+                    </div>
+                    <span className="font-mono text-[10px] text-muted-foreground">{s.n}</span>
+                    <span className="text-xs font-medium">{s.label}</span>
+                    {i < 7 && (
+                      <div className="hidden h-px w-full bg-gradient-to-r from-white/10 to-transparent md:block" />
+                    )}
+                  </motion.div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ============ STATS GRID ============ */}
+      <section className="relative px-4 py-16">
+        <div className="mx-auto max-w-4xl">
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+            {[
+              { icon: ShieldCheck, label: "Security Rules", value: "13", color: "#f472b6" },
+              { icon: Bug, label: "Bug Patterns", value: "11", color: "#fbbf24" },
+              { icon: Gauge, label: "Perf Rules", value: "42", color: "#34d399" },
+              { icon: Bot, label: "AI Agents", value: "12", color: "#22d3ee" },
+            ].map((stat, i) => {
+              const Icon = stat.icon;
+              return (
+                <motion.div
+                  key={stat.label}
+                  initial={{ opacity: 0, y: 16 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.06 }}
+                >
+                  <GlassCard className="p-5 text-center">
+                    <Icon className="mx-auto h-6 w-6" style={{ color: stat.color }} />
+                    <p className="mt-2 text-2xl font-bold" style={{ color: stat.color }}>{stat.value}</p>
+                    <p className="text-[11px] uppercase tracking-wider text-muted-foreground">{stat.label}</p>
+                  </GlassCard>
+                </motion.div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ============ FINAL CTA ============ */}
+      <section className="relative overflow-hidden px-4 py-24">
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-cyan-500/5 to-transparent" />
+        <div className="relative mx-auto max-w-3xl text-center">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+          >
+            <h2 className="text-4xl font-bold md:text-5xl">
+              Start <GradientText>analyzing</GradientText> now
+            </h2>
+            <p className="mx-auto mt-4 max-w-lg text-muted-foreground">
+              Paste a GitHub URL. Get a full senior-engineer-level report in 60 seconds. Free, local, private.
+            </p>
+            <div className="mt-8 flex flex-col items-center justify-center gap-2 sm:flex-row">
+              <Button
+                onClick={() => setView("analyze")}
+                size="lg"
+                className="glow-pulse bg-gradient-to-r from-cyan-500 to-violet-500 text-white hover:opacity-90"
+              >
+                <Sparkles className="mr-1.5 h-4 w-4" /> Analyze a Repository
+                <ArrowRight className="ml-1.5 h-4 w-4" />
+              </Button>
+              <Button onClick={() => setView("providers")} size="lg" variant="outline">
+                <Plug className="mr-1.5 h-4 w-4" /> Connect AI Provider
+              </Button>
+            </div>
+          </motion.div>
         </div>
       </section>
     </div>
