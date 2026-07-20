@@ -227,16 +227,20 @@ bun install
 
 # Set up environment
 cp .env.example .env
-# Edit .env — set DATABASE_URL, NEXTAUTH_SECRET
+# Edit .env — set NEXTAUTH_SECRET (any long random string)
+# DATABASE_URL defaults to SQLite (file:./db/local.db) — works offline
 
-# Push database schema (creates 11 tables)
+# Push database schema (creates 11 tables in local SQLite)
 bun run db:push
 
 # Start dev server
 bun run dev
 ```
 
-Open `http://localhost:3000`.
+Open `http://localhost:3000`. All data is stored locally in `db/local.db`.
+
+> 📖 **Deploy to Vercel + Neon?** See [`DEPLOY.md`](./DEPLOY.md) for the
+> full production deployment walkthrough.
 
 ### Connect Your First AI Provider
 
@@ -274,8 +278,8 @@ Open `http://localhost:3000`.
 ### Environment Variables (`.env`)
 
 ```bash
-# SQLite database location
-DATABASE_URL=file:./db/custom.db
+# SQLite database (local — Prisma creates the file on first db:push)
+DATABASE_URL="file:./db/local.db"
 
 # NextAuth (random string for session encryption)
 NEXTAUTH_SECRET="your-random-secret-here"
@@ -300,10 +304,13 @@ bun run dev          # Dev server (port 3000, hot reload)
 bun run build        # Production build
 bun run start        # Run production server
 bun run lint         # ESLint check
-bun run db:push      # Push Prisma schema to SQLite
+bun run db:push      # Push schema to local SQLite
 bun run db:generate  # Regenerate Prisma client
-bun run db:migrate   # Run migrations
+bun run db:migrate   # Create + apply a migration (local)
 bun run db:reset     # Reset database (⚠️ deletes all data)
+# Production (Postgres):
+bun run db:push:prod   # Push schema to Postgres (Vercel/Neon)
+bun run db:deploy      # Apply pending migrations to Postgres
 ```
 
 ---
