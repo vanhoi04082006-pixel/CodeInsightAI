@@ -18,7 +18,6 @@
     "db:generate:prod": "prisma generate --schema prisma/schema.prod.prisma",
     "db:migrate:prod": "prisma migrate dev --schema prisma/schema.prod.prisma",
     "db:deploy": "prisma migrate deploy --schema prisma/schema.prod.prisma",
-    "postinstall": "prisma generate",
     "vercel-build": "prisma generate --schema prisma/schema.prod.prisma && next build"
   },
   "dependencies": {
