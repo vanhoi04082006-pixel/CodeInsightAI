@@ -46,6 +46,11 @@ export function AppSidebar() {
   const activeReport = useAppStore((s) => s.activeReport);
   const { t } = useT();
 
+  // Mission badge: green pulse when a mission is running
+  const missionActive = useAppStore((s) => s.view === "mission" && !!s.activeReport);
+  // Chat badge: count unread (placeholder — could track lastSeenChatCount)
+  const chatBadge = 0;
+
   return (
     <motion.aside
       initial={false}
@@ -122,7 +127,18 @@ export function AppSidebar() {
               )}
               <Icon className={cn("h-[18px] w-[18px] shrink-0", active && "text-cyan-300")} />
               {!collapsed && <span className="font-medium">{label}</span>}
-              {!collapsed && active && (
+              {/* Badge for active mission */}
+              {item.id === "mission" && missionActive && !disabled && (
+                <span className="ml-auto flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+                </span>
+              )}
+              {/* Badge for chat with new messages */}
+              {item.id === "chat" && chatBadge > 0 && !disabled && (
+                <span className="ml-auto rounded-full bg-cyan-500 px-1.5 text-[10px] font-bold text-white">{chatBadge}</span>
+              )}
+              {!collapsed && active && !missionActive && chatBadge === 0 && (
                 <Sparkles className="ml-auto h-3.5 w-3.5 text-cyan-300" />
               )}
             </button>

@@ -29,17 +29,77 @@ export default function Home() {
   const setView = useAppStore((s) => s.setView);
   const { t } = useT();
 
-  // ⌘K to open command palette
+  // Global keyboard shortcuts
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+      const mod = e.metaKey || e.ctrlKey;
+
+      // ⌘K — Command palette
+      if (mod && e.key.toLowerCase() === "k") {
         e.preventDefault();
         useAppStore.getState().setCommandOpen(true);
+        return;
+      }
+
+      // Don't intercept when typing in inputs
+      const tag = (e.target as HTMLElement)?.tagName;
+      const isTyping = tag === "INPUT" || tag === "TEXTAREA" || (e.target as HTMLElement)?.isContentEditable;
+
+      if (isTyping) {
+        // Esc to blur/exit input
+        if (e.key === "Escape") {
+          (e.target as HTMLElement)?.blur();
+        }
+        return;
+      }
+
+      // Navigation shortcuts (no modifier)
+      if (e.key === "Escape" && view !== "landing") {
+        setView("landing");
+        return;
+      }
+
+      if (mod) {
+        // ⌘D — Dashboard
+        if (e.key.toLowerCase() === "d") { e.preventDefault(); setView("dashboard"); return; }
+        // ⌘A — Analyze
+        if (e.key.toLowerCase() === "a") { e.preventDefault(); setView("analyze"); return; }
+        // ⌘H — History
+        if (e.key.toLowerCase() === "h") { e.preventDefault(); setView("history"); return; }
+        // ⌘, — Settings
+        if (e.key === ",") { e.preventDefault(); setView("settings"); return; }
+        // ⌘P — Providers
+        if (e.key.toLowerCase() === "p") { e.preventDefault(); setView("providers"); return; }
+        // ⌘M — Mission Control
+        if (e.key.toLowerCase() === "m") { e.preventDefault(); setView("mission"); return; }
+        // ⌘C — Chat (only if not selecting text)
+        if (e.key.toLowerCase() === "c" && !window.getSelection()?.toString()) {
+          e.preventDefault(); setView("chat"); return;
+        }
+      } else {
+        // Single key shortcuts (no modifier, not typing)
+        // g then d = go dashboard (vim-style)
+        if (e.key === "g") {
+          const handler = (e2: KeyboardEvent) => {
+            const map: Record<string, string> = {
+              d: "dashboard", a: "analyze", p: "project", c: "chat",
+              h: "history", s: "settings", m: "mission", l: "landing",
+            };
+            const target = map[e2.key.toLowerCase()];
+            if (target) {
+              e2.preventDefault();
+              setView(target as any);
+            }
+            window.removeEventListener("keydown", handler);
+          };
+          window.addEventListener("keydown", handler, { once: true });
+          setTimeout(() => window.removeEventListener("keydown", handler), 1000);
+        }
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [view, setView]);
 
   const isLanding = view === "landing";
 
