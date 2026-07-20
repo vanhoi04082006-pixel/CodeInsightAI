@@ -1,22 +1,20 @@
-// CodeInsight AI — Prisma schema (LOCAL — SQLite)
+// CodeInsight AI — Prisma schema (PRODUCTION — PostgreSQL)
 //
-// This is the DEFAULT schema used for local development. It targets SQLite so
-// the app runs offline with zero setup — Prisma creates the DB file on first
-// `bun run db:push`. Set DATABASE_URL="file:./db/local.db" in your local .env.
+// This schema is used ONLY on Vercel/Neon (production). It is identical to
+// prisma/schema.prisma except the datasource provider is `postgresql` instead
+// of `sqlite`. The Vercel build selects it via the PRISMA_SCHEMA env var —
+// see vercel.json and DEPLOY.md.
 //
-// For PRODUCTION (Vercel + Neon Postgres), the equivalent PostgreSQL schema
-// lives in `prisma/schema.prod.prisma`. The Vercel build switches to it via
-// the PRISMA_SCHEMA env var — see vercel.json and DEPLOY.md.
-//
-// IMPORTANT: when you add/remove/rename a model or field here, mirror the
-// change in `prisma/schema.prod.prisma`. Keep the two files in sync.
+// KEEP IN SYNC with prisma/schema.prisma when you change any model/field.
+// The model definitions below are intentionally duplicated so each provider
+// has its own self-contained schema file.
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 

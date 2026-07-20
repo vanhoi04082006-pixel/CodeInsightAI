@@ -30,13 +30,12 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# env files (never commit real secrets — use .env.example as template)
 .env*
 !.env.example
 
 # vercel
 .vercel
-
 
 # typescript
 *.tsbuildinfo
@@ -45,32 +44,43 @@ local-*
 .claude
 .z-ai-config
 *.log
-dev.log
-dev.out.log
 /test
 prompt
 
-server.log
 # Skills directory
 /skills/
 
-# Database (local SQLite — contains persisted analyses & chat, must never be pushed)
-/db/*
-!/db/.gitkeep
+# Database files (Postgres is remote — Neon — but keep any local artifacts out)
 *.db
 *.db-journal
-
-# Server launcher logs/state
-watchdog.log
-dev.out.log
-start-dev.sh
-watch-dev.sh
+/db/*
+!/db/.gitkeep
+/prisma/db/*
+!/prisma/db/.gitkeep
 
 # Local provider config / secrets
 provider-config.json
+
 # Runtime/sandbox artifacts
 /.zscripts/
 /tool-results/
 *.pid
 agent-ctx/
-upload/
+
+# User uploads (paste images, etc.) — keep dir but ignore contents
+/upload/*
+!/upload/.gitkeep
+
+# Dev-only / internal artifacts (not part of the app)
+.zcode/
+worklog.md
+server.log
+watchdog.log
+dev.log
+dev.out.log
+start-dev.sh
+watch-dev.sh
+Caddyfile
+/examples/
+/mini-services/
+/download/
