@@ -31,6 +31,7 @@ import {
   Moon,
   Monitor,
   Gauge,
+  Loader2,
 } from "lucide-react";
 import { GlassCard, GradientText, NeonDivider } from "@/components/shared/ui";
 import { ThemeSwitcher } from "@/components/shared/theme-switcher";
@@ -111,19 +112,7 @@ export function SettingsView() {
 
           {/* Account */}
           <TabsContent value="account" className="mt-4 space-y-4">
-            <GlassCard className="p-6">
-              <h3 className="flex items-center gap-2 text-sm font-semibold"><User className="h-4 w-4 text-cyan-300" /> {t("settings", "profile")}</h3>
-              <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                <Field label={t("settings", "displayName")} defaultValue={session?.user?.name || "Z.ai Developer"} />
-                <Field label={t("settings", "email")} defaultValue={session?.user?.email || "dev@codeinsight.ai"} />
-                <Field label={t("settings", "company")} defaultValue="Independent" />
-                <Field label={t("settings", "role")} defaultValue="Staff Engineer" />
-              </div>
-              <Button onClick={() => toast.success(t("settings", "profileSaved"))} className="mt-4 bg-gradient-to-r from-cyan-500 to-violet-500 text-white">
-                {t("settings", "saveChanges")}
-              </Button>
-            </GlassCard>
-
+            <AccountTab session={session} />
             <GlassCard className="p-6">
               <h3 className="flex items-center gap-2 text-sm font-semibold"><KeyRound className="h-4 w-4 text-cyan-300" /> {t("settings", "connectedAccounts")}</h3>
               <div className="mt-4 space-y-2">
@@ -133,9 +122,9 @@ export function SettingsView() {
                   desc={t("settings", "githubDesc")}
                   connected={isGithubConnected}
                   loading={status === "loading"}
-                  onToggle={() => { 
+                  onToggle={() => {
                     if (isGithubConnected) { signOut(); toast.success(t("common", "status.disconnected")); }
-                    else signIn("github"); 
+                    else signIn("github");
                   }}
                 />
                 <ConnectRow
@@ -144,9 +133,9 @@ export function SettingsView() {
                   desc={t("settings", "googleDesc")}
                   connected={isGoogleConnected}
                   loading={status === "loading"}
-                  onToggle={() => { 
+                  onToggle={() => {
                     if (isGoogleConnected) { signOut(); toast.success(t("common", "status.disconnected")); }
-                    else signIn("google"); 
+                    else signIn("google");
                   }}
                 />
               </div>
@@ -301,6 +290,90 @@ export function SettingsView() {
         </Tabs>
       </div>
     </div>
+  );
+}
+
+// AccountTab — loads/saves profile to DB via /api/settings
+function AccountTab({ session }: { session: any }) {
+  const { t } = useT();
+  const [profile, setProfile] = useState({ name: "", email: "", company: "", role: "" });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/settings")
+      .then(r => r.json())
+      .then(d => {
+        const p = d.settings?.profile;
+        if (p) {
+          setProfile({
+            name: p.name || session?.user?.name || "Z.ai Developer",
+            email: p.email || session?.user?.email || "dev@codeinsight.ai",
+            company: p.company || "Independent",
+            role: p.role || "Staff Engineer",
+          });
+        } else {
+          setProfile({
+            name: session?.user?.name || "Z.ai Developer",
+            email: session?.user?.email || "dev@codeinsight.ai",
+            company: "Independent",
+            role: "Staff Engineer",
+          });
+        }
+      })
+      .catch(() => {
+        setProfile({
+          name: session?.user?.name || "Z.ai Developer",
+          email: session?.user?.email || "dev@codeinsight.ai",
+          company: "Independent",
+          role: "Staff Engineer",
+        });
+      })
+      .finally(() => setLoading(false));
+  }, [session]);
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      await fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "profile", value: profile }),
+      });
+      toast.success(t("settings", "profileSaved"));
+    } catch {
+      toast.error("Failed to save profile");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <GlassCard className="p-6">
+      <h3 className="flex items-center gap-2 text-sm font-semibold"><User className="h-4 w-4 text-cyan-300" /> {t("settings", "profile")}</h3>
+      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <div className="space-y-1.5">
+          <label className="text-xs uppercase tracking-wider text-muted-foreground">{t("settings", "displayName")}</label>
+          <Input value={loading ? "" : profile.name} onChange={e => setProfile(p => ({ ...p, name: e.target.value }))} className="bg-white/[0.03]" placeholder={loading ? "Loading…" : ""} />
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-xs uppercase tracking-wider text-muted-foreground">{t("settings", "email")}</label>
+          <Input value={loading ? "" : profile.email} onChange={e => setProfile(p => ({ ...p, email: e.target.value }))} className="bg-white/[0.03]" placeholder={loading ? "Loading…" : ""} />
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-xs uppercase tracking-wider text-muted-foreground">{t("settings", "company")}</label>
+          <Input value={loading ? "" : profile.company} onChange={e => setProfile(p => ({ ...p, company: e.target.value }))} className="bg-white/[0.03]" placeholder={loading ? "Loading…" : ""} />
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-xs uppercase tracking-wider text-muted-foreground">{t("settings", "role")}</label>
+          <Input value={loading ? "" : profile.role} onChange={e => setProfile(p => ({ ...p, role: e.target.value }))} className="bg-white/[0.03]" placeholder={loading ? "Loading…" : ""} />
+        </div>
+      </div>
+      <Button onClick={save} disabled={saving || loading} className="mt-4 bg-gradient-to-r from-cyan-500 to-violet-500 text-white">
+        {saving ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Sparkles className="mr-1.5 h-4 w-4" />}
+        {saving ? "Saving…" : t("settings", "saveChanges")}
+      </Button>
+    </GlassCard>
   );
 }
 
