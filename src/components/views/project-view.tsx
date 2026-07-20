@@ -75,6 +75,29 @@ export function ProjectView() {
     toast.success(t("reports", "exportMarkdown"));
   };
 
+  const downloadMarkdown = () => {
+    const md = `# ${report.repoOwner}/${report.repoName} — AI Report\n\n${report.summary}\n\n## Scores\n- Overall: ${report.scores.overall}\n- Security: ${report.scores.security}\n- Performance: ${report.scores.performance}\n- Architecture: ${report.scores.architecture}\n- Maintainability: ${report.scores.maintainability}\n- Code Quality: ${report.scores.codeQuality}\n\n## Languages\n${report.languages.map(l => `- ${l.name}: ${l.percentage}%`).join("\n")}\n\n## Frameworks\n${report.frameworks.map(f => `- ${f.name} ${f.version}`).join("\n")}\n\n## Security Issues\n${report.issues.security.map(i => `- [${i.severity}] ${i.title} (${i.file})\n  ${i.recommendation}`).join("\n")}\n\n## Bug Issues\n${report.issues.bugs.map(i => `- [${i.severity}] ${i.title} (${i.file})\n  ${i.recommendation}`).join("\n")}\n\n## Performance Issues\n${report.issues.performance.map(i => `- [${i.severity}] ${i.title} (${i.file})\n  ${i.recommendation}`).join("\n")}\n\n## Architecture\n- Pattern: ${report.architecture.pattern}\n- Strengths: ${report.architecture.strengths.join("; ")}\n- Weaknesses: ${report.architecture.weaknesses.join("; ")}\n\n## Technical Debt\n- Score: ${report.technicalDebt.score}/100\n${report.technicalDebt.items.map(item => `- ${item.title} (${item.impact}) — ${item.estimate}`).join("\n")}\n`;
+    const blob = new Blob([md], { type: "text/markdown" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${report.repoOwner}-${report.repoName}-report.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("Report downloaded as Markdown");
+  };
+
+  const downloadJSON = () => {
+    const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${report.repoOwner}-${report.repoName}-report.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("Report downloaded as JSON");
+  };
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 md:px-6">
       {/* header */}
@@ -100,9 +123,15 @@ export function ProjectView() {
             ))}
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button onClick={exportMarkdown} variant="outline" size="sm">
-            <Download className="mr-1.5 h-4 w-4" /> Markdown
+            <Copy className="mr-1.5 h-4 w-4" /> Copy MD
+          </Button>
+          <Button onClick={downloadMarkdown} variant="outline" size="sm">
+            <Download className="mr-1.5 h-4 w-4" /> .md
+          </Button>
+          <Button onClick={downloadJSON} variant="outline" size="sm">
+            <Download className="mr-1.5 h-4 w-4" /> .json
           </Button>
           <Button onClick={() => toast.success(t("reports", "shareLink"))} variant="outline" size="sm">
             <Share2 className="mr-1.5 h-4 w-4" /> Share

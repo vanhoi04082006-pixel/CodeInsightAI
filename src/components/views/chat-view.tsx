@@ -168,14 +168,96 @@ export function ChatView() {
         }),
       });
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error ?? t("chat", "error"));
+      // Check if provider supports streaming
+      const useStreaming = providerInstance?.streaming && providerInstance?.apiKey;
 
-      pushChat(data.message ?? { id: crypto.randomUUID(), role: "assistant", content: data.reply, createdAt: Date.now() });
+      if (useStreaming) {
+        // ── Streaming via SSE ──
+        const streamRes = await fetch("/api/chat/stream", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            analysisId: aid,
+            message: content,
+            history,
+            personality: personality ? {
+              id: personality.id,
+              name: personality.name,
+              systemPrompt: personality.systemPrompt,
+              temperature: personality.temperature,
+              maxTokens: personality.maxTokens,
+              preferredModel: personality.preferredModel,
+            } : undefined,
+            provider: providerInstance ? {
+              providerId: providerInstance.providerId,
+              apiKey: providerInstance.apiKey,
+              baseUrl: providerInstance.baseUrl,
+              model: providerInstance.model,
+              temperature: providerInstance.temperature,
+              maxTokens: providerInstance.maxTokens,
+              timeout: providerInstance.timeout,
+            } : undefined,
+            language,
+          }),
+        });
 
-      if (devMode.enabled && data.debug) {
-        devMode.addSnapshot(data.debug);
-        if (data.debug.log) devMode.addLog(data.debug.log);
+        if (!streamRes.ok) throw new Error("Stream failed");
+
+        // Create assistant message placeholder and update it as chunks arrive
+        const assistantId = crypto.randomUUID();
+        pushChat({ id: assistantId, role: "assistant", content: "", createdAt: Date.now() });
+
+        const reader = streamRes.body?.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let fullReply = "";
+
+        if (reader) {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split("\n");
+            buffer = lines.pop() || "";
+
+            for (const line of lines) {
+              const trimmed = line.trim();
+              if (!trimmed.startsWith("data:")) continue;
+              try {
+                const data = JSON.parse(trimmed.slice(5).trim());
+                if (data.error) throw new Error(data.error);
+                if (data.chunk) {
+                  fullReply += data.chunk;
+                  // Update the assistant message in-place
+                  const updated = useAppStore.getState().chat.map((m) =>
+                    m.id === assistantId ? { ...m, content: fullReply } : m
+                  );
+                  setChat(updated);
+                }
+              } catch { /* ignore */ }
+            }
+          }
+        }
+
+        // Fallback if streaming produced nothing
+        if (!fullReply) {
+          const updated = useAppStore.getState().chat.map((m) =>
+            m.id === assistantId ? { ...m, content: "⚠️ Empty response. Please try again." } : m
+          );
+          setChat(updated);
+        }
+      } else {
+        // ── Non-streaming (fallback) ──
+        const data = await res.json();
+        if (!res.ok) throw new Error(data?.error ?? t("chat", "error"));
+
+        pushChat(data.message ?? { id: crypto.randomUUID(), role: "assistant", content: data.reply, createdAt: Date.now() });
+
+        if (devMode.enabled && data.debug) {
+          devMode.addSnapshot(data.debug);
+          if (data.debug.log) devMode.addLog(data.debug.log);
+        }
       }
     } catch (e) {
       console.error(e);

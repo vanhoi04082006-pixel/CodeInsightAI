@@ -6,16 +6,19 @@ import { useAppStore } from "@/lib/store";
 import { useT } from "@/lib/i18n";
 import { AnimatedBackground } from "@/components/shared/animated-background";
 import { AppSidebar, AppTopbar, MobileNav } from "@/components/shared/app-shell";
+import dynamic from "next/dynamic";
 import { LandingView } from "@/components/views/landing-view";
-import { DashboardView } from "@/components/views/dashboard-view";
-import { AnalyzeView } from "@/components/views/analyze-view";
-import { ProjectView } from "@/components/views/project-view";
-import { ChatView } from "@/components/views/chat-view";
-import { HistoryView } from "@/components/views/history-view";
-import { SettingsView } from "@/components/views/settings-view";
-import { ProvidersView } from "@/components/views/providers-view";
-import { PersonalitiesView } from "@/components/views/personalities-view";
-import { MissionControlView } from "@/components/views/mission-control-view";
+
+// Lazy-load all non-landing views for code splitting
+const DashboardView = dynamic(() => import("@/components/views/dashboard-view").then(m => ({ default: m.DashboardView })), { ssr: false });
+const AnalyzeView = dynamic(() => import("@/components/views/analyze-view").then(m => ({ default: m.AnalyzeView })), { ssr: false });
+const ProjectView = dynamic(() => import("@/components/views/project-view").then(m => ({ default: m.ProjectView })), { ssr: false });
+const ChatView = dynamic(() => import("@/components/views/chat-view").then(m => ({ default: m.ChatView })), { ssr: false });
+const HistoryView = dynamic(() => import("@/components/views/history-view").then(m => ({ default: m.HistoryView })), { ssr: false });
+const SettingsView = dynamic(() => import("@/components/views/settings-view").then(m => ({ default: m.SettingsView })), { ssr: false });
+const ProvidersView = dynamic(() => import("@/components/views/providers-view").then(m => ({ default: m.ProvidersView })), { ssr: false });
+const PersonalitiesView = dynamic(() => import("@/components/views/personalities-view").then(m => ({ default: m.PersonalitiesView })), { ssr: false });
+const MissionControlView = dynamic(() => import("@/components/views/mission-control-view").then(m => ({ default: m.MissionControlView })), { ssr: false });
 import { CommandPalette } from "@/components/shared/command-palette";
 import { LanguageSwitcher } from "@/components/shared/language-switcher";
 import { ThemeSwitcher } from "@/components/shared/theme-switcher";
