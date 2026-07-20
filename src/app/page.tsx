@@ -18,6 +18,7 @@ import { PersonalitiesView } from "@/components/views/personalities-view";
 import { MissionControlView } from "@/components/views/mission-control-view";
 import { CommandPalette } from "@/components/shared/command-palette";
 import { LanguageSwitcher } from "@/components/shared/language-switcher";
+import { ThemeSwitcher } from "@/components/shared/theme-switcher";
 import { Heart, Sparkles } from "lucide-react";
 
 export default function Home() {
@@ -63,6 +64,7 @@ export default function Home() {
               <button onClick={() => setView("settings")} className="hover:text-foreground">{t("common", "nav.settings")}</button>
             </nav>
             <div className="flex items-center gap-2">
+              <ThemeSwitcher />
               <LanguageSwitcher />
               <button
                 onClick={() => setView("analyze")}
