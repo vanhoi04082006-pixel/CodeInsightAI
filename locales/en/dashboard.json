@@ -47,5 +47,7 @@
     "maintainability": "Maintainability",
     "codeQuality": "Code Quality",
     "overall": "Overall"
-  }
+  },
+  "recentAnalyses": "Recent Analyses",
+  "viewAll": "View All"
 }

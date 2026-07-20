@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
 import {
   ShieldCheck,
   Gauge,
@@ -407,18 +408,41 @@ export function DashboardView() {
 function EmptyDashboard() {
   const { t } = useT();
   const setView = useAppStore((s) => s.setView);
+  const setActiveReport = useAppStore((s) => s.setActiveReport);
+  const setActiveAnalysisId = useAppStore((s) => s.setActiveAnalysisId);
+  const [recent, setRecent] = useState<{ id: string; repoOwner: string; repoName: string; overallScore: number; primaryLanguage: string | null; createdAt: string }[]>([]);
+  const [loadingRecent, setLoadingRecent] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/analyze?limit=4")
+      .then(r => r.json())
+      .then(d => { setRecent(d.items ?? []); })
+      .catch(() => {})
+      .finally(() => setLoadingRecent(false));
+  }, []);
+
+  const openRecent = async (id: string) => {
+    try {
+      const res = await fetch(`/api/report?id=${id}`);
+      const d = await res.json();
+      if (d.report) {
+        setActiveReport(d.report);
+        setActiveAnalysisId(id);
+        useAppStore.getState().clearChat();
+      }
+    } catch { /* ignore */ }
+  };
 
   return (
-    <div className="mx-auto flex min-h-[60vh] max-w-2xl flex-col items-center justify-center px-4 text-center">
-      <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}>
-        <GlassCard strong className="p-10">
+    <div className="mx-auto max-w-4xl px-4 py-8">
+      {/* Hero empty */}
+      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="mb-8">
+        <GlassCard strong className="p-8 text-center">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-cyan-400/10 text-cyan-300">
             <FileCode className="h-8 w-8" />
           </div>
           <h2 className="mt-4 text-2xl font-bold">{t("dashboard", "noRepo")}</h2>
-          <p className="mt-2 text-muted-foreground">
-            {t("dashboard", "noRepoDesc")}
-          </p>
+          <p className="mt-2 text-sm text-muted-foreground">{t("dashboard", "noRepoDesc")}</p>
           <Button
             onClick={() => setView("analyze")}
             className="mt-6 bg-gradient-to-r from-cyan-500 to-violet-500 text-white hover:opacity-90"
@@ -428,6 +452,55 @@ function EmptyDashboard() {
           </Button>
         </GlassCard>
       </motion.div>
+
+      {/* Recent analyses */}
+      {loadingRecent ? (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {[0, 1, 2, 3].map(i => (
+            <div key={i} className="h-20 animate-pulse rounded-xl border border-white/5 bg-white/[0.02]" />
+          ))}
+        </div>
+      ) : recent.length > 0 ? (
+        <div>
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+              {t("dashboard", "recentAnalyses") || "Recent Analyses"}
+            </h3>
+            <Button variant="ghost" size="sm" onClick={() => setView("history")} className="text-xs">
+              {t("dashboard", "viewAll") || "View All"} →
+            </Button>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {recent.map((item, i) => (
+              <motion.button
+                key={item.id}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.05 }}
+                onClick={() => openRecent(item.id)}
+                className="group flex items-center gap-3 rounded-xl border border-white/5 bg-white/[0.02] p-4 text-left transition hover:border-cyan-400/30 hover:bg-white/[0.04]"
+              >
+                <div
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-sm font-bold"
+                  style={{
+                    background: item.overallScore >= 80 ? "#34d3991a" : item.overallScore >= 60 ? "#fbbf241a" : "#f472b61a",
+                    color: item.overallScore >= 80 ? "#34d399" : item.overallScore >= 60 ? "#fbbf24" : "#f472b6",
+                  }}
+                >
+                  {item.overallScore}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{item.repoOwner}/{item.repoName}</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {item.primaryLanguage ?? "Unknown"} · {new Date(item.createdAt).toLocaleDateString()}
+                  </p>
+                </div>
+                <ArrowUpRight className="h-4 w-4 shrink-0 text-muted-foreground transition group-hover:text-cyan-300" />
+              </motion.button>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

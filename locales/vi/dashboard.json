@@ -47,5 +47,7 @@
     "maintainability": "Khả năng bảo trì",
     "codeQuality": "Chất lượng Code",
     "overall": "Tổng thể"
-  }
+  },
+  "recentAnalyses": "Phân tích gần đây",
+  "viewAll": "Xem tất cả"
 }
