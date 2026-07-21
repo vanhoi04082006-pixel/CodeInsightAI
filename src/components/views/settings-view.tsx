@@ -207,6 +207,9 @@ export function SettingsView() {
 
             <AISettingsCard />
 
+            {/* AI Mode Toggle — BYOK vs Platform */}
+            <AIModeToggle />
+
             <GlassCard className="p-6">
               <div className="flex items-center gap-2">
                 <Bot className="h-4 w-4 text-violet-300" />
@@ -373,6 +376,129 @@ function AccountTab({ session }: { session: any }) {
         {saving ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Sparkles className="mr-1.5 h-4 w-4" />}
         {saving ? "Saving…" : t("settings", "saveChanges")}
       </Button>
+    </GlassCard>
+  );
+}
+
+// AI Mode Toggle — BYOK (free) vs Platform AI (Pro)
+function AIModeToggle() {
+  const { t } = useT();
+  const aiMode = useProvidersStore((s) => s.aiMode);
+  const setAiMode = useProvidersStore((s) => s.setAiMode);
+  const { data: session } = useSession();
+  const plan = (session as any)?.plan ?? "free";
+  const [loading, setLoading] = useState(false);
+
+  const upgrade = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/billing/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan: "pro" }),
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        toast.error(data.error || "Stripe not configured yet");
+      }
+    } catch {
+      toast.error("Failed to start checkout");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <GlassCard className="p-6">
+      <h3 className="flex items-center gap-2 text-sm font-semibold">
+        <Zap className="h-4 w-4 text-amber-400" /> AI Mode
+      </h3>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Choose how you want to power AI features (chat, analysis, agents).
+      </p>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        {/* BYOK */}
+        <button
+          onClick={() => setAiMode("byok")}
+          className={`rounded-xl border p-4 text-left transition ${
+            aiMode === "byok"
+              ? "border-cyan-400/40 bg-cyan-400/[0.06]"
+              : "border-white/10 bg-white/[0.02] hover:border-white/20"
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-semibold text-cyan-300">Bring Your Own Key</span>
+            {aiMode === "byok" && <Check className="h-4 w-4 text-cyan-300" />}
+          </div>
+          <p className="mt-1 text-[11px] text-muted-foreground">Free — use your own API keys from 14 providers</p>
+          <div className="mt-2 flex flex-wrap gap-1">
+            {["OpenRouter", "OpenAI", "Anthropic", "Ollama"].map(p => (
+              <span key={p} className="rounded-full bg-white/5 px-2 py-0.5 text-[9px] text-muted-foreground">{p}</span>
+            ))}
+          </div>
+        </button>
+
+        {/* Platform AI */}
+        <button
+          onClick={() => {
+            if (plan === "free") {
+              toast.info("Upgrade to Pro to use Platform AI — no API key needed.");
+              upgrade();
+            } else {
+              setAiMode("platform");
+            }
+          }}
+          className={`rounded-xl border p-4 text-left transition ${
+            aiMode === "platform"
+              ? "border-violet-400/40 bg-violet-400/[0.06]"
+              : "border-white/10 bg-white/[0.02] hover:border-white/20"
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-semibold text-violet-300">
+              Platform AI
+              {plan === "free" && (
+                <span className="ml-2 rounded-full bg-violet-500/20 px-1.5 py-0.5 text-[8px] font-bold uppercase text-violet-300">PRO</span>
+              )}
+            </span>
+            {aiMode === "platform" && <Check className="h-4 w-4 text-violet-300" />}
+          </div>
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            {plan === "free" ? "$9/mo — no key needed, Claude 3.5 / GPT-4o" : "Active — using CodeInsight AI"}
+          </p>
+          {plan !== "free" && (
+            <div className="mt-2">
+              <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[9px] text-emerald-300">Pro plan active</span>
+            </div>
+          )}
+          {loading && (
+            <div className="mt-2">
+              <Loader2 className="h-3 w-3 animate-spin text-violet-300" />
+            </div>
+          )}
+        </button>
+      </div>
+
+      {/* Manage subscription */}
+      {plan !== "free" && (
+        <button
+          onClick={async () => {
+            try {
+              const res = await fetch("/api/billing/portal", { method: "POST" });
+              const data = await res.json();
+              if (data.url) window.location.href = data.url;
+            } catch {
+              toast.error("Failed to open billing portal");
+            }
+          }}
+          className="mt-4 text-xs text-muted-foreground transition hover:text-foreground"
+        >
+          Manage subscription →
+        </button>
+      )}
     </GlassCard>
   );
 }
