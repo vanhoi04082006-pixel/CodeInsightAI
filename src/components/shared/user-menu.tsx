@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
-import { LogOut, User as UserIcon, Crown, ChevronDown, Loader2, ShieldCheck } from "lucide-react";
+import { LogOut, User as UserIcon, Crown, ChevronDown, Loader2, ShieldCheck, Shield } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,6 +24,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useAppStore } from "@/lib/store";
+import { useUpgrade } from "@/hooks/use-upgrade";
 import { toast } from "sonner";
 
 /**
@@ -38,6 +39,7 @@ import { toast } from "sonner";
 export function UserMenu() {
   const { data: session, status } = useSession();
   const setView = useAppStore((s) => s.setView);
+  const { upgrade } = useUpgrade();
   const [signingOut, setSigningOut] = useState(false);
 
   if (status === "loading") {
@@ -57,6 +59,8 @@ export function UserMenu() {
   const email = session.user.email ?? "";
   const image = session.user.image ?? null;
   const plan = (session as any).plan ?? "free";
+  const role = (session as any).role ?? "user";
+  const isAdmin = role === "admin";
   const initials = getInitials(name);
 
   const handleLogout = async () => {
@@ -95,12 +99,14 @@ export function UserMenu() {
             <div className="hidden min-w-0 sm:block">
               <div className="flex items-center gap-1.5 text-xs font-medium leading-tight">
                 <span className="max-w-[120px] truncate">{name.split(" ")[0]}</span>
-                {plan !== "free" && (
+                {isAdmin ? (
+                  <Shield className="h-3 w-3 text-cyan-300" />
+                ) : plan !== "free" ? (
                   <Crown className="h-3 w-3 text-amber-400" />
-                )}
+                ) : null}
               </div>
               <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                {plan} plan
+                {isAdmin ? "Admin" : `${plan} plan`}
               </div>
             </div>
             <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
@@ -124,8 +130,16 @@ export function UserMenu() {
           <DropdownMenuItem onClick={() => setView("settings")} className="cursor-pointer">
             <UserIcon className="mr-2 h-4 w-4" /> Profile & Settings
           </DropdownMenuItem>
-          {plan === "free" && (
-            <DropdownMenuItem onClick={() => setView("settings")} className="cursor-pointer text-amber-300">
+          {isAdmin && (
+            <DropdownMenuItem onClick={() => setView("admin")} className="cursor-pointer text-cyan-300">
+              <Shield className="mr-2 h-4 w-4" /> Admin Dashboard
+            </DropdownMenuItem>
+          )}
+          {!isAdmin && plan === "free" && (
+            <DropdownMenuItem
+              onClick={() => upgrade("pro")}
+              className="cursor-pointer text-amber-300"
+            >
               <Crown className="mr-2 h-4 w-4" /> Upgrade to Pro
             </DropdownMenuItem>
           )}

@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { parseRepoUrl } from "@/lib/analysis-engine";
 import type { AnalysisReport } from "@/lib/types";
 import { createJob, startJob, setJobProgress, completeJob, failJob, isCancelled } from "@/lib/job-queue";
+import { checkQuota, incrementUsage } from "@/lib/billing/usage";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -69,6 +70,15 @@ export async function POST(req: NextRequest) {
     const userId = await requireUserId();
     if (!userId) {
       return NextResponse.json({ error: "Sign in with GitHub to analyze a repository" }, { status: 401 });
+    }
+
+    // Quota enforcement — check before running the analysis
+    const quota = await checkQuota(userId, "analysis");
+    if (!quota.allowed) {
+      return NextResponse.json({
+        error: `Analysis quota exceeded (${quota.used}/${quota.limit} this month). Upgrade to Pro for more analyses.`,
+        quota,
+      }, { status: 429 });
     }
 
     // ── CACHE CHECK (scoped to this user) ──
@@ -156,6 +166,9 @@ export async function POST(req: NextRequest) {
         },
       },
     });
+
+    // Increment usage counter (best-effort — don't fail the analysis if this errors)
+    incrementUsage(userId, "analysis").catch(() => { /* silent */ });
 
     const durationMs = Date.now() - requestStart;
     console.log(`[${jobId}] Analysis complete: ${parsed.owner}/${parsed.name} — ${report.totalFiles} files, ${durationMs}ms`);

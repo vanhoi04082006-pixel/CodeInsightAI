@@ -1,6 +1,7 @@
 // NextAuth type augmentation
 // Adds `id` to session.user (so we can use session.user.id safely)
-// Adds `plan`, `stripeCustomerId`, `accessToken`, `provider`, `providers` to session.
+// Adds `plan`, `stripeCustomerId`, `accessToken`, `provider`, `providers`,
+// `role`, `banned` to session.
 import type { DefaultSession } from "next-auth";
 
 declare module "next-auth" {
@@ -13,6 +14,8 @@ declare module "next-auth" {
     accessToken?: string;
     provider?: string;
     providers?: string[];
+    role?: string;   // "user" | "admin"
+    banned?: boolean;
   }
 
   interface User {
@@ -27,5 +30,7 @@ declare module "next-auth/jwt" {
     stripeCustomerId?: string | null;
     accessToken?: string;
     provider?: string;
+    role?: string;   // "user" | "admin"
+    banned?: boolean;
   }
 }

@@ -39,6 +39,9 @@ import { useT } from "@/lib/i18n";
 import { parseRepoUrl } from "@/lib/analysis-engine";
 import { PROVIDER_PRESETS } from "@/lib/providers";
 import { LandingFAQ } from "@/components/shared/landing-faq";
+import { useUpgrade } from "@/hooks/use-upgrade";
+import { signIn } from "next-auth/react";
+import { Loader2 } from "lucide-react";
 
 const FEATURES = [
   { icon: Brain, titleKey: "feature1Title", descKey: "feature1Desc", color: "#22d3ee" },
@@ -89,6 +92,7 @@ const FEATURE_ROUTING = [
 export function LandingView() {
   const setView = useAppStore((s) => s.setView);
   const { t } = useT();
+  const { upgrade, loading: upgrading } = useUpgrade();
   const [url, setUrl] = useState("");
   const [error, setError] = useState("");
   const { scrollYProgress } = useScroll();
@@ -571,11 +575,26 @@ export function LandingView() {
                     ))}
                   </div>
                   <Button
-                    onClick={() => setView("analyze")}
+                    onClick={() => {
+                      if (plan.highlight) {
+                        // Pro plan → direct Stripe checkout
+                        upgrade("pro");
+                      } else {
+                        // Free plan → GitHub sign-in
+                        signIn("github", { callbackUrl: "/" });
+                      }
+                    }}
+                    disabled={plan.highlight && upgrading}
                     variant="outline"
                     className={`mt-6 w-full ${plan.highlight ? "border-violet-400/40 text-violet-300 hover:bg-violet-400/10" : ""}`}
                   >
-                    {plan.cta}
+                    {plan.highlight && upgrading ? (
+                      <>
+                        <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> Redirecting…
+                      </>
+                    ) : (
+                      plan.cta
+                    )}
                   </Button>
                 </GlassCard>
               </motion.div>
@@ -774,15 +793,22 @@ export function LandingView() {
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-2 sm:flex-row">
               <Button
-                onClick={() => setView("analyze")}
+                onClick={() => signIn("github", { callbackUrl: "/" })}
                 size="lg"
                 className="glow-pulse bg-gradient-to-r from-cyan-500 to-violet-500 text-white hover:opacity-90"
               >
                 <Github className="mr-1.5 h-4 w-4" /> Sign in with GitHub
                 <ArrowRight className="ml-1.5 h-4 w-4" />
               </Button>
-              <Button onClick={() => setView("providers")} size="lg" variant="outline">
-                <Plug className="mr-1.5 h-4 w-4" /> View Pricing
+              <Button
+                onClick={() => upgrade("pro")}
+                disabled={upgrading}
+                size="lg"
+                variant="outline"
+                className="border-violet-400/40 text-violet-300 hover:bg-violet-400/10"
+              >
+                {upgrading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Sparkles className="mr-1.5 h-4 w-4" />}
+                {upgrading ? "Redirecting…" : "Upgrade to Pro — $9/mo"}
               </Button>
             </div>
           </motion.div>

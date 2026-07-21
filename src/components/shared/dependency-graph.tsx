@@ -8,6 +8,26 @@ import { cn } from "@/lib/utils";
 
 const GROUP_COLORS = ["#22d3ee", "#a78bfa", "#f472b6", "#34d399", "#fbbf24"];
 
+/**
+ * Compute the SVG radius for a node based on its type + size.
+ * Entry nodes are largest (12), then core (10), service/util/component (8),
+ * config smallest (7). The `n.size` from the analyzer is also factored in
+ * but clamped so nodes stay readable (min 7, max 14).
+ */
+function nodeRadius(n: { type: string; size: number }): number {
+  const baseByType: Record<string, number> = {
+    entry: 12,
+    core: 10,
+    service: 8,
+    util: 7,
+    component: 8,
+    config: 7,
+  };
+  const base = baseByType[n.type] ?? 8;
+  const scaled = base + (n.size / 20); // add a small factor from size
+  return Math.max(7, Math.min(14, scaled));
+}
+
 interface SimNode extends d3.SimulationNodeDatum {
   id: string;
   label: string;
@@ -64,7 +84,7 @@ export function DependencyGraph({ report }: { report: AnalysisReport }) {
         .strength((d) => d.weight * 0.3))
       .force("charge", d3.forceManyBody().strength(-120))
       .force("center", d3.forceCenter(250, 200))
-      .force("collide", d3.forceCollide<SimNode>().radius((d) => d.size + 4))
+      .force("collide", d3.forceCollide<SimNode>().radius((d) => nodeRadius(d) + 4))
       .force("x", d3.forceX(250).strength(0.05))
       .force("y", d3.forceY(200).strength(0.05))
       .alphaDecay(0.02);
@@ -169,21 +189,27 @@ export function DependencyGraph({ report }: { report: AnalysisReport }) {
                   style={{ cursor: "pointer", opacity: dim ? 0.2 : 1, transition: "opacity 0.2s" }}
                 >
                   {(isHover || isSel) && (
-                    <circle cx={pos.x} cy={pos.y} r={n.size / 8 + 3} fill={color} opacity={0.15} />
+                    <circle cx={pos.x} cy={pos.y} r={nodeRadius(n) + 6} fill={color} opacity={0.18} />
                   )}
                   <circle
-                    cx={pos.x} cy={pos.y} r={n.size / 8}
+                    cx={pos.x} cy={pos.y} r={nodeRadius(n)}
                     fill={`url(#node-grad-${n.group % GROUP_COLORS.length})`}
                     stroke={color}
-                    strokeWidth={isSel ? 1 : 0.5}
+                    strokeWidth={isSel ? 2 : 1}
                   />
-                  {(isHover || isSel || n.type === "entry") && (
+                  <circle
+                    cx={pos.x} cy={pos.y} r={nodeRadius(n) * 0.4}
+                    fill="white" opacity={isHover || isSel ? 0.9 : 0.6}
+                    className="pointer-events-none"
+                  />
+                  {(isHover || isSel || n.type === "entry" || zoom > 1.5) && (
                     <text
-                      x={pos.x} y={pos.y - n.size / 8 - 2}
-                      textAnchor="middle" fontSize="2.5" fill="white"
-                      className="font-mono pointer-events-none"
+                      x={pos.x} y={pos.y - nodeRadius(n) - 4}
+                      textAnchor="middle" fontSize="8" fill="white"
+                      className="font-mono pointer-events-none font-semibold"
+                      style={{ paintOrder: "stroke", stroke: "rgba(0,0,0,0.6)", strokeWidth: 2 }}
                     >
-                      {n.label}
+                      {n.label.length > 18 ? n.label.slice(0, 16) + "…" : n.label}
                     </text>
                   )}
                 </g>

@@ -12,7 +12,8 @@
     "personalities": "Personalities",
     "agents": "AI Agents",
     "mission": "Mission Control",
-    "settings": "Settings"
+    "settings": "Settings",
+    "admin": "Admin"
   },
   "actions": {
     "startAnalysis": "Start Analysis",

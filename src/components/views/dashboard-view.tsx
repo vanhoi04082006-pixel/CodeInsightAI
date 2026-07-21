@@ -19,6 +19,8 @@ import {
 } from "lucide-react";
 import { GlassCard, ScoreGauge, GradientText, StatPill } from "@/components/shared/ui";
 import { Button } from "@/components/ui/button";
+import { ProFeaturesCard } from "@/components/shared/pro-features-card";
+import { UsageWidget } from "@/components/shared/usage-widget";
 import { useAppStore } from "@/lib/store";
 import { useT } from "@/lib/i18n";
 import {
@@ -102,6 +104,12 @@ export function DashboardView() {
           </Button>
         </div>
       </motion.div>
+
+      {/* Pro Features + Usage widget row */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <ProFeaturesCard />
+        <UsageWidget />
+      </div>
 
       {/* top row: overall gauge + score cards */}
       <div className="grid gap-4 lg:grid-cols-3">

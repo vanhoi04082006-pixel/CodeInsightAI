@@ -15,6 +15,7 @@ import {
   Plug,
   Bot,
   Rocket,
+  Shield,
 } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { useProvidersStore } from "@/lib/providers-store";
@@ -25,8 +26,10 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { LanguageSwitcher } from "@/components/shared/language-switcher";
 import { UserMenu } from "@/components/shared/user-menu";
+import { AIModeToggle } from "@/components/shared/ai-mode-toggle";
+import { useSession } from "next-auth/react";
 
-const NAV: { id: View; labelKey: string; icon: typeof LayoutDashboard; disabled?: boolean }[] = [
+const NAV: { id: View; labelKey: string; icon: typeof LayoutDashboard; disabled?: boolean; adminOnly?: boolean }[] = [
   { id: "landing", labelKey: "nav.home", icon: Sparkles },
   { id: "dashboard", labelKey: "nav.dashboard", icon: LayoutDashboard },
   { id: "analyze", labelKey: "nav.analyze", icon: ScanSearch },
@@ -37,6 +40,7 @@ const NAV: { id: View; labelKey: string; icon: typeof LayoutDashboard; disabled?
   { id: "personalities", labelKey: "nav.personalities", icon: Bot },
   { id: "mission", labelKey: "nav.mission", icon: Rocket },
   { id: "settings", labelKey: "nav.settings", icon: Settings },
+  { id: "admin", labelKey: "nav.admin", icon: Shield, adminOnly: true },
 ];
 
 export function AppSidebar() {
@@ -46,11 +50,17 @@ export function AppSidebar() {
   const toggle = useAppStore((s) => s.toggleSidebar);
   const activeReport = useAppStore((s) => s.activeReport);
   const { t } = useT();
+  const { data: session } = useSession();
+  const role = (session as any)?.role ?? "user";
+  const isAdmin = role === "admin";
 
   // Mission badge: green pulse when a mission is running
   const missionActive = useAppStore((s) => s.view === "mission" && !!s.activeReport);
   // Chat badge: count unread (placeholder — could track lastSeenChatCount)
   const chatBadge = 0;
+
+  // Filter nav items — hide admin-only items for non-admins
+  const visibleNav = NAV.filter((item) => !item.adminOnly || isAdmin);
 
   return (
     <motion.aside
@@ -96,7 +106,7 @@ export function AppSidebar() {
 
       {/* Nav */}
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 scrollbar-thin">
-        {NAV.map((item) => {
+        {visibleNav.map((item) => {
         const active = view === item.id;
         const disabled = item.disabled === true || ((item.id === "project" || item.id === "chat" || item.id === "mission") && !activeReport);
           const Icon = item.icon;
@@ -170,6 +180,7 @@ export function AppTopbar() {
     providers: "nav.providers",
     personalities: "nav.personalities",
     mission: "nav.mission",
+    admin: "nav.admin",
   };
 
   return (
@@ -205,6 +216,7 @@ export function AppTopbar() {
           <span>{t("common", "actions.quickSearch")}</span>
           <kbd className="rounded bg-white/5 px-1.5 py-0.5 text-[10px]">⌘K</kbd>
         </button>
+        <AIModeToggle />
         <LanguageSwitcher compact />
         <Button
           size="sm"
@@ -227,7 +239,10 @@ export function MobileNav() {
   const setView = useAppStore((s) => s.setView);
   const activeReport = useAppStore((s) => s.activeReport);
   const { t } = useT();
-  const items = NAV.filter((n) => n.id !== "landing");
+  const { data: session } = useSession();
+  const role = (session as any)?.role ?? "user";
+  const isAdmin = role === "admin";
+  const items = NAV.filter((n) => n.id !== "landing" && (!n.adminOnly || isAdmin));
   return (
     <nav className="glass-strong fixed bottom-0 left-0 right-0 z-30 flex items-center justify-around border-t border-white/10 px-1 py-1.5 md:hidden">
       {items.map((item) => {

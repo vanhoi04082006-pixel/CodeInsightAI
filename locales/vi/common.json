@@ -12,7 +12,8 @@
     "personalities": "Tính cách AI",
     "agents": "AI Agents",
     "mission": "Mission Control",
-    "settings": "Cài đặt"
+    "settings": "Cài đặt",
+    "admin": "Quản trị"
   },
   "actions": {
     "startAnalysis": "Bắt đầu phân tích",

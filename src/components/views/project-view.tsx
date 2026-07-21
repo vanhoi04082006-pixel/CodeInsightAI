@@ -22,6 +22,7 @@ import {
   Check,
   GitBranch,
   Activity,
+  Loader2,
 } from "lucide-react";
 import { GlassCard, ScoreGauge, GradientText, NeonDivider, SeverityBadge } from "@/components/shared/ui";
 import { DependencyGraph } from "@/components/shared/dependency-graph";
@@ -51,8 +52,10 @@ const TABS: { id: Tab; labelKey: string; icon: typeof LayoutGrid }[] = [
 export function ProjectView() {
   const { t } = useT();
   const report = useAppStore((s) => s.activeReport);
+  const activeAnalysisId = useAppStore((s) => s.activeAnalysisId);
   const setView = useAppStore((s) => s.setView);
   const [tab, setTab] = useState<Tab>("overview");
+  const [sharing, setSharing] = useState(false);
 
   if (!report) {
     return (
@@ -68,6 +71,36 @@ export function ProjectView() {
       </div>
     );
   }
+
+  const shareReport = async () => {
+    if (sharing) return;
+    setSharing(true);
+    try {
+      const analysisId = activeAnalysisId || (report as any).id;
+      if (!analysisId) {
+        toast.error("Cannot share — analysis not saved to DB yet.");
+        return;
+      }
+      const res = await fetch("/api/share", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ analysisId }),
+      });
+      const data = await res.json();
+      if (data.url) {
+        await navigator.clipboard.writeText(data.url);
+        toast.success("Share link copied to clipboard!", {
+          description: "Expires in 7 days. Anyone with the link can view (read-only).",
+        });
+      } else {
+        toast.error(data.error || "Failed to create share link");
+      }
+    } catch (e) {
+      toast.error("Failed to share — please try again");
+    } finally {
+      setSharing(false);
+    }
+  };
 
   const exportMarkdown = () => {
     const md = `# ${report.repoOwner}/${report.repoName} — AI Report\n\n${report.summary}\n\n## Scores\n- Overall: ${report.scores.overall}\n- Security: ${report.scores.security}\n- Performance: ${report.scores.performance}\n- Architecture: ${report.scores.architecture}\n- Maintainability: ${report.scores.maintainability}\n\n## Top Issues\n${[...report.issues.security, ...report.issues.bugs, ...report.issues.performance].map((i) => `- [${i.severity}] ${i.title}`).join("\n")}\n`;
@@ -133,8 +166,8 @@ export function ProjectView() {
           <Button onClick={downloadJSON} variant="outline" size="sm">
             <Download className="mr-1.5 h-4 w-4" /> .json
           </Button>
-          <Button onClick={() => toast.success(t("reports", "shareLink"))} variant="outline" size="sm">
-            <Share2 className="mr-1.5 h-4 w-4" /> Share
+          <Button onClick={shareReport} variant="outline" size="sm" disabled={sharing}>
+            {sharing ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Share2 className="mr-1.5 h-4 w-4" />} Share
           </Button>
           <Button onClick={() => setView("chat")} size="sm" className="bg-gradient-to-r from-cyan-500 to-violet-500 text-white">
             <Sparkles className="mr-1.5 h-4 w-4" /> Ask AI

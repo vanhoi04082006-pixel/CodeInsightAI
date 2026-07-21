@@ -36,6 +36,8 @@ model User {
   image           String?
   // SaaS fields
   plan            String    @default("free") // free | pro | team | enterprise
+  role            String    @default("user") // user | admin
+  banned          Boolean   @default(false)
   stripeCustomerId String?
   trialEndsAt     DateTime?
   createdAt       DateTime  @default(now())
@@ -47,6 +49,8 @@ model User {
   credentials     ProviderCredential[]
   usageRecords    UsageRecord[]
   settings        UserSettings[]
+  auditLogs       AuditLog[]
+  shareTokens     ShareToken[]
 }
 
 model Account {
@@ -118,6 +122,7 @@ model Analysis {
   user               User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   messages           ChatMessage[]
   fileSummaries      FileSummary[]
+  shareTokens        ShareToken[]
 
   @@index([userId])
   @@index([repoUrl])
@@ -277,5 +282,45 @@ model AgentEvent {
 
   @@index([taskId])
   @@index([agentId])
+  @@index([createdAt])
+}
+
+// ==========================================
+// SHARE TOKENS (public read-only analysis links)
+// ==========================================
+
+model ShareToken {
+  id          String    @id @default(cuid())
+  token       String    @unique
+  analysisId  String
+  createdBy   String
+  expiresAt   DateTime?
+  accessCount Int       @default(0)
+  createdAt   DateTime  @default(now())
+
+  analysis    Analysis  @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  creator     User      @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+
+  @@index([analysisId])
+  @@index([createdBy])
+}
+
+// ==========================================
+// AUDIT LOG (admin actions)
+// ==========================================
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  adminId     String
+  action      String   // upgrade_user | downgrade_user | ban_user | unban_user | delete_user | impersonate
+  targetId    String?
+  details     String   @default("{}")
+  createdAt   DateTime @default(now())
+
+  admin       User     @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId])
+  @@index([targetId])
+  @@index([action])
   @@index([createdAt])
 }

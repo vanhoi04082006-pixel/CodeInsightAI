@@ -98,6 +98,9 @@ export async function getUsage(userId: string): Promise<Record<string, number>> 
 
 /**
  * Check if user can perform an action (quota not exceeded).
+ *
+ * Admins (role === "admin") always bypass quotas — they have unlimited
+ * access to all features.
  */
 export async function checkQuota(userId: string, type: "analysis" | "chat" | "agent_task"): Promise<{
   allowed: boolean;
@@ -105,13 +108,21 @@ export async function checkQuota(userId: string, type: "analysis" | "chat" | "ag
   limit: number;
   plan: string;
 }> {
-  // Get user's plan
+  // Get user's plan + role
   const user = await db.user.findUnique({
     where: { id: userId },
-    select: { plan: true },
+    select: { plan: true, role: true },
   });
 
   const plan = user?.plan ?? "free";
+  const role = user?.role ?? "user";
+
+  // Admin bypass — unlimited everything
+  if (role === "admin") {
+    const usage = await getUsage(userId);
+    return { allowed: true, used: usage[type] ?? 0, limit: -1, plan: "enterprise" };
+  }
+
   const limits = PLAN_LIMITS[plan] ?? PLAN_LIMITS.free;
 
   // Map type to limit field

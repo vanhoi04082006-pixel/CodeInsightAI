@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { requireUserId } from "@/lib/auth";
 import { decrypt } from "@/lib/crypto";
 import { isProduction } from "@/lib/env";
+import { checkQuota, incrementUsage } from "@/lib/billing/usage";
 import type { AnalysisReport, ChatMessage } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -116,6 +117,18 @@ export async function POST(req: NextRequest) {
 
     if (!message || typeof message !== "string") {
       return NextResponse.json({ error: "message is required" }, { status: 400 });
+    }
+
+    // Quota enforcement — chat messages are limited per plan (admin bypasses)
+    const userId = await requireUserId();
+    if (userId) {
+      const quota = await checkQuota(userId, "chat");
+      if (!quota.allowed) {
+        return NextResponse.json({
+          error: `Chat quota exceeded (${quota.used}/${quota.limit} this month). Upgrade to Pro for more messages.`,
+          quota,
+        }, { status: 429 });
+      }
     }
 
     // Load the analysis + report for context
@@ -295,6 +308,11 @@ export async function POST(req: NextRequest) {
       await db.chatMessage.create({
         data: { analysisId: analysisRow.id, role: "assistant", content: reply },
       });
+    }
+
+    // Increment usage counter (best-effort)
+    if (userId) {
+      incrementUsage(userId, "chat").catch(() => { /* silent */ });
     }
 
     // ---- Debug metadata (only when requested; secrets masked client-side) ----

@@ -22,6 +22,7 @@ const SettingsView = dynamic(() => import("@/components/views/settings-view").th
 const ProvidersView = dynamic(() => import("@/components/views/providers-view").then(m => ({ default: m.ProvidersView })), { ssr: false });
 const PersonalitiesView = dynamic(() => import("@/components/views/personalities-view").then(m => ({ default: m.PersonalitiesView })), { ssr: false });
 const MissionControlView = dynamic(() => import("@/components/views/mission-control-view").then(m => ({ default: m.MissionControlView })), { ssr: false });
+const AdminView = dynamic(() => import("@/components/views/admin-view").then(m => ({ default: m.AdminView })), { ssr: false });
 import { CommandPalette } from "@/components/shared/command-palette";
 import { LanguageSwitcher } from "@/components/shared/language-switcher";
 import { ThemeSwitcher } from "@/components/shared/theme-switcher";
@@ -215,6 +216,7 @@ export default function Home() {
                   {view === "providers" && <ProvidersView />}
                   {view === "personalities" && <PersonalitiesView />}
                   {view === "mission" && <MissionControlView />}
+                  {view === "admin" && <AdminView />}
                 </motion.div>
               </AnimatePresence>
             </main>

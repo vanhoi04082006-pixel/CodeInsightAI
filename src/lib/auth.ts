@@ -82,11 +82,40 @@ export const authOptions: NextAuthOptions = {
         try {
           const dbUser = await db.user.findUnique({
             where: { id: uid },
-            select: { plan: true, stripeCustomerId: true, name: true, email: true, image: true },
+            select: {
+              plan: true,
+              stripeCustomerId: true,
+              name: true,
+              email: true,
+              image: true,
+              role: true,
+              banned: true,
+            },
           });
           if (dbUser) {
             token.plan = dbUser.plan;
             token.stripeCustomerId = dbUser.stripeCustomerId;
+            token.role = dbUser.role ?? "user";
+            token.banned = dbUser.banned ?? false;
+            // Admin override: if the user's email matches ADMIN_EMAIL, force
+            // admin role + enterprise plan (all features unlocked).
+            const adminEmail = process.env.ADMIN_EMAIL;
+            if (adminEmail && dbUser.email && dbUser.email.toLowerCase() === adminEmail.toLowerCase()) {
+              token.role = "admin";
+              // Admin effectively has enterprise (unlimited) — but we keep
+              // dbUser.plan for display purposes unless it's already higher.
+              if (dbUser.plan === "free") {
+                token.plan = "enterprise";
+                // Best-effort: persist the admin role + enterprise plan so
+                // future JWT refreshes + API routes see it immediately.
+                try {
+                  await db.user.update({
+                    where: { id: uid },
+                    data: { role: "admin", plan: "enterprise" },
+                  });
+                } catch { /* ignore concurrent updates */ }
+              }
+            }
             // Make sure display fields stay in sync with DB
             token.name = dbUser.name ?? token.name;
             token.email = dbUser.email ?? token.email;
@@ -109,6 +138,8 @@ export const authOptions: NextAuthOptions = {
         (session as any).provider = token.provider;
         (session as any).plan = token.plan ?? "free";
         (session as any).stripeCustomerId = token.stripeCustomerId;
+        (session as any).role = token.role ?? "user";
+        (session as any).banned = token.banned ?? false;
       }
       // Load connected OAuth providers for the account-settings UI
       const uid = (token.uid as string | undefined) ?? token.sub;
