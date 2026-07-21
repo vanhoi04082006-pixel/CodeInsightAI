@@ -1,17 +1,25 @@
+// GET /api/report?id=... — full report for an analysis (multi-tenant).
+// The analysis MUST belong to the authenticated user.
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { requireUserId } from "@/lib/auth";
 import type { AnalysisReport } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// GET /api/report?id=...  -> full report for an analysis
 export async function GET(req: NextRequest) {
+  const userId = await requireUserId();
+  if (!userId) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
   const id = req.nextUrl.searchParams.get("id");
   if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
 
   const row = await db.analysis.findUnique({ where: { id } });
-  if (!row) return NextResponse.json({ error: "not found" }, { status: 404 });
+  if (!row || row.userId !== userId) {
+    return NextResponse.json({ error: "not found" }, { status: 404 });
+  }
 
   let report: AnalysisReport | null = null;
   try {

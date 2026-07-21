@@ -1,10 +1,21 @@
-// CodeInsight AI — Prisma schema (PostgreSQL for production/SaaS)
+// CodeInsight AI — Prisma schema (LOCAL DEVELOPMENT — SQLite)
+//
+// This is the schema used for local development. It uses SQLite so you can
+// `bun install && bun run db:push` without setting up a database server.
+//
+// PRODUCTION uses prisma/schema.prod.prisma (PostgreSQL on Neon). The Vercel
+// build picks it up via the PRISMA_SCHEMA env var (see vercel.json).
+//
+// KEEP IN SYNC with prisma/schema.prod.prisma when you change any model.
+// The two files have identical model definitions — only the datasource
+// provider differs (sqlite vs postgresql).
+
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 

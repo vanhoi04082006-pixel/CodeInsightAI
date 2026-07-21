@@ -1,7 +1,7 @@
 // POST /api/billing/checkout — Create Stripe Checkout Session
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptions, requireUserId } from "@/lib/auth";
 import { createCheckoutSession } from "@/lib/billing/stripe";
 
 export const runtime = "nodejs";
@@ -9,23 +9,27 @@ export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email || "" as any) {
+    const userId = await requireUserId();
+    if (!userId) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
+
+    // Use the user's email from session for Stripe receipt emails
+    const session = await getServerSession(authOptions);
+    const email = session?.user?.email ?? null;
 
     const { plan } = await req.json();
     if (plan !== "pro" && plan !== "team") {
       return NextResponse.json({ error: "Invalid plan" }, { status: 400 });
     }
 
-    const origin = req.headers.get("origin") || "http://localhost:3000";
+    const origin = req.headers.get("origin") || process.env.NEXTAUTH_URL || "http://localhost:3000";
     const result = await createCheckoutSession(
-      (session.user.email ?? "") as any,
-      session.user.email,
+      userId,            // canonical User.id (cuid)
+      email,             // for Stripe receipt
       plan,
-      `${origin}/settings?status=success`,
-      `${origin}/settings?status=cancelled`,
+      `${origin}/?view=settings&status=success`,
+      `${origin}/?view=settings&status=cancelled`,
     );
 
     if (!result) {

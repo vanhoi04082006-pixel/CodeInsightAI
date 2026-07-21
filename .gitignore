@@ -65,3 +65,4 @@ prisma/migrations/
 .cache/
 .turbo/
 coverage/
+worklog.md

@@ -25,6 +25,7 @@ const MissionControlView = dynamic(() => import("@/components/views/mission-cont
 import { CommandPalette } from "@/components/shared/command-palette";
 import { LanguageSwitcher } from "@/components/shared/language-switcher";
 import { ThemeSwitcher } from "@/components/shared/theme-switcher";
+import { UserMenu } from "@/components/shared/user-menu";
 import { Heart, Sparkles, Github } from "lucide-react";
 
 export default function Home() {
@@ -164,12 +165,15 @@ export default function Home() {
               <ThemeSwitcher />
               <LanguageSwitcher />
               {isAuthenticated ? (
-                <button
-                  onClick={() => setView("dashboard")}
-                  className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-cyan-500 to-violet-500 px-3 py-1.5 text-xs font-medium text-white transition hover:opacity-90"
-                >
-                  <Sparkles className="h-3.5 w-3.5" /> Dashboard
-                </button>
+                <>
+                  <button
+                    onClick={() => setView("dashboard")}
+                    className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-cyan-500 to-violet-500 px-3 py-1.5 text-xs font-medium text-white transition hover:opacity-90"
+                  >
+                    <Sparkles className="h-3.5 w-3.5" /> Dashboard
+                  </button>
+                  <UserMenu />
+                </>
               ) : (
                 <button
                   onClick={() => signIn("github", { callbackUrl: "/" })}

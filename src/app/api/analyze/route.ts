@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptions, requireUserId } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { parseRepoUrl } from "@/lib/analysis-engine";
 import type { AnalysisReport } from "@/lib/types";
@@ -10,19 +10,19 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * Lấy GitHub access token của user hiện tại (từ session hoặc DB Account).
- * Token này cho phép gọi GitHub API tới repo PRIVATE của user.
- * Trả về null nếu user chưa đăng nhập GitHub (chỉ phân tích được repo public).
+ * Get the current user's GitHub access token (from session JWT or DB Account).
+ * Allows calling GitHub API for the user's PRIVATE repos. Returns null if the
+ * user isn't signed in with GitHub (public repos only).
  */
 async function getGithubAccessToken(): Promise<string | null> {
   const session = await getServerSession(authOptions);
-  const userId = (session as any)?.user ? (session as any).user.id : null;
+  const userId = (session?.user as any)?.id ?? null;
   const tokenFromSession = (session as any)?.accessToken as string | undefined;
 
-  // Ưu tiên token có sẵn trong session JWT
+  // Prefer the token cached in the JWT session
   if (tokenFromSession) return tokenFromSession;
 
-  // Fallback: đọc trực tiếp từ bảng Account theo userId
+  // Fallback: read directly from the Account table by userId
   if (userId) {
     const account = await db.account.findFirst({
       where: { userId, provider: "github" },
@@ -65,10 +65,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid GitHub URL" }, { status: 400 });
     }
 
-    // ── CACHE CHECK ──
+    // Multi-tenant: each analysis belongs to a user. Anonymous users can't analyze.
+    const userId = await requireUserId();
+    if (!userId) {
+      return NextResponse.json({ error: "Sign in with GitHub to analyze a repository" }, { status: 401 });
+    }
+
+    // ── CACHE CHECK (scoped to this user) ──
     if (!force) {
       const existing = await db.analysis.findFirst({
-        where: { repoOwner: parsed.owner, repoName: parsed.name },
+        where: { userId, repoOwner: parsed.owner, repoName: parsed.name },
         orderBy: { createdAt: "desc" },
       });
       if (existing) {
@@ -92,7 +98,7 @@ export async function POST(req: NextRequest) {
         console.warn(`[${jobId}] No GitHub token — private repos will fail with 404. User should sign in with GitHub.`);
       }
       // Run analysis in background (non-blocking)
-      runAnalysisInBackground(job.id, parsed.owner, parsed.name, parsed.url, !!force, ghToken).catch(e => {
+      runAnalysisInBackground(job.id, parsed.owner, parsed.name, parsed.url, !!force, ghToken, userId).catch(e => {
         console.error(`[job ${job.id}] background error:`, e);
         failJob(job.id, e.message || "Unknown error");
       });
@@ -125,6 +131,7 @@ export async function POST(req: NextRequest) {
 
     const created = await db.analysis.create({
       data: {
+        userId,                          // multi-tenant — attach to current user
         repoUrl: report.repoUrl, repoOwner: report.repoOwner, repoName: report.repoName,
         repoBranch: report.repoBranch, status: "completed",
         overallScore: report.scores.overall, securityScore: report.scores.security,
@@ -237,7 +244,8 @@ async function runAnalysisInBackground(
   repo: string,
   repoUrl: string,
   force: boolean,
-  ghToken: string | null = null
+  ghToken: string | null = null,
+  userId: string | null = null
 ) {
   startJob(jobId);
 
@@ -246,7 +254,7 @@ async function runAnalysisInBackground(
     if (!force) {
       setJobProgress(jobId, 5, "Checking cache...");
       const existing = await db.analysis.findFirst({
-        where: { repoOwner: owner, repoName: repo },
+        where: { userId: userId ?? undefined, repoOwner: owner, repoName: repo },
         orderBy: { createdAt: "desc" },
       });
       if (existing) {
@@ -356,6 +364,7 @@ async function runAnalysisInBackground(
     const getParsedFile = (path: string) => parsedRepo.files?.find((f: any) => f.path === path);
     const created = await db.analysis.create({
       data: {
+        userId: userId ?? null,            // multi-tenant — attach to current user
         repoUrl: report.repoUrl, repoOwner: report.repoOwner, repoName: report.repoName,
         repoBranch: report.repoBranch, status: "completed",
         overallScore: report.scores.overall, securityScore: report.scores.security,

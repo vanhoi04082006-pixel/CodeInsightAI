@@ -1,15 +1,23 @@
+// /api/history — per-user analysis history
+// GET /api/history                — recent analyses (scoped to authenticated user)
+// POST /api/history { id, ... }   — fetch a single analysis (must belong to user)
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { requireUserId } from "@/lib/auth";
 import type { AnalysisReport, ChatMessage } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// GET /api/history  -> recent analyses + chat preview
 export async function GET(req: NextRequest) {
   try {
+    const userId = await requireUserId();
+    if (!userId) {
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
     const limit = Math.min(Number(req.nextUrl.searchParams.get("limit") ?? "20"), 100);
     const rows = await db.analysis.findMany({
+      where: { userId },                    // multi-tenant — only this user's analyses
       orderBy: { createdAt: "desc" },
       take: limit,
       include: { _count: { select: { messages: true } } },
@@ -44,16 +52,22 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// GET /api/history?id=...&messages=true -> single analysis with chat
 export async function POST(req: NextRequest) {
   try {
+    const userId = await requireUserId();
+    if (!userId) {
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
     const { id } = await req.json();
     if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
+    // Ensure the analysis belongs to the user (multi-tenant)
     const row = await db.analysis.findUnique({
       where: { id },
       include: { messages: { orderBy: { createdAt: "asc" } } },
     });
-    if (!row) return NextResponse.json({ error: "not found" }, { status: 404 });
+    if (!row || row.userId !== userId) {
+      return NextResponse.json({ error: "not found" }, { status: 404 });
+    }
 
     let report: AnalysisReport | null = null;
     try {

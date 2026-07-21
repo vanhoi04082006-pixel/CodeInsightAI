@@ -1,7 +1,6 @@
 // GET /api/usage — Return current usage + limits for the authenticated user
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireUserId } from "@/lib/auth";
 import { getUsage, checkQuota, PLAN_LIMITS } from "@/lib/billing/usage";
 import { db } from "@/lib/db";
 
@@ -10,12 +9,11 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email || "" as any) {
+    const userId = await requireUserId();
+    if (!userId) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
-    const userId = (session.user.email ?? "") as any;
     const usage = await getUsage(userId);
 
     const user = await db.user.findUnique({

@@ -5,9 +5,11 @@
   "scripts": {
     "dev": "next dev -p 3000",
     "build": "prisma generate && next build",
+    "build:prod": "PRISMA_SCHEMA=prisma/schema.prod.prisma prisma generate && next build",
     "start": "next start",
     "lint": "eslint .",
     "db:push": "prisma db push",
+    "db:push:prod": "PRISMA_SCHEMA=prisma/schema.prod.prisma prisma db push",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:reset": "prisma migrate reset",

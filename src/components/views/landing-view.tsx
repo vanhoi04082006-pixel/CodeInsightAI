@@ -38,12 +38,7 @@ import { useAppStore } from "@/lib/store";
 import { useT } from "@/lib/i18n";
 import { parseRepoUrl } from "@/lib/analysis-engine";
 import { PROVIDER_PRESETS } from "@/lib/providers";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
+import { LandingFAQ } from "@/components/shared/landing-faq";
 
 const FEATURES = [
   { icon: Brain, titleKey: "feature1Title", descKey: "feature1Desc", color: "#22d3ee" },
@@ -90,8 +85,6 @@ const FEATURE_ROUTING = [
   { feature: "Refactoring", model: "Qwen 2.5 72B", color: "#8b5cf6" },
   { feature: "Security Audit", model: "Claude 3.5 Sonnet", color: "#d97706" },
 ];
-
-const FAQ_KEYS = ["faqQ1", "faqQ2", "faqQ3", "faqQ4", "faqQ5", "faqQ6"];
 
 export function LandingView() {
   const setView = useAppStore((s) => s.setView);
@@ -599,20 +592,7 @@ export function LandingView() {
         <div className="mx-auto max-w-3xl">
           <SectionTitle center eyebrow={t("landing", "faqEyebrow")} title={t("landing", "faqTitle")} />
           <div className="mt-10">
-            <GlassCard className="p-2">
-              <Accordion type="single" collapsible className="w-full">
-                {FAQ_KEYS.map((qk, i) => (
-                  <AccordionItem key={i} value={`item-${i}`} className="border-white/5">
-                    <AccordionTrigger className="px-4 text-left hover:no-underline">
-                      <span className="text-sm font-medium">{t("landing", qk)}</span>
-                    </AccordionTrigger>
-                    <AccordionContent className="px-4 text-sm text-muted-foreground">
-                      {t("landing", `faqA${i + 1}`)}
-                    </AccordionContent>
-                  </AccordionItem>
-                ))}
-              </Accordion>
-            </GlassCard>
+            <LandingFAQ />
           </div>
         </div>
       </section>

@@ -1,7 +1,6 @@
 // POST /api/billing/portal — Create Stripe Customer Portal session
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireUserId } from "@/lib/auth";
 import { createPortalSession } from "@/lib/billing/stripe";
 import { db } from "@/lib/db";
 
@@ -10,13 +9,13 @@ export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email || "" as any) {
+    const userId = await requireUserId();
+    if (!userId) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
     const user = await db.user.findUnique({
-      where: { email: (session.user.email ?? "") as any },
+      where: { id: userId },                // look up by User.id (cuid), NOT email
       select: { stripeCustomerId: true },
     });
 
@@ -24,10 +23,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No active subscription found" }, { status: 400 });
     }
 
-    const origin = req.headers.get("origin") || "http://localhost:3000";
+    const origin = req.headers.get("origin") || process.env.NEXTAUTH_URL || "http://localhost:3000";
     const result = await createPortalSession(
       user.stripeCustomerId,
-      `${origin}/settings`,
+      `${origin}/?view=settings`,
     );
 
     if (!result) {

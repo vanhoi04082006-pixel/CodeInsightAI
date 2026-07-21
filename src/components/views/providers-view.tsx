@@ -26,6 +26,7 @@ import {
   RefreshCw,
   ChevronDown,
   Settings2,
+  ShieldCheck,
 } from "lucide-react";
 import { GlassCard, GradientText, NeonDivider } from "@/components/shared/ui";
 import { Button } from "@/components/ui/button";
@@ -45,9 +46,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useProvidersStore } from "@/lib/providers-store";
+import { useProvidersStore, getAvailablePresets } from "@/lib/providers-store";
 import { useT } from "@/lib/i18n";
 import { PROVIDER_PRESETS, PRESET_BY_ID, FEATURE_LABELS, FEATURE_DEFAULTS } from "@/lib/providers";
+import { isProduction } from "@/lib/env";
 import type { AIProvider, FeatureKind, ProviderId, ProviderPreset } from "@/lib/types";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -239,7 +241,9 @@ function ProviderCard({ provider }: { provider: AIProvider }) {
   const update = useProvidersStore((s) => s.updateProvider);
   const remove = useProvidersStore((s) => s.removeProvider);
   const setStatus = useProvidersStore((s) => s.setProviderStatus);
+  const syncFromBackend = useProvidersStore((s) => s.syncFromBackend);
   const [expanded, setExpanded] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const STATUS_META: Record<string, { color: string; label: string; icon: typeof Power }> = {
     unknown: { color: "#94a3b8", label: t("providers", "status.unknown"), icon: Activity },
@@ -252,9 +256,46 @@ function ProviderCard({ provider }: { provider: AIProvider }) {
   const status = STATUS_META[provider.status ?? "unknown"];
   const SIcon = status.icon;
   const isLocal = preset.local;
+  // In production we never store the raw key in the browser — show masked
+  // form. In local dev, the raw key is in localStorage for convenience.
   const maskedKey = provider.apiKey
     ? `${provider.apiKey.slice(0, 4)}...${provider.apiKey.slice(-4)}`
-    : "Not set";
+    : provider.id.startsWith("prov_")  // locally added, not yet saved
+      ? "Not set"
+      : "•••• (saved server-side)";
+
+  /**
+   * Persist the credential to the backend (encrypted). Called when the user
+   * toggles enabled OR edits the apiKey field. After save we re-sync so the
+   * local state reflects the masked key from the server.
+   */
+  const saveToBackend = async (patch: Partial<AIProvider>) => {
+    setSaving(true);
+    try {
+      await fetch("/api/providers/credentials", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          providerId: provider.providerId,
+          label: provider.label,
+          apiKey: patch.apiKey ?? provider.apiKey,
+          baseUrl: provider.baseUrl,
+          model: provider.model,
+          temperature: provider.temperature,
+          maxTokens: provider.maxTokens,
+          streaming: provider.streaming,
+          enabled: patch.enabled ?? provider.enabled,
+        }),
+      });
+      // After save, re-sync to get the masked key back from the server.
+      await syncFromBackend();
+      toast.success("Saved securely (encrypted)");
+    } catch (e) {
+      toast.error("Failed to save credential");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const testConnection = async () => {
     setStatus(provider.id, "testing");
@@ -430,9 +471,33 @@ function ProviderCard({ provider }: { provider: AIProvider }) {
                   {t("providers", "getApiKey")} <ArrowRight className="h-3 w-3" />
                 </a>
               ) : <span />}
-              <Button size="sm" variant="destructive" onClick={() => { remove(provider.id); toast.success(t("notifications", "providerRemoved")); }}>
-                <Trash2 className="mr-1.5 h-3.5 w-3.5" /> {t("providers", "remove")}
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => saveToBackend({})}
+                  disabled={saving}
+                >
+                  {saving ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <ShieldCheck className="mr-1.5 h-3.5 w-3.5" />}
+                  {saving ? "Saving…" : "Save (encrypted)"}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={async () => {
+                    // If the provider came from the backend, delete the credential there too.
+                    if (!provider.id.startsWith("prov_")) {
+                      try {
+                        await fetch(`/api/providers/credentials?id=${encodeURIComponent(provider.id)}`, { method: "DELETE" });
+                      } catch { /* best-effort */ }
+                    }
+                    remove(provider.id);
+                    toast.success(t("notifications", "providerRemoved"));
+                  }}
+                >
+                  <Trash2 className="mr-1.5 h-3.5 w-3.5" /> {t("providers", "remove")}
+                </Button>
+              </div>
             </div>
           </motion.div>
         )}
@@ -460,12 +525,15 @@ function Field({ icon: Icon, label, hint, children }: { icon: typeof Hash; label
 
 function AddProviderDialog({ open, onOpenChange, onPick }: { open: boolean; onOpenChange: (b: boolean) => void; onPick: (pid: ProviderId) => void }) {
   const { t } = useT();
+  // Use getAvailablePresets() — it filters out local-only providers (Ollama,
+  // LM Studio) in production because they're unreachable from a Vercel origin.
+  const available = getAvailablePresets();
   const grouped = {
-    [t("providers", "groups.aggregator")]: PROVIDER_PRESETS.filter((p) => p.category === "Aggregator"),
-    [t("providers", "groups.cloud")]: PROVIDER_PRESETS.filter((p) => p.category.startsWith("Cloud")),
-    [t("providers", "groups.local")]: PROVIDER_PRESETS.filter((p) => p.local),
-    [t("providers", "groups.enterprise")]: PROVIDER_PRESETS.filter((p) => p.category === "Enterprise"),
-    [t("providers", "groups.custom")]: PROVIDER_PRESETS.filter((p) => p.category === "Custom"),
+    [t("providers", "groups.aggregator")]: available.filter((p) => p.category === "Aggregator"),
+    [t("providers", "groups.cloud")]: available.filter((p) => p.category.startsWith("Cloud")),
+    [t("providers", "groups.local")]: available.filter((p) => p.local),
+    [t("providers", "groups.enterprise")]: available.filter((p) => p.category === "Enterprise"),
+    [t("providers", "groups.custom")]: available.filter((p) => p.category === "Custom"),
   };
 
   return (
@@ -478,18 +546,27 @@ function AddProviderDialog({ open, onOpenChange, onPick }: { open: boolean; onOp
           <p className="text-sm text-muted-foreground">
             {t("providers", "addProviderDesc")}
           </p>
+          {isProduction && (
+            <p className="mt-2 rounded-lg border border-cyan-400/20 bg-cyan-400/[0.04] p-2.5 text-[11px] text-cyan-200">
+              Production mode: local providers (Ollama, LM Studio) are hidden because they
+              can&apos;t be reached from a browser on this domain.
+            </p>
+          )}
         </DialogHeader>
         <div className="space-y-5">
-          {Object.entries(grouped).map(([groupName, items]) => (
-            <div key={groupName}>
-              <p className="mb-2 text-[10px] uppercase tracking-wider text-muted-foreground">{groupName}</p>
-              <div className="grid gap-2 sm:grid-cols-2">
-                {items.map((p) => (
-                  <ProviderPick key={p.providerId} preset={p} onPick={() => onPick(p.providerId)} />
-                ))}
+          {Object.entries(grouped).map(([groupName, items]) => {
+            if (items.length === 0) return null;
+            return (
+              <div key={groupName}>
+                <p className="mb-2 text-[10px] uppercase tracking-wider text-muted-foreground">{groupName}</p>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {items.map((p) => (
+                    <ProviderPick key={p.providerId} preset={p} onPick={() => onPick(p.providerId)} />
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </DialogContent>
     </Dialog>

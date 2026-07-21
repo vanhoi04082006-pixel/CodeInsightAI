@@ -16,6 +16,9 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "2mb",
     },
   },
+  // Allow the Z.ai preview-chat iframe origin to load Next.js assets
+  // (avoids the "Cross origin request detected" dev warning).
+  allowedDevOrigins: ["*.space-z.ai", "*.vercel.app"],
 };
 
 export default nextConfig;

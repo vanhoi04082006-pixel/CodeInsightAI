@@ -2,6 +2,9 @@
 // Returns text/event-stream with chunks as AI generates them
 import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
+import { requireUserId } from "@/lib/auth";
+import { decrypt } from "@/lib/crypto";
+import { isProduction } from "@/lib/env";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -48,9 +51,39 @@ export async function POST(req: NextRequest) {
   }
 
   // If no provider AND no Platform AI, fall back
-  const usePlatformAI = body.aiMode === "platform" || (!provider?.apiKey && process.env.PLATFORM_AI_API_KEY);
+  let effectiveProvider = provider;
+  // Production: look up the encrypted credential from DB when client has no apiKey
+  if (provider && !provider.apiKey && isProduction) {
+    const userId = await requireUserId();
+    if (userId) {
+      const cred = await db.providerCredential.findFirst({
+        where: {
+          userId,
+          providerId: provider.providerId,
+          ...(provider.label ? { label: provider.label } : {}),
+          enabled: true,
+        },
+      });
+      if (cred) {
+        try {
+          const realKey = decrypt(cred.encryptedApiKey);
+          effectiveProvider = {
+            ...provider,
+            apiKey: realKey,
+            baseUrl: cred.baseUrl || provider.baseUrl,
+            model: cred.model || provider.model,
+            temperature: cred.temperature ?? provider.temperature,
+            maxTokens: cred.maxTokens ?? provider.maxTokens,
+            streaming: cred.streaming ?? provider.streaming,
+          };
+        } catch { /* decryption failed */ }
+      }
+    }
+  }
 
-  if (!provider?.apiKey && !usePlatformAI) {
+  const usePlatformAI = body.aiMode === "platform" || (!effectiveProvider?.apiKey && process.env.PLATFORM_AI_API_KEY);
+
+  if (!effectiveProvider?.apiKey && !usePlatformAI) {
     const fallback = "⚠️ No AI provider configured. Add a provider in AI Providers settings (BYOK) or switch to Platform AI mode.";
     const stream = new ReadableStream({
       start(controller) {
@@ -68,7 +101,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Use Platform AI config if in platform mode
-  const effectiveProvider = usePlatformAI ? {
+  const finalProvider = usePlatformAI ? {
     providerId: process.env.PLATFORM_AI_PROVIDER || "openrouter",
     apiKey: process.env.PLATFORM_AI_API_KEY || "",
     baseUrl: process.env.PLATFORM_AI_BASE_URL || "https://openrouter.ai/api/v1",
@@ -76,7 +109,7 @@ export async function POST(req: NextRequest) {
     temperature: 0.7,
     maxTokens: 4096,
     timeout: 60,
-  } : provider;
+  } : effectiveProvider;
 
   // Build messages
   const systemPrompt = personality?.systemPrompt || "You are CodeInsight AI, a senior software engineer.";
@@ -87,18 +120,18 @@ export async function POST(req: NextRequest) {
     { role: "user", content: message },
   ];
 
-  const temperature = personality?.temperature ?? effectiveProvider!.temperature ?? 0.7;
-  const maxTokens = personality?.maxTokens && personality.maxTokens > 0 ? personality.maxTokens : (effectiveProvider!.maxTokens && effectiveProvider!.maxTokens > 0 ? effectiveProvider!.maxTokens : 4096);
-  const model = effectiveProvider!.model || "gpt-4o-mini";
+  const temperature = personality?.temperature ?? finalProvider!.temperature ?? 0.7;
+  const maxTokens = personality?.maxTokens && personality.maxTokens > 0 ? personality.maxTokens : (finalProvider!.maxTokens && finalProvider!.maxTokens > 0 ? finalProvider!.maxTokens : 4096);
+  const model = finalProvider!.model || "gpt-4o-mini";
 
   // Build request to provider with stream: true
   let url: string;
   let headers: Record<string, string> = { "Content-Type": "application/json" };
   let reqBody: Record<string, unknown>;
 
-  if (effectiveProvider!.providerId === "anthropic") {
-    url = effectiveProvider!.baseUrl.endsWith("/v1") ? `${effectiveProvider!.baseUrl}/messages` : `${effectiveProvider!.baseUrl}/v1/messages`;
-    headers["x-api-key"] = effectiveProvider!.apiKey;
+  if (finalProvider!.providerId === "anthropic") {
+    url = finalProvider!.baseUrl.endsWith("/v1") ? `${finalProvider!.baseUrl}/messages` : `${finalProvider!.baseUrl}/v1/messages`;
+    headers["x-api-key"] = finalProvider!.apiKey;
     headers["anthropic-version"] = "2023-06-01";
     const systemMsg = llmMessages.find(m => m.role === "system")?.content || "";
     const chatMsgs = llmMessages.filter(m => m.role !== "system").map(m => ({
@@ -115,8 +148,8 @@ export async function POST(req: NextRequest) {
     };
   } else {
     // OpenAI-compatible (default)
-    url = effectiveProvider!.baseUrl.endsWith("/v1") ? `${effectiveProvider!.baseUrl}/chat/completions` : `${effectiveProvider!.baseUrl}/v1/chat/completions`;
-    if (effectiveProvider!.apiKey) headers["Authorization"] = `Bearer ${effectiveProvider!.apiKey}`;
+    url = finalProvider!.baseUrl.endsWith("/v1") ? `${finalProvider!.baseUrl}/chat/completions` : `${finalProvider!.baseUrl}/v1/chat/completions`;
+    if (finalProvider!.apiKey) headers["Authorization"] = `Bearer ${finalProvider!.apiKey}`;
     reqBody = {
       model,
       messages: llmMessages.map(m => ({ role: m.role, content: m.content })),
@@ -176,7 +209,7 @@ export async function POST(req: NextRequest) {
               const parsed = JSON.parse(data);
               let chunk = "";
 
-              if (effectiveProvider!.providerId === "anthropic") {
+              if (finalProvider!.providerId === "anthropic") {
                 if (parsed.type === "content_block_delta" && parsed.delta?.text) {
                   chunk = parsed.delta.text;
                 }

@@ -1,23 +1,20 @@
 // POST /api/providers/credentials — Save encrypted API key to DB
 // GET  /api/providers/credentials — List user's credentials (masked keys)
 // DELETE /api/providers/credentials?id=xxx — Delete credential
+//
+// All routes use session.user.id (the User.id cuid) — never email — so the
+// Prisma FK constraint on ProviderCredential.userId is satisfied.
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { encrypt, decrypt, maskApiKey } from "@/lib/crypto";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireUserId } from "@/lib/auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-async function getUserId(): Promise<string | null> {
-  const session = await getServerSession(authOptions);
-  return (session?.user?.email as string) ?? null;
-}
-
 export async function GET() {
   try {
-    const userId = await getUserId();
+    const userId = await requireUserId();
     if (!userId) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
@@ -51,7 +48,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const userId = await getUserId();
+    const userId = await requireUserId();
     if (!userId) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
@@ -109,7 +106,7 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
-    const userId = await getUserId();
+    const userId = await requireUserId();
     if (!userId) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }

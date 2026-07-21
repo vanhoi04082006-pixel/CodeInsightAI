@@ -24,6 +24,7 @@ import type { View } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { LanguageSwitcher } from "@/components/shared/language-switcher";
+import { UserMenu } from "@/components/shared/user-menu";
 
 const NAV: { id: View; labelKey: string; icon: typeof LayoutDashboard; disabled?: boolean }[] = [
   { id: "landing", labelKey: "nav.home", icon: Sparkles },
@@ -214,9 +215,8 @@ export function AppTopbar() {
           <span className="hidden sm:inline">{t("common", "actions.newAnalysis")}</span>
           <span className="sm:hidden">{t("common", "actions.analyzeRepo")}</span>
         </Button>
-        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-cyan-400/40 to-violet-500/40 text-xs font-bold">
-          ZA
-        </div>
+        {/* Real session-backed user menu with avatar, plan badge, logout */}
+        <UserMenu />
       </div>
     </header>
   );

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireUserId } from "@/lib/auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -10,6 +11,7 @@ export const dynamic = "force-dynamic";
  * Anthropic, Gemini, and local (Ollama / LM Studio) providers.
  *
  * NOTE: apiKey is accepted but NEVER logged or echoed back.
+ * Requires authentication — anonymous users can't probe providers.
  */
 interface TestBody {
   providerId?: string;
@@ -20,6 +22,10 @@ interface TestBody {
 }
 
 export async function POST(req: NextRequest) {
+  const userId = await requireUserId();
+  if (!userId) {
+    return NextResponse.json({ status: "error", error: "Not authenticated" }, { status: 401 });
+  }
   const start = Date.now();
   const body = (await req.json().catch(() => ({}))) as TestBody;
   const { providerId, apiKey, baseUrl, model, timeout } = body;

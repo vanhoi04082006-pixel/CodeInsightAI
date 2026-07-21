@@ -3,6 +3,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { ThemeManager } from "@/components/shared/theme-manager";
+import { AuthStateWatcher } from "@/components/shared/auth-state-watcher";
 import { useI18nStore, type Locale } from "@/lib/i18n";
 import { SessionProvider } from "next-auth/react";
 
@@ -40,6 +41,7 @@ export function Providers({
     >
       <QueryClientProvider client={client}>
         <ThemeManager />
+        <AuthStateWatcher />
         {children}
       </QueryClientProvider>
     </SessionProvider>

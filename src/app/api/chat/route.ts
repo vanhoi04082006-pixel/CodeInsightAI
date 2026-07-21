@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { requireUserId } from "@/lib/auth";
+import { decrypt } from "@/lib/crypto";
+import { isProduction } from "@/lib/env";
 import type { AnalysisReport, ChatMessage } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -191,8 +194,45 @@ export async function POST(req: NextRequest) {
     let llmError: string | undefined;
     let retryCount = 0;
 
+    // ── Production security: if the client sent a provider but no apiKey,
+    //     look up the encrypted credential from the DB (multi-tenant safe).
+    //     This lets the browser hold only a masked key while the server still
+    //     makes authenticated calls to the AI provider.
+    // ── In local dev, we trust the apiKey from localStorage (BYOK convenience).
+    let effectiveProvider = provider;
+    if (provider && !provider.apiKey && isProduction) {
+      const userId = await requireUserId();
+      if (userId) {
+        // Find by providerId + label (label may be undefined → fall back to providerId)
+        const cred = await db.providerCredential.findFirst({
+          where: {
+            userId,
+            providerId: provider.providerId,
+            ...(provider.label ? { label: provider.label } : {}),
+            enabled: true,
+          },
+        });
+        if (cred) {
+          try {
+            const realKey = decrypt(cred.encryptedApiKey);
+            effectiveProvider = {
+              ...provider,
+              apiKey: realKey,
+              baseUrl: cred.baseUrl || provider.baseUrl,
+              model: cred.model || provider.model,
+              temperature: cred.temperature ?? provider.temperature,
+              maxTokens: cred.maxTokens ?? provider.maxTokens,
+              streaming: cred.streaming ?? provider.streaming,
+            };
+          } catch {
+            // Decryption failed — fall through to error path below
+          }
+        }
+      }
+    }
+
     // Check for Platform AI mode
-    const usePlatformAI = body.aiMode === "platform" || (!provider?.apiKey && process.env.PLATFORM_AI_API_KEY);
+    const usePlatformAI = body.aiMode === "platform" || (!effectiveProvider?.apiKey && process.env.PLATFORM_AI_API_KEY);
 
     try {
       if (usePlatformAI) {
@@ -209,12 +249,12 @@ export async function POST(req: NextRequest) {
           maxTokens: personality?.maxTokens ?? 4096,
           timeout: 60,
         } as any, llmMessages, personality);
-      } else if (provider && provider.apiKey) {
+      } else if (effectiveProvider && effectiveProvider.apiKey) {
         // Call the user's selected provider directly (OpenAI-compatible)
-        reply = await callProvider(provider, llmMessages, personality);
-      } else if (provider && (provider.providerId === "ollama" || provider.providerId === "lmstudio")) {
+        reply = await callProvider(effectiveProvider, llmMessages, personality);
+      } else if (effectiveProvider && (effectiveProvider.providerId === "ollama" || effectiveProvider.providerId === "lmstudio")) {
         // Local providers don't need API key
-        reply = await callProvider(provider, llmMessages, personality);
+        reply = await callProvider(effectiveProvider, llmMessages, personality);
       } else {
         // Fallback: try z-ai built-in SDK
         try {

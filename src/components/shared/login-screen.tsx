@@ -1,11 +1,39 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { Github, Sparkles, ArrowRight, ShieldCheck, Zap, Code2 } from "lucide-react";
+import { Github, Sparkles, ArrowRight, ShieldCheck, Zap, Code2, Loader2 } from "lucide-react";
 import { GlassCard, GradientText } from "@/components/shared/ui";
 import { signIn } from "next-auth/react";
+import { toast } from "sonner";
 
+/**
+ * Production-grade login screen.
+ *
+ * Flow:
+ * 1. User clicks "Sign in with GitHub"
+ * 2. Button shows loading spinner, toast "Redirecting to GitHub…"
+ * 3. Browser redirects to GitHub OAuth
+ * 4. After callback, AuthStateWatcher (mounted in providers.tsx) toasts
+ *    success or surfaces `?error=…` from the URL.
+ */
 export function LoginScreen({ onBack }: { onBack?: () => void }) {
+  const [redirecting, setRedirecting] = useState(false);
+
+  const handleSignIn = async () => {
+    if (redirecting) return;
+    setRedirecting(true);
+    toast.loading("Redirecting to GitHub…", { id: "github-redirect" });
+    try {
+      // signIn() navigates away — if it returns, the redirect failed
+      await signIn("github", { callbackUrl: "/" });
+    } catch (e) {
+      setRedirecting(false);
+      toast.dismiss("github-redirect");
+      toast.error("Failed to start GitHub sign-in. Please try again.");
+    }
+  };
+
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4">
       {/* Background glow */}
@@ -33,18 +61,39 @@ export function LoginScreen({ onBack }: { onBack?: () => void }) {
 
           {/* GitHub Login Button */}
           <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => signIn("github", { callbackUrl: "/" })}
-            className="mt-6 flex w-full items-center justify-center gap-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-500 px-4 py-3 text-sm font-semibold text-white transition hover:opacity-90"
+            whileHover={{ scale: redirecting ? 1 : 1.02 }}
+            whileTap={{ scale: redirecting ? 1 : 0.98 }}
+            onClick={handleSignIn}
+            disabled={redirecting}
+            className="mt-6 flex w-full items-center justify-center gap-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-500 px-4 py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-70"
           >
-            <Github className="h-5 w-5" />
-            Sign in with GitHub
-            <ArrowRight className="ml-1 h-4 w-4" />
+            {redirecting ? (
+              <>
+                <Loader2 className="h-5 w-5 animate-spin" />
+                Redirecting…
+              </>
+            ) : (
+              <>
+                <Github className="h-5 w-5" />
+                Sign in with GitHub
+                <ArrowRight className="ml-1 h-4 w-4" />
+              </>
+            )}
           </motion.button>
 
+          {/* Privacy / scope notice */}
+          <div className="mt-4 flex items-start gap-2 rounded-lg border border-white/5 bg-white/[0.02] p-3 text-left">
+            <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-400" />
+            <p className="text-[11px] leading-relaxed text-muted-foreground">
+              We request <code className="rounded bg-white/5 px-1 text-cyan-300">read:user</code>,{" "}
+              <code className="rounded bg-white/5 px-1 text-cyan-300">user:email</code>, and{" "}
+              <code className="rounded bg-white/5 px-1 text-cyan-300">repo</code> scopes (so we can analyze your
+              private repositories). You can revoke access anytime from your GitHub settings.
+            </p>
+          </div>
+
           {/* Features */}
-          <div className="mt-8 space-y-2.5">
+          <div className="mt-6 space-y-2.5">
             {[
               { icon: Code2, text: "Analyze any GitHub repository with 12 AI agents" },
               { icon: ShieldCheck, text: "66 static analysis rules (security, bugs, performance)" },
@@ -69,7 +118,7 @@ export function LoginScreen({ onBack }: { onBack?: () => void }) {
           </div>
 
           {/* Back to landing */}
-          {onBack && (
+          {onBack && !redirecting && (
             <button
               onClick={onBack}
               className="mt-6 text-xs text-muted-foreground transition hover:text-foreground"
@@ -80,7 +129,7 @@ export function LoginScreen({ onBack }: { onBack?: () => void }) {
 
           {/* Privacy note */}
           <p className="mt-6 text-[10px] leading-relaxed text-muted-foreground/60">
-            We only request read access to your public repositories. Your API keys are encrypted and never exposed.
+            Your API keys are AES-256-GCM encrypted on the server and never exposed to the frontend.
             <Sparkles className="mx-auto mt-2 h-3 w-3 text-cyan-300/40" />
           </p>
         </GlassCard>

@@ -1,8 +1,9 @@
 {
-  "buildCommand": "prisma generate && next build",
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
+  "buildCommand": "PRISMA_SCHEMA=prisma/schema.prod.prisma prisma generate && next build",
   "regions": ["sin1"],
-  "env": {
-    "NEXTAUTH_URL": "https://codeinsight-ai.vercel.app"
+  "github": {
+    "silent": true
   }
 }
