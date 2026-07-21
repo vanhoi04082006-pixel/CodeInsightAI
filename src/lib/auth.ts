@@ -4,22 +4,50 @@ import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { db } from "@/lib/db";
 
 /**
+ * Resolve the canonical app URL for NextAuth.
+ *
+ * On Vercel, we DO NOT require NEXTAUTH_URL to be set — NextAuth v4 can
+ * auto-detect it from the request headers (`x-forwarded-proto` + `x-forwarded-host`).
+ *
+ * If NEXTAUTH_URL IS set, it takes precedence (useful for forcing a specific
+ * canonical domain, e.g. when you have multiple aliases).
+ *
+ * Common cause of the "Callback" error:
+ *   NEXTAUTH_URL is set to a different domain than the actual deployment URL.
+ *   For example, setting NEXTAUTH_URL=https://codeinsight-ai.vercel.app
+ *   when the actual deployment is https://code-insight-ai-six.vercel.app.
+ *
+ * Fix: either (a) unset NEXTAUTH_URL on Vercel and let auto-detection work,
+ * or (b) set it to the exact deployment URL.
+ */
+function resolveAuthUrl(): string | undefined {
+  // 1. Explicit env var wins
+  if (process.env.NEXTAUTH_URL) return process.env.NEXTAUTH_URL;
+  // 2. On Vercel, build from VERCEL_URL (e.g. code-insight-ai-six.vercel.app)
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  // 3. Fallback: undefined → NextAuth auto-detects from request headers
+  return undefined;
+}
+
+/**
  * NextAuth — GitHub only (production-grade SaaS auth)
  *
  * - JWT strategy (stateless, scales on Vercel serverless)
  * - session.user.id is populated from token.sub (the User.id cuid)
  * - All API routes MUST read session.user.id — never use email as userId
- *   (email is for display only; User.id is the FK target in Prisma)
  *
  * Required env vars:
  *   NEXTAUTH_SECRET  — random 32+ char string
- *   NEXTAUTH_URL     — app origin (http://localhost:3000 locally,
- *                      https://code-insight-ai-six.vercel.app in prod)
  *   GITHUB_ID        — GitHub OAuth App Client ID
  *   GITHUB_SECRET    — GitHub OAuth App Client Secret
  *
+ * Optional env vars:
+ *   NEXTAUTH_URL  — app origin. If unset, auto-detected from VERCEL_URL or
+ *                   request headers. Set this ONLY if you need to force a
+ *                   specific canonical domain.
+ *
  * GitHub OAuth callback URL (set in https://github.com/settings/developers):
- *   <NEXTAUTH_URL>/api/auth/callback/github
+ *   <your-deployment-url>/api/auth/callback/github
  */
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(db),
@@ -99,6 +127,10 @@ export const authOptions: NextAuthOptions = {
     },
   },
   secret: process.env.NEXTAUTH_SECRET,
+  // url: resolveAuthUrl() — optional, NextAuth v4 auto-detects from request
+  // headers when not set. We only set it if NEXTAUTH_URL or VERCEL_URL is
+  // explicitly available, to avoid forcing a wrong canonical URL.
+  ...(resolveAuthUrl() ? { url: resolveAuthUrl() } : {}),
   pages: {
     // Landing page IS the sign-in page — it shows the public marketing view
     // and the login screen is overlaid when the user tries to access the app.
@@ -106,7 +138,7 @@ export const authOptions: NextAuthOptions = {
     error: "/",
   },
   // Defensive: surface OAuth errors via ?error= on the redirect back to "/"
-  // so the client can toast them (see settings-view.tsx / login-screen.tsx).
+  // so the client can toast them (see auth-state-watcher.tsx).
   debug: process.env.NODE_ENV === "development" && process.env.AUTH_DEBUG === "1",
 };
 
