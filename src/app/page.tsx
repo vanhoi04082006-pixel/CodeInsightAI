@@ -27,7 +27,8 @@ import { CommandPalette } from "@/components/shared/command-palette";
 import { LanguageSwitcher } from "@/components/shared/language-switcher";
 import { ThemeSwitcher } from "@/components/shared/theme-switcher";
 import { UserMenu } from "@/components/shared/user-menu";
-import { Heart, Sparkles, Github } from "lucide-react";
+import { ProGate } from "@/components/shared/pro-gate";
+import { Heart, Sparkles, Github, Rocket } from "lucide-react";
 
 export default function Home() {
   const view = useAppStore((s) => s.view);
@@ -215,7 +216,11 @@ export default function Home() {
                   {view === "settings" && <SettingsView />}
                   {view === "providers" && <ProvidersView />}
                   {view === "personalities" && <PersonalitiesView />}
-                  {view === "mission" && <MissionControlView />}
+                  {view === "mission" && (
+                    <ProGate feature="Mission Control" icon={Rocket}>
+                      <MissionControlView />
+                    </ProGate>
+                  )}
                   {view === "admin" && <AdminView />}
                 </motion.div>
               </AnimatePresence>

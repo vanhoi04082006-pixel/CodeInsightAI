@@ -23,9 +23,11 @@ import {
   GitBranch,
   Activity,
   Loader2,
+  Zap,
 } from "lucide-react";
 import { GlassCard, ScoreGauge, GradientText, NeonDivider, SeverityBadge } from "@/components/shared/ui";
 import { DependencyGraph } from "@/components/shared/dependency-graph";
+import { CodeGraphView } from "@/components/shared/codegraph-view";
 import { CodeViewer } from "@/components/shared/code-viewer";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -35,7 +37,7 @@ import { toast } from "sonner";
 import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
-type Tab = "overview" | "architecture" | "bugs" | "security" | "performance" | "dependencies" | "code" | "docs" | "roadmap";
+type Tab = "overview" | "architecture" | "bugs" | "security" | "performance" | "dependencies" | "code" | "docs" | "roadmap" | "codegraph" | "ai-insights";
 
 const TABS: { id: Tab; labelKey: string; icon: typeof LayoutGrid }[] = [
   { id: "overview", labelKey: "overview", icon: LayoutGrid },
@@ -44,7 +46,9 @@ const TABS: { id: Tab; labelKey: string; icon: typeof LayoutGrid }[] = [
   { id: "security", labelKey: "security", icon: ShieldCheck },
   { id: "performance", labelKey: "performance", icon: Gauge },
   { id: "dependencies", labelKey: "dependencies", icon: Boxes },
+  { id: "codegraph", labelKey: "codegraph", icon: Network },
   { id: "code", labelKey: "code", icon: FileCode },
+  { id: "ai-insights", labelKey: "ai-insights", icon: Sparkles },
   { id: "docs", labelKey: "docs", icon: FileText },
   { id: "roadmap", labelKey: "roadmap", icon: Rocket },
 ];
@@ -229,8 +233,14 @@ export function ProjectView() {
           <TabsContent value="dependencies" className="mt-4">
             <DependenciesTab report={report} />
           </TabsContent>
+          <TabsContent value="codegraph" className="mt-4">
+            <CodeGraphView analysisId={activeAnalysisId} />
+          </TabsContent>
           <TabsContent value="code" className="mt-4">
             <CodeTab report={report} />
+          </TabsContent>
+          <TabsContent value="ai-insights" className="mt-4">
+            <AIInsightsTab report={report} />
           </TabsContent>
           <TabsContent value="docs" className="mt-4">
             <DocsTab report={report} />
@@ -845,6 +855,131 @@ function Stat({ label, value, accent }: { label: string; value: string | number;
     <div className="rounded-lg border border-white/5 bg-white/[0.02] p-3">
       <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</p>
       <p className="mt-0.5 text-lg font-bold tabular-nums" style={{ color: accent }}>{value}</p>
+    </div>
+  );
+}
+
+/* ---------- AI Insights Tab (Deep Analysis) ---------- */
+function AIInsightsTab({ report }: { report: AnalysisReport }) {
+  const deep = (report as any).deepAnalysis;
+  const aiEnh = (report as any).aiEnhancement;
+
+  if (!deep && !aiEnh) {
+    return (
+      <GlassCard className="p-8 text-center">
+        <Activity className="mx-auto h-8 w-8 text-cyan-300" />
+        <h3 className="mt-3 text-sm font-semibold">Static Analysis Only</h3>
+        <p className="mt-1 text-xs text-muted-foreground">
+          No AI insights available for this analysis. Add an AI provider or enable Platform AI for deep AI-powered insights.
+        </p>
+      </GlassCard>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Badge */}
+      <div className="flex items-center gap-2">
+        {deep?.badge === "deep-ai" ? (
+          <span className="flex items-center gap-1.5 rounded-full bg-violet-500/15 px-3 py-1 text-xs font-medium text-violet-300">
+            <Sparkles className="h-3.5 w-3.5" /> Deep AI Analysis (5-pass)
+          </span>
+        ) : (
+          <span className="flex items-center gap-1.5 rounded-full bg-cyan-500/10 px-3 py-1 text-xs font-medium text-cyan-300">
+            <Activity className="h-3.5 w-3.5" /> AI-Enhanced
+          </span>
+        )}
+      </div>
+
+      {/* Executive Summary */}
+      <GlassCard className="p-6">
+        <h3 className="flex items-center gap-2 text-sm font-semibold"><Sparkles className="h-4 w-4 text-violet-300" /> Executive Summary</h3>
+        <p className="mt-2 text-sm leading-relaxed text-foreground/90">
+          {deep?.executiveSummary || aiEnh?.aiSummary || report.summary}
+        </p>
+      </GlassCard>
+
+      {/* Deep Analysis sections */}
+      {deep && (
+        <>
+          {deep.securityReview?.length > 0 && (
+            <GlassCard className="p-6">
+              <h3 className="flex items-center gap-2 text-sm font-semibold"><ShieldCheck className="h-4 w-4 text-rose-400" /> AI Security Review</h3>
+              <div className="mt-3 space-y-3">
+                {deep.securityReview.map((s: any, i: number) => (
+                  <div key={i} className="rounded-lg border border-rose-500/15 bg-rose-500/[0.03] p-3">
+                    <p className="text-sm font-medium text-rose-200">{s.issue}</p>
+                    <p className="mt-1 text-xs text-muted-foreground"><span className="font-medium">Root cause:</span> {s.rootCause}</p>
+                    <p className="mt-1 text-xs text-muted-foreground"><span className="font-medium">Impact:</span> {s.impact}</p>
+                    {s.fixCode && (
+                      <pre className="mt-2 overflow-x-auto rounded-md bg-black/40 p-2 text-[10px] font-mono text-emerald-300"><code>{s.fixCode}</code></pre>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </GlassCard>
+          )}
+
+          {deep.architectureReview && (
+            <GlassCard className="p-6">
+              <h3 className="flex items-center gap-2 text-sm font-semibold"><Network className="h-4 w-4 text-cyan-300" /> AI Architecture Review</h3>
+              <div className="mt-3 grid gap-4 sm:grid-cols-2">
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-emerald-400">Strengths</p>
+                  <ul className="mt-1 space-y-1">{deep.architectureReview.strengths?.map((s: string, i: number) => <li key={i} className="text-xs text-muted-foreground">✓ {s}</li>)}</ul>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-rose-400">Weaknesses</p>
+                  <ul className="mt-1 space-y-1">{deep.architectureReview.weaknesses?.map((w: string, i: number) => <li key={i} className="text-xs text-muted-foreground">✗ {w}</li>)}</ul>
+                </div>
+              </div>
+              {deep.architectureReview.suggestions?.length > 0 && (
+                <div className="mt-3 space-y-2">
+                  <p className="text-[10px] uppercase tracking-wider text-violet-300">Suggestions</p>
+                  {deep.architectureReview.suggestions.map((s: any, i: number) => (
+                    <div key={i} className="rounded border border-white/5 bg-white/[0.02] p-2">
+                      <p className="text-xs font-medium">{s.title} <span className="ml-1 text-[9px] text-muted-foreground">({s.effort})</span></p>
+                      <p className="text-[11px] text-muted-foreground">{s.description}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </GlassCard>
+          )}
+
+          {deep.priorities?.length > 0 && (
+            <GlassCard className="p-6">
+              <h3 className="flex items-center gap-2 text-sm font-semibold"><Zap className="h-4 w-4 text-amber-400" /> AI Priorities</h3>
+              <div className="mt-3 space-y-2">
+                {deep.priorities.map((p: any, i: number) => (
+                  <div key={i} className="flex items-start gap-2 rounded-lg border border-white/5 bg-white/[0.02] p-3">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-violet-500/20 text-[10px] font-bold text-violet-300">{i + 1}</span>
+                    <div>
+                      <p className="text-sm font-medium">{p.issue}</p>
+                      <p className="text-[11px] text-muted-foreground"><span className="font-medium">Impact:</span> {p.businessImpact}</p>
+                      <p className="text-[11px] text-muted-foreground"><span className="font-medium">Recommendation:</span> {p.recommendation}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </GlassCard>
+          )}
+
+          {deep.roadmap?.length > 0 && (
+            <GlassCard className="p-6">
+              <h3 className="flex items-center gap-2 text-sm font-semibold"><Rocket className="h-4 w-4 text-cyan-300" /> AI Roadmap</h3>
+              <div className="mt-3 space-y-3">
+                {deep.roadmap.map((phase: any, i: number) => (
+                  <div key={i} className="rounded-lg border border-cyan-500/15 bg-cyan-500/[0.03] p-3">
+                    <p className="text-xs font-semibold text-cyan-200">{phase.phase}</p>
+                    <ul className="mt-1 space-y-0.5">{phase.tasks?.map((task: string, j: number) => <li key={j} className="text-[11px] text-muted-foreground">→ {task}</li>)}</ul>
+                  </div>
+                ))}
+              </div>
+            </GlassCard>
+          )}
+        </>
+      )}
     </div>
   );
 }

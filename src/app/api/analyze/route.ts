@@ -137,28 +137,29 @@ export async function POST(req: NextRequest) {
       report = generateReport(parsed.url);
     }
 
-    // ── Optional AI Enhancement ──
-    // If the user has Platform AI configured OR BYOK with an enabled provider,
-    // call the LLM to generate an AI-enhanced executive summary + priorities.
-    // Default: ON when a provider is available. Users can disable via ?aiEnhance=false.
+    // ── Optional Deep AI Analysis (5-pass) ──
+    // If Platform AI is configured, run 5 LLM passes for a comprehensive report:
+    // 1. Executive Summary, 2. Security Review, 3. Architecture, 4. Code Quality, 5. Priorities
+    // Falls back to basic static report if no AI key or if the call fails.
     const enableAiEnhance = body.aiEnhance !== false; // default true
     if (enableAiEnhance && parsedRepoData) {
       try {
-        const { enhanceWithAI } = await import("@/lib/ai-enhance");
-        // Try Platform AI first (server-side key), then fall back to no enhancement
-        const platformKey = process.env.PLATFORM_AI_API_KEY;
-        const aiResult = await enhanceWithAI(parsedRepoData, report, {
-          providerId: process.env.PLATFORM_AI_PROVIDER || "openrouter",
-          apiKey: platformKey || "",
-          baseUrl: process.env.PLATFORM_AI_BASE_URL || "https://openrouter.ai/api/v1",
-          model: process.env.PLATFORM_AI_MODEL || "anthropic/claude-3.5-sonnet",
-        });
-        if (aiResult) {
-          // Attach AI enhancement to the report
-          (report as any).aiEnhancement = aiResult;
+        const { runDeepAnalysis } = await import("@/lib/ai-deep-analysis");
+        const { getPlatformAIConfig } = await import("@/lib/platform-ai");
+        const platformConfig = getPlatformAIConfig();
+        if (platformConfig) {
+          const deepResult = await runDeepAnalysis(parsedRepoData, report, platformConfig);
+          if (deepResult) {
+            (report as any).deepAnalysis = deepResult;
+            // Also set aiEnhancement for backward compat (badge display)
+            (report as any).aiEnhancement = {
+              aiSummary: deepResult.executiveSummary,
+              aiBadge: "ai-enhanced",
+            };
+          }
         }
       } catch (e) {
-        console.warn(`[${jobId}] AI enhancement failed (non-fatal):`, e);
+        console.warn(`[${jobId}] Deep AI analysis failed (non-fatal):`, e);
         // Non-fatal — keep the static report
       }
     }

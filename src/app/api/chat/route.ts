@@ -4,6 +4,8 @@ import { requireUserId } from "@/lib/auth";
 import { decrypt } from "@/lib/crypto";
 import { isProduction } from "@/lib/env";
 import { checkQuota, incrementUsage } from "@/lib/billing/usage";
+import { callAI, type AIMessage } from "@/lib/ai-client";
+import { resolveEffectiveProvider } from "@/lib/platform-ai";
 import type { AnalysisReport, ChatMessage } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -244,30 +246,34 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Check for Platform AI mode
-    const usePlatformAI = body.aiMode === "platform" || (!effectiveProvider?.apiKey && process.env.PLATFORM_AI_API_KEY);
+    // Resolve effective provider using the unified platform-ai resolver.
+    // This supports ALL 14 providers (not just OpenRouter) and handles
+    // Platform AI, BYOK (with encrypted DB lookup in production), and local providers.
+    const finalProvider = resolveEffectiveProvider(
+      body.aiMode,
+      effectiveProvider ? {
+        providerId: effectiveProvider.providerId,
+        apiKey: effectiveProvider.apiKey,
+        baseUrl: effectiveProvider.baseUrl,
+        model: effectiveProvider.model,
+        temperature: effectiveProvider.temperature,
+        maxTokens: effectiveProvider.maxTokens,
+      } : undefined,
+      null  // decryptedBYOK already handled above (effectiveProvider has the key)
+    );
 
     try {
-      if (usePlatformAI) {
-        // Platform AI mode — use server-side key (hidden from user)
-        if (!process.env.PLATFORM_AI_API_KEY) {
-          throw new Error("Platform AI is not configured. Please add your own API key in Settings → AI Providers (BYOK mode).");
-        }
-        reply = await callProvider({
-          providerId: process.env.PLATFORM_AI_PROVIDER || "openrouter",
-          apiKey: process.env.PLATFORM_AI_API_KEY,
-          baseUrl: process.env.PLATFORM_AI_BASE_URL || "https://openrouter.ai/api/v1",
-          model: process.env.PLATFORM_AI_MODEL || "anthropic/claude-3.5-sonnet",
-          temperature: personality?.temperature ?? 0.7,
-          maxTokens: personality?.maxTokens ?? 4096,
-          timeout: 60,
-        } as any, llmMessages, personality);
-      } else if (effectiveProvider && effectiveProvider.apiKey) {
-        // Call the user's selected provider directly (OpenAI-compatible)
-        reply = await callProvider(effectiveProvider, llmMessages, personality);
-      } else if (effectiveProvider && (effectiveProvider.providerId === "ollama" || effectiveProvider.providerId === "lmstudio")) {
-        // Local providers don't need API key
-        reply = await callProvider(effectiveProvider, llmMessages, personality);
+      if (finalProvider) {
+        // Use unified ai-client (supports all 14 providers)
+        const result = await callAI(
+          finalProvider,
+          llmMessages as AIMessage[],
+          {
+            temperature: personality?.temperature ?? 0.7,
+            maxTokens: personality?.maxTokens && personality.maxTokens > 0 ? personality.maxTokens : 4096,
+          }
+        );
+        reply = result.content;
       } else {
         // Fallback: try z-ai built-in SDK
         try {
@@ -282,14 +288,13 @@ export async function POST(req: NextRequest) {
           reply = completion.choices[0]?.message?.content ?? "";
         } catch (zaiErr) {
           console.error("[/api/chat] z-ai SDK error", zaiErr);
-          // If z-ai fails, return error (don't use fallback — user wants real AI)
-          throw new Error("No AI provider configured. Please add an AI provider in Settings → AI Providers, or enable a provider with a valid API key.");
+          throw new Error("No AI provider configured. Please add an AI provider in Settings → AI Providers, or enable Platform AI mode.");
         }
       }
     } catch (err) {
       console.error("[/api/chat] LLM error", err);
       llmError = err instanceof Error ? err.message : String(err);
-      reply = ""; // Don't use fake fallback — return the error to the user
+      reply = "";
     }
 
     if (!reply || !reply.trim()) {
