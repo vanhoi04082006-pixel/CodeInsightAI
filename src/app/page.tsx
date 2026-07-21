@@ -6,7 +6,9 @@ import { useAppStore } from "@/lib/store";
 import { useT } from "@/lib/i18n";
 import { AnimatedBackground } from "@/components/shared/animated-background";
 import { CustomCursor } from "@/components/shared/custom-cursor";
+import { LoginScreen } from "@/components/shared/login-screen";
 import { AppSidebar, AppTopbar, MobileNav } from "@/components/shared/app-shell";
+import { useSession, signIn } from "next-auth/react";
 import dynamic from "next/dynamic";
 import { LandingView } from "@/components/views/landing-view";
 
@@ -23,12 +25,17 @@ const MissionControlView = dynamic(() => import("@/components/views/mission-cont
 import { CommandPalette } from "@/components/shared/command-palette";
 import { LanguageSwitcher } from "@/components/shared/language-switcher";
 import { ThemeSwitcher } from "@/components/shared/theme-switcher";
-import { Heart, Sparkles } from "lucide-react";
+import { Heart, Sparkles, Github } from "lucide-react";
 
 export default function Home() {
   const view = useAppStore((s) => s.view);
   const setView = useAppStore((s) => s.setView);
   const { t } = useT();
+  const { data: session, status } = useSession();
+
+  // Auth gate: landing is public, app requires GitHub login
+  const isLanding = view === "landing";
+  const isAuthenticated = status === "authenticated" && !!session?.user;
 
   // Global keyboard shortcuts
   useEffect(() => {
@@ -102,7 +109,33 @@ export default function Home() {
     return () => window.removeEventListener("keydown", onKey);
   }, [view, setView]);
 
-  const isLanding = view === "landing";
+  // Auth gate: if not landing and not authenticated → show login screen
+  if (!isLanding && !isAuthenticated && status !== "loading") {
+    return (
+      <div className="relative flex min-h-screen flex-col">
+        <AnimatedBackground />
+        <LoginScreen onBack={() => setView("landing")} />
+        <CustomCursor />
+      </div>
+    );
+  }
+
+  // Loading state while checking session
+  if (!isLanding && status === "loading") {
+    return (
+      <div className="relative flex min-h-screen flex-col">
+        <AnimatedBackground />
+        <div className="flex flex-1 items-center justify-center">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span className="h-2 w-2 animate-pulse rounded-full bg-cyan-400" />
+            <span className="h-2 w-2 animate-pulse rounded-full bg-cyan-400" style={{ animationDelay: "0.2s" }} />
+            <span className="h-2 w-2 animate-pulse rounded-full bg-cyan-400" style={{ animationDelay: "0.4s" }} />
+            <span className="ml-2">Loading…</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative flex min-h-screen flex-col">
@@ -130,12 +163,21 @@ export default function Home() {
             <div className="flex items-center gap-2">
               <ThemeSwitcher />
               <LanguageSwitcher />
-              <button
-                onClick={() => setView("analyze")}
-                className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-cyan-500 to-violet-500 px-3 py-1.5 text-xs font-medium text-white transition hover:opacity-90"
-              >
-                <Sparkles className="h-3.5 w-3.5" /> {t("common", "actions.analyzeRepo")}
-              </button>
+              {isAuthenticated ? (
+                <button
+                  onClick={() => setView("dashboard")}
+                  className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-cyan-500 to-violet-500 px-3 py-1.5 text-xs font-medium text-white transition hover:opacity-90"
+                >
+                  <Sparkles className="h-3.5 w-3.5" /> Dashboard
+                </button>
+              ) : (
+                <button
+                  onClick={() => signIn("github", { callbackUrl: "/" })}
+                  className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-cyan-500 to-violet-500 px-3 py-1.5 text-xs font-medium text-white transition hover:opacity-90"
+                >
+                  <Github className="h-3.5 w-3.5" /> Sign in
+                </button>
+              )}
             </div>
           </header>
 

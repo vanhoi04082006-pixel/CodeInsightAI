@@ -167,11 +167,13 @@ export function ChatView() {
             : undefined,
           language,
           debug: devMode.enabled,
+          aiMode: useProvidersStore.getState().aiMode,
         }),
       });
 
-      // Check if provider supports streaming
-      const useStreaming = providerInstance?.streaming && providerInstance?.apiKey;
+      // Check if provider supports streaming (BYOK with streaming enabled, or Platform AI)
+      const aiMode = useProvidersStore.getState().aiMode;
+      const useStreaming = aiMode === "platform" || (providerInstance?.streaming && providerInstance?.apiKey);
 
       if (useStreaming) {
         // ── Streaming via SSE ──
@@ -200,6 +202,7 @@ export function ChatView() {
               timeout: providerInstance.timeout,
             } : undefined,
             language,
+            aiMode: useProvidersStore.getState().aiMode,
           }),
         });
 

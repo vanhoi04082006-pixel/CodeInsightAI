@@ -34,8 +34,9 @@ interface ChatBody {
   history?: { role: "user" | "assistant"; content: string }[];
   personality?: PersonalityConfig;
   provider?: ProviderConfig;
-  language?: string; // "en" | "vi" | ...
-  debug?: boolean; // when true, return debug metadata
+  language?: string;
+  debug?: boolean;
+  aiMode?: "byok" | "platform"; // SaaS: BYOK or Platform AI
 }
 
 const DEFAULT_SYSTEM_PROMPT = `You are CodeInsight AI — an elite AI CTO, Software Architect, Security Expert, Performance Engineer, and Senior Staff Engineer combined.
@@ -183,15 +184,32 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // 5. Call the LLM — use user's provider if available, else built-in
+    // 5. Call the LLM — use user's provider (BYOK), Platform AI, or built-in
     const queueMs = Date.now() - requestStart;
     const genStart = Date.now();
     let reply: string;
     let llmError: string | undefined;
     let retryCount = 0;
 
+    // Check for Platform AI mode
+    const usePlatformAI = body.aiMode === "platform" || (!provider?.apiKey && process.env.PLATFORM_AI_API_KEY);
+
     try {
-      if (provider && provider.apiKey) {
+      if (usePlatformAI) {
+        // Platform AI mode — use server-side key (hidden from user)
+        if (!process.env.PLATFORM_AI_API_KEY) {
+          throw new Error("Platform AI is not configured. Please add your own API key in Settings → AI Providers (BYOK mode).");
+        }
+        reply = await callProvider({
+          providerId: process.env.PLATFORM_AI_PROVIDER || "openrouter",
+          apiKey: process.env.PLATFORM_AI_API_KEY,
+          baseUrl: process.env.PLATFORM_AI_BASE_URL || "https://openrouter.ai/api/v1",
+          model: process.env.PLATFORM_AI_MODEL || "anthropic/claude-3.5-sonnet",
+          temperature: personality?.temperature ?? 0.7,
+          maxTokens: personality?.maxTokens ?? 4096,
+          timeout: 60,
+        } as any, llmMessages, personality);
+      } else if (provider && provider.apiKey) {
         // Call the user's selected provider directly (OpenAI-compatible)
         reply = await callProvider(provider, llmMessages, personality);
       } else if (provider && (provider.providerId === "ollama" || provider.providerId === "lmstudio")) {

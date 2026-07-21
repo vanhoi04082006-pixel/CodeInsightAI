@@ -33,6 +33,7 @@ interface ChatBody {
   personality?: PersonalityConfig;
   provider?: ProviderConfig;
   language?: string;
+  aiMode?: "byok" | "platform";
 }
 
 export async function POST(req: NextRequest) {
@@ -46,9 +47,11 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  // If no provider, fall back to non-streaming with a simple message
-  if (!provider || !provider.apiKey) {
-    const fallback = "⚠️ No AI provider configured. Add a provider in AI Providers settings to enable AI chat.";
+  // If no provider AND no Platform AI, fall back
+  const usePlatformAI = body.aiMode === "platform" || (!provider?.apiKey && process.env.PLATFORM_AI_API_KEY);
+
+  if (!provider?.apiKey && !usePlatformAI) {
+    const fallback = "⚠️ No AI provider configured. Add a provider in AI Providers settings (BYOK) or switch to Platform AI mode.";
     const stream = new ReadableStream({
       start(controller) {
         controller.enqueue(`data: ${JSON.stringify({ chunk: fallback, done: true })}\n\n`);
@@ -64,6 +67,17 @@ export async function POST(req: NextRequest) {
     });
   }
 
+  // Use Platform AI config if in platform mode
+  const effectiveProvider = usePlatformAI ? {
+    providerId: process.env.PLATFORM_AI_PROVIDER || "openrouter",
+    apiKey: process.env.PLATFORM_AI_API_KEY || "",
+    baseUrl: process.env.PLATFORM_AI_BASE_URL || "https://openrouter.ai/api/v1",
+    model: process.env.PLATFORM_AI_MODEL || "anthropic/claude-3.5-sonnet",
+    temperature: 0.7,
+    maxTokens: 4096,
+    timeout: 60,
+  } : provider;
+
   // Build messages
   const systemPrompt = personality?.systemPrompt || "You are CodeInsight AI, a senior software engineer.";
   const langInstruction = language === "vi" ? "\n\nTrả lời bằng tiếng Việt." : "";
@@ -73,18 +87,18 @@ export async function POST(req: NextRequest) {
     { role: "user", content: message },
   ];
 
-  const temperature = personality?.temperature ?? provider.temperature ?? 0.7;
-  const maxTokens = personality?.maxTokens && personality.maxTokens > 0 ? personality.maxTokens : (provider.maxTokens && provider.maxTokens > 0 ? provider.maxTokens : 4096);
-  const model = provider.model || "gpt-4o-mini";
+  const temperature = personality?.temperature ?? effectiveProvider!.temperature ?? 0.7;
+  const maxTokens = personality?.maxTokens && personality.maxTokens > 0 ? personality.maxTokens : (effectiveProvider!.maxTokens && effectiveProvider!.maxTokens > 0 ? effectiveProvider!.maxTokens : 4096);
+  const model = effectiveProvider!.model || "gpt-4o-mini";
 
   // Build request to provider with stream: true
   let url: string;
   let headers: Record<string, string> = { "Content-Type": "application/json" };
   let reqBody: Record<string, unknown>;
 
-  if (provider.providerId === "anthropic") {
-    url = provider.baseUrl.endsWith("/v1") ? `${provider.baseUrl}/messages` : `${provider.baseUrl}/v1/messages`;
-    headers["x-api-key"] = provider.apiKey;
+  if (effectiveProvider!.providerId === "anthropic") {
+    url = effectiveProvider!.baseUrl.endsWith("/v1") ? `${effectiveProvider!.baseUrl}/messages` : `${effectiveProvider!.baseUrl}/v1/messages`;
+    headers["x-api-key"] = effectiveProvider!.apiKey;
     headers["anthropic-version"] = "2023-06-01";
     const systemMsg = llmMessages.find(m => m.role === "system")?.content || "";
     const chatMsgs = llmMessages.filter(m => m.role !== "system").map(m => ({
@@ -101,8 +115,8 @@ export async function POST(req: NextRequest) {
     };
   } else {
     // OpenAI-compatible (default)
-    url = provider.baseUrl.endsWith("/v1") ? `${provider.baseUrl}/chat/completions` : `${provider.baseUrl}/v1/chat/completions`;
-    if (provider.apiKey) headers["Authorization"] = `Bearer ${provider.apiKey}`;
+    url = effectiveProvider!.baseUrl.endsWith("/v1") ? `${effectiveProvider!.baseUrl}/chat/completions` : `${effectiveProvider!.baseUrl}/v1/chat/completions`;
+    if (effectiveProvider!.apiKey) headers["Authorization"] = `Bearer ${effectiveProvider!.apiKey}`;
     reqBody = {
       model,
       messages: llmMessages.map(m => ({ role: m.role, content: m.content })),
@@ -162,7 +176,7 @@ export async function POST(req: NextRequest) {
               const parsed = JSON.parse(data);
               let chunk = "";
 
-              if (provider.providerId === "anthropic") {
+              if (effectiveProvider!.providerId === "anthropic") {
                 if (parsed.type === "content_block_delta" && parsed.delta?.text) {
                   chunk = parsed.delta.text;
                 }

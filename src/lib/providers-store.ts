@@ -7,9 +7,12 @@ import { PRESET_BY_ID, FEATURE_DEFAULTS } from "./providers";
 
 interface ProvidersState {
   providers: AIProvider[];
+  // AI mode: "byok" = bring your own key, "platform" = use CodeInsight AI
+  aiMode: "byok" | "platform";
   // feature -> provider instance id
   routing: Partial<Record<FeatureKind, string>>;
 
+  setAiMode: (mode: "byok" | "platform") => void;
   addProvider: (providerId: ProviderId) => string;
   updateProvider: (id: string, patch: Partial<AIProvider>) => void;
   removeProvider: (id: string) => void;
@@ -44,6 +47,7 @@ export const useProvidersStore = create<ProvidersState>()(
   persist(
     (set, get) => ({
       providers: [],
+      aiMode: "byok",
       routing: {},
 
       addProvider: (providerId) => {
@@ -65,6 +69,8 @@ export const useProvidersStore = create<ProvidersState>()(
           }
           return { providers: s.providers.filter((p) => p.id !== id), routing };
         }),
+
+      setAiMode: (mode) => set({ aiMode: mode }),
 
       setRouting: (feature, providerInstanceId) =>
         set((s) => {
