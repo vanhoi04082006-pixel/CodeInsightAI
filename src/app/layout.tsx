@@ -49,7 +49,7 @@ export default async function RootLayout({
   const initialLocale: "en" | "vi" = langCookie === "vi" ? "vi" : "en";
 
   return (
-    <html lang={initialLocale} suppressHydrationWarning>
+    <html lang={initialLocale} data-scroll-behavior="smooth" suppressHydrationWarning>
       <head>
         {/*
           SSR-safe i18n + theme initialization script.
