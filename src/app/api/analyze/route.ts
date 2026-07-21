@@ -137,6 +137,32 @@ export async function POST(req: NextRequest) {
       report = generateReport(parsed.url);
     }
 
+    // ── Optional AI Enhancement ──
+    // If the user has Platform AI configured OR BYOK with an enabled provider,
+    // call the LLM to generate an AI-enhanced executive summary + priorities.
+    // Default: ON when a provider is available. Users can disable via ?aiEnhance=false.
+    const enableAiEnhance = body.aiEnhance !== false; // default true
+    if (enableAiEnhance && parsedRepoData) {
+      try {
+        const { enhanceWithAI } = await import("@/lib/ai-enhance");
+        // Try Platform AI first (server-side key), then fall back to no enhancement
+        const platformKey = process.env.PLATFORM_AI_API_KEY;
+        const aiResult = await enhanceWithAI(parsedRepoData, report, {
+          providerId: process.env.PLATFORM_AI_PROVIDER || "openrouter",
+          apiKey: platformKey || "",
+          baseUrl: process.env.PLATFORM_AI_BASE_URL || "https://openrouter.ai/api/v1",
+          model: process.env.PLATFORM_AI_MODEL || "anthropic/claude-3.5-sonnet",
+        });
+        if (aiResult) {
+          // Attach AI enhancement to the report
+          (report as any).aiEnhancement = aiResult;
+        }
+      } catch (e) {
+        console.warn(`[${jobId}] AI enhancement failed (non-fatal):`, e);
+        // Non-fatal — keep the static report
+      }
+    }
+
     const getParsedFile = (path: string) => parsedRepoData?.files?.find((f: any) => f.path === path);
 
     const created = await db.analysis.create({

@@ -145,11 +145,22 @@ export function ProjectView() {
               {report.repoOwner}/{report.repoName} <ExternalLink className="h-3 w-3" />
             </a>
             <span className="rounded-full bg-white/5 px-2 py-0.5 text-[10px]">{report.repoBranch}</span>
+            {(report as any).aiEnhancement?.aiBadge === "ai-enhanced" ? (
+              <span className="flex items-center gap-1 rounded-full bg-violet-500/15 px-2 py-0.5 text-[10px] font-medium text-violet-300">
+                <Sparkles className="h-3 w-3" /> AI-Enhanced
+              </span>
+            ) : (
+              <span className="flex items-center gap-1 rounded-full bg-cyan-500/10 px-2 py-0.5 text-[10px] font-medium text-cyan-300">
+                <Activity className="h-3 w-3" /> Static Analysis
+              </span>
+            )}
           </div>
           <h1 className="mt-1 text-2xl font-bold md:text-3xl">
             Project <GradientText>Report</GradientText>
           </h1>
-          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{report.summary}</p>
+          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+            {(report as any).aiEnhancement?.aiSummary || report.summary}
+          </p>
           <div className="mt-2 flex flex-wrap gap-1.5">
             {Array.from(new Set(report.tags)).map((t, i) => (
               <span key={`${t}-${i}`} className="rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-0.5 text-[10px] text-muted-foreground">{t}</span>
