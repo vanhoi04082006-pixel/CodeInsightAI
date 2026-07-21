@@ -5,17 +5,19 @@ import { getActiveJobs } from "@/lib/job-queue";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// GET /api/health — system health check
+// GET /api/health — system health check (with detailed DB error for debugging)
 export async function GET() {
   const start = performance.now();
   try {
-    // Check database
-    let dbStatus = "ok";
+    // Check database — capture the error message so we can debug on Vercel
+    let dbStatus: "ok" | "error" = "ok";
+    let dbError: string | undefined;
     let analysisCount = 0;
     try {
       analysisCount = await db.analysis.count();
-    } catch {
+    } catch (e) {
       dbStatus = "error";
+      dbError = e instanceof Error ? e.message : String(e);
     }
 
     // Check active jobs
@@ -28,15 +30,32 @@ export async function GET() {
 
     const latencyMs = Math.round(performance.now() - start);
 
+    // Detect environment for debugging
+    const envInfo = {
+      nodeEnv: process.env.NODE_ENV,
+      appEnv: process.env.APP_ENV ?? "(not set)",
+      hasNextAuthSecret: !!process.env.NEXTAUTH_SECRET,
+      hasNextAuthUrl: !!process.env.NEXTAUTH_URL,
+      nextAuthUrl: process.env.NEXTAUTH_URL ?? "(not set)",
+      vercelUrl: process.env.VERCEL_URL ?? "(not set)",
+      hasDatabaseUrl: !!process.env.DATABASE_URL,
+      databaseUrlProtocol: process.env.DATABASE_URL?.split("://")[0] ?? "(not set)",
+      hasGithubId: !!process.env.GITHUB_ID,
+      hasGithubSecret: !!process.env.GITHUB_SECRET,
+      hasPlatformAiKey: !!process.env.PLATFORM_AI_API_KEY,
+    };
+
     return NextResponse.json({
       status: dbStatus === "ok" ? "healthy" : "degraded",
       timestamp: new Date().toISOString(),
       latencyMs,
       services: {
         database: dbStatus,
+        ...(dbError ? { databaseError: dbError.slice(0, 300) } : {}),
         jobQueue: "ok",
         github: "ok",
       },
+      env: envInfo,
       stats: {
         analyses: analysisCount,
         activeJobs: activeJobs.length,
