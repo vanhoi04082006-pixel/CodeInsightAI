@@ -1,110 +1,112 @@
-# Vercel Deployment Guide
+# CodeInsight AI — Deployment Guide (SaaS)
 
 ## Prerequisites
 
-1. A [Vercel](https://vercel.com) account
-2. A PostgreSQL database (Vercel Postgres, Supabase, Neon, or Railway)
+1. **Neon** account (PostgreSQL) — https://neon.tech
+2. **Vercel** account — https://vercel.com
+3. **GitHub OAuth App** — https://github.com/settings/developers
+4. **Stripe** account (optional, for Platform AI billing) — https://stripe.com
+5. **OpenRouter** API key (optional, for Platform AI mode) — https://openrouter.ai
 
-## Step 1: Database Setup
+---
 
-Vercel doesn't support SQLite (serverless filesystem is read-only). Use PostgreSQL.
+## Step 1: Database (Neon PostgreSQL)
 
-### Option A: Vercel Postgres (easiest)
-1. Go to Vercel Dashboard → Your Project → Storage
-2. Create a Postgres database
-3. Copy the `DATABASE_URL` from the connection string
+1. Go to https://neon.tech → Create project
+2. Copy connection string: `postgresql://user:pass@ep-xxx.region.aws.neon.tech/neondb?sslmode=require`
+3. Save as `DATABASE_URL`
 
-### Option B: Supabase (free tier)
-1. Go to [supabase.com](https://supabase.com) → Create project
-2. Settings → Database → Connection string
-3. Copy: `postgresql://user:pass@host:5432/dbname`
+## Step 2: GitHub OAuth App
 
-### Option C: Neon (serverless Postgres)
-1. Go to [neon.tech](https://neon.tech) → Create project
-2. Copy the connection string
+1. Go to https://github.com/settings/developers → New OAuth App
+2. **Application name**: CodeInsight AI
+3. **Homepage URL**: `https://your-app.vercel.app`
+4. **Authorization callback URL**: `https://your-app.vercel.app/api/auth/callback/github`
+5. Copy Client ID → `GITHUB_ID`
+6. Generate Client Secret → `GITHUB_SECRET`
 
-## Step 2: Switch Prisma to PostgreSQL
+## Step 3: Stripe (optional — for Platform AI billing)
 
-```bash
-./switch-db.sh postgres
+1. Go to https://dashboard.stripe.com → Products
+2. Create product "Pro" — $9/month recurring
+3. Copy Price ID → `STRIPE_PRICE_PRO`
+4. Go to Developers → API Keys → Copy secret key → `STRIPE_SECRET_KEY`
+5. Go to Developers → Webhooks → Add endpoint: `https://your-app.vercel.app/api/billing/webhook`
+6. Copy signing secret → `STRIPE_WEBHOOK_SECRET`
+
+## Step 4: Platform AI (optional — for "use our AI" mode)
+
+1. Get an OpenRouter API key (recommended, 1 key = 100+ models)
+2. Set env vars:
+   - `PLATFORM_AI_API_KEY` = your OpenRouter key
+   - `PLATFORM_AI_BASE_URL` = `https://openrouter.ai/api/v1`
+   - `PLATFORM_AI_MODEL` = `anthropic/claude-3.5-sonnet`
+   - `PLATFORM_AI_PROVIDER` = `openrouter`
+
+## Step 5: Deploy to Vercel
+
+1. Go to https://vercel.com → New Project → Import GitHub repo
+2. Set Environment Variables:
+
+```
+DATABASE_URL=postgresql://...neon.tech/...
+NEXTAUTH_SECRET=<openssl rand -base64 32>
+NEXTAUTH_URL=https://your-app.vercel.app
+GITHUB_ID=<from step 2>
+GITHUB_SECRET=<from step 2>
+STRIPE_SECRET_KEY=<from step 3>
+STRIPE_WEBHOOK_SECRET=<from step 3>
+STRIPE_PRICE_PRO=<from step 3>
+PLATFORM_AI_API_KEY=<from step 4>
+PLATFORM_AI_BASE_URL=https://openrouter.ai/api/v1
+PLATFORM_AI_MODEL=anthropic/claude-3.5-sonnet
+PLATFORM_AI_PROVIDER=openrouter
 ```
 
-This changes `prisma/schema.prisma` from `provider = "sqlite"` to `provider = "postgresql"`.
+3. Deploy
 
-## Step 3: Set Environment Variables on Vercel
+## Step 6: Push Database Schema
 
-In Vercel Dashboard → Project → Settings → Environment Variables:
-
-| Variable | Value |
-|----------|-------|
-| `DATABASE_URL` | `postgresql://user:pass@host:5432/dbname?schema=public` |
-| `NEXTAUTH_SECRET` | Generate with: `openssl rand -base64 32` |
-| `NEXTAUTH_URL` | `https://your-app.vercel.app` |
-| `GITHUB_ID` | Your GitHub OAuth client ID (optional) |
-| `GITHUB_SECRET` | Your GitHub OAuth secret (optional) |
-
-## Step 4: Deploy
+After first deploy, run locally with production DATABASE_URL:
 
 ```bash
-# Install Vercel CLI
-npm i -g vercel
-
-# Deploy
-vercel
-
-# Or connect your GitHub repo on Vercel dashboard for auto-deploy
-```
-
-## Step 5: Push Database Schema
-
-After the first deployment, run:
-
-```bash
-# Set DATABASE_URL to your production database
-DATABASE_URL="postgresql://..." bun run db:push
+DATABASE_URL="postgresql://..." bunx prisma db push
 ```
 
 Or use Vercel CLI:
 
 ```bash
+npm i -g vercel
 vercel env pull .env.production
-bun run db:push
+bunx prisma db push
+```
+
+## Step 7: Update GitHub OAuth Callback
+
+After deploy, update GitHub OAuth App callback URL to your Vercel domain:
+`https://your-app.vercel.app/api/auth/callback/github`
+
+---
+
+## SaaS Flow
+
+```
+User opens app → Landing (public)
+Clicks "Sign in" → GitHub OAuth → Dashboard
+Settings → AI tab → Two modes:
+  BYOK: enter own API key → FREE
+  Platform AI: use your key → $9/mo (Stripe checkout)
+Analyze repos, chat with AI, Mission Control — all features work in both modes
 ```
 
 ## Local Development (SQLite)
 
-For local development, keep using SQLite:
+For local dev, keep SQLite:
 
 ```bash
-./switch-db.sh sqlite
 cp .env.example .env
-bun run db:push
+# Edit .env: DATABASE_URL="file:./db/custom.db"
+bun install
+bunx prisma db push
 bun run dev
 ```
-
-## Build Commands
-
-Vercel will automatically run:
-1. `bun install` (or `npm install`)
-2. `prisma generate` (postinstall hook)
-3. `next build`
-
-The `build` script is: `prisma generate && next build`
-
-## Troubleshooting
-
-### "PrismaClientInitializationError"
-- Ensure `DATABASE_URL` is set correctly on Vercel
-- Ensure schema is switched to `postgresql`: `./switch-db.sh status`
-
-### "NEXTAUTH_URL mismatch"
-- Set `NEXTAUTH_URL` to your Vercel deployment URL
-
-### "GitHub OAuth callback mismatch"
-- Update GitHub OAuth app callback URL to:
-  `https://your-app.vercel.app/api/auth/callback/github`
-
-### Build fails on Vercel
-- Check that all env vars are set
-- Run `bun run lint` and `npx tsc --noEmit` locally first
-- Check Vercel build logs for specific errors

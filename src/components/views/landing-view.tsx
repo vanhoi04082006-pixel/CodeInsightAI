@@ -186,6 +186,8 @@ export function LandingView() {
             </div>
             {error && <p className="mt-2 text-sm text-rose-400">{error}</p>}
             <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1"><Github className="h-3 w-3" /> Sign in with GitHub to start</span>
+              <span>·</span>
               <span>{t("landing", "tryLabel")}</span>
               {["vercel/next.js", "facebook/react", "vuejs/core"].map((r) => (
                 <button
@@ -209,10 +211,10 @@ export function LandingView() {
             transition={{ duration: 0.7, delay: 0.4 }}
             className="mt-12 flex flex-wrap items-center justify-center gap-x-8 gap-y-2 text-xs text-muted-foreground"
           >
-            <span className="flex items-center gap-1.5"><KeyRound className="h-3.5 w-3.5" /> {t("landing", "trustPrivate")}</span>
-            <span className="flex items-center gap-1.5"><HardDrive className="h-3.5 w-3.5" /> {t("landing", "trustData")}</span>
-            <span className="flex items-center gap-1.5"><Zap className="h-3.5 w-3.5" /> {t("landing", "trustFast")}</span>
-            <span className="flex items-center gap-1.5"><Plug className="h-3.5 w-3.5" /> {t("landing", "trustProviders")}</span>
+            <span className="flex items-center gap-1.5"><KeyRound className="h-3.5 w-3.5" /> Free with your own keys</span>
+            <span className="flex items-center gap-1.5"><Zap className="h-3.5 w-3.5" /> Platform AI from $9/mo</span>
+            <span className="flex items-center gap-1.5"><Github className="h-3.5 w-3.5" /> GitHub login</span>
+            <span className="flex items-center gap-1.5"><Plug className="h-3.5 w-3.5" /> 14 AI providers</span>
           </motion.div>
         </motion.div>
 
@@ -499,38 +501,47 @@ export function LandingView() {
 
       {/* ============ PRICING ============ */}
       <section className="relative px-4 py-24">
-        <div className="mx-auto max-w-5xl">
+        <div className="mx-auto max-w-4xl">
           <SectionTitle
             center
-            eyebrow={t("landing", "pricingEyebrow") || "Pricing"}
-            title={<>Free forever. <GradientText>No subscriptions.</GradientText></>}
-            description={t("landing", "pricingDesc") || "CodeInsight AI is local-first. Bring your own AI keys. No hidden fees."}
+            eyebrow="PRICING"
+            title={<>Bring your own key — <GradientText>or use ours.</GradientText></>}
+            description="CodeInsight AI is free with your own API keys. Or upgrade to Platform AI and we handle everything."
           />
-          <div className="mt-14 grid gap-5 md:grid-cols-3">
+          <div className="mt-14 grid gap-5 md:grid-cols-2">
             {[
               {
-                name: "Free",
+                name: "Free (BYOK)",
                 price: "$0",
-                desc: "Everything you need",
-                features: ["All 11 AI agents", "Unlimited analyses", "66 analysis rules", "14 AI providers", "Local SQLite DB", "Mission Control"],
+                desc: "Bring your own API keys",
+                features: [
+                  "All 12 AI agents + 66 analysis rules",
+                  "Unlimited analyses & chat",
+                  "14 AI providers supported",
+                  "Streaming chat (SSE)",
+                  "Mission Control + ReAct loop",
+                  "GitHub OAuth login",
+                ],
                 color: "#22d3ee",
                 highlight: false,
+                cta: "Sign in with GitHub",
               },
               {
-                name: "Self-Hosted",
-                price: "$0",
-                desc: "Full control",
-                features: ["Everything in Free", "Custom personalities", "Plugin SDK", "Developer Mode", "Git Intelligence", "Terminal sandbox"],
+                name: "Pro (Platform AI)",
+                price: "$9",
+                period: "/month",
+                desc: "We provide the AI — no key needed",
+                features: [
+                  "Everything in Free",
+                  "Platform AI (no API key needed)",
+                  "Claude 3.5 Sonnet / GPT-4o",
+                  "Streaming + priority queue",
+                  "Usage analytics dashboard",
+                  "Priority support",
+                ],
                 color: "#a78bfa",
                 highlight: true,
-              },
-              {
-                name: "Enterprise",
-                price: "Contact",
-                desc: "For teams",
-                features: ["Everything in Self-Hosted", "Team shared analyses", "SSO + Audit logs", "Priority support", "Custom integrations", "On-premise deploy"],
-                color: "#34d399",
-                highlight: false,
+                cta: "Upgrade to Pro",
               },
             ].map((plan, i) => (
               <motion.div
@@ -549,11 +560,14 @@ export function LandingView() {
                       className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full px-3 py-0.5 text-[10px] font-bold uppercase tracking-wider"
                       style={{ background: plan.color, color: "#050507" }}
                     >
-                      Popular
+                      Recommended
                     </span>
                   )}
                   <h3 className="text-lg font-bold" style={{ color: plan.color }}>{plan.name}</h3>
-                  <p className="mt-1 text-3xl font-bold">{plan.price}</p>
+                  <div className="mt-1 flex items-baseline gap-1">
+                    <span className="text-3xl font-bold">{plan.price}</span>
+                    {plan.period && <span className="text-sm text-muted-foreground">{plan.period}</span>}
+                  </div>
                   <p className="mt-1 text-xs text-muted-foreground">{plan.desc}</p>
                   <div className="mt-4 space-y-2">
                     {plan.features.map((f) => (
@@ -568,12 +582,15 @@ export function LandingView() {
                     variant="outline"
                     className={`mt-6 w-full ${plan.highlight ? "border-violet-400/40 text-violet-300 hover:bg-violet-400/10" : ""}`}
                   >
-                    {plan.price === "Contact" ? "Contact Us" : "Get Started"}
+                    {plan.cta}
                   </Button>
                 </GlassCard>
               </motion.div>
             ))}
           </div>
+          <p className="mt-6 text-center text-xs text-muted-foreground">
+            Need team access or on-premise? <button onClick={() => setView("settings")} className="text-cyan-300 hover:underline">Contact us</button>
+          </p>
         </div>
       </section>
 
@@ -773,7 +790,7 @@ export function LandingView() {
               Start <GradientText>analyzing</GradientText> now
             </h2>
             <p className="mx-auto mt-4 max-w-lg text-muted-foreground">
-              Paste a GitHub URL. Get a full senior-engineer-level report in 60 seconds. Free, local, private.
+              Sign in with GitHub. Bring your own API key (free) or use Platform AI ($9/mo). Analyze any repo in 60 seconds.
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-2 sm:flex-row">
               <Button
@@ -781,11 +798,11 @@ export function LandingView() {
                 size="lg"
                 className="glow-pulse bg-gradient-to-r from-cyan-500 to-violet-500 text-white hover:opacity-90"
               >
-                <Sparkles className="mr-1.5 h-4 w-4" /> Analyze a Repository
+                <Github className="mr-1.5 h-4 w-4" /> Sign in with GitHub
                 <ArrowRight className="ml-1.5 h-4 w-4" />
               </Button>
               <Button onClick={() => setView("providers")} size="lg" variant="outline">
-                <Plug className="mr-1.5 h-4 w-4" /> Connect AI Provider
+                <Plug className="mr-1.5 h-4 w-4" /> View Pricing
               </Button>
             </div>
           </motion.div>
