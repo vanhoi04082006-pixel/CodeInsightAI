@@ -1,68 +1,63 @@
-// CodeInsight AI — Global API rate limiting middleware
+// CodeInsight AI — Rate limiting middleware (Vercel Edge compatible)
 //
-// Protects all /api/* routes from abuse. Uses in-memory token bucket per IP.
-// Limits: 60 requests/minute per IP (general), 10/minute for auth + billing.
-//
-// In production on Vercel, each serverless instance has its own memory,
-// so this is per-instance limiting. For true distributed rate limiting,
-// use Upstash Redis (but in-memory is sufficient for most use cases).
+// IMPORTANT: This middleware MUST be edge-runtime compatible.
+// No `setInterval`, no Node.js APIs, no dynamic imports.
+// /api/auth/* is EXCLUDED from matcher to prevent NextAuth errors.
 
 import { NextRequest, NextResponse } from "next/server";
-import { RateLimiterRegistry } from "@/lib/production/rate-limiter";
 
-// Initialize rate limiter registry
-const registry = new RateLimiterRegistry();
+// In-memory token bucket (edge-safe)
+interface Bucket { tokens: number; lastRefill: number; }
+const buckets = new Map<string, Bucket>();
+const LIMITS: Record<string, { capacity: number; refillRate: number }> = {
+  default: { capacity: 60, refillRate: 1 },
+  analyze: { capacity: 20, refillRate: 0.33 },
+  billing: { capacity: 10, refillRate: 0.17 },
+};
+
+function allow(ip: string, type: keyof typeof LIMITS): boolean {
+  const key = `${ip}:${type}`;
+  const limit = LIMITS[type];
+  const now = Date.now();
+  let bucket = buckets.get(key);
+  if (!bucket) {
+    bucket = { tokens: limit.capacity, lastRefill: now };
+    buckets.set(key, bucket);
+  }
+  const elapsed = (now - bucket.lastRefill) / 1000;
+  bucket.tokens = Math.min(limit.capacity, bucket.tokens + elapsed * limit.refillRate);
+  bucket.lastRefill = now;
+  if (buckets.size > 500) {
+    for (const [k, b] of buckets) {
+      if (now - b.lastRefill > 300000) buckets.delete(k);
+    }
+  }
+  if (bucket.tokens >= 1) { bucket.tokens -= 1; return true; }
+  return false;
+}
 
 export function middleware(req: NextRequest) {
   const path = req.nextUrl.pathname;
+  if (!path.startsWith("/api/")) return NextResponse.next();
+  if (path === "/api/health") return NextResponse.next();
 
-  // Only rate-limit API routes
-  if (!path.startsWith("/api/")) {
-    return NextResponse.next();
-  }
-
-  // Skip health check (no rate limit)
-  if (path === "/api/health") {
-    return NextResponse.next();
-  }
-
-  // Get client IP (from Vercel headers or fallback)
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
-    || req.headers.get("x-real-ip")
-    || "unknown";
+    || req.headers.get("x-real-ip") || "unknown";
 
-  // Choose limiter based on route
-  let limiterName: "default" | "auth" | "billing" | "analyze" = "default";
+  let type: keyof typeof LIMITS = "default";
+  if (path.startsWith("/api/billing/")) type = "billing";
+  else if (path.startsWith("/api/analyze") || path.startsWith("/api/chat")) type = "analyze";
 
-  if (path.startsWith("/api/auth/") || path.startsWith("/api/auth/signin")) {
-    limiterName = "auth";
-  } else if (path.startsWith("/api/billing/")) {
-    limiterName = "billing";
-  } else if (path.startsWith("/api/analyze") || path.startsWith("/api/chat")) {
-    limiterName = "analyze";
-  }
-
-  const limiter = registry.get(limiterName);
-  if (!limiter.allow(ip)) {
+  if (!allow(ip, type)) {
     return NextResponse.json(
-      {
-        error: "Rate limit exceeded. Please slow down and try again in a moment.",
-        retryAfter: 60,
-      },
-      {
-        status: 429,
-        headers: {
-          "Retry-After": "60",
-          "X-RateLimit-Limit": limiterName === "auth" ? "10" : "60",
-          "X-RateLimit-Remaining": "0",
-        },
-      }
+      { error: "Rate limit exceeded.", retryAfter: 60 },
+      { status: 429, headers: { "Retry-After": "60" } }
     );
   }
-
   return NextResponse.next();
 }
 
+// CRITICAL: Exclude /api/auth/* using negative lookahead
 export const config = {
-  matcher: "/api/:path*",
+  matcher: ["/api/((?!auth).*)"],
 };
