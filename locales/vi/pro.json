@@ -1,0 +1,64 @@
+{
+  "proFeatures": {
+    "unlockTitle": "Mở khóa tính năng Pro",
+    "proActive": "Đã kích hoạt Pro",
+    "adminUnlocked": "Quản trị — Tất cả tính năng đã mở khóa",
+    "upgradeToPro": "Nâng cấp lên Pro — $9/tháng",
+    "upgradeForMore": "Nâng cấp lên Pro để có thêm",
+    "cancelAnytime": "Hủy bất cứ lúc nào. Thanh toán an toàn qua Stripe.",
+    "manageSubscription": "Cần hủy? Truy cập",
+    "stripePortal": "Cổng khách hàng Stripe",
+    "features": {
+      "platformAi": "Platform AI",
+      "platformAiDesc": "Không cần API key — Claude 3.5 / GPT-4o",
+      "unlimitedAnalyses": "Phân tích không giới hạn",
+      "unlimitedAnalysesDesc": "100/tháng thay vì 5",
+      "streamingChat": "Trò chuyện streaming",
+      "streamingChatDesc": "Streaming token theo thời gian thực",
+      "priorityQueue": "Hàng đợi ưu tiên",
+      "priorityQueueDesc": "Thực thi tác vụ agent nhanh hơn",
+      "pdfExport": "Xuất PDF / JSON",
+      "pdfExportDesc": "Xuất báo cáo ở nhiều định dạng",
+      "usageAnalytics": "Phân tích sử dụng",
+      "usageAnalyticsDesc": "Bảng điều khiển sử dụng chi tiết",
+      "prioritySupport": "Hỗ trợ ưu tiên",
+      "prioritySupportDesc": "Liên hệ trực tiếp với đội ngũ"
+    }
+  },
+  "proGate": {
+    "isProFeature": "là tính năng Pro",
+    "upgradeDesc": "Nâng cấp lên Pro để mở khóa {feature} và tất cả tính năng cao cấp khác. Thành viên Pro có quyền truy cập không giới hạn vào AI agents, trò chuyện streaming, hàng đợi ưu tiên và hơn thế nữa.",
+    "features": {
+      "unlimitedAgents": "AI agents không giới hạn",
+      "platformAiNoKey": "Platform AI (không cần key)",
+      "streamingChatSse": "Trò chuyện streaming (SSE)",
+      "priorityQueue": "Hàng đợi ưu tiên",
+      "analyses100": "100 phân tích/tháng",
+      "chat2000": "2000 tin nhắn trò chuyện/tháng",
+      "pdfJsonExport": "Xuất PDF / JSON",
+      "prioritySupport": "Hỗ trợ ưu tiên"
+    }
+  },
+  "usage": {
+    "title": "Sử dụng tháng này",
+    "admin": "Quản trị",
+    "unlimited": "Không giới hạn",
+    "analyses": "Phân tích",
+    "chatMessages": "Tin nhắn trò chuyện",
+    "agentTasks": "Tác vụ Agent",
+    "limitReached": "Đã đạt giới hạn — nâng cấp để có thêm",
+    "approachingLimit": "Sắp đạt giới hạn"
+  },
+  "aiMode": {
+    "byok": "BYOK",
+    "platformAi": "Platform AI",
+    "byokDesc": "Sử dụng API key của bạn từ OpenRouter, OpenAI, v.v. (miễn phí)",
+    "platformAiDesc": "Sử dụng key của CodeInsight AI (không cần thiết lập).",
+    "clickToUpgrade": "Nhấp để nâng cấp lên Pro — $9/tháng",
+    "clickToSwitch": "Nhấp để chuyển chế độ",
+    "switchedByok": "Đã chuyển sang chế độ BYOK",
+    "switchedPlatform": "Đã chuyển sang chế độ Platform AI",
+    "byokUsingOwn": "Sử dụng API key của bạn (miễn phí).",
+    "adminAllFeatures": "Tài khoản quản trị đã có tất cả tính năng."
+  }
+}

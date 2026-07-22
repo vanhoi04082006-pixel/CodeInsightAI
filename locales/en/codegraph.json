@@ -1,0 +1,45 @@
+{
+  "title": "CodeGraph",
+  "inspector": "Inspector",
+  "graphStats": "Graph Stats",
+  "searchNodes": "Search nodes…",
+  "totalNodes": "Total Nodes",
+  "totalEdges": "Total Edges",
+  "visible": "Visible",
+  "nodeTypes": {
+    "file": "File",
+    "function": "Function",
+    "class": "Class",
+    "module": "Module",
+    "route": "Route",
+    "component": "Component",
+    "import": "Import"
+  },
+  "edgeTypes": {
+    "imports": "Imports",
+    "calls": "Calls",
+    "extends": "Extends",
+    "implements": "Implements",
+    "uses": "Uses",
+    "depends_on": "Depends On",
+    "exports": "Exports"
+  },
+  "filterByType": "Filter by type",
+  "minimap": "Minimap",
+  "clickToInspect": "Click a node to inspect its connections and metadata.",
+  "incoming": "Incoming",
+  "outgoing": "Outgoing",
+  "type": "Type",
+  "language": "Language",
+  "lines": "Lines",
+  "complexity": "Complexity",
+  "degree": "Degree",
+  "none": "None",
+  "building": "Building CodeGraph…",
+  "legend": "Legend",
+  "zoomControls": {
+    "zoomIn": "Zoom In",
+    "zoomOut": "Zoom Out",
+    "reset": "Reset View"
+  }
+}

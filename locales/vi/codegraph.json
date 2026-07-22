@@ -1,0 +1,45 @@
+{
+  "title": "CodeGraph",
+  "inspector": "Trình kiểm tra",
+  "graphStats": "Thống kê đồ thị",
+  "searchNodes": "Tìm kiếm nút…",
+  "totalNodes": "Tổng số nút",
+  "totalEdges": "Tổng số cạnh",
+  "visible": "Hiển thị",
+  "nodeTypes": {
+    "file": "Tệp",
+    "function": "Hàm",
+    "class": "Lớp",
+    "module": "Mô-đun",
+    "route": "Tuyến",
+    "component": "Thành phần",
+    "import": "Nhập"
+  },
+  "edgeTypes": {
+    "imports": "Nhập",
+    "calls": "Gọi",
+    "extends": "Kế thừa",
+    "implements": "Triển khai",
+    "uses": "Sử dụng",
+    "depends_on": "Phụ thuộc",
+    "exports": "Xuất"
+  },
+  "filterByType": "Lọc theo loại",
+  "minimap": "Bản đồ nhỏ",
+  "clickToInspect": "Nhấp vào nút để kiểm tra kết nối và siêu dữ liệu.",
+  "incoming": "Đầu vào",
+  "outgoing": "Đầu ra",
+  "type": "Loại",
+  "language": "Ngôn ngữ",
+  "lines": "Dòng",
+  "complexity": "Độ phức tạp",
+  "degree": "Mức kết nối",
+  "none": "Không",
+  "building": "Đang xây dựng CodeGraph…",
+  "legend": "Chú giải",
+  "zoomControls": {
+    "zoomIn": "Phóng to",
+    "zoomOut": "Thu nhỏ",
+    "reset": "Đặt lại"
+  }
+}

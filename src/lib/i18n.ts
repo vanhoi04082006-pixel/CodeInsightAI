@@ -20,6 +20,9 @@ import enChat from "../../locales/en/chat.json";
 import enNotifications from "../../locales/en/notifications.json";
 import enAgents from "../../locales/en/agents.json";
 import enMission from "../../locales/en/mission.json";
+import enCodegraph from "../../locales/en/codegraph.json";
+import enAdmin from "../../locales/en/admin.json";
+import enPro from "../../locales/en/pro.json";
 
 import viCommon from "../../locales/vi/common.json";
 import viSettings from "../../locales/vi/settings.json";
@@ -36,6 +39,9 @@ import viChat from "../../locales/vi/chat.json";
 import viNotifications from "../../locales/vi/notifications.json";
 import viAgents from "../../locales/vi/agents.json";
 import viMission from "../../locales/vi/mission.json";
+import viCodegraph from "../../locales/vi/codegraph.json";
+import viAdmin from "../../locales/vi/admin.json";
+import viPro from "../../locales/vi/pro.json";
 
 type Dict = Record<string, unknown>;
 
@@ -45,21 +51,21 @@ export const DICTS: Record<Locale, Record<string, Dict>> = {
     analysis: enAnalysis, landing: enLanding, reports: enReports, errors: enErrors,
     providers: enProviders, personality: enPersonality, developer: enDeveloper,
     history: enHistory, chat: enChat, notifications: enNotifications, agents: enAgents,
-    mission: enMission,
+    mission: enMission, codegraph: enCodegraph, admin: enAdmin, pro: enPro,
   },
   vi: {
     common: viCommon, settings: viSettings, dashboard: viDashboard,
     analysis: viAnalysis, landing: viLanding, reports: viReports, errors: viErrors,
     providers: viProviders, personality: viPersonality, developer: viDeveloper,
     history: viHistory, chat: viChat, notifications: viNotifications, agents: viAgents,
-    mission: viMission,
+    mission: viMission, codegraph: viCodegraph, admin: viAdmin, pro: viPro,
   },
 };
 
 export const NAMESPACES = [
   "common", "settings", "dashboard", "analysis", "landing", "reports", "errors",
   "providers", "personality", "developer", "history", "chat", "notifications", "agents",
-  "mission",
+  "mission", "codegraph", "admin", "pro",
 ] as const;
 
 export const COOKIE_NAME = "codeinsight-lang";

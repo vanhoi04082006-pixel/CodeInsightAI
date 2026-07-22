@@ -1,14 +1,16 @@
-// CodeInsight AI — Deep AI Analysis (5-pass)
+// CodeInsight AI — Deep AI Analysis (7-pass)
 //
-// When an AI provider is available (BYOK or Platform AI), runs 5 LLM passes
+// When an AI provider is available (BYOK or Platform AI), runs 7 LLM passes
 // to generate a comprehensive analysis:
 // 1. Executive Summary (business-focused)
 // 2. Deep Security Review (with AI-generated fix code)
 // 3. Architecture Analysis (pattern evaluation + improvements)
 // 4. Code Quality Review (complex files + refactored code)
-// 5. Priorities + Roadmap (ranked by business impact)
+// 5. Performance Deep Dive (AI review of each perf issue + fix code)  ← NEW
+// 6. Best Practices Audit (framework-specific best practices)         ← NEW
+// 7. Priorities + Roadmap (ranked by business impact)
 //
-// Total token cost: ~7000 tokens per analysis (vs ~500 for basic enhancement).
+// Total token cost: ~10000 tokens per analysis (vs ~500 for basic enhancement).
 // This is why it's optional — users can disable via body.aiEnhance=false.
 
 import type { AnalysisReport } from "@/lib/types";
@@ -34,12 +36,24 @@ export interface DeepAnalysisResult {
     issues: string[];
     refactorSuggestion: string;
   }>;
+  performanceReview: Array<{  // ← NEW
+    issue: string;
+    rootCause: string;
+    fixCode: string;
+    expectedImprovement: string;
+  }>;
+  bestPracticesAudit: {       // ← NEW
+    framework: string;
+    passed: string[];
+    failed: Array<{ practice: string; recommendation: string }>;
+    score: number;
+  };
   priorities: Array<{ issue: string; businessImpact: string; recommendation: string }>;
   roadmap: Array<{ phase: string; tasks: string[] }>;
 }
 
 /**
- * Run 5-pass deep analysis on a repository report.
+ * Run 7-pass deep analysis on a repository report.
  * Returns null if the AI call fails (non-fatal — keeps static report).
  */
 export async function runDeepAnalysis(
@@ -48,16 +62,23 @@ export async function runDeepAnalysis(
   provider: AIProviderConfig
 ): Promise<DeepAnalysisResult | null> {
   try {
-    // Run passes in parallel where possible (1+5 parallel, then 2+3+4 parallel)
+    // Pass 1 + 7: Executive Summary + Priorities (parallel — independent)
     const [summaryResult, prioritiesResult] = await Promise.all([
       runPass(provider, "summary", parsed, report),
       runPass(provider, "priorities", parsed, report),
     ]);
 
+    // Pass 2 + 3 + 4: Security + Architecture + Code Quality (parallel)
     const [securityResult, archResult, qualityResult] = await Promise.all([
       runPass(provider, "security", parsed, report),
       runPass(provider, "architecture", parsed, report),
       runPass(provider, "quality", parsed, report),
+    ]);
+
+    // Pass 5 + 6: Performance Deep Dive + Best Practices Audit (parallel)  ← NEW
+    const [perfResult, bestPracticesResult] = await Promise.all([
+      runPass(provider, "performance", parsed, report),
+      runPass(provider, "bestPractices", parsed, report),
     ]);
 
     const result: DeepAnalysisResult = {
@@ -66,6 +87,13 @@ export async function runDeepAnalysis(
       securityReview: securityResult?.reviews || [],
       architectureReview: archResult || { strengths: [], weaknesses: [], suggestions: [] },
       codeQualityReview: qualityResult?.reviews || [],
+      performanceReview: perfResult?.reviews || [],                          // ← NEW
+      bestPracticesAudit: bestPracticesResult || {                           // ← NEW
+        framework: parsed.frameworks[0]?.name || "Unknown",
+        passed: [],
+        failed: [],
+        score: 0,
+      },
       priorities: prioritiesResult?.priorities || [],
       roadmap: prioritiesResult?.roadmap || [],
     };
@@ -79,7 +107,7 @@ export async function runDeepAnalysis(
 
 async function runPass(
   provider: AIProviderConfig,
-  passType: "summary" | "security" | "architecture" | "quality" | "priorities",
+  passType: "summary" | "security" | "architecture" | "quality" | "priorities" | "performance" | "bestPractices",
   parsed: ParsedRepository,
   report: AnalysisReport
 ): Promise<any> {
@@ -179,6 +207,35 @@ Debt items: ${report.technicalDebt.items.map((t) => `${t.title} (${t.impact})`).
 
 Rank the top 3 issues by business impact and create a 3-phase roadmap. Respond as JSON:
 {"priorities": [{"issue": "string", "businessImpact": "string", "recommendation": "string"}], "roadmap": [{"phase": "string", "tasks": ["string"]}]}`;
+
+    case "performance":  // ← NEW Pass 5
+      return `${repoInfo}
+
+Performance issues found:
+${report.issues.performance.map((i) => `- [${i.severity}] ${i.title} (${i.file}): ${i.description}`).join("\n")}
+
+Positive findings: ${report.perfPositiveFindings?.join("; ") || "None"}
+
+For each performance issue, provide root cause, a code fix, and expected improvement. Respond as JSON:
+{"reviews": [{"issue": "string", "rootCause": "string", "fixCode": "string (code block)", "expectedImprovement": "string"}]}`;
+
+    case "bestPractices":  // ← NEW Pass 6
+      const frameworks = parsed.frameworks.map((f) => `${f.name} ${f.version}`).join(", ") || "None detected";
+      return `${repoInfo}
+
+Frameworks: ${frameworks}
+Primary language: ${parsed.languages[0]?.name ?? "Unknown"}
+
+Audit this codebase against framework-specific best practices. For each framework detected, check:
+- Project structure conventions
+- Configuration best practices
+- Performance optimizations
+- Security hardening
+- Testing practices
+- Error handling patterns
+
+Respond as JSON:
+{"framework": "string (primary framework)", "passed": ["string (practices that pass)"], "failed": [{"practice": "string", "recommendation": "string"}], "score": number (0-100)}`;
 
     default:
       return "";

@@ -1,0 +1,64 @@
+{
+  "proFeatures": {
+    "unlockTitle": "Unlock Pro Features",
+    "proActive": "Pro Active",
+    "adminUnlocked": "Admin — All Features Unlocked",
+    "upgradeToPro": "Upgrade to Pro — $9/month",
+    "upgradeForMore": "Upgrade to Pro for more",
+    "cancelAnytime": "Cancel anytime. Secure payment via Stripe.",
+    "manageSubscription": "Need to cancel? Visit",
+    "stripePortal": "Stripe customer portal",
+    "features": {
+      "platformAi": "Platform AI",
+      "platformAiDesc": "No API key needed — Claude 3.5 / GPT-4o",
+      "unlimitedAnalyses": "Unlimited Analyses",
+      "unlimitedAnalysesDesc": "100/month instead of 5",
+      "streamingChat": "Streaming Chat",
+      "streamingChatDesc": "Real-time token streaming",
+      "priorityQueue": "Priority Queue",
+      "priorityQueueDesc": "Faster agent task execution",
+      "pdfExport": "PDF / JSON Export",
+      "pdfExportDesc": "Export reports in multiple formats",
+      "usageAnalytics": "Usage Analytics",
+      "usageAnalyticsDesc": "Detailed usage dashboard",
+      "prioritySupport": "Priority Support",
+      "prioritySupportDesc": "Direct line to the team"
+    }
+  },
+  "proGate": {
+    "isProFeature": "is a Pro Feature",
+    "upgradeDesc": "Upgrade to Pro to unlock {feature} and all other premium features. Pro members get unlimited access to AI agents, streaming chat, priority queue, and more.",
+    "features": {
+      "unlimitedAgents": "Unlimited AI agents",
+      "platformAiNoKey": "Platform AI (no key needed)",
+      "streamingChatSse": "Streaming chat (SSE)",
+      "priorityQueue": "Priority queue",
+      "analyses100": "100 analyses/month",
+      "chat2000": "2000 chat messages/month",
+      "pdfJsonExport": "PDF / JSON export",
+      "prioritySupport": "Priority support"
+    }
+  },
+  "usage": {
+    "title": "Usage This Month",
+    "admin": "Admin",
+    "unlimited": "Unlimited",
+    "analyses": "Analyses",
+    "chatMessages": "Chat Messages",
+    "agentTasks": "Agent Tasks",
+    "limitReached": "Limit reached — upgrade for more",
+    "approachingLimit": "Approaching limit"
+  },
+  "aiMode": {
+    "byok": "BYOK",
+    "platformAi": "Platform AI",
+    "byokDesc": "Using your own API keys from OpenRouter, OpenAI, etc. (free)",
+    "platformAiDesc": "Using CodeInsight AI's key (no setup needed).",
+    "clickToUpgrade": "Click to upgrade to Pro — $9/mo",
+    "clickToSwitch": "Click to switch mode",
+    "switchedByok": "Switched to BYOK mode",
+    "switchedPlatform": "Switched to Platform AI mode",
+    "byokUsingOwn": "Using your own API keys (free).",
+    "adminAllFeatures": "Admin accounts already have all features."
+  }
+}
