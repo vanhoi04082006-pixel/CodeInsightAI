@@ -31,13 +31,26 @@ export async function POST(req: NextRequest) {
 
     const preset = PRESET_BY_ID[providerId];
     const models = JSON.parse(config.models || "[]");
-    // Use first model from config, or preset default. For OpenRouter, ensure
-    // model has provider prefix (e.g. "anthropic/claude-3.5-sonnet")
-    let model = models[0] || preset?.defaultModel || "gpt-4o-mini";
-    // OpenRouter-specific: if model doesn't contain "/", prepend a default
-    if (providerId === "openrouter" && !model.includes("/")) {
-      model = `openai/${model}`;
-    }
+
+    // For testing, use a CHEAP + RELIABLE model per provider.
+    // Don't use the first model from the list (might be expensive or deprecated).
+    // This is just a "ping" to verify the API key works — not a real analysis.
+    const TEST_MODELS: Record<string, string> = {
+      openrouter: "openai/gpt-4o-mini",        // cheapest OpenRouter model
+      openai: "gpt-4o-mini",
+      anthropic: "claude-3-5-haiku-20241022",   // cheapest Anthropic model
+      gemini: "gemini-1.5-flash",
+      deepseek: "deepseek-chat",
+      groq: "llama-3.1-8b-instant",
+      together: "meta-llama/Llama-3.3-70B-Instruct-Turbo",
+      fireworks: "accounts/fireworks/models/llama-v3p3-70b-instruct",
+      mistral: "mistral-small-latest",
+      xai: "grok-2-mini",
+      azure: models[0] || "gpt-4o-mini",
+      custom: models[0] || "gpt-4o-mini",
+    };
+
+    let model = TEST_MODELS[providerId] || models[0] || preset?.defaultModel || "gpt-4o-mini";
     const start = Date.now();
 
     // Build test request based on provider
