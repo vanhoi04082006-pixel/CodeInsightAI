@@ -18,6 +18,7 @@ import {
   CheckCircle2,
   ScrollText,
   Server,
+  Cpu,
 } from "lucide-react";
 import { GlassCard, GradientText } from "@/components/shared/ui";
 import { Button } from "@/components/ui/button";
@@ -137,6 +138,7 @@ export function AdminView() {
         <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5">
           <TabsTrigger value="overview" className="gap-1.5"><Activity className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Overview</span></TabsTrigger>
           <TabsTrigger value="users" className="gap-1.5"><Users className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Users</span></TabsTrigger>
+          <TabsTrigger value="platform-ai" className="gap-1.5"><Cpu className="h-3.5 w-3.5" /> <span className="hidden sm:inline">AI Config</span></TabsTrigger>
           <TabsTrigger value="subscriptions" className="gap-1.5"><Crown className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Subs</span></TabsTrigger>
           <TabsTrigger value="audit" className="gap-1.5"><ScrollText className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Audit</span></TabsTrigger>
           <TabsTrigger value="system" className="gap-1.5"><Server className="h-3.5 w-3.5" /> <span className="hidden sm:inline">System</span></TabsTrigger>
@@ -144,6 +146,7 @@ export function AdminView() {
 
         <TabsContent value="overview" className="mt-4"><OverviewTab /></TabsContent>
         <TabsContent value="users" className="mt-4"><UsersTab /></TabsContent>
+        <TabsContent value="platform-ai" className="mt-4"><PlatformAITab /></TabsContent>
         <TabsContent value="subscriptions" className="mt-4"><SubscriptionsTab /></TabsContent>
         <TabsContent value="audit" className="mt-4"><AuditTab /></TabsContent>
         <TabsContent value="system" className="mt-4"><SystemTab /></TabsContent>
@@ -666,4 +669,218 @@ function getActionIcon(action: string) {
 
 function formatAction(action: string): string {
   return action.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+/* ---------- Platform AI Config Tab ---------- */
+function PlatformAITab() {
+  const [config, setConfig] = useState<any>(null);
+  const [providers, setProviders] = useState<any[]>([]);
+  const [envConfig, setEnvConfig] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  // Form state
+  const [providerId, setProviderId] = useState("openrouter");
+  const [apiKey, setApiKey] = useState("");
+  const [baseUrl, setBaseUrl] = useState("https://openrouter.ai/api/v1");
+  const [model, setModel] = useState("anthropic/claude-3.5-sonnet");
+  const [temperature, setTemperature] = useState(0.7);
+  const [maxTokens, setMaxTokens] = useState(4096);
+  const [enabled, setEnabled] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/admin/platform-ai")
+      .then((r) => r.json())
+      .then((data) => {
+        setProviders(data.providers || []);
+        setEnvConfig(data.envConfig || null);
+        if (data.config) {
+          setConfig(data.config);
+          setProviderId(data.config.providerId);
+          setBaseUrl(data.config.baseUrl);
+          setModel(data.config.model);
+          setTemperature(data.config.temperature);
+          setMaxTokens(data.config.maxTokens);
+          setEnabled(data.config.enabled);
+        }
+      })
+      .catch(() => toast.error("Failed to load Platform AI config"))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const selectedProvider = providers.find((p) => p.providerId === providerId);
+
+  const handleProviderChange = (id: string) => {
+    const p = providers.find((x) => x.providerId === id);
+    if (p) {
+      setProviderId(id);
+      setBaseUrl(p.defaultBaseUrl);
+      setModel(p.defaultModel);
+    }
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch("/api/admin/platform-ai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          providerId, apiKey: apiKey || undefined, baseUrl, model, temperature, maxTokens, enabled,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setConfig(data.config);
+        setApiKey("");
+        toast.success("Platform AI config saved");
+      } else {
+        toast.error(data.error || "Failed to save");
+      }
+    } catch {
+      toast.error("Failed to save");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDisable = async () => {
+    setSaving(true);
+    try {
+      await fetch("/api/admin/platform-ai", { method: "DELETE" });
+      setEnabled(false);
+      toast.success("Platform AI disabled");
+    } catch {
+      toast.error("Failed to disable");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) return <LoadingCard />;
+
+  return (
+    <div className="space-y-4">
+      <GlassCard className="p-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Cpu className="h-4 w-4 text-cyan-300" />
+            <h3 className="text-sm font-semibold"><GradientText>Platform AI Configuration</GradientText></h3>
+          </div>
+          {config && (
+            <Badge className={enabled ? "bg-emerald-500/15 text-emerald-300" : "bg-rose-500/15 text-rose-300"}>
+              {enabled ? "Enabled" : "Disabled"}
+            </Badge>
+          )}
+        </div>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Configure which AI provider + model is used for Platform AI mode. This replaces the hardcoded
+          env vars — admin can change provider/model without redeploying.
+        </p>
+
+        {/* Current status */}
+        {config ? (
+          <div className="mt-4 rounded-lg border border-cyan-500/20 bg-cyan-500/[0.04] p-3 text-xs">
+            <p className="text-cyan-200">Current config:</p>
+            <p className="mt-1 text-muted-foreground">
+              Provider: <span className="font-mono text-foreground">{config.providerId}</span> ·
+              Model: <span className="font-mono text-foreground">{config.model}</span> ·
+              Key: <span className="font-mono text-foreground">{config.maskedKey}</span>
+            </p>
+          </div>
+        ) : envConfig?.hasEnvKey ? (
+          <div className="mt-4 rounded-lg border border-amber-500/20 bg-amber-500/[0.04] p-3 text-xs">
+            <p className="text-amber-200">Using env vars fallback:</p>
+            <p className="mt-1 text-muted-foreground">
+              {envConfig.envProvider}/{envConfig.envModel} — set DB config above to override.
+            </p>
+          </div>
+        ) : (
+          <div className="mt-4 rounded-lg border border-rose-500/20 bg-rose-500/[0.04] p-3 text-xs">
+            <p className="text-rose-200">Platform AI not configured.</p>
+            <p className="mt-1 text-muted-foreground">Set config below or configure env vars on Vercel.</p>
+          </div>
+        )}
+
+        {/* Form */}
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">Provider</label>
+            <Select value={providerId} onValueChange={handleProviderChange}>
+              <SelectTrigger className="bg-white/[0.03]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {providers.map((p) => (
+                  <SelectItem key={p.providerId} value={p.providerId}>
+                    {p.name} ({p.category})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">Model</label>
+            <Select value={model} onValueChange={setModel}>
+              <SelectTrigger className="bg-white/[0.03]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {selectedProvider?.models.map((m: string) => (
+                  <SelectItem key={m} value={m}>{m}</SelectItem>
+                ))}
+                <SelectItem value={model}>{model} (custom)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">
+              API Key {config && <span className="text-emerald-400">(saved — type new to replace)</span>}
+            </label>
+            <Input
+              type="password"
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
+              placeholder={config ? "•••• (saved — type new to replace)" : "sk-..."}
+              className="bg-white/[0.03] font-mono"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">Base URL</label>
+            <Input value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} className="bg-white/[0.03] font-mono text-xs" />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">Temperature — {temperature.toFixed(2)}</label>
+            <input type="range" min="0" max="2" step="0.05" value={temperature} onChange={(e) => setTemperature(Number(e.target.value))} className="w-full" />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">Max Tokens</label>
+            <Input type="number" value={maxTokens} onChange={(e) => setMaxTokens(Number(e.target.value))} className="bg-white/[0.03]" />
+          </div>
+        </div>
+
+        <div className="mt-4 flex items-center gap-2">
+          <Button onClick={handleSave} disabled={saving} className="bg-gradient-to-r from-cyan-500 to-violet-500 text-white">
+            {saving ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Cpu className="mr-1.5 h-4 w-4" />}
+            {saving ? "Saving…" : "Save Config"}
+          </Button>
+          {config?.enabled && (
+            <Button onClick={handleDisable} disabled={saving} variant="outline" className="text-rose-300">
+              Disable
+            </Button>
+          )}
+        </div>
+      </GlassCard>
+
+      {/* Available providers reference */}
+      <GlassCard className="p-5">
+        <h3 className="text-sm font-semibold">Available Providers ({providers.length})</h3>
+        <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {providers.map((p) => (
+            <div key={p.providerId} className="rounded-lg border border-white/5 bg-white/[0.02] p-2.5">
+              <p className="text-xs font-medium">{p.name}</p>
+              <p className="text-[10px] text-muted-foreground">{p.category} · {p.models.length} models</p>
+              <p className="mt-1 font-mono text-[10px] text-cyan-300">{p.defaultModel}</p>
+            </div>
+          ))}
+        </div>
+      </GlassCard>
+    </div>
+  );
 }

@@ -138,17 +138,63 @@ export async function POST(req: NextRequest) {
     }
 
     // ── Optional Deep AI Analysis (5-pass) ──
-    // If Platform AI is configured, run 5 LLM passes for a comprehensive report:
-    // 1. Executive Summary, 2. Security Review, 3. Architecture, 4. Code Quality, 5. Priorities
+    // Resolution order for AI provider:
+    // 1. Platform AI (env vars or admin-set DB config)
+    // 2. BYOK — look up encrypted credential from DB (user's saved provider)
+    // 3. Client-provided provider in request body (local dev convenience)
     // Falls back to basic static report if no AI key or if the call fails.
     const enableAiEnhance = body.aiEnhance !== false; // default true
     if (enableAiEnhance && parsedRepoData) {
       try {
         const { runDeepAnalysis } = await import("@/lib/ai-deep-analysis");
         const { getPlatformAIConfig } = await import("@/lib/platform-ai");
-        const platformConfig = getPlatformAIConfig();
-        if (platformConfig) {
-          const deepResult = await runDeepAnalysis(parsedRepoData, report, platformConfig);
+        const { decrypt } = await import("@/lib/crypto");
+
+        // 1. Try Platform AI first (env vars or admin-set DB config)
+        let aiConfig = await getPlatformAIConfig();
+
+        // 2. If no Platform AI → look up BYOK credential from DB
+        if (!aiConfig) {
+          const cred = await db.providerCredential.findFirst({
+            where: { userId, enabled: true },
+            orderBy: { updatedAt: "desc" },
+          });
+          if (cred) {
+            try {
+              const realKey = decrypt(cred.encryptedApiKey);
+              aiConfig = {
+                providerId: cred.providerId,
+                apiKey: realKey,
+                baseUrl: cred.baseUrl,
+                model: cred.model,
+                temperature: cred.temperature ?? 0.7,
+                maxTokens: cred.maxTokens ?? 4096,
+                timeout: 60,
+              };
+              console.log(`[${jobId}] Using BYOK provider: ${cred.providerId} (${cred.model})`);
+            } catch {
+              console.warn(`[${jobId}] BYOK credential decryption failed`);
+            }
+          }
+        }
+
+        // 3. If still no config → accept from request body (local dev)
+        if (!aiConfig && body.provider?.apiKey) {
+          aiConfig = {
+            providerId: body.provider.providerId,
+            apiKey: body.provider.apiKey,
+            baseUrl: body.provider.baseUrl || "",
+            model: body.provider.model || "",
+            temperature: body.provider.temperature ?? 0.7,
+            maxTokens: body.provider.maxTokens ?? 4096,
+            timeout: 60,
+          };
+          console.log(`[${jobId}] Using client-provided provider: ${aiConfig.providerId}`);
+        }
+
+        if (aiConfig) {
+          console.log(`[${jobId}] Running deep AI analysis with ${aiConfig.providerId}/${aiConfig.model}`);
+          const deepResult = await runDeepAnalysis(parsedRepoData, report, aiConfig);
           if (deepResult) {
             (report as any).deepAnalysis = deepResult;
             // Also set aiEnhancement for backward compat (badge display)
@@ -157,6 +203,8 @@ export async function POST(req: NextRequest) {
               aiBadge: "ai-enhanced",
             };
           }
+        } else {
+          console.log(`[${jobId}] No AI provider configured — static analysis only`);
         }
       } catch (e) {
         console.warn(`[${jobId}] Deep AI analysis failed (non-fatal):`, e);

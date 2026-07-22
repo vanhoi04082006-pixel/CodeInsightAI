@@ -56,11 +56,34 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { providerId, label, apiKey, baseUrl, model, temperature, maxTokens, streaming, enabled } = body;
 
-    if (!providerId || !apiKey) {
-      return NextResponse.json({ error: "providerId and apiKey are required" }, { status: 400 });
+    if (!providerId) {
+      return NextResponse.json({ error: "providerId is required" }, { status: 400 });
     }
 
-    const encrypted = encrypt(apiKey);
+    // apiKey is required for CREATE (new credential), but optional for UPDATE.
+    // If apiKey is empty/missing on update, we keep the existing encrypted key.
+    // This prevents the "key disappears after save" bug when user saves other fields.
+    let encrypted: string | null = null;
+    if (apiKey && apiKey.length > 0) {
+      encrypted = encrypt(apiKey);
+    } else {
+      // Check if credential already exists — if not, apiKey is required
+      const existing = await db.providerCredential.findUnique({
+        where: {
+          userId_providerId_label: {
+            userId,
+            providerId,
+            label: label || providerId,
+          },
+        },
+        select: { encryptedApiKey: true },
+      });
+      if (!existing) {
+        return NextResponse.json({ error: "apiKey is required for new credentials" }, { status: 400 });
+      }
+      // Keep existing encrypted key
+      encrypted = existing.encryptedApiKey;
+    }
 
     const cred = await db.providerCredential.upsert({
       where: {
@@ -83,7 +106,7 @@ export async function POST(req: NextRequest) {
         enabled: enabled ?? true,
       },
       update: {
-        encryptedApiKey: encrypted,
+        ...(encrypted ? { encryptedApiKey: encrypted } : {}),  // only update if new key provided
         baseUrl: baseUrl || "",
         model: model || "",
         temperature: temperature ?? 0.7,
@@ -93,10 +116,16 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    // Return masked key — decrypt for masking (don't expose raw key)
+    let maskedKey = "••••••••";
+    try {
+      maskedKey = maskApiKey(decrypt(cred.encryptedApiKey));
+    } catch { /* ignore */ }
+
     return NextResponse.json({
       success: true,
       id: cred.id,
-      maskedKey: maskApiKey(apiKey),
+      maskedKey,
     });
   } catch (e) {
     console.error("[/api/providers/credentials POST]", e);

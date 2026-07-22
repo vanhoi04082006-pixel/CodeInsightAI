@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Use the unified resolver (supports all 14 providers)
-  const finalProvider = resolveEffectiveProvider(
+  const finalProvider = await resolveEffectiveProvider(
     body.aiMode,
     effectiveProvider ? {
       providerId: effectiveProvider.providerId,

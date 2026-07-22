@@ -256,36 +256,48 @@ function ProviderCard({ provider }: { provider: AIProvider }) {
   const status = STATUS_META[provider.status ?? "unknown"];
   const SIcon = status.icon;
   const isLocal = preset.local;
+  // Determine if the API key is saved server-side (provider came from backend)
+  const isSavedServerSide = !provider.id.startsWith("prov_");
   // In production we never store the raw key in the browser — show masked
   // form. In local dev, the raw key is in localStorage for convenience.
   const maskedKey = provider.apiKey
     ? `${provider.apiKey.slice(0, 4)}...${provider.apiKey.slice(-4)}`
-    : provider.id.startsWith("prov_")  // locally added, not yet saved
-      ? "Not set"
-      : "•••• (saved server-side)";
+    : isSavedServerSide
+      ? "•••• (saved server-side)"
+      : "Not set";
 
   /**
    * Persist the credential to the backend (encrypted). Called when the user
    * toggles enabled OR edits the apiKey field. After save we re-sync so the
    * local state reflects the masked key from the server.
+   *
+   * IMPORTANT: If the apiKey field is empty (user didn't type a new key),
+   * we skip sending apiKey — the backend keeps the existing encrypted key.
+   * This prevents the "key disappears after save" bug.
    */
   const saveToBackend = async (patch: Partial<AIProvider>) => {
     setSaving(true);
     try {
+      const payload: any = {
+        providerId: provider.providerId,
+        label: provider.label,
+        baseUrl: provider.baseUrl,
+        model: provider.model,
+        temperature: provider.temperature,
+        maxTokens: provider.maxTokens,
+        streaming: provider.streaming,
+        enabled: patch.enabled ?? provider.enabled,
+      };
+      // Only send apiKey if user typed a new one (non-empty)
+      const newKey = patch.apiKey ?? provider.apiKey;
+      if (newKey && newKey.length > 0) {
+        payload.apiKey = newKey;
+      }
+
       await fetch("/api/providers/credentials", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          providerId: provider.providerId,
-          label: provider.label,
-          apiKey: patch.apiKey ?? provider.apiKey,
-          baseUrl: provider.baseUrl,
-          model: provider.model,
-          temperature: provider.temperature,
-          maxTokens: provider.maxTokens,
-          streaming: provider.streaming,
-          enabled: patch.enabled ?? provider.enabled,
-        }),
+        body: JSON.stringify(payload),
       });
       // After save, re-sync to get the masked key back from the server.
       await syncFromBackend();
@@ -425,9 +437,18 @@ function ProviderCard({ provider }: { provider: AIProvider }) {
                   type="password"
                   value={provider.apiKey}
                   onChange={(e) => update(provider.id, { apiKey: e.target.value })}
-                  placeholder={preset.requiresKey ? "sk-..." : "Optional for local"}
+                  placeholder={
+                    isSavedServerSide && !provider.apiKey
+                      ? "•••• (saved — type new key to replace)"
+                      : preset.requiresKey ? "sk-..." : "Optional for local"
+                  }
                   className="bg-white/[0.03] font-mono"
                 />
+                {isSavedServerSide && !provider.apiKey && (
+                  <p className="mt-1 flex items-center gap-1 text-[10px] text-emerald-400">
+                    <Check className="h-3 w-3" /> API key saved securely (encrypted). Leave empty to keep current key.
+                  </p>
+                )}
               </Field>
               <Field icon={Globe} label={t("providers", "baseUrl")}>
                 <Input value={provider.baseUrl} onChange={(e) => update(provider.id, { baseUrl: e.target.value })} className="bg-white/[0.03] font-mono text-xs" />

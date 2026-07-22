@@ -1,26 +1,62 @@
 // CodeInsight AI — Platform AI configuration resolver
 //
-// Resolves the Platform AI provider config from environment variables.
+// Resolves the Platform AI provider config from:
+// 1. DB (admin-set via Admin Dashboard) — takes precedence
+// 2. Environment variables (fallback)
+//
 // Supports ALL 14 providers — not just OpenRouter.
 //
-// Env vars (all optional — if not set, Platform AI is disabled):
+// Env vars (fallback if DB config not set):
 //   PLATFORM_AI_PROVIDER   — openrouter | openai | anthropic | gemini | deepseek | groq |
 //                            together | fireworks | mistral | xai | azure | ollama | lmstudio | custom
 //   PLATFORM_AI_API_KEY    — the API key (server-side only, never exposed to frontend)
 //   PLATFORM_AI_BASE_URL   — the base URL for the provider
 //   PLATFORM_AI_MODEL      — the model name
-//
-// If PLATFORM_AI_PROVIDER is not set, defaults to "openrouter".
 
 import { PRESET_BY_ID } from "@/lib/providers";
 import type { AIProviderConfig } from "@/lib/ai-client";
 import { isProduction } from "@/lib/env";
 
 /**
- * Resolve the Platform AI provider config from env vars.
- * Returns null if Platform AI is not configured (no API key).
+ * Resolve the Platform AI provider config.
+ * Priority: 1. DB (admin-set) → 2. Env vars → 3. null (not configured)
+ *
+ * This is ASYNC because it queries the DB. For sync contexts (rare), use
+ * getPlatformAIConfigFromEnv() which only checks env vars.
  */
-export function getPlatformAIConfig(): AIProviderConfig | null {
+export async function getPlatformAIConfig(): Promise<AIProviderConfig | null> {
+  // 1. Try DB config (admin-set) first
+  try {
+    const { db } = await import("@/lib/db");
+    const { decrypt } = await import("@/lib/crypto");
+    const dbConfig = await db.platformAIConfig.findUnique({ where: { id: "singleton" } });
+    if (dbConfig?.enabled && dbConfig.encryptedApiKey) {
+      try {
+        const apiKey = decrypt(dbConfig.encryptedApiKey);
+        if (apiKey && apiKey.length > 0) {
+          return {
+            providerId: dbConfig.providerId,
+            apiKey,
+            baseUrl: dbConfig.baseUrl,
+            model: dbConfig.model,
+            temperature: dbConfig.temperature ?? 0.7,
+            maxTokens: dbConfig.maxTokens ?? 4096,
+            timeout: 60,
+          };
+        }
+      } catch { /* decryption failed — fall through to env */ }
+    }
+  } catch { /* DB not ready — fall through to env */ }
+
+  // 2. Fall back to env vars
+  return getPlatformAIConfigFromEnv();
+}
+
+/**
+ * Sync version — only checks env vars (no DB query).
+ * Use this in contexts where async is not possible (rare).
+ */
+export function getPlatformAIConfigFromEnv(): AIProviderConfig | null {
   const apiKey = process.env.PLATFORM_AI_API_KEY;
   if (!apiKey || apiKey.length === 0) return null;
 
@@ -41,10 +77,10 @@ export function getPlatformAIConfig(): AIProviderConfig | null {
 }
 
 /**
- * Check if Platform AI is configured.
+ * Check if Platform AI is configured (checks DB + env).
  */
-export function isPlatformAIConfigured(): boolean {
-  return getPlatformAIConfig() !== null;
+export async function isPlatformAIConfigured(): Promise<boolean> {
+  return (await getPlatformAIConfig()) !== null;
 }
 
 /**
@@ -81,7 +117,7 @@ export function getBYOKConfig(
  * In production, BYOK keys are looked up from the encrypted DB credential
  * if the client sends a provider without an apiKey.
  */
-export function resolveEffectiveProvider(
+export async function resolveEffectiveProvider(
   aiMode: "byok" | "platform" | undefined,
   clientProvider: {
     providerId: string;
@@ -99,10 +135,10 @@ export function resolveEffectiveProvider(
     temperature?: number;
     maxTokens?: number;
   } | null
-): AIProviderConfig | null {
+): Promise<AIProviderConfig | null> {
   // 1. Explicit Platform AI mode
   if (aiMode === "platform") {
-    return getPlatformAIConfig();
+    return await getPlatformAIConfig();
   }
 
   // 2. BYOK with decrypted credential from DB (production)
@@ -144,5 +180,5 @@ export function resolveEffectiveProvider(
   }
 
   // 5. Fallback to Platform AI if configured
-  return getPlatformAIConfig();
+  return await getPlatformAIConfig();
 }

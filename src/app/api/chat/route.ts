@@ -280,7 +280,7 @@ Use this graph knowledge to answer questions about function callers, callees, de
     // Resolve effective provider using the unified platform-ai resolver.
     // This supports ALL 14 providers (not just OpenRouter) and handles
     // Platform AI, BYOK (with encrypted DB lookup in production), and local providers.
-    const finalProvider = resolveEffectiveProvider(
+    const finalProvider = await resolveEffectiveProvider(
       body.aiMode,
       effectiveProvider ? {
         providerId: effectiveProvider.providerId,

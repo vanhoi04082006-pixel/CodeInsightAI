@@ -324,3 +324,22 @@ model AuditLog {
   @@index([action])
   @@index([createdAt])
 }
+
+// ==========================================
+// PLATFORM AI CONFIG (admin-set, singleton)
+// ==========================================
+// Admin can configure which AI provider + model is used for Platform AI mode
+// (instead of being hardcoded to OpenRouter/Claude). Stored encrypted.
+// ==========================================
+
+model PlatformAIConfig {
+  id              String   @id @default("singleton")  // always "singleton"
+  providerId      String   // openrouter | openai | anthropic | gemini | etc.
+  encryptedApiKey String   // AES-256 encrypted
+  baseUrl         String
+  model           String
+  temperature     Float    @default(0.7)
+  maxTokens       Int      @default(4096)
+  enabled         Boolean  @default(true)
+  updatedAt       DateTime @updatedAt
+}
