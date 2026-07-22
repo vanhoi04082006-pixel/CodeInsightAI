@@ -61,10 +61,42 @@ export default async function RootLayout({
 
           This guarantees the server-rendered HTML and the first client render
           produce identical output — no hydration mismatch.
+
+          Browser extension fix: We also strip fdprocessedid + other extension-injected
+          attributes before React hydrates. This prevents hydration mismatch warnings
+          caused by Bitdefender, Avast, and similar browser extensions.
         */}
         <script dangerouslySetInnerHTML={{ __html: `
           (function() {
             try {
+              // --- Strip browser extension attributes BEFORE React hydrates ---
+              // Bitdefender/Avast inject fdprocessedid, data-bitdefender, etc.
+              // into interactive elements. If present during hydration, React
+              // sees a mismatch (server HTML doesn't have these attributes).
+              // We remove them before React loads to prevent the mismatch.
+              var stripAttrs = function() {
+                var els = document.querySelectorAll('[fdprocessedid], [data-bitdefender], [data-adt]');
+                for (var i = 0; i < els.length; i++) {
+                  els[i].removeAttribute('fdprocessedid');
+                  els[i].removeAttribute('data-bitdefender');
+                  els[i].removeAttribute('data-adt');
+                }
+              };
+              stripAttrs();
+              // Also use MutationObserver to catch any attributes added later
+              // (before React hydration completes)
+              var observer = new MutationObserver(function(mutations) {
+                for (var i = 0; i < mutations.length; i++) {
+                  var m = mutations[i];
+                  if (m.type === 'attributes' && (m.attributeName === 'fdprocessedid' || m.attributeName === 'data-bitdefender' || m.attributeName === 'data-adt')) {
+                    m.target.removeAttribute(m.attributeName);
+                  }
+                }
+              });
+              observer.observe(document.documentElement, { attributes: true, subtree: true });
+              // Disconnect observer after 2 seconds (React should be hydrated by then)
+              setTimeout(function() { observer.disconnect(); }, 2000);
+
               // --- Language ---
               var lang = 'en';
               var m = document.cookie.match(/codeinsight-lang=([^;]+)/);
