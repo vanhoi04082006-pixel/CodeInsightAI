@@ -29,6 +29,7 @@ import { ThemeSwitcher } from "@/components/shared/theme-switcher";
 import { UserMenu } from "@/components/shared/user-menu";
 import { ProGate } from "@/components/shared/pro-gate";
 import { OnboardingOverlay } from "@/components/shared/onboarding-overlay";
+import { HydrationGuard } from "@/components/shared/hydration-guard";
 import { Heart, Sparkles, Github, Rocket } from "lucide-react";
 
 export default function Home() {
@@ -142,6 +143,16 @@ export default function Home() {
   }
 
   return (
+    <HydrationGuard fallback={
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <span className="h-2 w-2 animate-pulse rounded-full bg-cyan-400" />
+          <span className="h-2 w-2 animate-pulse rounded-full bg-cyan-400" style={{ animationDelay: "0.2s" }} />
+          <span className="h-2 w-2 animate-pulse rounded-full bg-cyan-400" style={{ animationDelay: "0.4s" }} />
+          <span className="ml-2">Loading…</span>
+        </div>
+      </div>
+    }>
     <div className="relative flex min-h-screen flex-col">
       <AnimatedBackground />
 
@@ -236,6 +247,7 @@ export default function Home() {
       <OnboardingOverlay />
       <CustomCursor />
     </div>
+    </HydrationGuard>
   );
 }
 
