@@ -1,5 +1,6 @@
 import { NextAuthOptions } from "next-auth";
 import GithubProvider from "next-auth/providers/github";
+import GoogleProvider from "next-auth/providers/google";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { db } from "@/lib/db";
 
@@ -58,6 +59,18 @@ export const authOptions: NextAuthOptions = {
       authorization: { params: { scope: "read:user user:email repo" } },
       allowDangerousEmailAccountLinking: true,
     }),
+    // Google OAuth — users can sign in with Google.
+    // Note: Google users CANNOT access private GitHub repos (no GitHub token).
+    // If they want private repo access, they must link their GitHub account
+    // in Settings → Account.
+    ...(process.env.GOOGLE_ID && process.env.GOOGLE_SECRET
+      ? [GoogleProvider({
+          clientId: process.env.GOOGLE_ID,
+          clientSecret: process.env.GOOGLE_SECRET,
+          authorization: { params: { scope: "openid email profile" } },
+          allowDangerousEmailAccountLinking: true,
+        })]
+      : []),
   ],
   session: {
     // JWT is stateless and works on Vercel serverless without a session table

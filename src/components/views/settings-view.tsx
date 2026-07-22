@@ -66,8 +66,9 @@ export function SettingsView() {
   const { data: session, status } = useSession();
   
   // Đọc danh sách mảng (array) các tài khoản đã liên kết từ backend
-  const connectedProviders = (session as any)?.providers || []; 
+  const connectedProviders = (session as any)?.providers || [];
   const isGithubConnected = connectedProviders.includes("github");
+  const isGoogleConnected = connectedProviders.includes("google");
 
   const prevStatus = useRef(status);
 
@@ -118,7 +119,7 @@ export function SettingsView() {
                 <ConnectRow
                   icon={Github}
                   name="GitHub"
-                  desc={t("settings", "githubDesc")}
+                  desc={isGithubConnected ? "Connected — can analyze private repos" : "Connect to analyze private repositories"}
                   connected={isGithubConnected}
                   loading={status === "loading"}
                   onToggle={() => {
@@ -126,7 +127,25 @@ export function SettingsView() {
                     else signIn("github");
                   }}
                 />
+                <ConnectRow
+                  icon={Sparkles}
+                  name="Google"
+                  desc={isGoogleConnected ? "Connected — public repos only (link GitHub for private)" : "Sign in with Google (public repos only)"}
+                  connected={isGoogleConnected}
+                  loading={status === "loading"}
+                  onToggle={() => {
+                    if (isGoogleConnected) { signOut(); toast.success(t("common", "status.disconnected")); }
+                    else signIn("google");
+                  }}
+                />
               </div>
+              {/* Private repo notice */}
+              {!isGithubConnected && (
+                <div className="mt-3 rounded-lg border border-amber-500/20 bg-amber-500/[0.04] p-3 text-xs text-amber-300">
+                  ⚠️ Without GitHub connected, you can only analyze <strong>public</strong> repositories.
+                  Link your GitHub account to analyze private repos.
+                </div>
+              )}
             </GlassCard>
 
             <GlassCard className="p-6">
