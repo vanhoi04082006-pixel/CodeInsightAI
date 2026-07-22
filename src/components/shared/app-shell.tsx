@@ -28,6 +28,8 @@ import { LanguageSwitcher } from "@/components/shared/language-switcher";
 import { UserMenu } from "@/components/shared/user-menu";
 import { AIModeToggle } from "@/components/shared/ai-mode-toggle";
 import { useSession } from "next-auth/react";
+import { isProduction } from "@/lib/env";
+import { Lock } from "lucide-react";
 
 const NAV: { id: View; labelKey: string; icon: typeof LayoutDashboard; disabled?: boolean; adminOnly?: boolean }[] = [
   { id: "landing", labelKey: "nav.home", icon: Sparkles },
@@ -52,7 +54,12 @@ export function AppSidebar() {
   const { t } = useT();
   const { data: session } = useSession();
   const role = (session as any)?.role ?? "user";
+  const plan = (session as any)?.plan ?? "free";
   const isAdmin = role === "admin";
+  const isPro = plan !== "free" || isAdmin;
+
+  // In production, Mission Control is Pro-only — free users see a lock icon
+  const missionLocked = isProduction && !isPro;
 
   // Mission badge: green pulse when a mission is running
   const missionActive = useAppStore((s) => s.view === "mission" && !!s.activeReport);
@@ -108,7 +115,8 @@ export function AppSidebar() {
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 scrollbar-thin">
         {visibleNav.map((item) => {
         const active = view === item.id;
-        const disabled = item.disabled === true || ((item.id === "project" || item.id === "chat" || item.id === "mission") && !activeReport);
+        const isMissionLocked = item.id === "mission" && missionLocked;
+        const disabled = item.disabled === true || ((item.id === "project" || item.id === "chat" || item.id === "mission") && !activeReport && !isMissionLocked);
           const Icon = item.icon;
           const label = t("common", item.labelKey);
           return (
@@ -121,9 +129,10 @@ export function AppSidebar() {
                 active
                   ? "text-foreground"
                   : "text-muted-foreground hover:bg-white/5 hover:text-foreground",
-                disabled && "cursor-not-allowed opacity-40 hover:bg-transparent"
+                disabled && "cursor-not-allowed opacity-40 hover:bg-transparent",
+                isMissionLocked && "text-amber-400/70 hover:text-amber-300"
               )}
-              title={collapsed ? label : undefined}
+              title={collapsed ? (isMissionLocked ? `${label} (Pro)` : label) : undefined}
             >
               {active && (
                 <motion.span
@@ -138,8 +147,15 @@ export function AppSidebar() {
               )}
               <Icon className={cn("h-[18px] w-[18px] shrink-0", active && "text-cyan-300")} />
               {!collapsed && <span className="font-medium">{label}</span>}
+              {/* Pro lock badge for Mission Control */}
+              {isMissionLocked && (
+                <span className="ml-auto flex items-center gap-1">
+                  <Lock className="h-3 w-3 text-amber-400" />
+                  {!collapsed && <span className="rounded-full bg-amber-500/15 px-1.5 text-[8px] font-bold uppercase text-amber-300">Pro</span>}
+                </span>
+              )}
               {/* Badge for active mission */}
-              {item.id === "mission" && missionActive && !disabled && (
+              {item.id === "mission" && missionActive && !disabled && !isMissionLocked && (
                 <span className="ml-auto flex h-2 w-2">
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
@@ -149,7 +165,7 @@ export function AppSidebar() {
               {item.id === "chat" && chatBadge > 0 && !disabled && (
                 <span className="ml-auto rounded-full bg-cyan-500 px-1.5 text-[10px] font-bold text-white">{chatBadge}</span>
               )}
-              {!collapsed && active && !missionActive && chatBadge === 0 && (
+              {!collapsed && active && !missionActive && chatBadge === 0 && !isMissionLocked && (
                 <Sparkles className="ml-auto h-3.5 w-3.5 text-cyan-300" />
               )}
             </button>

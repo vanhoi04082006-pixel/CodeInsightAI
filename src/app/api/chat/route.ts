@@ -174,6 +174,37 @@ export async function POST(req: NextRequest) {
       context = promptCtx.repositoryContext;
       retrievedChunks = promptCtx.retrievedChunks;
       estimatedTokens = promptCtx.estimatedTokens;
+
+      // ── CodeGraph integration ──
+      // Build a CodeGraph from the parsed repo and query it for relevant context.
+      // This gives the AI a "Google Maps" view of the codebase — instead of
+      // grep/read, it can see function callers, callees, impact analysis, etc.
+      try {
+        const { buildCodeGraph, getGraphStats, searchNodes } = await import("@/lib/codegraph/builder");
+        const graph = buildCodeGraph(parsedRepo);
+        const stats = getGraphStats(graph);
+
+        // Search for nodes matching the user's message (semantic-ish search)
+        const words = message.split(/\s+/).filter((w) => w.length > 3).slice(0, 5);
+        const matchedNodes = words.flatMap((w) => searchNodes(graph, w)).slice(0, 10);
+
+        // Append CodeGraph context to the system prompt
+        const graphContext = `\n\nCODEGRAPH (semantic knowledge graph — "Google Maps for codebase")
+Total: ${stats.totalNodes} nodes, ${stats.totalEdges} edges
+Node types: ${Object.entries(stats.byType).map(([k, v]) => `${k} (${v})`).join(", ")}
+
+Most connected nodes (hubs):
+${stats.mostConnected.slice(0, 5).map((m) => `- ${m.node.label} (${m.node.type}, ${m.degree} connections) — ${m.node.filePath}`).join("\n")}
+
+${matchedNodes.length > 0 ? `Nodes matching your question:\n${matchedNodes.map((n) => `- ${n.label} (${n.type}) — ${n.filePath}`).join("\n")}` : ""}
+
+Use this graph knowledge to answer questions about function callers, callees, dependencies, and impact analysis without needing to grep the codebase.`;
+
+        systemPrompt += graphContext;
+      } catch (e) {
+        // Non-fatal — CodeGraph is optional enhancement
+        console.warn("[/api/chat] CodeGraph integration failed (non-fatal):", e);
+      }
     } else {
       // Fallback to simulated report context
       const basePrompt = personality?.systemPrompt?.trim()

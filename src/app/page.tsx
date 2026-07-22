@@ -81,7 +81,7 @@ export default function Home() {
         if (e.key === ",") { e.preventDefault(); setView("settings"); return; }
         // ⌘P — Providers
         if (e.key.toLowerCase() === "p") { e.preventDefault(); setView("providers"); return; }
-        // ⌘M — Mission Control
+        // ⌘M — Mission Control (Pro-gated in production — ProGate will show lock screen for free users)
         if (e.key.toLowerCase() === "m") { e.preventDefault(); setView("mission"); return; }
         // ⌘C — Chat (only if not selecting text)
         if (e.key.toLowerCase() === "c" && !window.getSelection()?.toString()) {
