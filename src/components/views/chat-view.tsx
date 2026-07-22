@@ -137,6 +137,33 @@ export function ChatView() {
 
       const history = chat.map((m) => ({ role: m.role, content: m.content }));
 
+      // Build AI config — Pro users get admin key, BYOK users get their own key
+      const aiMode = useProvidersStore.getState().aiMode;
+      const byokProvider = providerInstance?.apiKey ? providerInstance : undefined;
+      const platformSelection = JSON.parse(localStorage.getItem("codeinsight-platform-selection") || "null");
+
+      // Pro user with platform selection: send platformProvider + platformModel
+      // BYOK user with key: send provider config
+      const aiBody: Record<string, any> = {};
+      if (platformSelection && (!byokProvider || aiMode === "platform")) {
+        aiBody.platformProvider = platformSelection.providerId;
+        aiBody.platformModel = platformSelection.model;
+        aiBody.aiMode = "platform";
+      } else if (byokProvider) {
+        aiBody.provider = {
+          providerId: byokProvider.providerId,
+          label: byokProvider.label,
+          model: byokProvider.model,
+          baseUrl: byokProvider.baseUrl,
+          temperature: byokProvider.temperature,
+          maxTokens: byokProvider.maxTokens,
+          streaming: byokProvider.streaming,
+          timeout: byokProvider.timeout,
+          apiKey: byokProvider.apiKey,
+        };
+        aiBody.aiMode = "byok";
+      }
+
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -152,31 +179,18 @@ export function ChatView() {
             maxTokens: personality.maxTokens,
             preferredModel: personality.preferredModel,
           },
-          provider: providerInstance
-            ? {
-                providerId: providerInstance.providerId,
-                label: providerInstance.label,
-                model: providerInstance.model,
-                baseUrl: providerInstance.baseUrl,
-                temperature: providerInstance.temperature,
-                maxTokens: providerInstance.maxTokens,
-                streaming: providerInstance.streaming,
-                timeout: providerInstance.timeout,
-                apiKey: providerInstance.apiKey,
-              }
-            : undefined,
           language,
           debug: devMode.enabled,
-          aiMode: useProvidersStore.getState().aiMode,
+          ...aiBody,
         }),
       });
 
       // Check if provider supports streaming (BYOK with streaming enabled, or Platform AI)
       // Free plan: streaming disabled (PLAN_LIMITS.free.streaming = false)
-      const aiMode = useProvidersStore.getState().aiMode;
-      const session = await import("next-auth/react").then(m => m.useSession());
-      const plan = (session.data as any)?.plan ?? "free";
-      const role = (session.data as any)?.role ?? "user";
+      // Use useSession hook at component level instead — get plan from session cookie
+      const sessionRes = await fetch("/api/auth/session").then(r => r.json()).catch(() => ({}));
+      const plan = sessionRes?.plan ?? "free";
+      const role = sessionRes?.role ?? "user";
       const canStream = plan !== "free" || role === "admin";
       const useStreaming = canStream && (aiMode === "platform" || (providerInstance?.streaming && providerInstance?.apiKey));
 
@@ -197,17 +211,8 @@ export function ChatView() {
               maxTokens: personality.maxTokens,
               preferredModel: personality.preferredModel,
             } : undefined,
-            provider: providerInstance ? {
-              providerId: providerInstance.providerId,
-              apiKey: providerInstance.apiKey,
-              baseUrl: providerInstance.baseUrl,
-              model: providerInstance.model,
-              temperature: providerInstance.temperature,
-              maxTokens: providerInstance.maxTokens,
-              timeout: providerInstance.timeout,
-            } : undefined,
             language,
-            aiMode: useProvidersStore.getState().aiMode,
+            ...aiBody,
           }),
         });
 

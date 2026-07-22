@@ -133,22 +133,41 @@ export function AnalyzeView() {
     startProgressAnimation();  // begin smooth interpolation loop
 
     // Start real async analysis with job polling
-    // Send platform provider + model if user selected one (Pro feature)
+    // Send platform provider + model if Pro user, or BYOK key if available
     try {
+      const { useEffectiveAIConfig, buildAIRequestBody } = await import("@/hooks/use-effective-ai-config");
+      // Read config from localStorage (sync — hook is for component state, but we
+      // need it in the event handler, so we read directly)
       const aiMode = useProvidersStore.getState().aiMode;
-      const platformSelection = aiMode === "platform"
-        ? JSON.parse(localStorage.getItem("codeinsight-platform-selection") || "null")
-        : null;
+      const providers = useProvidersStore.getState().providers;
+      const byokProvider = providers.find((p) => p.enabled && p.apiKey);
+      const platformSelection = JSON.parse(localStorage.getItem("codeinsight-platform-selection") || "null");
+      const session = await import("next-auth/react").then(m => m.getSession ? null : null);
+      // Build request body
+      const aiBody: Record<string, any> = {};
+      // Pro user with platform selection: use admin key
+      if (platformSelection && (!byokProvider || aiMode === "platform")) {
+        aiBody.platformProvider = platformSelection.providerId;
+        aiBody.platformModel = platformSelection.model;
+        aiBody.aiMode = "platform";
+      } else if (byokProvider) {
+        // BYOK with saved key
+        aiBody.provider = {
+          providerId: byokProvider.providerId,
+          apiKey: byokProvider.apiKey,
+          baseUrl: byokProvider.baseUrl,
+          model: byokProvider.model,
+          label: byokProvider.label,
+        };
+        aiBody.aiMode = "byok";
+      }
 
       const startRes = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           repoUrl: parsed.url, async: true, force: true,
-          ...(platformSelection ? {
-            platformProvider: platformSelection.providerId,
-            platformModel: platformSelection.model,
-          } : {}),
+          ...aiBody,
         }),
       });
       const startData = await startRes.json();

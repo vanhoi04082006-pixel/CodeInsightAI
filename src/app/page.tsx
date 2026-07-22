@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAppStore } from "@/lib/store";
 import { useT } from "@/lib/i18n";
@@ -11,6 +11,8 @@ import { AppSidebar, AppTopbar, MobileNav } from "@/components/shared/app-shell"
 import { useSession, signIn } from "next-auth/react";
 import dynamic from "next/dynamic";
 import { LandingView } from "@/components/views/landing-view";
+import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 
 // Lazy-load all non-landing views for code splitting
 const DashboardView = dynamic(() => import("@/components/views/dashboard-view").then(m => ({ default: m.DashboardView })), { ssr: false });
@@ -35,8 +37,45 @@ import { Heart, Sparkles, Github, Rocket } from "lucide-react";
 export default function Home() {
   const view = useAppStore((s) => s.view);
   const setView = useAppStore((s) => s.setView);
+  const setActiveReport = useAppStore((s) => s.setActiveReport);
+  const setActiveAnalysisId = useAppStore((s) => s.setActiveAnalysisId);
   const { t } = useT();
   const { data: session, status } = useSession();
+
+  // ── Handle shared report links (?share=TOKEN) ──
+  // When user opens a share link, fetch the shared analysis and display it
+  // in read-only mode (no auth required).
+  const [sharedReport, setSharedReport] = useState<any>(null);
+  const [sharedLoading, setSharedLoading] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const shareToken = params.get("share");
+    if (!shareToken) return;
+
+    // Use microtask to avoid setState-in-effect warning
+    Promise.resolve().then(() => setSharedLoading(true));
+    fetch(`/api/share/${shareToken}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.analysis?.report) {
+          setSharedReport(data.analysis);
+          setActiveReport(data.analysis.report);
+          setActiveAnalysisId(data.analysis.id);
+          setView("project");
+          toast.success("Shared report loaded", {
+            description: `Expires ${new Date(data.expiresAt).toLocaleDateString()}`,
+          });
+        } else {
+          toast.error(data.error || "Share link not found or expired");
+        }
+      })
+      .catch(() => toast.error("Failed to load shared report"))
+      .finally(() => {
+        setSharedLoading(false);
+        window.history.replaceState({}, document.title, window.location.pathname);
+      });
+  }, []);
 
   // Auth gate: landing is public, app requires GitHub login
   const isLanding = view === "landing";
@@ -113,6 +152,36 @@ export default function Home() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [view, setView]);
+
+  // Shared report loading screen
+  if (sharedLoading) {
+    return (
+      <div className="relative flex min-h-screen flex-col">
+        <AnimatedBackground />
+        <div className="flex flex-1 items-center justify-center">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-5 w-5 animate-spin text-cyan-400" />
+            <span>Loading shared report…</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // If viewing a shared report, show ProjectView (read-only, no auth required)
+  if (sharedReport && view === "project") {
+    return (
+      <div className="relative flex min-h-screen flex-col">
+        <AnimatedBackground />
+        <div className="sticky top-0 z-50 border-b border-cyan-500/20 bg-cyan-500/[0.04] px-4 py-2 text-center text-xs text-cyan-300 backdrop-blur-md">
+          📋 Shared report — read-only view. <button onClick={() => { setSharedReport(null); setView("landing"); }} className="underline hover:text-cyan-200">Go to homepage</button>
+        </div>
+        <main className="flex-1">
+          <ProjectView />
+        </main>
+      </div>
+    );
+  }
 
   // Auth gate: if not landing and not authenticated → show login screen
   if (!isLanding && !isAuthenticated && status !== "loading") {

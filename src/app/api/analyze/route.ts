@@ -141,13 +141,10 @@ export async function POST(req: NextRequest) {
     }
 
     // ── Optional Deep AI Analysis (7-pass) ──
-    // Resolution order:
-    // 1. Pro user selected platform provider → use admin's key for that provider
-    // 2. Platform AI (first available from DB or env vars)
-    // 3. BYOK — look up encrypted credential from DB (user's saved provider)
-    // 4. Client-provided provider in request body (local dev convenience)
+    // Runs on ANY analysis (even without parsedRepoData) as long as AI key is available.
+    // Resolution: Pro platform selection → Platform AI (DB/env) → BYOK → client-provided
     const enableAiEnhance = body.aiEnhance !== false;
-    if (enableAiEnhance && parsedRepoData) {
+    if (enableAiEnhance) {
       try {
         const { runDeepAnalysis } = await import("@/lib/ai-deep-analysis");
         const { getPlatformAIProvider, getPlatformAIConfig } = await import("@/lib/platform-ai");
@@ -158,15 +155,11 @@ export async function POST(req: NextRequest) {
         // 1. Pro user selected a specific platform provider + model
         if (platformProvider) {
           aiConfig = await getPlatformAIProvider(platformProvider, platformModel);
-          if (aiConfig) {
-            console.log(`[${jobId}] Using Pro-selected platform provider: ${platformProvider}/${platformModel || aiConfig.model}`);
-          }
         }
 
         // 2. Fallback: first available Platform AI (DB or env)
         if (!aiConfig) {
           aiConfig = await getPlatformAIConfig();
-          if (aiConfig) console.log(`[${jobId}] Using default Platform AI: ${aiConfig.providerId}/${aiConfig.model}`);
         }
 
         // 3. BYOK — look up user's saved credential
@@ -177,42 +170,55 @@ export async function POST(req: NextRequest) {
           });
           if (cred) {
             try {
-              const realKey = decrypt(cred.encryptedApiKey);
               aiConfig = {
-                providerId: cred.providerId, apiKey: realKey,
+                providerId: cred.providerId, apiKey: decrypt(cred.encryptedApiKey),
                 baseUrl: cred.baseUrl, model: cred.model,
                 temperature: cred.temperature ?? 0.7, maxTokens: cred.maxTokens ?? 4096, timeout: 60,
               };
-              console.log(`[${jobId}] Using BYOK provider: ${cred.providerId} (${cred.model})`);
-            } catch { console.warn(`[${jobId}] BYOK decryption failed`); }
+            } catch {}
           }
         }
 
-        // 4. Client-provided (local dev)
+        // 4. Client-provided (local dev or BYOK with inline key)
         if (!aiConfig && body.provider?.apiKey) {
           aiConfig = {
             providerId: body.provider.providerId, apiKey: body.provider.apiKey,
             baseUrl: body.provider.baseUrl || "", model: body.provider.model || "",
-            temperature: body.provider.temperature ?? 0.7, maxTokens: body.provider.maxTokens ?? 4096, timeout: 60,
+            temperature: 0.7, maxTokens: 4096, timeout: 60,
           };
-          console.log(`[${jobId}] Using client-provided: ${aiConfig.providerId}`);
         }
 
         if (aiConfig) {
-          console.log(`[${jobId}] Running deep AI analysis with ${aiConfig.providerId}/${aiConfig.model}`);
-          const deepResult = await runDeepAnalysis(parsedRepoData, report, aiConfig);
+          console.log(`[${jobId}] Running 7-pass AI analysis with ${aiConfig.providerId}/${aiConfig.model}`);
+          // Use parsedRepoData if available, otherwise build minimal context from report
+          const analysisContext = parsedRepoData || {
+            owner: parsed.owner,
+            name: parsed.name,
+            url: parsed.url,
+            totalFiles: report.totalFiles,
+            totalLines: report.totalLines,
+            languages: report.languages,
+            frameworks: report.frameworks,
+            files: report.files.map(f => ({
+              path: f.path, language: f.language, lines: f.lines,
+              complexity: f.complexity, description: f.description,
+              imports: [], exports: [], functions: [], classes: [], components: [], routes: [],
+            })),
+          };
+          const deepResult = await runDeepAnalysis(analysisContext as any, report, aiConfig);
           if (deepResult) {
             (report as any).deepAnalysis = deepResult;
             (report as any).aiEnhancement = {
               aiSummary: deepResult.executiveSummary,
               aiBadge: "ai-enhanced",
             };
+            console.log(`[${jobId}] AI analysis complete — badge: deep-ai`);
           }
         } else {
-          console.log(`[${jobId}] No AI provider configured — static analysis only`);
+          console.log(`[${jobId}] No AI provider available — static analysis only`);
         }
       } catch (e) {
-        console.warn(`[${jobId}] Deep AI analysis failed (non-fatal):`, e);
+        console.warn(`[${jobId}] AI analysis failed (non-fatal):`, e);
       }
     }
 
