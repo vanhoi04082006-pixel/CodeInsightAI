@@ -598,7 +598,7 @@ export function LandingView() {
                         upgrade("pro");
                       } else {
                         // Free plan → GitHub sign-in
-                        signIn("github", { callbackUrl: "/" });
+                        setView("dashboard");
                       }
                     }}
                     disabled={plan.highlight && upgrading}
@@ -810,7 +810,7 @@ export function LandingView() {
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-2 sm:flex-row">
               <Button
-                onClick={() => signIn("github", { callbackUrl: "/" })}
+                onClick={() => setView("dashboard")}
                 size="lg"
                 className="glow-pulse bg-gradient-to-r from-cyan-500 to-violet-500 text-white hover:opacity-90"
               >

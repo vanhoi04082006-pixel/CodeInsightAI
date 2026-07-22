@@ -31,7 +31,13 @@ export async function POST(req: NextRequest) {
 
     const preset = PRESET_BY_ID[providerId];
     const models = JSON.parse(config.models || "[]");
-    const model = models[0] || preset?.defaultModel || "gpt-4o-mini";
+    // Use first model from config, or preset default. For OpenRouter, ensure
+    // model has provider prefix (e.g. "anthropic/claude-3.5-sonnet")
+    let model = models[0] || preset?.defaultModel || "gpt-4o-mini";
+    // OpenRouter-specific: if model doesn't contain "/", prepend a default
+    if (providerId === "openrouter" && !model.includes("/")) {
+      model = `openai/${model}`;
+    }
     const start = Date.now();
 
     // Build test request based on provider

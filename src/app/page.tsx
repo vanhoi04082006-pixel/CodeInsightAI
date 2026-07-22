@@ -169,15 +169,20 @@ export default function Home() {
   }
 
   // If viewing a shared report, show ProjectView (read-only, no auth required)
+  // No custom cursor, no sidebar, no action buttons — pure read-only view
   if (sharedReport && view === "project") {
     return (
       <div className="relative flex min-h-screen flex-col">
         <AnimatedBackground />
-        <div className="sticky top-0 z-50 border-b border-cyan-500/20 bg-cyan-500/[0.04] px-4 py-2 text-center text-xs text-cyan-300 backdrop-blur-md">
-          📋 Shared report — read-only view. <button onClick={() => { setSharedReport(null); setView("landing"); }} className="underline hover:text-cyan-200">Go to homepage</button>
+        <div className="sticky top-0 z-50 flex items-center justify-between border-b border-cyan-500/20 bg-cyan-500/[0.04] px-4 py-2 text-xs text-cyan-300 backdrop-blur-md">
+          <span>📋 Shared report — read-only view</span>
+          <button onClick={() => { setSharedReport(null); setView("landing"); }} className="rounded-lg bg-cyan-500/20 px-3 py-1 font-medium hover:bg-cyan-500/30">
+            Go to CodeInsight AI →
+          </button>
         </div>
         <main className="flex-1">
-          <ProjectView />
+          {/* Pass isShared prop to ProjectView so it hides action buttons */}
+          <ProjectView isShared />
         </main>
       </div>
     );
@@ -259,7 +264,7 @@ export default function Home() {
                 </>
               ) : (
                 <button
-                  onClick={() => signIn("github", { callbackUrl: "/" })}
+                  onClick={() => setView("dashboard")}
                   className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-cyan-500 to-violet-500 px-3 py-1.5 text-xs font-medium text-white transition hover:opacity-90"
                 >
                   <Github className="h-3.5 w-3.5" /> Sign in

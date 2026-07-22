@@ -53,7 +53,7 @@ const TABS: { id: Tab; labelKey: string; icon: typeof LayoutGrid }[] = [
   { id: "roadmap", labelKey: "roadmap", icon: Rocket },
 ];
 
-export function ProjectView() {
+export function ProjectView({ isShared = false }: { isShared?: boolean }) {
   const { t } = useT();
   const report = useAppStore((s) => s.activeReport);
   const activeAnalysisId = useAppStore((s) => s.activeAnalysisId);
@@ -171,23 +171,26 @@ export function ProjectView() {
             ))}
           </div>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button onClick={exportMarkdown} variant="outline" size="sm">
-            <Copy className="mr-1.5 h-4 w-4" /> Copy MD
-          </Button>
-          <Button onClick={downloadMarkdown} variant="outline" size="sm">
-            <Download className="mr-1.5 h-4 w-4" /> .md
-          </Button>
-          <Button onClick={downloadJSON} variant="outline" size="sm">
-            <Download className="mr-1.5 h-4 w-4" /> .json
-          </Button>
-          <Button onClick={shareReport} variant="outline" size="sm" disabled={sharing}>
-            {sharing ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Share2 className="mr-1.5 h-4 w-4" />} Share
-          </Button>
-          <Button onClick={() => setView("chat")} size="sm" className="bg-gradient-to-r from-cyan-500 to-violet-500 text-white">
-            <Sparkles className="mr-1.5 h-4 w-4" /> Ask AI
-          </Button>
-        </div>
+        {/* Action buttons — hidden in shared (read-only) mode */}
+        {!isShared && (
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={exportMarkdown} variant="outline" size="sm">
+              <Copy className="mr-1.5 h-4 w-4" /> Copy MD
+            </Button>
+            <Button onClick={downloadMarkdown} variant="outline" size="sm">
+              <Download className="mr-1.5 h-4 w-4" /> .md
+            </Button>
+            <Button onClick={downloadJSON} variant="outline" size="sm">
+              <Download className="mr-1.5 h-4 w-4" /> .json
+            </Button>
+            <Button onClick={shareReport} variant="outline" size="sm" disabled={sharing}>
+              {sharing ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Share2 className="mr-1.5 h-4 w-4" />} Share
+            </Button>
+            <Button onClick={() => setView("chat")} size="sm" className="bg-gradient-to-r from-cyan-500 to-violet-500 text-white">
+              <Sparkles className="mr-1.5 h-4 w-4" /> Ask AI
+            </Button>
+          </div>
+        )}
       </motion.div>
 
       {/* tabs */}
