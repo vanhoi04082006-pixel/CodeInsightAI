@@ -172,8 +172,13 @@ export function ChatView() {
       });
 
       // Check if provider supports streaming (BYOK with streaming enabled, or Platform AI)
+      // Free plan: streaming disabled (PLAN_LIMITS.free.streaming = false)
       const aiMode = useProvidersStore.getState().aiMode;
-      const useStreaming = aiMode === "platform" || (providerInstance?.streaming && providerInstance?.apiKey);
+      const session = await import("next-auth/react").then(m => m.useSession());
+      const plan = (session.data as any)?.plan ?? "free";
+      const role = (session.data as any)?.role ?? "user";
+      const canStream = plan !== "free" || role === "admin";
+      const useStreaming = canStream && (aiMode === "platform" || (providerInstance?.streaming && providerInstance?.apiKey));
 
       if (useStreaming) {
         // ── Streaming via SSE ──

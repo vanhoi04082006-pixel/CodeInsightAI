@@ -63,7 +63,8 @@ export function AppSidebar() {
 
   // Mission badge: green pulse when a mission is running
   const missionActive = useAppStore((s) => s.view === "mission" && !!s.activeReport);
-  // Chat badge: count unread (placeholder — could track lastSeenChatCount)
+  // Chat badge: removed — was dead code (always 0). Uncomment + implement
+  // if you want to track unread chat messages per analysis.
   const chatBadge = 0;
 
   // Filter nav items — hide admin-only items for non-admins

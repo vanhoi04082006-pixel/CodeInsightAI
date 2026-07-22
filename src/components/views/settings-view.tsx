@@ -68,7 +68,6 @@ export function SettingsView() {
   // Đọc danh sách mảng (array) các tài khoản đã liên kết từ backend
   const connectedProviders = (session as any)?.providers || []; 
   const isGithubConnected = connectedProviders.includes("github");
-  const isGoogleConnected = connectedProviders.includes("google");
 
   const prevStatus = useRef(status);
 
@@ -125,17 +124,6 @@ export function SettingsView() {
                   onToggle={() => {
                     if (isGithubConnected) { signOut(); toast.success(t("common", "status.disconnected")); }
                     else signIn("github");
-                  }}
-                />
-                <ConnectRow
-                  icon={Sparkles}
-                  name="Google"
-                  desc={t("settings", "googleDesc")}
-                  connected={isGoogleConnected}
-                  loading={status === "loading"}
-                  onToggle={() => {
-                    if (isGoogleConnected) { signOut(); toast.success(t("common", "status.disconnected")); }
-                    else signIn("google");
                   }}
                 />
               </div>

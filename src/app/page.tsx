@@ -28,6 +28,7 @@ import { LanguageSwitcher } from "@/components/shared/language-switcher";
 import { ThemeSwitcher } from "@/components/shared/theme-switcher";
 import { UserMenu } from "@/components/shared/user-menu";
 import { ProGate } from "@/components/shared/pro-gate";
+import { OnboardingOverlay } from "@/components/shared/onboarding-overlay";
 import { Heart, Sparkles, Github, Rocket } from "lucide-react";
 
 export default function Home() {
@@ -232,6 +233,7 @@ export default function Home() {
 
       <MobileNav />
       <CommandPalette />
+      <OnboardingOverlay />
       <CustomCursor />
     </div>
   );
@@ -258,10 +260,14 @@ function Footer() {
             <button onClick={() => setView("providers")} className="hover:text-foreground">{t("common", "nav.providers")}</button>
             <button onClick={() => setView("history")} className="hover:text-foreground">{t("common", "nav.history")}</button>
             <button onClick={() => setView("settings")} className="hover:text-foreground">{t("common", "nav.settings")}</button>
+            <a href="https://github.com/vanhoi04082006-pixel/CodeInsightAI" target="_blank" rel="noreferrer" className="hover:text-foreground">GitHub</a>
           </nav>
-          <p className="flex items-center gap-1 text-xs text-muted-foreground">
-            Built with <Heart className="h-3 w-3 fill-rose-400 text-rose-400" /> for developers
-          </p>
+          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+            <a href="/terms" className="hover:text-foreground">Terms</a>
+            <a href="/privacy" className="hover:text-foreground">Privacy</a>
+            <span className="text-muted-foreground/50">·</span>
+            <span className="flex items-center gap-1">Built with <Heart className="h-3 w-3 fill-rose-400 text-rose-400" /> for developers</span>
+          </div>
         </div>
       </div>
     </footer>

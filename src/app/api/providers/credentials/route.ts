@@ -60,6 +60,29 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "providerId is required" }, { status: 400 });
     }
 
+    // ── Enforce maxProviders limit ──
+    // Free: 3 providers, Pro: 20, Team: 50, Enterprise: unlimited
+    const existingCred = await db.providerCredential.findUnique({
+      where: { userId_providerId_label: { userId, providerId, label: label || providerId } },
+    });
+    if (!existingCred) {
+      // This is a NEW credential — check provider count limit
+      const user = await db.user.findUnique({ where: { id: userId }, select: { plan: true, role: true } });
+      const plan = user?.plan ?? "free";
+      const role = user?.role ?? "user";
+      const { PLAN_LIMITS } = await import("@/lib/billing/usage");
+      const limits = PLAN_LIMITS[plan] ?? PLAN_LIMITS.free;
+      const currentCount = await db.providerCredential.count({ where: { userId } });
+      const maxProviders = role === "admin" ? -1 : limits.maxProviders;
+      if (maxProviders !== -1 && currentCount >= maxProviders) {
+        return NextResponse.json({
+          error: `Provider limit reached (${currentCount}/${maxProviders}). Upgrade to ${plan === "free" ? "Pro" : "Team"} for more providers.`,
+          limit: maxProviders,
+          current: currentCount,
+        }, { status: 429 });
+      }
+    }
+
     // apiKey is required for CREATE (new credential), but optional for UPDATE.
     // If apiKey is empty/missing on update, we keep the existing encrypted key.
     // This prevents the "key disappears after save" bug when user saves other fields.
