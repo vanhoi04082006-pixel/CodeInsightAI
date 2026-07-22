@@ -1,6 +1,9 @@
-// CodeInsight AI — Rate limiting middleware (Vercel Edge compatible)
+// CodeInsight AI — Rate limiting proxy (Vercel Edge compatible)
 //
-// IMPORTANT: This middleware MUST be edge-runtime compatible.
+// Next.js 16 deprecates "middleware" in favor of "proxy".
+// This file replaces src/middleware.ts with the same functionality.
+//
+// IMPORTANT: This MUST be edge-runtime compatible.
 // No `setInterval`, no Node.js APIs, no dynamic imports.
 // /api/auth/* is EXCLUDED from matcher to prevent NextAuth errors.
 
