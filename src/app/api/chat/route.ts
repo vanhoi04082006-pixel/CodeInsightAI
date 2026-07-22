@@ -43,6 +43,8 @@ interface ChatBody {
   language?: string;
   debug?: boolean;
   aiMode?: "byok" | "platform"; // SaaS: BYOK or Platform AI
+  platformProvider?: string;   // Pro user's selected platform provider
+  platformModel?: string;      // Pro user's selected model
 }
 
 const DEFAULT_SYSTEM_PROMPT = `You are CodeInsight AI — an elite AI CTO, Software Architect, Security Expert, Performance Engineer, and Senior Staff Engineer combined.
@@ -290,7 +292,9 @@ Use this graph knowledge to answer questions about function callers, callees, de
         temperature: effectiveProvider.temperature,
         maxTokens: effectiveProvider.maxTokens,
       } : undefined,
-      null  // decryptedBYOK already handled above (effectiveProvider has the key)
+      null,  // decryptedBYOK already handled above (effectiveProvider has the key)
+      // Pro user's selected platform provider + model
+      body.platformProvider ? { providerId: body.platformProvider, model: body.platformModel } : null
     );
 
     try {

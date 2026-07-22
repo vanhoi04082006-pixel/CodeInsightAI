@@ -326,20 +326,23 @@ model AuditLog {
 }
 
 // ==========================================
-// PLATFORM AI CONFIG (admin-set, singleton)
+// PLATFORM AI CONFIG (admin-set, MULTI-PROVIDER)
 // ==========================================
-// Admin can configure which AI provider + model is used for Platform AI mode
-// (instead of being hardcoded to OpenRouter/Claude). Stored encrypted.
+// Admin can configure MULTIPLE AI providers (OpenRouter, OpenAI, Anthropic, etc.)
+// Each row = 1 provider with its own API key. Pro users choose which provider +
+// model to use. Free users use their own BYOK keys.
 // ==========================================
 
 model PlatformAIConfig {
-  id              String   @id @default("singleton")  // always "singleton"
+  id              String   @id @default(cuid())
   providerId      String   // openrouter | openai | anthropic | gemini | etc.
   encryptedApiKey String   // AES-256 encrypted
   baseUrl         String
-  model           String
-  temperature     Float    @default(0.7)
-  maxTokens       Int      @default(4096)
+  models          String   @default("[]") // JSON array of available models
   enabled         Boolean  @default(true)
+  createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+
+  @@unique([providerId])  // one config per provider
+  @@index([enabled])
 }

@@ -21,6 +21,7 @@ import { GlassCard, GradientText } from "@/components/shared/ui";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAppStore } from "@/lib/store";
+import { useProvidersStore } from "@/lib/providers-store";
 import { ANALYSIS_STAGES, parseRepoUrl } from "@/lib/analysis-engine";
 import type { AnalysisReport } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -132,11 +133,23 @@ export function AnalyzeView() {
     startProgressAnimation();  // begin smooth interpolation loop
 
     // Start real async analysis with job polling
+    // Send platform provider + model if user selected one (Pro feature)
     try {
+      const aiMode = useProvidersStore.getState().aiMode;
+      const platformSelection = aiMode === "platform"
+        ? JSON.parse(localStorage.getItem("codeinsight-platform-selection") || "null")
+        : null;
+
       const startRes = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ repoUrl: parsed.url, async: true, force: true }),
+        body: JSON.stringify({
+          repoUrl: parsed.url, async: true, force: true,
+          ...(platformSelection ? {
+            platformProvider: platformSelection.providerId,
+            platformModel: platformSelection.model,
+          } : {}),
+        }),
       });
       const startData = await startRes.json();
 

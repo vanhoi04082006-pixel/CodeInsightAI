@@ -19,6 +19,8 @@ import {
   ScrollText,
   Server,
   Cpu,
+  Settings2,
+  Check,
 } from "lucide-react";
 import { GlassCard, GradientText } from "@/components/shared/ui";
 import { Button } from "@/components/ui/button";
@@ -671,52 +673,56 @@ function formatAction(action: string): string {
   return action.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-/* ---------- Platform AI Config Tab ---------- */
+
+/* ---------- Platform AI Config Tab (Multi-Provider) ---------- */
 function PlatformAITab() {
-  const [config, setConfig] = useState<any>(null);
-  const [providers, setProviders] = useState<any[]>([]);
-  const [envConfig, setEnvConfig] = useState<any>(null);
+  const [configured, setConfigured] = useState<any[]>([]);
+  const [available, setAvailable] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // Form state
-  const [providerId, setProviderId] = useState("openrouter");
-  const [apiKey, setApiKey] = useState("");
-  const [baseUrl, setBaseUrl] = useState("https://openrouter.ai/api/v1");
-  const [model, setModel] = useState("anthropic/claude-3.5-sonnet");
-  const [temperature, setTemperature] = useState(0.7);
-  const [maxTokens, setMaxTokens] = useState(4096);
-  const [enabled, setEnabled] = useState(true);
+  // Form state for adding/editing
+  const [editProviderId, setEditProviderId] = useState("");
+  const [editApiKey, setEditApiKey] = useState("");
+  const [editBaseUrl, setEditBaseUrl] = useState("");
+  const [editModels, setEditModels] = useState<string[]>([]);
+  const [editEnabled, setEditEnabled] = useState(true);
+  const [showAddForm, setShowAddForm] = useState(false);
 
-  useEffect(() => {
-    fetch("/api/admin/platform-ai")
-      .then((r) => r.json())
-      .then((data) => {
-        setProviders(data.providers || []);
-        setEnvConfig(data.envConfig || null);
-        if (data.config) {
-          setConfig(data.config);
-          setProviderId(data.config.providerId);
-          setBaseUrl(data.config.baseUrl);
-          setModel(data.config.model);
-          setTemperature(data.config.temperature);
-          setMaxTokens(data.config.maxTokens);
-          setEnabled(data.config.enabled);
-        }
-      })
-      .catch(() => toast.error("Failed to load Platform AI config"))
-      .finally(() => setLoading(false));
-  }, []);
-
-  const selectedProvider = providers.find((p) => p.providerId === providerId);
-
-  const handleProviderChange = (id: string) => {
-    const p = providers.find((x) => x.providerId === id);
-    if (p) {
-      setProviderId(id);
-      setBaseUrl(p.defaultBaseUrl);
-      setModel(p.defaultModel);
+  const load = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/admin/platform-ai");
+      const data = await res.json();
+      setConfigured(data.configured || []);
+      setAvailable(data.available || []);
+    } catch {
+      toast.error("Failed to load Platform AI config");
+    } finally {
+      setLoading(false);
     }
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const handleAdd = (providerId: string) => {
+    const p = available.find((x) => x.providerId === providerId);
+    if (!p) return;
+    setEditProviderId(p.providerId);
+    setEditApiKey("");
+    setEditBaseUrl(p.defaultBaseUrl);
+    setEditModels(p.models);
+    setEditEnabled(true);
+    setShowAddForm(true);
+  };
+
+  const handleEdit = (c: any) => {
+    setEditProviderId(c.providerId);
+    setEditApiKey("");
+    setEditBaseUrl(c.baseUrl);
+    setEditModels(c.models);
+    setEditEnabled(c.enabled);
+    setShowAddForm(true);
   };
 
   const handleSave = async () => {
@@ -726,14 +732,19 @@ function PlatformAITab() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          providerId, apiKey: apiKey || undefined, baseUrl, model, temperature, maxTokens, enabled,
+          providerId: editProviderId,
+          apiKey: editApiKey || undefined,
+          baseUrl: editBaseUrl,
+          models: editModels,
+          enabled: editEnabled,
         }),
       });
       const data = await res.json();
       if (data.success) {
-        setConfig(data.config);
-        setApiKey("");
-        toast.success("Platform AI config saved");
+        toast.success(`${editProviderId} saved`);
+        setShowAddForm(false);
+        setEditApiKey("");
+        load();
       } else {
         toast.error(data.error || "Failed to save");
       }
@@ -744,16 +755,14 @@ function PlatformAITab() {
     }
   };
 
-  const handleDisable = async () => {
-    setSaving(true);
+  const handleDelete = async (providerId: string) => {
+    if (!confirm(`Remove ${providerId} from Platform AI?`)) return;
     try {
-      await fetch("/api/admin/platform-ai", { method: "DELETE" });
-      setEnabled(false);
-      toast.success("Platform AI disabled");
+      await fetch(`/api/admin/platform-ai?providerId=${providerId}`, { method: "DELETE" });
+      toast.success(`${providerId} removed`);
+      load();
     } catch {
-      toast.error("Failed to disable");
-    } finally {
-      setSaving(false);
+      toast.error("Failed to remove");
     }
   };
 
@@ -765,121 +774,111 @@ function PlatformAITab() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Cpu className="h-4 w-4 text-cyan-300" />
-            <h3 className="text-sm font-semibold"><GradientText>Platform AI Configuration</GradientText></h3>
+            <h3 className="text-sm font-semibold"><GradientText>Platform AI Providers</GradientText></h3>
           </div>
-          {config && (
-            <Badge className={enabled ? "bg-emerald-500/15 text-emerald-300" : "bg-rose-500/15 text-rose-300"}>
-              {enabled ? "Enabled" : "Disabled"}
-            </Badge>
-          )}
+          <Badge variant="outline" className="text-[10px]">{configured.length} configured</Badge>
         </div>
         <p className="mt-1 text-xs text-muted-foreground">
-          Configure which AI provider + model is used for Platform AI mode. This replaces the hardcoded
-          env vars — admin can change provider/model without redeploying.
+          Configure MULTIPLE AI providers with API keys. Pro users can then choose which provider + model to use.
+          Free users use their own BYOK keys.
         </p>
 
-        {/* Current status */}
-        {config ? (
-          <div className="mt-4 rounded-lg border border-cyan-500/20 bg-cyan-500/[0.04] p-3 text-xs">
-            <p className="text-cyan-200">Current config:</p>
-            <p className="mt-1 text-muted-foreground">
-              Provider: <span className="font-mono text-foreground">{config.providerId}</span> ·
-              Model: <span className="font-mono text-foreground">{config.model}</span> ·
-              Key: <span className="font-mono text-foreground">{config.maskedKey}</span>
-            </p>
-          </div>
-        ) : envConfig?.hasEnvKey ? (
-          <div className="mt-4 rounded-lg border border-amber-500/20 bg-amber-500/[0.04] p-3 text-xs">
-            <p className="text-amber-200">Using env vars fallback:</p>
-            <p className="mt-1 text-muted-foreground">
-              {envConfig.envProvider}/{envConfig.envModel} — set DB config above to override.
-            </p>
+        {/* Configured providers list */}
+        {configured.length === 0 ? (
+          <div className="mt-4 rounded-lg border border-rose-500/20 bg-rose-500/[0.04] p-4 text-center">
+            <p className="text-sm text-rose-300">No Platform AI providers configured yet.</p>
+            <p className="mt-1 text-xs text-muted-foreground">Add at least one provider below so Pro users can use Platform AI.</p>
           </div>
         ) : (
-          <div className="mt-4 rounded-lg border border-rose-500/20 bg-rose-500/[0.04] p-3 text-xs">
-            <p className="text-rose-200">Platform AI not configured.</p>
-            <p className="mt-1 text-muted-foreground">Set config below or configure env vars on Vercel.</p>
+          <div className="mt-4 space-y-2">
+            {configured.map((c) => (
+              <div key={c.id} className="flex items-center gap-3 rounded-lg border border-white/5 bg-white/[0.02] p-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-cyan-400/10 text-cyan-300">
+                  <Cpu className="h-4 w-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-medium">{c.name}</p>
+                    <Badge className={c.enabled ? "bg-emerald-500/15 text-emerald-300" : "bg-rose-500/15 text-rose-300"}>
+                      {c.enabled ? "Enabled" : "Disabled"}
+                    </Badge>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">
+                    {c.models.length} models · Key: <span className="font-mono">{c.maskedKey}</span>
+                  </p>
+                </div>
+                <Button size="sm" variant="ghost" onClick={() => handleEdit(c)} title="Edit">
+                  <Settings2 className="h-3.5 w-3.5" />
+                </Button>
+                <Button size="sm" variant="ghost" className="text-rose-300" onClick={() => handleDelete(c.providerId)} title="Remove">
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            ))}
           </div>
         )}
 
-        {/* Form */}
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">Provider</label>
-            <Select value={providerId} onValueChange={handleProviderChange}>
-              <SelectTrigger className="bg-white/[0.03]"><SelectValue /></SelectTrigger>
+        {/* Add provider dropdown */}
+        {available.length > 0 && !showAddForm && (
+          <div className="mt-4">
+            <Select value="" onValueChange={handleAdd}>
+              <SelectTrigger className="bg-white/[0.03]"><SelectValue placeholder="+ Add provider…" /></SelectTrigger>
               <SelectContent>
-                {providers.map((p) => (
+                {available.map((p) => (
                   <SelectItem key={p.providerId} value={p.providerId}>
-                    {p.name} ({p.category})
+                    {p.name} ({p.category}) — {p.models.length} models
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">Model</label>
-            <Select value={model} onValueChange={setModel}>
-              <SelectTrigger className="bg-white/[0.03]"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {selectedProvider?.models.map((m: string) => (
-                  <SelectItem key={m} value={m}>{m}</SelectItem>
-                ))}
-                <SelectItem value={model}>{model} (custom)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">
-              API Key {config && <span className="text-emerald-400">(saved — type new to replace)</span>}
-            </label>
-            <Input
-              type="password"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              placeholder={config ? "•••• (saved — type new to replace)" : "sk-..."}
-              className="bg-white/[0.03] font-mono"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">Base URL</label>
-            <Input value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} className="bg-white/[0.03] font-mono text-xs" />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">Temperature — {temperature.toFixed(2)}</label>
-            <input type="range" min="0" max="2" step="0.05" value={temperature} onChange={(e) => setTemperature(Number(e.target.value))} className="w-full" />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">Max Tokens</label>
-            <Input type="number" value={maxTokens} onChange={(e) => setMaxTokens(Number(e.target.value))} className="bg-white/[0.03]" />
-          </div>
-        </div>
+        )}
 
-        <div className="mt-4 flex items-center gap-2">
-          <Button onClick={handleSave} disabled={saving} className="bg-gradient-to-r from-cyan-500 to-violet-500 text-white">
-            {saving ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Cpu className="mr-1.5 h-4 w-4" />}
-            {saving ? "Saving…" : "Save Config"}
-          </Button>
-          {config?.enabled && (
-            <Button onClick={handleDisable} disabled={saving} variant="outline" className="text-rose-300">
-              Disable
-            </Button>
-          )}
-        </div>
-      </GlassCard>
-
-      {/* Available providers reference */}
-      <GlassCard className="p-5">
-        <h3 className="text-sm font-semibold">Available Providers ({providers.length})</h3>
-        <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          {providers.map((p) => (
-            <div key={p.providerId} className="rounded-lg border border-white/5 bg-white/[0.02] p-2.5">
-              <p className="text-xs font-medium">{p.name}</p>
-              <p className="text-[10px] text-muted-foreground">{p.category} · {p.models.length} models</p>
-              <p className="mt-1 font-mono text-[10px] text-cyan-300">{p.defaultModel}</p>
+        {/* Edit/Add form */}
+        {showAddForm && (
+          <div className="mt-4 rounded-lg border border-cyan-500/20 bg-cyan-500/[0.04] p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <p className="text-sm font-semibold text-cyan-200">
+                {configured.find((c) => c.providerId === editProviderId) ? "Edit" : "Add"} {editProviderId}
+              </p>
+              <button onClick={() => setShowAddForm(false)} className="text-xs text-muted-foreground hover:text-foreground">✕ Cancel</button>
             </div>
-          ))}
-        </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase text-muted-foreground">API Key</label>
+                <Input
+                  type="password"
+                  value={editApiKey}
+                  onChange={(e) => setEditApiKey(e.target.value)}
+                  placeholder={configured.find((c) => c.providerId === editProviderId) ? "•••• (saved — type new to replace)" : "sk-..."}
+                  className="bg-white/[0.03] font-mono text-xs"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase text-muted-foreground">Base URL</label>
+                <Input value={editBaseUrl} onChange={(e) => setEditBaseUrl(e.target.value)} className="bg-white/[0.03] font-mono text-xs" />
+              </div>
+            </div>
+            <div className="mt-3 space-y-1">
+              <label className="text-[10px] uppercase text-muted-foreground">Available Models ({editModels.length})</label>
+              <div className="flex flex-wrap gap-1">
+                {editModels.map((m) => (
+                  <span key={m} className="rounded-full border border-white/10 bg-white/[0.03] px-2 py-0.5 text-[10px] font-mono">{m}</span>
+                ))}
+              </div>
+            </div>
+            <div className="mt-3 flex items-center gap-2">
+              <Button onClick={handleSave} disabled={saving} size="sm" className="bg-gradient-to-r from-cyan-500 to-violet-500 text-white">
+                {saving ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Check className="mr-1.5 h-3.5 w-3.5" />}
+                {saving ? "Saving…" : "Save Provider"}
+              </Button>
+              <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <input type="checkbox" checked={editEnabled} onChange={(e) => setEditEnabled(e.target.checked)} className="rounded" />
+                Enabled
+              </label>
+            </div>
+          </div>
+        )}
       </GlassCard>
     </div>
   );

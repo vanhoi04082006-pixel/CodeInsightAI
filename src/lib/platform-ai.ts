@@ -1,60 +1,140 @@
-// CodeInsight AI — Platform AI configuration resolver
+// CodeInsight AI — Platform AI configuration resolver (MULTI-PROVIDER)
 //
-// Resolves the Platform AI provider config from:
-// 1. DB (admin-set via Admin Dashboard) — takes precedence
-// 2. Environment variables (fallback)
+// Admin can configure MULTIPLE AI providers (OpenRouter, OpenAI, Anthropic, etc.)
+// Each provider has its own API key + model list.
 //
-// Supports ALL 14 providers — not just OpenRouter.
+// Pro users choose which provider + model to use.
+// Free users use their own BYOK keys.
 //
-// Env vars (fallback if DB config not set):
-//   PLATFORM_AI_PROVIDER   — openrouter | openai | anthropic | gemini | deepseek | groq |
-//                            together | fireworks | mistral | xai | azure | ollama | lmstudio | custom
-//   PLATFORM_AI_API_KEY    — the API key (server-side only, never exposed to frontend)
-//   PLATFORM_AI_BASE_URL   — the base URL for the provider
-//   PLATFORM_AI_MODEL      — the model name
+// Resolution order for AI calls:
+// 1. If user selected a specific platform provider + model → use that (Pro only)
+// 2. If BYOK credential exists → use that (Free + Pro)
+// 3. If Platform AI env vars set → use that (fallback)
+// 4. null (no AI available)
 
 import { PRESET_BY_ID } from "@/lib/providers";
 import type { AIProviderConfig } from "@/lib/ai-client";
 import { isProduction } from "@/lib/env";
 
 /**
- * Resolve the Platform AI provider config.
- * Priority: 1. DB (admin-set) → 2. Env vars → 3. null (not configured)
- *
- * This is ASYNC because it queries the DB. For sync contexts (rare), use
- * getPlatformAIConfigFromEnv() which only checks env vars.
+ * Get ALL admin-configured platform AI providers (for listing to Pro users).
+ * Returns array of { providerId, name, models, ... } — NO API keys exposed.
  */
-export async function getPlatformAIConfig(): Promise<AIProviderConfig | null> {
-  // 1. Try DB config (admin-set) first
+export async function getPlatformAIProviders(): Promise<Array<{
+  providerId: string;
+  name: string;
+  category: string;
+  baseUrl: string;
+  models: string[];
+}>> {
+  try {
+    const { db } = await import("@/lib/db");
+    const configs = await db.platformAIConfig.findMany({
+      where: { enabled: true },
+      orderBy: { createdAt: "asc" },
+    });
+    return configs.map((c) => {
+      const preset = PRESET_BY_ID[c.providerId];
+      return {
+        providerId: c.providerId,
+        name: preset?.name || c.providerId,
+        category: preset?.category || "Unknown",
+        baseUrl: c.baseUrl,
+        models: JSON.parse(c.models || "[]"),
+      };
+    });
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Resolve a SPECIFIC platform AI provider config (with decrypted API key).
+ * Used when Pro user selects a specific provider + model.
+ *
+ * @param providerId — e.g. "openrouter", "openai", "anthropic"
+ * @param model — the model name (e.g. "anthropic/claude-3.5-sonnet")
+ * @returns AIProviderConfig with decrypted key, or null if not configured
+ */
+export async function getPlatformAIProvider(
+  providerId: string,
+  model?: string
+): Promise<AIProviderConfig | null> {
   try {
     const { db } = await import("@/lib/db");
     const { decrypt } = await import("@/lib/crypto");
-    const dbConfig = await db.platformAIConfig.findUnique({ where: { id: "singleton" } });
-    if (dbConfig?.enabled && dbConfig.encryptedApiKey) {
+
+    const config = await db.platformAIConfig.findUnique({
+      where: { providerId },
+    });
+
+    if (!config?.enabled || !config.encryptedApiKey) return null;
+
+    try {
+      const apiKey = decrypt(config.encryptedApiKey);
+      if (!apiKey) return null;
+
+      // Use the user-selected model, or the first model in the list
+      const models = JSON.parse(config.models || "[]");
+      const selectedModel = model || models[0] || PRESET_BY_ID[providerId]?.defaultModel || "";
+
+      return {
+        providerId: config.providerId,
+        apiKey,
+        baseUrl: config.baseUrl,
+        model: selectedModel,
+        temperature: 0.7,
+        maxTokens: 4096,
+        timeout: 60,
+      };
+    } catch {
+      return null;
+    }
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Get the FIRST available platform AI config (fallback when no specific provider selected).
+ * Checks DB first, then env vars.
+ */
+export async function getPlatformAIConfig(): Promise<AIProviderConfig | null> {
+  // 1. Try DB — first enabled provider
+  try {
+    const { db } = await import("@/lib/db");
+    const { decrypt } = await import("@/lib/crypto");
+
+    const config = await db.platformAIConfig.findFirst({
+      where: { enabled: true },
+      orderBy: { createdAt: "asc" },
+    });
+
+    if (config?.encryptedApiKey) {
       try {
-        const apiKey = decrypt(dbConfig.encryptedApiKey);
-        if (apiKey && apiKey.length > 0) {
+        const apiKey = decrypt(config.encryptedApiKey);
+        if (apiKey) {
+          const models = JSON.parse(config.models || "[]");
           return {
-            providerId: dbConfig.providerId,
+            providerId: config.providerId,
             apiKey,
-            baseUrl: dbConfig.baseUrl,
-            model: dbConfig.model,
-            temperature: dbConfig.temperature ?? 0.7,
-            maxTokens: dbConfig.maxTokens ?? 4096,
+            baseUrl: config.baseUrl,
+            model: models[0] || PRESET_BY_ID[config.providerId]?.defaultModel || "",
+            temperature: 0.7,
+            maxTokens: 4096,
             timeout: 60,
           };
         }
-      } catch { /* decryption failed — fall through to env */ }
+      } catch {}
     }
-  } catch { /* DB not ready — fall through to env */ }
+  } catch {}
 
-  // 2. Fall back to env vars
+  // 2. Fallback to env vars
   return getPlatformAIConfigFromEnv();
 }
 
 /**
  * Sync version — only checks env vars (no DB query).
- * Use this in contexts where async is not possible (rare).
  */
 export function getPlatformAIConfigFromEnv(): AIProviderConfig | null {
   const apiKey = process.env.PLATFORM_AI_API_KEY;
@@ -65,27 +145,18 @@ export function getPlatformAIConfigFromEnv(): AIProviderConfig | null {
   const baseUrl = process.env.PLATFORM_AI_BASE_URL || preset?.defaultBaseUrl || "https://openrouter.ai/api/v1";
   const model = process.env.PLATFORM_AI_MODEL || preset?.defaultModel || "anthropic/claude-3.5-sonnet";
 
-  return {
-    providerId,
-    apiKey,
-    baseUrl,
-    model,
-    temperature: 0.7,
-    maxTokens: 4096,
-    timeout: 60,
-  };
+  return { providerId, apiKey, baseUrl, model, temperature: 0.7, maxTokens: 4096, timeout: 60 };
 }
 
 /**
- * Check if Platform AI is configured (checks DB + env).
+ * Check if ANY platform AI is configured (DB or env).
  */
 export async function isPlatformAIConfigured(): Promise<boolean> {
   return (await getPlatformAIConfig()) !== null;
 }
 
 /**
- * Resolve the BYOK provider config from a saved credential (decrypted).
- * Used when the user has BYOK mode enabled.
+ * BYOK config builder
  */
 export function getBYOKConfig(
   providerId: string,
@@ -96,10 +167,7 @@ export function getBYOKConfig(
   maxTokens?: number
 ): AIProviderConfig {
   return {
-    providerId,
-    apiKey,
-    baseUrl,
-    model,
+    providerId, apiKey, baseUrl, model,
     temperature: temperature ?? 0.7,
     maxTokens: maxTokens ?? 4096,
     timeout: 60,
@@ -108,14 +176,13 @@ export function getBYOKConfig(
 
 /**
  * Resolve the effective AI provider for a request.
- * Priority:
- * 1. If aiMode === "platform" AND Platform AI is configured → use Platform AI
- * 2. If user sent a provider with apiKey → use BYOK
- * 3. If no apiKey AND Platform AI is configured → use Platform AI (fallback)
- * 4. Otherwise → null (no AI available)
  *
- * In production, BYOK keys are looked up from the encrypted DB credential
- * if the client sends a provider without an apiKey.
+ * Priority:
+ * 1. Pro user selected platform provider + model → use admin's key for that provider
+ * 2. BYOK credential (decrypted from DB)
+ * 3. Client-provided provider with apiKey (local dev)
+ * 4. First available platform AI (fallback)
+ * 5. null (no AI available)
  */
 export async function resolveEffectiveProvider(
   aiMode: "byok" | "platform" | undefined,
@@ -134,14 +201,25 @@ export async function resolveEffectiveProvider(
     model: string;
     temperature?: number;
     maxTokens?: number;
+  } | null,
+  // NEW: Pro user's selected platform provider + model
+  platformSelection?: {
+    providerId: string;
+    model?: string;
   } | null
 ): Promise<AIProviderConfig | null> {
-  // 1. Explicit Platform AI mode
+  // 1. Pro user explicitly selected a platform provider + model
+  if (platformSelection?.providerId) {
+    const config = await getPlatformAIProvider(platformSelection.providerId, platformSelection.model);
+    if (config) return config;
+  }
+
+  // 2. Explicit Platform AI mode (no specific selection — use first available)
   if (aiMode === "platform") {
     return await getPlatformAIConfig();
   }
 
-  // 2. BYOK with decrypted credential from DB (production)
+  // 3. BYOK with decrypted credential from DB
   if (decryptedBYOK) {
     return getBYOKConfig(
       decryptedBYOK.providerId,
@@ -153,7 +231,7 @@ export async function resolveEffectiveProvider(
     );
   }
 
-  // 3. BYOK with client-provided apiKey (local dev convenience)
+  // 4. BYOK with client-provided apiKey (local dev)
   if (clientProvider?.apiKey) {
     return getBYOKConfig(
       clientProvider.providerId,
@@ -165,20 +243,18 @@ export async function resolveEffectiveProvider(
     );
   }
 
-  // 4. Local providers (Ollama, LM Studio) don't need API key — but only in local dev
+  // 5. Local providers (Ollama, LM Studio) — local dev only
   if (clientProvider?.providerId === "ollama" || clientProvider?.providerId === "lmstudio") {
     if (!isProduction) {
       return getBYOKConfig(
-        clientProvider.providerId,
-        "",
+        clientProvider.providerId, "",
         clientProvider.baseUrl || PRESET_BY_ID[clientProvider.providerId]?.defaultBaseUrl || "",
         clientProvider.model || PRESET_BY_ID[clientProvider.providerId]?.defaultModel || "",
-        clientProvider.temperature,
-        clientProvider.maxTokens
+        clientProvider.temperature, clientProvider.maxTokens
       );
     }
   }
 
-  // 5. Fallback to Platform AI if configured
+  // 6. Fallback to Platform AI if configured
   return await getPlatformAIConfig();
 }
