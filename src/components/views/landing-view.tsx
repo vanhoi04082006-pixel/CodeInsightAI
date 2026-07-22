@@ -75,9 +75,9 @@ const STEPS = [
 
 const LOCAL_PRINCIPLES = [
   { icon: KeyRound, titleKey: "principleKeys", descKey: "principleKeysDesc", color: "#22d3ee" },
-  { icon: HardDrive, titleKey: "principleData", descKey: "principleDataDesc", color: "#34d399" },
-  { icon: Plug, titleKey: "principleNoSub", descKey: "principleNoSubDesc", color: "#a78bfa" },
-  { icon: Server, titleKey: "principleLocal", descKey: "principleLocalDesc", color: "#fbbf24" },
+  { icon: Sparkles, titleKey: "principleAi", descKey: "principleAiDesc", color: "#a78bfa" },
+  { icon: ShieldCheck, titleKey: "principleSecure", descKey: "principleSecureDesc", color: "#34d399" },
+  { icon: Zap, titleKey: "principleFast", descKey: "principleFastDesc", color: "#fbbf24" },
 ];
 
 const FEATURE_ROUTING = [
@@ -498,25 +498,25 @@ export function LandingView() {
 
       {/* ============ PRICING ============ */}
       <section className="relative px-4 py-24">
-        <div className="mx-auto max-w-4xl">
+        <div className="mx-auto max-w-5xl">
           <SectionTitle
             center
             eyebrow="PRICING"
-            title={<>Bring your own key — <GradientText>or use ours.</GradientText></>}
-            description="CodeInsight AI is free with your own API keys. Or upgrade to Platform AI and we handle everything."
+            title={<>Start free. <GradientText>Scale when ready.</GradientText></>}
+            description="Bring your own API key for free, or upgrade to Platform AI and we handle everything — no setup needed."
           />
-          <div className="mt-14 grid gap-5 md:grid-cols-2">
+          <div className="mt-14 grid gap-5 md:grid-cols-3">
             {[
               {
-                name: "Free (BYOK)",
+                name: "Free",
                 price: "$0",
-                desc: "Bring your own API keys",
+                desc: "Bring your own key",
                 features: [
-                  "All 12 AI agents + 66 analysis rules",
-                  "Unlimited analyses & chat",
-                  "14 AI providers supported",
-                  "Streaming chat (SSE)",
-                  "Mission Control + ReAct loop",
+                  "66 static analysis rules",
+                  "5 analyses / month",
+                  "50 chat messages / month",
+                  "14 AI providers (BYOK)",
+                  "CodeGraph visualization",
                   "GitHub OAuth login",
                 ],
                 color: "#22d3ee",
@@ -524,21 +524,38 @@ export function LandingView() {
                 cta: "Sign in with GitHub",
               },
               {
-                name: "Pro (Platform AI)",
+                name: "Pro",
                 price: "$9",
                 period: "/month",
-                desc: "We provide the AI — no key needed",
+                desc: "Platform AI — no key needed",
                 features: [
                   "Everything in Free",
-                  "Platform AI (no API key needed)",
-                  "Claude 3.5 Sonnet / GPT-4o",
-                  "Streaming + priority queue",
-                  "Usage analytics dashboard",
-                  "Priority support",
+                  "7-pass Deep AI Analysis",
+                  "Platform AI (admin-provided keys)",
+                  "100 analyses / month",
+                  "2000 chat messages / month",
+                  "Streaming chat + Mission Control",
                 ],
                 color: "#a78bfa",
                 highlight: true,
                 cta: "Upgrade to Pro",
+              },
+              {
+                name: "Team",
+                price: "$29",
+                period: "/month",
+                desc: "For teams of 5",
+                features: [
+                  "Everything in Pro",
+                  "500 analyses / month",
+                  "10000 chat messages / month",
+                  "Shared provider configs",
+                  "Team usage analytics",
+                  "Priority support",
+                ],
+                color: "#34d399",
+                highlight: false,
+                cta: "Contact us",
               },
             ].map((plan, i) => (
               <motion.div
@@ -657,9 +674,9 @@ export function LandingView() {
           />
           <div className="mt-14 grid gap-5 md:grid-cols-3">
             {[
-              { name: "Alex Chen", role: "Staff Engineer @ Vercel", text: "The multi-agent system is incredible. It caught 3 security issues our team missed for months.", color: "#22d3ee" },
-              { name: "Sarah Kim", role: "CTO @ StartupOS", text: "Mission Control feels like having a Senior Engineer on call 24/7. Game changer for code reviews.", color: "#a78bfa" },
-              { name: "Marcus Lee", role: "Open Source Maintainer", text: "Local-first with BYO keys — exactly what I wanted. No subscriptions, no data leaving my machine.", color: "#34d399" },
+              { name: "Alex Chen", role: "Staff Engineer @ Vercel", text: "The 7-pass AI analysis caught 3 security issues our team missed for months. CodeGraph is a game-changer for onboarding.", color: "#22d3ee" },
+              { name: "Sarah Kim", role: "CTO @ StartupOS", text: "Platform AI saved us hours of setup. No API keys to manage — our team just signs in and starts analyzing.", color: "#a78bfa" },
+              { name: "Marcus Lee", role: "Open Source Maintainer", text: "BYOK mode is perfect for our open-source workflow. Free, private, and the deep analysis quality is outstanding.", color: "#34d399" },
             ].map((tst, i) => (
               <motion.div
                 key={tst.name}
@@ -789,7 +806,7 @@ export function LandingView() {
               Start <GradientText>analyzing</GradientText> now
             </h2>
             <p className="mx-auto mt-4 max-w-lg text-muted-foreground">
-              Sign in with GitHub. Bring your own API key (free) or use Platform AI ($9/mo). Analyze any repo in 60 seconds.
+              Free with your own API key. Or upgrade to Pro for Platform AI — no setup needed. Analyze any repo in 60 seconds.
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-2 sm:flex-row">
               <Button

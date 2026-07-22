@@ -176,10 +176,10 @@ function OverviewTab() {
   }
 
   const cards = [
-    { label: "Total Users", value: stats.totals.users, icon: Users, color: "#22d3ee" },
-    { label: "Total Analyses", value: stats.totals.analyses, icon: Activity, color: "#a78bfa" },
-    { label: "Active Subs", value: stats.totals.activeSubs, icon: Crown, color: "#fbbf24" },
-    { label: "MRR", value: `$${stats.totals.mrr}`, icon: DollarSign, color: "#34d399" },
+    { label: "Total Users", value: stats.totals.users, icon: Users, color: "#22d3ee", sub: `${stats.totals.proUsers} Pro · ${stats.totals.teamUsers} Team` },
+    { label: "Total Analyses", value: stats.totals.analyses, icon: Activity, color: "#a78bfa", sub: `${stats.totals.chatMessages} chat msgs` },
+    { label: "Active Subs", value: stats.totals.activeSubs, icon: Crown, color: "#fbbf24", sub: `$${stats.totals.mrr}/mo MRR` },
+    { label: "MRR", value: `$${stats.totals.mrr}`, icon: DollarSign, color: "#34d399", sub: `$${stats.totals.mrr * 12}/yr ARR` },
   ];
 
   return (
@@ -196,6 +196,7 @@ function OverviewTab() {
               </div>
               <p className="mt-3 text-[10px] uppercase tracking-wider text-muted-foreground">{c.label}</p>
               <p className="text-2xl font-bold tabular-nums" style={{ color: c.color }}>{c.value}</p>
+              {c.sub && <p className="text-[10px] text-muted-foreground">{c.sub}</p>}
             </GlassCard>
           );
         })}
