@@ -39,7 +39,7 @@ function allow(ip: string, type: keyof typeof LIMITS): boolean {
   return false;
 }
 
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const path = req.nextUrl.pathname;
   if (!path.startsWith("/api/")) return NextResponse.next();
   if (path === "/api/health") return NextResponse.next();
