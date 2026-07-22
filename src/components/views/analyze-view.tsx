@@ -48,6 +48,7 @@ export function AnalyzeView() {
   const [stageIdx, setStageIdx] = useState(0);
   const [stageProgress, setStageProgress] = useState(0);
   const [report, setReport] = useState<AnalysisReport | null>(null);
+  const [useAI, setUseAI] = useState(true); // AI analysis toggle (default ON)
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   // Smooth progress animation: separate target (from API) vs displayed (interpolated).
@@ -167,6 +168,7 @@ export function AnalyzeView() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           repoUrl: parsed.url, async: true, force: true,
+          aiEnhance: useAI, // send AI toggle state
           ...aiBody,
         }),
       });
@@ -334,6 +336,27 @@ export function AnalyzeView() {
               </Button>
             </div>
             {error && <p className="mt-2 text-sm text-rose-400">{error}</p>}
+
+            {/* AI Analysis Toggle */}
+            <div className="mt-4 flex items-center gap-3">
+              <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2 transition hover:bg-white/[0.04]">
+                <input
+                  type="checkbox"
+                  checked={useAI}
+                  onChange={(e) => setUseAI(e.target.checked)}
+                  className="h-4 w-4 rounded border-white/20 bg-transparent accent-violet-500"
+                />
+                <Brain className="h-4 w-4 text-violet-300" />
+                <span className="text-sm font-medium">
+                  {useAI ? "🧠 Deep AI Analysis (7-pass)" : "⚡ Static Analysis Only"}
+                </span>
+              </label>
+              <span className="text-xs text-muted-foreground">
+                {useAI
+                  ? "Uses AI for executive summary, security review, architecture, performance + best practices audit"
+                  : "Faster — 66 static rules only, no AI tokens used"}
+              </span>
+            </div>
           </div>
 
           {/* quick examples */}

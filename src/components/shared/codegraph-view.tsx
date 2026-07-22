@@ -132,7 +132,7 @@ export function CodeGraphView({ analysisId }: { analysisId: string | null }) {
               });
               setPositions(newPositions);
             });
-            setTimeout(() => simulation.stop(), 3000);
+            setTimeout(() => simulation.stop(), 1500);
           }
         }
         if (data.nodeCount !== undefined) {
@@ -193,7 +193,34 @@ export function CodeGraphView({ analysisId }: { analysisId: string | null }) {
     window.addEventListener("mousemove", onMove);
     window.addEventListener("mouseup", onUp);
     return () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); };
-  }, []);
+  }, [pan]);
+
+  // Wheel-to-zoom (scroll = zoom in/out, not pan)
+  const onWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -0.1 : 0.1;
+    setZoom((z) => Math.max(0.3, Math.min(4, z + delta)));
+  };
+
+  // Fit to screen — calculate bounding box of all nodes and zoom to fit
+  const fitToScreen = () => {
+    if (allNodes.length === 0) return;
+    const positions_arr = allNodes.map((n) => getPos(n.id)).filter((p) => p.x || p.y);
+    if (positions_arr.length === 0) return;
+    const minX = Math.min(...positions_arr.map((p) => p.x));
+    const maxX = Math.max(...positions_arr.map((p) => p.x));
+    const minY = Math.min(...positions_arr.map((p) => p.y));
+    const maxY = Math.max(...positions_arr.map((p) => p.y));
+    const graphWidth = maxX - minX || 600;
+    const graphHeight = maxY - minY || 500;
+    const scaleX = 600 / (graphWidth + 40);
+    const scaleY = 500 / (graphHeight + 40);
+    const newZoom = Math.min(scaleX, scaleY, 2);
+    const centerX = (minX + maxX) / 2;
+    const centerY = (minY + maxY) / 2;
+    setZoom(newZoom);
+    setPan({ x: (300 - centerX * newZoom) * 3, y: (250 - centerY * newZoom) * 3 });
+  };
 
   const handleNodeClick = (node: GraphNode) => {
     setSelected(node.id);
@@ -291,9 +318,9 @@ export function CodeGraphView({ analysisId }: { analysisId: string | null }) {
 
         {/* Zoom controls */}
         <div className="absolute right-3 top-3 z-10 flex flex-col gap-1">
-          <button onClick={() => setZoom((z) => Math.min(3, z + 0.2))} className="flex h-7 w-7 items-center justify-center rounded-md border border-white/10 bg-white/5 text-sm hover:bg-white/10"><ZoomIn className="h-3.5 w-3.5" /></button>
+          <button onClick={() => setZoom((z) => Math.min(4, z + 0.2))} className="flex h-7 w-7 items-center justify-center rounded-md border border-white/10 bg-white/5 text-sm hover:bg-white/10"><ZoomIn className="h-3.5 w-3.5" /></button>
           <button onClick={() => setZoom((z) => Math.max(0.3, z - 0.2))} className="flex h-7 w-7 items-center justify-center rounded-md border border-white/10 bg-white/5 text-sm hover:bg-white/10"><ZoomOut className="h-3.5 w-3.5" /></button>
-          <button onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }} className="flex h-7 w-7 items-center justify-center rounded-md border border-white/10 bg-white/5 text-xs hover:bg-white/10"><Maximize className="h-3.5 w-3.5" /></button>
+          <button onClick={fitToScreen} className="flex h-7 w-7 items-center justify-center rounded-md border border-white/10 bg-white/5 text-xs hover:bg-white/10" title="Fit to screen"><Maximize className="h-3.5 w-3.5" /></button>
         </div>
 
         {/* Legend */}
@@ -322,6 +349,7 @@ export function CodeGraphView({ analysisId }: { analysisId: string | null }) {
           viewBox="0 0 600 500"
           className="h-[500px] w-full cursor-grab active:cursor-grabbing"
           onMouseDown={onDown}
+          onWheel={onWheel}
           style={{ touchAction: "none" }}
         >
           <defs>
@@ -340,7 +368,7 @@ export function CodeGraphView({ analysisId }: { analysisId: string | null }) {
             ))}
           </defs>
 
-          <g transform={`translate(${pan.x / 3} ${pan.y / 3}) scale(${zoom})`} style={{ transformOrigin: "300px 250px" }}>
+          <g transform={`translate(${pan.x} ${pan.y}) scale(${zoom})`} style={{ transformOrigin: "0 0", transition: "transform 0.1s ease-out" }}>
             {/* Edges with arrows */}
             {visibleEdges.map((e, i) => {
               const a = getPos(e.from); const b = getPos(e.to);
@@ -437,7 +465,7 @@ export function CodeGraphView({ analysisId }: { analysisId: string | null }) {
               })}
               {/* Viewport indicator */}
               <rect
-                x={-pan.x / 3 / zoom} y={-pan.y / 3 / zoom}
+                x={-pan.x / zoom} y={-pan.y / zoom}
                 width={600 / zoom} height={500 / zoom}
                 fill="none" stroke="#22d3ee" strokeWidth="1" opacity="0.6"
               />

@@ -21,6 +21,7 @@ import {
   Cpu,
   Settings2,
   Check,
+  Zap,
 } from "lucide-react";
 import { GlassCard, GradientText } from "@/components/shared/ui";
 import { Button } from "@/components/ui/button";
@@ -688,6 +689,8 @@ function PlatformAITab() {
   const [editModels, setEditModels] = useState<string[]>([]);
   const [editEnabled, setEditEnabled] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [testing, setTesting] = useState<string | null>(null); // providerId being tested
+  const [testResults, setTestResults] = useState<Record<string, { status: "ok" | "error" | "testing"; latency?: number; error?: string }>>({});
 
   const load = async () => {
     setLoading(true);
@@ -766,6 +769,67 @@ function PlatformAITab() {
     }
   };
 
+  // Test API key connectivity — calls /api/providers/test with admin's key
+  const handleTestKey = async (providerId: string, apiKey?: string, baseUrl?: string, model?: string) => {
+    setTesting(providerId);
+    setTestResults((prev) => ({ ...prev, [providerId]: { status: "testing" } }));
+    try {
+      // If no apiKey provided, fetch from DB (admin already saved it)
+      let keyToTest = apiKey;
+      if (!keyToTest) {
+        // Read from DB via admin API
+        const configRes = await fetch("/api/admin/platform-ai");
+        const configData = await configRes.json();
+        const config = configData.configured?.find((c: any) => c.providerId === providerId);
+        if (config?.maskedKey && config.maskedKey !== "••••") {
+          // Key exists in DB — use the admin API to test it (server decrypts)
+          // We can't send the masked key to /api/providers/test — so we call
+          // a special admin test endpoint that decrypts server-side
+          const testRes = await fetch("/api/admin/platform-ai/test", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ providerId }),
+          });
+          const testData = await testRes.json();
+          setTestResults((prev) => ({
+            ...prev,
+            [providerId]: testData.status === "connected"
+              ? { status: "ok", latency: testData.latencyMs }
+              : { status: "error", error: testData.error },
+          }));
+          return;
+        }
+      }
+
+      // If we have a raw key (from edit form), test it directly
+      const models = editModels.length > 0 ? editModels : [];
+      const testRes = await fetch("/api/providers/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          providerId,
+          apiKey: keyToTest,
+          baseUrl: baseUrl || editBaseUrl,
+          model: model || models[0] || "",
+        }),
+      });
+      const testData = await testRes.json();
+      setTestResults((prev) => ({
+        ...prev,
+        [providerId]: testData.status === "connected"
+          ? { status: "ok", latency: testData.latencyMs }
+          : { status: "error", error: testData.error },
+      }));
+    } catch (e) {
+      setTestResults((prev) => ({
+        ...prev,
+        [providerId]: { status: "error", error: "Network error" },
+      }));
+    } finally {
+      setTesting(null);
+    }
+  };
+
   if (loading) return <LoadingCard />;
 
   return (
@@ -791,30 +855,61 @@ function PlatformAITab() {
           </div>
         ) : (
           <div className="mt-4 space-y-2">
-            {configured.map((c) => (
-              <div key={c.id} className="flex items-center gap-3 rounded-lg border border-white/5 bg-white/[0.02] p-3">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-cyan-400/10 text-cyan-300">
-                  <Cpu className="h-4 w-4" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-medium">{c.name}</p>
-                    <Badge className={c.enabled ? "bg-emerald-500/15 text-emerald-300" : "bg-rose-500/15 text-rose-300"}>
-                      {c.enabled ? "Enabled" : "Disabled"}
-                    </Badge>
+            {configured.map((c) => {
+              const testResult = testResults[c.providerId];
+              return (
+                <div key={c.id} className="flex items-center gap-3 rounded-lg border border-white/5 bg-white/[0.02] p-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-cyan-400/10 text-cyan-300">
+                    <Cpu className="h-4 w-4" />
                   </div>
-                  <p className="text-[10px] text-muted-foreground">
-                    {c.models.length} models · Key: <span className="font-mono">{c.maskedKey}</span>
-                  </p>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium">{c.name}</p>
+                      <Badge className={c.enabled ? "bg-emerald-500/15 text-emerald-300" : "bg-rose-500/15 text-rose-300"}>
+                        {c.enabled ? "Enabled" : "Disabled"}
+                      </Badge>
+                      {/* Test status badge */}
+                      {testResult?.status === "ok" && (
+                        <Badge className="bg-emerald-500/15 text-emerald-300">
+                          <CheckCircle2 className="mr-1 h-2.5 w-2.5" /> {testResult.latency}ms
+                        </Badge>
+                      )}
+                      {testResult?.status === "error" && (
+                        <Badge className="bg-rose-500/15 text-rose-300">
+                          <AlertCircle className="mr-1 h-2.5 w-2.5" /> Error
+                        </Badge>
+                      )}
+                      {testResult?.status === "testing" && (
+                        <Badge className="bg-amber-500/15 text-amber-300">
+                          <Loader2 className="mr-1 h-2.5 w-2.5 animate-spin" /> Testing…
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">
+                      {c.models.length} models · Key: <span className="font-mono">{c.maskedKey}</span>
+                      {testResult?.error && <span className="text-rose-400"> · {testResult.error.slice(0, 60)}</span>}
+                    </p>
+                  </div>
+                  {/* Test Key button */}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleTestKey(c.providerId)}
+                    disabled={testing === c.providerId}
+                    className="border-cyan-400/30 text-cyan-300 hover:bg-cyan-400/10"
+                  >
+                    {testing === c.providerId ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <Zap className="mr-1 h-3.5 w-3.5" />}
+                    Test
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => handleEdit(c)} title="Edit">
+                    <Settings2 className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button size="sm" variant="ghost" className="text-rose-300" onClick={() => handleDelete(c.providerId)} title="Remove">
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
                 </div>
-                <Button size="sm" variant="ghost" onClick={() => handleEdit(c)} title="Edit">
-                  <Settings2 className="h-3.5 w-3.5" />
-                </Button>
-                <Button size="sm" variant="ghost" className="text-rose-300" onClick={() => handleDelete(c.providerId)} title="Remove">
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
