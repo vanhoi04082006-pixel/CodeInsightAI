@@ -29,19 +29,25 @@ async function getGithubAccessToken(): Promise<string | null> {
       where: { userId, provider: "github" },
       select: { access_token: true, expires_at: true },
     });
-    // Check if token is expired (expires_at is a Unix timestamp in seconds)
     if (account?.access_token) {
       const now = Math.floor(Date.now() / 1000);
       const isExpired = account.expires_at && account.expires_at < now;
       if (isExpired) {
         console.warn("[getGithubAccessToken] GitHub token expired — user needs to re-authenticate");
-        // Still return the token — GitHub sometimes accepts expired tokens
-        // for public repos (just not private ones)
-        return account.access_token;
       }
       return account.access_token;
     }
   }
+
+  // FALLBACK: User has no GitHub account (e.g. logged in with Google).
+  // Use server-side fallback token for PUBLIC repo access.
+  // Without any token, GitHub API limits anonymous to 60 req/hour (very low).
+  const fallbackToken = getFallbackGithubToken();
+  if (fallbackToken) {
+    console.log("[getGithubAccessToken] No user GitHub token — using fallback token for public repos");
+    return fallbackToken;
+  }
+
   return null;
 }
 
@@ -51,6 +57,17 @@ function githubHeaders(token: string | null, acceptJson = true) {
   if (acceptJson) headers["Accept"] = "application/vnd.github.v3+json";
   if (token) headers["Authorization"] = `Bearer ${token}`;
   return headers;
+}
+
+/**
+ * Fallback GitHub token — used when user doesn't have a GitHub account
+ * (e.g. logged in with Google). This is a server-side env var that allows
+ * analyzing PUBLIC repos without requiring the user to have a GitHub token.
+ * Without any token, GitHub API limits anonymous requests to 60/hour.
+ * With this fallback token, we get 5000/hour.
+ */
+function getFallbackGithubToken(): string | null {
+  return process.env.GITHUB_FALLBACK_TOKEN || process.env.GITHUB_TOKEN || null;
 }
 
 const IGNORE_DIRS = ["node_modules", "dist", "build", "coverage", "vendor", ".cache", ".git", ".next", ".turbo", ".vercel", "__pycache__", ".pytest_cache", "target", "bin", "obj", "packages", ".idea", ".vscode"];
@@ -295,16 +312,12 @@ async function fetchAndAnalyzeFromGitHub(owner: string, repo: string, ghToken: s
     if (!repoRes.ok) {
       throw new Error(
         repoRes.status === 404
-          ? `GitHub API: repo not found (404). ${
-              ghToken
-                ? "Token doesn't have access to this repo or repo doesn't exist."
-                : "Repo might be PRIVATE — sign in with GitHub to analyze private repos."
-            }`
+          ? `Repository not found. ${ghToken ? "Your token doesn't have access to this repo or it doesn't exist." : "This repo may be PRIVATE. Sign in with GitHub to analyze private repos, or try a public repo."}`
           : repoRes.status === 401
-          ? `GitHub API: authentication failed (401). Your GitHub token may have expired. Try signing out and signing back in.`
+          ? `GitHub authentication failed. ${ghToken ? "Your token may have expired — sign out and back in." : "No GitHub token available. If you signed in with Google, link your GitHub account in Settings to analyze repos."}`
           : repoRes.status === 403
-          ? `GitHub API: rate limit exceeded (403). Please try again in a few minutes.`
-          : `GitHub API: repo not found (${repoRes.status})`
+          ? `GitHub rate limit exceeded. ${ghToken ? "Try again in a few minutes." : "Anonymous limit is 60/hour — sign in with GitHub for 5000/hour."}`
+          : `GitHub API error (${repoRes.status}). Please try again.`
       );
     }
     const repoData = await repoRes.json();
