@@ -41,6 +41,8 @@ interface ChatBody {
   provider?: ProviderConfig;
   language?: string;
   aiMode?: "byok" | "platform";
+  platformProvider?: string;   // Pro user's selected platform provider
+  platformModel?: string;      // Pro user's selected model
 }
 
 export async function POST(req: NextRequest) {
@@ -54,12 +56,13 @@ export async function POST(req: NextRequest) {
     });
   }
 
+  const userId = await requireUserId();
+
   // ── Resolve effective provider ──
   // In production, if the client sends a provider without apiKey, look up the
   // encrypted credential from the DB and decrypt it.
   let effectiveProvider = provider;
   if (provider && !provider.apiKey && isProduction) {
-    const userId = await requireUserId();
     if (userId) {
       const cred = await db.providerCredential.findFirst({
         where: {
@@ -86,7 +89,8 @@ export async function POST(req: NextRequest) {
   }
 
   // Use the unified resolver (supports all 14 providers)
-  const finalProvider = await resolveEffectiveProvider(
+  // FIXED: Pass platformSelection (4th param) so Pro users get their selected provider
+  let finalProvider = await resolveEffectiveProvider(
     body.aiMode,
     effectiveProvider ? {
       providerId: effectiveProvider.providerId,
@@ -96,8 +100,48 @@ export async function POST(req: NextRequest) {
       temperature: effectiveProvider.temperature,
       maxTokens: effectiveProvider.maxTokens,
     } : undefined,
-    null
+    null,
+    // Pro user's selected platform provider + model
+    body.platformProvider ? { providerId: body.platformProvider, model: body.platformModel } : null
   );
+
+  // FALLBACK 1: If resolveEffectiveProvider returned null but platformProvider was
+  // specified, try getPlatformAIProvider directly (sometimes the resolver misses it)
+  if (!finalProvider && body.platformProvider) {
+    try {
+      const { getPlatformAIProvider } = await import("@/lib/platform-ai");
+      finalProvider = await getPlatformAIProvider(body.platformProvider, body.platformModel);
+    } catch {}
+  }
+
+  // FALLBACK 2: If still null, try first available platform AI
+  if (!finalProvider) {
+    try {
+      const { getPlatformAIConfig } = await import("@/lib/platform-ai");
+      finalProvider = await getPlatformAIConfig();
+    } catch {}
+  }
+
+  // FALLBACK 3: BYOK lookup from DB (if user has any saved credential)
+  if (!finalProvider && userId) {
+    try {
+      const cred = await db.providerCredential.findFirst({
+        where: { userId, enabled: true },
+        orderBy: { updatedAt: "desc" },
+      });
+      if (cred) {
+        finalProvider = {
+          providerId: cred.providerId,
+          apiKey: decrypt(cred.encryptedApiKey),
+          baseUrl: cred.baseUrl,
+          model: cred.model,
+          temperature: cred.temperature ?? 0.7,
+          maxTokens: cred.maxTokens ?? 4096,
+          timeout: 60,
+        };
+      }
+    } catch {}
+  }
 
   if (!finalProvider) {
     const fallback = "⚠️ No AI provider configured. Add a provider in AI Providers settings (BYOK) or switch to Platform AI mode.";
@@ -129,37 +173,70 @@ export async function POST(req: NextRequest) {
   const maxTokens = personality?.maxTokens && personality.maxTokens > 0 ? personality.maxTokens : 4096;
 
   // Create SSE stream using the unified streamAI() generator
+  // FIXED: Retry logic — if stream returns empty, retry once before giving up
   const stream = new ReadableStream({
     async start(controller) {
       const encoder = new TextEncoder();
       let fullReply = "";
+      let lastError: string | undefined;
 
-      try {
-        // streamAI() yields chunk strings from any of the 14 providers
-        for await (const chunk of streamAI(finalProvider, llmMessages, { temperature, maxTokens })) {
-          fullReply += chunk;
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ chunk })}\n\n`));
+      // Retry loop: attempt 1 + attempt 2 (if empty)
+      for (let attempt = 0; attempt < 2; attempt++) {
+        fullReply = "";
+        try {
+          for await (const chunk of streamAI(finalProvider!, llmMessages, { temperature, maxTokens })) {
+            fullReply += chunk;
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ chunk })}\n\n`));
+          }
+
+          // If we got content, we're done
+          if (fullReply.trim()) {
+            break;
+          }
+
+          // Empty response — retry if first attempt
+          if (attempt === 0) {
+            console.warn(`[/api/chat/stream] Empty stream on attempt 1 — retrying...`);
+            await new Promise(r => setTimeout(r, 500));
+          }
+        } catch (err: any) {
+          lastError = err?.message || "Stream failed";
+          console.warn(`[/api/chat/stream] Attempt ${attempt + 1} error:`, lastError);
+          if (attempt === 0) {
+            await new Promise(r => setTimeout(r, 500));
+          } else {
+            // Both attempts failed — send error to client
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: lastError })}\n\n`));
+            controller.close();
+            return;
+          }
         }
-
-        // Send done signal
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true, reply: fullReply })}\n\n`));
-
-        // Persist to DB
-        if (body.analysisId) {
-          try {
-            await db.chatMessage.create({
-              data: { analysisId: body.analysisId, role: "user", content: message },
-            });
-            await db.chatMessage.create({
-              data: { analysisId: body.analysisId, role: "assistant", content: fullReply },
-            });
-          } catch { /* best-effort persist */ }
-        }
-      } catch (err: any) {
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: err?.message || "Stream failed" })}\n\n`));
-      } finally {
-        controller.close();
       }
+
+      // Send done signal
+      controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true, reply: fullReply })}\n\n`));
+
+      // Persist to DB
+      if (body.analysisId && fullReply.trim()) {
+        try {
+          await db.chatMessage.create({
+            data: { analysisId: body.analysisId, role: "user", content: message },
+          });
+          await db.chatMessage.create({
+            data: { analysisId: body.analysisId, role: "assistant", content: fullReply },
+          });
+        } catch { /* best-effort persist */ }
+      }
+
+      // Increment usage (best-effort)
+      if (userId) {
+        try {
+          const { incrementUsage } = await import("@/lib/billing/usage");
+          incrementUsage(userId, "chat").catch(() => {});
+        } catch {}
+      }
+
+      controller.close();
     },
   });
 
