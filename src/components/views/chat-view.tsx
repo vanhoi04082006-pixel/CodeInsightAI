@@ -508,13 +508,15 @@ export function ChatView() {
         </div>
       </div>
 
-      {/* Right sidebar: Developer Console (independent toggle) */}
-      <DeveloperConsole
-        snapshot={latestSnapshot}
-        closed={devConsoleClosed}
-        onClose={() => setDevConsoleClosed(true)}
-        onOpen={() => setDevConsoleClosed(false)}
-      />
+      {/* Right sidebar: Developer Console (only when dev mode enabled) */}
+      {devModeEnabled && (
+        <DeveloperConsole
+          snapshot={latestSnapshot}
+          closed={devConsoleClosed}
+          onClose={() => setDevConsoleClosed(true)}
+          onOpen={() => setDevConsoleClosed(false)}
+        />
+      )}
 
       {/* Right sidebar: Request Log (independent toggle) */}
       {logSidebarOpen && (
