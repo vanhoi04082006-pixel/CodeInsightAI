@@ -138,7 +138,7 @@ export function AdminView() {
       </motion.div>
 
       <Tabs defaultValue="overview">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-6">
           <TabsTrigger value="overview" className="gap-1.5"><Activity className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Overview</span></TabsTrigger>
           <TabsTrigger value="users" className="gap-1.5"><Users className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Users</span></TabsTrigger>
           <TabsTrigger value="platform-ai" className="gap-1.5"><Cpu className="h-3.5 w-3.5" /> <span className="hidden sm:inline">AI Config</span></TabsTrigger>
@@ -147,7 +147,7 @@ export function AdminView() {
           <TabsTrigger value="system" className="gap-1.5"><Server className="h-3.5 w-3.5" /> <span className="hidden sm:inline">System</span></TabsTrigger>
         </TabsList>
 
-        <TabsContent value="overview" className="mt-4"><OverviewTab /></TabsContent>
+        <TabsContent value="overview" className="mt-4"><AdminOverview /></TabsContent>
         <TabsContent value="users" className="mt-4"><UsersTab /></TabsContent>
         <TabsContent value="platform-ai" className="mt-4"><PlatformAITab /></TabsContent>
         <TabsContent value="subscriptions" className="mt-4"><SubscriptionsTab /></TabsContent>
@@ -158,84 +158,7 @@ export function AdminView() {
   );
 }
 
-/* ---------- Overview Tab ---------- */
-function OverviewTab() {
-  const [stats, setStats] = useState<Stats | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetch("/api/admin/stats")
-      .then((r) => r.json())
-      .then(setStats)
-      .catch(() => toast.error("Failed to load stats"))
-      .finally(() => setLoading(false));
-  }, []);
-
-  if (loading || !stats) {
-    return <LoadingCard />;
-  }
-
-  const cards = [
-    { label: "Total Users", value: stats.totals.users, icon: Users, color: "#22d3ee", sub: `${stats.totals.proUsers} Pro · ${stats.totals.teamUsers} Team` },
-    { label: "Total Analyses", value: stats.totals.analyses, icon: Activity, color: "#a78bfa", sub: `${stats.totals.chatMessages} chat msgs` },
-    { label: "Active Subs", value: stats.totals.activeSubs, icon: Crown, color: "#fbbf24", sub: `$${stats.totals.mrr}/mo MRR` },
-    { label: "MRR", value: `$${stats.totals.mrr}`, icon: DollarSign, color: "#34d399", sub: `$${stats.totals.mrr * 12}/yr ARR` },
-  ];
-
-  return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        {cards.map((c) => {
-          const Icon = c.icon;
-          return (
-            <GlassCard key={c.label} className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg" style={{ background: `${c.color}1a`, color: c.color, border: `1px solid ${c.color}33` }}>
-                  <Icon className="h-4 w-4" />
-                </div>
-              </div>
-              <p className="mt-3 text-[10px] uppercase tracking-wider text-muted-foreground">{c.label}</p>
-              <p className="text-2xl font-bold tabular-nums" style={{ color: c.color }}>{c.value}</p>
-              {c.sub && <p className="text-[10px] text-muted-foreground">{c.sub}</p>}
-            </GlassCard>
-          );
-        })}
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        <GlassCard className="p-5">
-          <h3 className="flex items-center gap-2 text-sm font-semibold"><TrendingUp className="h-4 w-4 text-cyan-300" /> Analyses (30 days)</h3>
-          <MiniChart data={stats.trends.analyses} color="#22d3ee" />
-        </GlassCard>
-        <GlassCard className="p-5">
-          <h3 className="flex items-center gap-2 text-sm font-semibold"><Users className="h-4 w-4 text-violet-300" /> New Users (30 days)</h3>
-          <MiniChart data={stats.trends.users} color="#a78bfa" />
-        </GlassCard>
-      </div>
-
-      <GlassCard className="p-5">
-        <h3 className="text-sm font-semibold">Recent Signups</h3>
-        <div className="mt-3 space-y-2">
-          {stats.recentSignups.length === 0 ? (
-            <p className="text-xs text-muted-foreground">No signups yet.</p>
-          ) : (
-            stats.recentSignups.map((u) => (
-              <div key={u.id} className="flex items-center gap-3 rounded-lg border border-white/5 bg-white/[0.02] p-2">
-                <Avatar name={u.name ?? u.email ?? "?"} image={u.image} size={32} />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">{u.name ?? "Unknown"}</p>
-                  <p className="truncate text-[11px] text-muted-foreground">{u.email}</p>
-                </div>
-                <Badge variant="outline" className="text-[10px]">{u.plan}</Badge>
-                <span className="text-[10px] text-muted-foreground">{new Date(u.createdAt).toLocaleDateString()}</span>
-              </div>
-            ))
-          )}
-        </div>
-      </GlassCard>
-    </div>
-  );
-}
+/* ---------- Overview Tab (moved to admin-overview.tsx) ---------- */
 
 /* ---------- Users Tab ---------- */
 function SubscriptionsTab() {
@@ -500,3 +423,4 @@ function formatAction(action: string): string {
 // Extracted tabs — imported from separate files
 import { UsersTab } from "@/components/admin-tabs/users-tab";
 import { PlatformAITab } from "@/components/admin-tabs/platform-ai-tab";
+import { AdminOverview } from "@/components/admin-tabs/admin-overview";
