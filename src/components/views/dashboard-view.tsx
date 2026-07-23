@@ -16,6 +16,10 @@ import {
   Clock,
   FileCode,
   Cpu,
+  Github,
+  Boxes,
+  Terminal,
+  Zap,
 } from "lucide-react";
 import { GlassCard, ScoreGauge, GradientText, StatPill } from "@/components/shared/ui";
 import { Button } from "@/components/ui/button";
@@ -417,6 +421,57 @@ export function DashboardView() {
   );
 }
 
+const SAMPLE_REPOS = [
+  {
+    name: "facebook/react",
+    url: "https://github.com/facebook/react",
+    desc: "The library for web and native user interfaces.",
+    lang: "JavaScript",
+    icon: Code2,
+    color: "#f7df1e",
+  },
+  {
+    name: "vercel/next.js",
+    url: "https://github.com/vercel/next.js",
+    desc: "The React Framework for the Web.",
+    lang: "TypeScript",
+    icon: Boxes,
+    color: "#3178c6",
+  },
+  {
+    name: "fastapi/fastapi",
+    url: "https://github.com/fastapi/fastapi",
+    desc: "High performance, easy to learn Python web framework.",
+    lang: "Python",
+    icon: Terminal,
+    color: "#3776ab",
+  },
+  {
+    name: "tailwindlabs/tailwindcss",
+    url: "https://github.com/tailwindlabs/tailwindcss",
+    desc: "A utility-first CSS framework for rapid UI development.",
+    lang: "TypeScript",
+    icon: Zap,
+    color: "#22d3ee",
+  },
+  {
+    name: "prisma/prisma",
+    url: "https://github.com/prisma/prisma",
+    desc: "Next-generation Node.js and TypeScript ORM.",
+    lang: "TypeScript",
+    icon: Network,
+    color: "#5eead4",
+  },
+  {
+    name: "vitejs/vite",
+    url: "https://github.com/vitejs/vite",
+    desc: "Next generation frontend tooling. It's fast!",
+    lang: "TypeScript",
+    icon: Github,
+    color: "#a78bfa",
+  },
+];
+
 function EmptyDashboard() {
   const { t } = useT();
   const setView = useAppStore((s) => s.setView);
@@ -463,6 +518,58 @@ function EmptyDashboard() {
             {t("dashboard", "fullReport")}
           </Button>
         </GlassCard>
+      </motion.div>
+
+      {/* Sample repos — try instantly */}
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="mb-8"
+      >
+        <div className="mb-3 flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-cyan-300" />
+          <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+            Try a sample repository
+          </h3>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {SAMPLE_REPOS.map((repo, i) => {
+            const Icon = repo.icon;
+            return (
+              <motion.button
+                key={repo.url}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.15 + i * 0.05 }}
+                onClick={() => {
+                  setView("analyze");
+                  // Pre-fill the analyze input via store
+                  useAppStore.getState().setPendingRepoUrl?.(repo.url);
+                }}
+                className="group flex flex-col gap-2 rounded-xl border border-white/5 bg-white/[0.02] p-4 text-left transition hover:border-cyan-400/30 hover:bg-white/[0.04]"
+              >
+                <div className="flex items-center gap-2">
+                  <div
+                    className="flex h-8 w-8 items-center justify-center rounded-lg"
+                    style={{ background: `${repo.color}1a`, border: `1px solid ${repo.color}33` }}
+                  >
+                    <Icon className="h-4 w-4" style={{ color: repo.color }} />
+                  </div>
+                  <span className="text-xs font-medium text-muted-foreground">{repo.lang}</span>
+                </div>
+                <div>
+                  <p className="truncate text-sm font-semibold">{repo.name}</p>
+                  <p className="mt-0.5 line-clamp-2 text-[11px] text-muted-foreground">{repo.desc}</p>
+                </div>
+                <div className="mt-auto flex items-center gap-1 text-[10px] text-cyan-300 opacity-0 transition group-hover:opacity-100">
+                  <span>Analyze</span>
+                  <ArrowUpRight className="h-3 w-3" />
+                </div>
+              </motion.button>
+            );
+          })}
+        </div>
       </motion.div>
 
       {/* Recent analyses */}

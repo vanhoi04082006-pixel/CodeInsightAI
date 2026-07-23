@@ -31,6 +31,11 @@ interface AppState {
   toggleSidebar: () => void;
   commandOpen: boolean;
   setCommandOpen: (b: boolean) => void;
+
+  // Pending repo URL (pre-fills analyze input when navigating from dashboard)
+  pendingRepoUrl: string | null;
+  setPendingRepoUrl: (url: string | null) => void;
+  consumePendingRepoUrl: () => string | null;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -56,4 +61,12 @@ export const useAppStore = create<AppState>((set) => ({
   toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
   commandOpen: false,
   setCommandOpen: (b) => set({ commandOpen: b }),
+
+  pendingRepoUrl: null,
+  setPendingRepoUrl: (url) => set({ pendingRepoUrl: url }),
+  consumePendingRepoUrl: () => {
+    const url = useAppStore.getState().pendingRepoUrl;
+    if (url) set({ pendingRepoUrl: null });
+    return url;
+  },
 }));

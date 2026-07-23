@@ -118,6 +118,14 @@ export function AnalyzeView() {
     stopProgressAnimation();
   }, []);
 
+  // Consume pending repo URL (set by dashboard sample-repo clicks)
+  useEffect(() => {
+    const pending = useAppStore.getState().consumePendingRepoUrl?.();
+    if (pending) {
+      setUrl(pending);
+    }
+  }, []);
+
   const start = async () => {
     const parsed = parseRepoUrl(url);
     if (!parsed.valid) {
