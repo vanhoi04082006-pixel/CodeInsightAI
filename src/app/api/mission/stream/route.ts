@@ -15,6 +15,7 @@ export const dynamic = "force-dynamic";
 const HEARTBEAT_MS = 15_000;
 
 export async function GET(req: NextRequest) {
+  const userId = await requireUserId(); if (!userId) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   const url = new URL(req.url);
   const missionId = url.searchParams.get("missionId");
 

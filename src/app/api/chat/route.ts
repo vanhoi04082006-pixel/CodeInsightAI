@@ -304,7 +304,7 @@ Use this graph knowledge to answer questions about function callers, callees, de
         const { getPlatformAIProvider } = await import("@/lib/platform-ai");
         finalProvider = await getPlatformAIProvider(body.platformProvider, body.platformModel);
         if (finalProvider) {
-          console.log(`[/api/chat] Fallback: using platform provider ${body.platformProvider}/${body.platformModel}`);
+          // DEV: console.log(`[/api/chat] Fallback: using platform provider ${body.platformProvider}/${body.platformModel}`);
         }
       } catch {}
     }
@@ -315,7 +315,7 @@ Use this graph knowledge to answer questions about function callers, callees, de
         const { getPlatformAIConfig } = await import("@/lib/platform-ai");
         finalProvider = await getPlatformAIConfig();
         if (finalProvider) {
-          console.log(`[/api/chat] Fallback 2: using default platform AI ${finalProvider.providerId}`);
+          // DEV: console.log(`[/api/chat] Fallback 2: using default platform AI ${finalProvider.providerId}`);
         }
       } catch {}
     }
@@ -338,7 +338,7 @@ Use this graph knowledge to answer questions about function callers, callees, de
             maxTokens: cred.maxTokens ?? 4096,
             timeout: 60,
           };
-          console.log(`[/api/chat] Fallback 3: using BYOK ${cred.providerId}`);
+          // DEV: console.log(`[/api/chat] Fallback 3: using BYOK ${cred.providerId}`);
         }
       } catch {}
     }

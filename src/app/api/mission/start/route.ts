@@ -16,6 +16,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 300; // 5 min for the request itself; mission keeps running
 
 export async function POST(req: NextRequest) {
+  const userId = await requireUserId(); if (!userId) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   try {
     const body = await req.json().catch(() => ({}));
     const { goal, repositoryUrl, provider, cwd, maxIterations } = body as {

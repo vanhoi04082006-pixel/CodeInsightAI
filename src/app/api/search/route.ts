@@ -7,6 +7,7 @@ export const dynamic = "force-dynamic";
 // POST /api/search — semantic search over repository file summaries
 // Body: { analysisId, query }
 export async function POST(req: NextRequest) {
+  const userId = await requireUserId(); if (!userId) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   try {
     const { analysisId, query } = await req.json();
     if (!analysisId || !query) return NextResponse.json({ error: "analysisId and query required" }, { status: 400 });

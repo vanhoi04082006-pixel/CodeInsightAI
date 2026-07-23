@@ -47,12 +47,12 @@ async function getGithubAccessToken(): Promise<string | null> {
   // Use server-side fallback token for PUBLIC repo access.
   const fallbackToken = getFallbackGithubToken();
   if (fallbackToken) {
-    console.log("[getGithubAccessToken] Using fallback token for public repos");
+    // DEV: console.log("[getGithubAccessToken] Using fallback token for public repos");
     return fallbackToken;
   }
 
   // No token at all — anonymous access (60 req/hour, public repos only)
-  console.log("[getGithubAccessToken] No GitHub token — anonymous access (60 req/hour limit)");
+  // DEV: console.log("[getGithubAccessToken] No GitHub token — anonymous access (60 req/hour limit)");
   return null;
 }
 
@@ -222,7 +222,7 @@ export async function POST(req: NextRequest) {
         }
 
         if (aiConfig) {
-          console.log(`[${jobId}] Running 7-pass AI analysis with ${aiConfig.providerId}/${aiConfig.model}`);
+          // DEV: console.log(`[${jobId}] Running 7-pass AI analysis with ${aiConfig.providerId}/${aiConfig.model}`);
           // Use parsedRepoData if available, otherwise build minimal context from report
           const analysisContext = parsedRepoData || {
             owner: parsed.owner,
@@ -245,10 +245,10 @@ export async function POST(req: NextRequest) {
               aiSummary: deepResult.executiveSummary,
               aiBadge: "ai-enhanced",
             };
-            console.log(`[${jobId}] AI analysis complete — badge: deep-ai`);
+            // DEV: console.log(`[${jobId}] AI analysis complete — badge: deep-ai`);
           }
         } else {
-          console.log(`[${jobId}] No AI provider available — static analysis only`);
+          // DEV: console.log(`[${jobId}] No AI provider available — static analysis only`);
         }
       } catch (e) {
         console.warn(`[${jobId}] AI analysis failed (non-fatal):`, e);
@@ -289,7 +289,7 @@ export async function POST(req: NextRequest) {
     incrementUsage(userId, "analysis").catch(() => { /* silent */ });
 
     const durationMs = Date.now() - requestStart;
-    console.log(`[${jobId}] Analysis complete: ${parsed.owner}/${parsed.name} — ${report.totalFiles} files, ${durationMs}ms`);
+    // DEV: console.log(`[${jobId}] Analysis complete: ${parsed.owner}/${parsed.name} — ${report.totalFiles} files, ${durationMs}ms`);
 
     return NextResponse.json({
       id: created.id, report, createdAt: created.createdAt,
@@ -309,7 +309,7 @@ async function fetchAndAnalyzeFromGitHub(owner: string, repo: string, ghToken: s
 
   if (memCached && Date.now() - memCached.timestamp < CACHE_TTL_MS) {
     fileContents = memCached.files;
-    console.log(`[cache] IN-MEMORY HIT: ${cacheKey} (${fileContents.length} files)`);
+    // DEV: console.log(`[cache] IN-MEMORY HIT: ${cacheKey} (${fileContents.length} files)`);
   } else {
     const repoRes = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
       headers: githubHeaders(ghToken),
@@ -523,7 +523,7 @@ async function runAnalysisInBackground(
 
     setJobProgress(jobId, 100, "Analysis complete");
     completeJob(jobId, { id: created.id, report, cached: false, real: true });
-    console.log(`[job ${jobId}] Background analysis complete: ${owner}/${repo} — ${report.totalFiles} files`);
+    // DEV: console.log(`[job ${jobId}] Background analysis complete: ${owner}/${repo} — ${report.totalFiles} files`);
   } catch (e: any) {
     console.error(`[job ${jobId}] Background analysis failed:`, e);
     failJob(jobId, e.message || "Unknown error");

@@ -9,6 +9,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 300;  // 5 minutes max for Vercel
 
 export async function POST(req: NextRequest) {
+  const userId = await requireUserId(); if (!userId) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   try {
     const body = await req.json();
     const { mode } = body;
