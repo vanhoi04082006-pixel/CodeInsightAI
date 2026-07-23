@@ -282,7 +282,7 @@ Use this graph knowledge to answer questions about function callers, callees, de
     // Resolve effective provider using the unified platform-ai resolver.
     // This supports ALL 14 providers (not just OpenRouter) and handles
     // Platform AI, BYOK (with encrypted DB lookup in production), and local providers.
-    const finalProvider = await resolveEffectiveProvider(
+    let finalProvider = await resolveEffectiveProvider(
       body.aiMode,
       effectiveProvider ? {
         providerId: effectiveProvider.providerId,
@@ -296,6 +296,52 @@ Use this graph knowledge to answer questions about function callers, callees, de
       // Pro user's selected platform provider + model
       body.platformProvider ? { providerId: body.platformProvider, model: body.platformModel } : null
     );
+
+    // FALLBACK: If resolveEffectiveProvider returned null but platformProvider was
+    // specified, try getPlatformAIProvider directly (sometimes the resolver misses it)
+    if (!finalProvider && body.platformProvider) {
+      try {
+        const { getPlatformAIProvider } = await import("@/lib/platform-ai");
+        finalProvider = await getPlatformAIProvider(body.platformProvider, body.platformModel);
+        if (finalProvider) {
+          console.log(`[/api/chat] Fallback: using platform provider ${body.platformProvider}/${body.platformModel}`);
+        }
+      } catch {}
+    }
+
+    // FALLBACK 2: If still null, try first available platform AI
+    if (!finalProvider) {
+      try {
+        const { getPlatformAIConfig } = await import("@/lib/platform-ai");
+        finalProvider = await getPlatformAIConfig();
+        if (finalProvider) {
+          console.log(`[/api/chat] Fallback 2: using default platform AI ${finalProvider.providerId}`);
+        }
+      } catch {}
+    }
+
+    // FALLBACK 3: BYOK lookup from DB (if not already done above)
+    if (!finalProvider && userId) {
+      try {
+        const { decrypt } = await import("@/lib/crypto");
+        const cred = await db.providerCredential.findFirst({
+          where: { userId, enabled: true },
+          orderBy: { updatedAt: "desc" },
+        });
+        if (cred) {
+          finalProvider = {
+            providerId: cred.providerId,
+            apiKey: decrypt(cred.encryptedApiKey),
+            baseUrl: cred.baseUrl,
+            model: cred.model,
+            temperature: cred.temperature ?? 0.7,
+            maxTokens: cred.maxTokens ?? 4096,
+            timeout: 60,
+          };
+          console.log(`[/api/chat] Fallback 3: using BYOK ${cred.providerId}`);
+        }
+      } catch {}
+    }
 
     try {
       if (finalProvider) {

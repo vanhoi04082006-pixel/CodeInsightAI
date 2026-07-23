@@ -286,9 +286,13 @@ async function fetchAndAnalyzeFromGitHub(owner: string, repo: string, ghToken: s
         repoRes.status === 404
           ? `GitHub API: repo not found (404). ${
               ghToken
-                ? "Token không có quyền truy cập repo này hoặc repo không tồn tại."
-                : "Repo có thể là PRIVATE — hãy đăng nhập bằng GitHub để phân tích."
+                ? "Token doesn't have access to this repo or repo doesn't exist."
+                : "Repo might be PRIVATE — sign in with GitHub to analyze private repos."
             }`
+          : repoRes.status === 401
+          ? `GitHub API: authentication failed (401). Your GitHub token may have expired. Try signing out and signing back in.`
+          : repoRes.status === 403
+          ? `GitHub API: rate limit exceeded (403). Please try again in a few minutes.`
           : `GitHub API: repo not found (${repoRes.status})`
       );
     }
