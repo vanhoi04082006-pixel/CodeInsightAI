@@ -22,7 +22,6 @@ import {
 } from "lucide-react";
 import { GlassCard, GradientText } from "@/components/shared/ui";
 import { DeveloperConsole } from "@/components/dev-console/developer-console";
-import { RequestLogSidebar } from "@/components/shared/request-log-sidebar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useAppStore } from "@/lib/store";
@@ -52,12 +51,7 @@ export function ChatView() {
   const [restoring, setRestoring] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Request log sidebar state
-  const [logSidebarCollapsed, setLogSidebarCollapsed] = useState(false);
-  const [logSidebarClosed, setLogSidebarClosed] = useState(false);
-  const [mobileLogOpen, setMobileLogOpen] = useState(false);
-
-  // Developer console state
+  // Developer console state (replaces old RequestLogSidebar)
   const [devConsoleClosed, setDevConsoleClosed] = useState(false);
 
   const SUGGESTIONS = [
