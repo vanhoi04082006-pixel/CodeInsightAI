@@ -21,7 +21,7 @@ import {
   ScrollText,
 } from "lucide-react";
 import { GlassCard, GradientText } from "@/components/shared/ui";
-import { DeveloperPanel } from "@/components/shared/debug-panel";
+import { DeveloperConsole } from "@/components/dev-console/developer-console";
 import { RequestLogSidebar } from "@/components/shared/request-log-sidebar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -56,6 +56,9 @@ export function ChatView() {
   const [logSidebarCollapsed, setLogSidebarCollapsed] = useState(false);
   const [logSidebarClosed, setLogSidebarClosed] = useState(false);
   const [mobileLogOpen, setMobileLogOpen] = useState(false);
+
+  // Developer console state
+  const [devConsoleClosed, setDevConsoleClosed] = useState(false);
 
   const SUGGESTIONS = [
     { icon: Shield, text: t("chat", "suggestions.security"), color: "#f472b6" },
@@ -378,14 +381,6 @@ export function ChatView() {
               </button>
             </div>
             <div className="flex items-center gap-2">
-              {/* Mobile: open log drawer */}
-              <button
-                onClick={() => setMobileLogOpen(true)}
-                className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-1.5 text-xs text-muted-foreground transition hover:bg-white/5 md:hidden"
-                aria-label="Open request log"
-              >
-                <ScrollText className="h-3.5 w-3.5" />
-              </button>
               <Button variant="ghost" size="sm" onClick={() => { clearChat(); toast.success(t("chat", "clearToast")); }}>
                 <Trash2 className="mr-1.5 h-3.5 w-3.5" /> {t("chat", "clear")}
               </Button>
@@ -445,10 +440,6 @@ export function ChatView() {
         )}
       </div>
 
-      <div className="mt-3 space-y-2">
-        <DeveloperPanel snapshot={latestSnapshot} />
-      </div>
-
       {/* composer */}
       <div className="mt-3">
         <GlassCard strong className="p-2">
@@ -483,27 +474,12 @@ export function ChatView() {
         </div>
       </div>
 
-      {/* Right sidebar: Request / Response Log */}
-      {!logSidebarClosed && (
-        <RequestLogSidebar
-          collapsed={logSidebarCollapsed}
-          onToggleCollapse={() => setLogSidebarCollapsed((v) => !v)}
-          onClose={() => setLogSidebarClosed(true)}
-          mobileOpen={mobileLogOpen}
-          onMobileClose={() => setMobileLogOpen(false)}
-        />
-      )}
-
-      {/* Reopen button when sidebar is closed (desktop) */}
-      {logSidebarClosed && (
-        <button
-          onClick={() => setLogSidebarClosed(false)}
-          className="glass-strong absolute right-0 top-1/2 z-30 hidden -translate-y-1/2 items-center gap-1 rounded-l-xl border border-r-0 border-white/10 px-2 py-4 text-muted-foreground transition hover:bg-white/5 hover:text-foreground md:flex"
-          aria-label="Open log sidebar"
-        >
-          <ScrollText className="h-4 w-4" />
-        </button>
-      )}
+      {/* Right sidebar: Developer Console (replaces old RequestLogSidebar) */}
+      <DeveloperConsole
+        snapshot={latestSnapshot}
+        closed={devConsoleClosed}
+        onClose={() => setDevConsoleClosed(false)}
+      />
     </div>
   );
 }
