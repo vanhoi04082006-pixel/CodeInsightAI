@@ -17,9 +17,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CodeInsight AI — Paste a GitHub Repo. AI Understands Everything.",
+  title: "CodeInsight AI — AI-Powered Code Intelligence Platform",
   description:
-    "AI-powered GitHub repository analysis platform. Clone, scan, analyse, and chat with any codebase. Acts like your Senior Staff Engineer, Security Expert, and CTO combined.",
+    "AI-powered GitHub repository analysis platform. 66 static rules + 7-pass AI deep analysis. CodeGraph, AI Chat, Mission Control. BYOK free or Platform AI $9/mo.",
   keywords: [
     "CodeInsight AI",
     "GitHub analysis",
@@ -28,14 +28,30 @@ export const metadata: Metadata = {
     "architecture analysis",
     "security audit",
     "performance analysis",
+    "CodeGraph",
+    "AI agents",
   ],
   authors: [{ name: "CodeInsight AI" }],
   icons: { icon: "/logo.png" },
+  metadataBase: new URL("https://code-insight-ai-six.vercel.app"),
   openGraph: {
-    title: "CodeInsight AI",
-    description: "Paste a GitHub Repository. AI Understands Everything.",
+    title: "CodeInsight AI — AI-Powered Code Intelligence",
+    description: "Analyze any GitHub repo with 66 static rules + 7-pass AI deep analysis. CodeGraph visualization, AI chat, Mission Control.",
     siteName: "CodeInsight AI",
     type: "website",
+    url: "https://code-insight-ai-six.vercel.app",
+    images: [{ url: "/logo.png", width: 512, height: 512, alt: "CodeInsight AI" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "CodeInsight AI",
+    description: "AI-Powered Code Intelligence Platform — Analyze any GitHub repo in 60 seconds.",
+    images: ["/logo.png"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, "max-image-preview": "large" },
   },
 };
 
