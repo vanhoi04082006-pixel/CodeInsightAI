@@ -223,7 +223,41 @@ export async function POST(req: NextRequest) {
         // Estimate tokens (rough: 1 token ≈ 4 chars)
         const inputTokens = Math.ceil((systemPrompt.length + message.length + history.map(h => h.content).join("").length) / 4);
         const outputTokens = Math.ceil(fullReply.length / 4);
+
+        // Build finalPrompt (for Prompt tab — shows the assembled pipeline)
+        const finalPrompt = llmMessages.map((m) => `[${m.role}]\n${m.content}`).join("\n\n---\n\n");
+
         doneData.debug = {
+          // Full snapshot (for DeveloperConsole tabs)
+          requestId,
+          timestamp: requestStart,
+          provider: finalProvider?.providerId ?? "unknown",
+          model: finalProvider?.model ?? "unknown",
+          personality: personality?.name ?? "Default (CTO)",
+          temperature,
+          maxTokens,
+          streaming: true,
+          contextWindow: 128000,
+          systemPrompt: systemPrompt + langInstruction,
+          userPrompt: message,
+          repositoryContext: "",
+          retrievedChunks: [],
+          finalPrompt,
+          inputTokens,
+          outputTokens,
+          totalTokens: inputTokens + outputTokens,
+          queueMs: 0,
+          generationMs: totalMs,
+          totalMs,
+          capabilities: {
+            vision: finalProvider?.providerId === "gemini" || finalProvider?.providerId === "openai",
+            toolCalling: true,
+            functionCalling: true,
+            reasoning: finalProvider?.providerId === "openai",
+          },
+          rawResponse: fullReply,
+          formattedResponse: fullReply,
+          // Log (for Logs tab)
           log: {
             id: requestId,
             timestamp: requestStart,
