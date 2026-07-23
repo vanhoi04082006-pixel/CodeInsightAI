@@ -478,7 +478,8 @@ export function ChatView() {
       <DeveloperConsole
         snapshot={latestSnapshot}
         closed={devConsoleClosed}
-        onClose={() => setDevConsoleClosed(false)}
+        onClose={() => setDevConsoleClosed(true)}
+        onOpen={() => setDevConsoleClosed(false)}
       />
     </div>
   );

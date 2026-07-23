@@ -54,10 +54,12 @@ export function DeveloperConsole({
   snapshot,
   closed,
   onClose,
+  onOpen,
 }: {
   snapshot: DebugSnapshot | null;
   closed: boolean;
   onClose: () => void;
+  onOpen: () => void;
 }) {
   const enabled = useDeveloperModeStore((s) => s.enabled);
   const logs = useDeveloperModeStore((s) => s.logs);
@@ -141,11 +143,12 @@ export function DeveloperConsole({
   if (closed) {
     return (
       <button
-        onClick={onClose}
-        className="absolute right-0 top-1/2 z-30 hidden -translate-y-1/2 items-center gap-1 rounded-l-xl border border-r-0 border-white/10 bg-background/80 px-2 py-4 text-muted-foreground backdrop-blur-sm transition hover:bg-white/5 hover:text-foreground md:flex"
+        onClick={onOpen}
+        className="glass-strong absolute right-2 top-1/2 z-30 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 text-violet-300 shadow-lg transition hover:scale-110 hover:border-violet-400/40 hover:bg-violet-400/10 hover:text-violet-200 md:flex"
         aria-label="Open Developer Console"
+        title="Open Developer Console"
       >
-        <Terminal className="h-4 w-4" />
+        <Terminal className="h-5 w-5" />
       </button>
     );
   }
@@ -246,8 +249,8 @@ export function DeveloperConsole({
             >
               <Download className="h-3.5 w-3.5" />
             </button>
-            <button onClick={onClose} className="rounded p-1.5 text-muted-foreground transition hover:bg-white/5 hover:text-foreground" aria-label="Close console">
-              <X className="h-3.5 w-3.5" />
+            <button onClick={onClose} className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-rose-500/15 hover:text-rose-300" aria-label="Close console" title="Close console">
+              <X className="h-4 w-4" />
             </button>
           </div>
         </div>
