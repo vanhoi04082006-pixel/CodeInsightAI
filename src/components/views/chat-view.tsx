@@ -219,6 +219,7 @@ export function ChatView() {
               preferredModel: personality.preferredModel,
             } : undefined,
             language,
+            debug: devMode.enabled,
             ...aiBody,
           }),
         });
@@ -233,6 +234,7 @@ export function ChatView() {
         const decoder = new TextDecoder();
         let buffer = "";
         let fullReply = "";
+        let debugData: any = null;
 
         if (reader) {
           while (true) {
@@ -257,6 +259,10 @@ export function ChatView() {
                   );
                   setChat(updated);
                 }
+                // Capture debug metadata from done event
+                if (data.done && data.debug) {
+                  debugData = data.debug;
+                }
               } catch { /* ignore */ }
             }
           }
@@ -268,6 +274,37 @@ export function ChatView() {
             m.id === assistantId ? { ...m, content: "⚠️ Empty response. Please try again." } : m
           );
           setChat(updated);
+        }
+
+        // Log to developer mode (streaming path was missing this!)
+        if (devMode.enabled && debugData?.log) {
+          devMode.addLog(debugData.log);
+          // Also create a snapshot for the Developer Panel
+          devMode.addSnapshot({
+            requestId: debugData.log.requestId,
+            timestamp: debugData.log.timestamp,
+            provider: debugData.log.provider,
+            model: debugData.log.model,
+            personality: debugData.log.personality,
+            temperature: personality?.temperature ?? 0.7,
+            maxTokens: personality?.maxTokens ?? 4096,
+            streaming: true,
+            contextWindow: 128000,
+            systemPrompt: personality?.systemPrompt ?? "",
+            userPrompt: content,
+            repositoryContext: "",
+            retrievedChunks: [],
+            finalPrompt: "",
+            inputTokens: debugData.log.inputTokens,
+            outputTokens: debugData.log.outputTokens,
+            totalTokens: debugData.log.totalTokens,
+            queueMs: 0,
+            generationMs: debugData.log.generationMs,
+            totalMs: debugData.log.durationMs,
+            capabilities: { vision: false, toolCalling: true, functionCalling: true, reasoning: false },
+            rawResponse: fullReply,
+            formattedResponse: fullReply,
+          } as any);
         }
       } else {
         // ── Non-streaming (fallback) ──

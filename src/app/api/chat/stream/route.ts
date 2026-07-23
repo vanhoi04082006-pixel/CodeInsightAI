@@ -43,9 +43,12 @@ interface ChatBody {
   aiMode?: "byok" | "platform";
   platformProvider?: string;   // Pro user's selected platform provider
   platformModel?: string;      // Pro user's selected model
+  debug?: boolean;             // Enable debug metadata in done event
 }
 
 export async function POST(req: NextRequest) {
+  const requestStart = Date.now();
+  const requestId = `req_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
   const body = (await req.json()) as ChatBody;
   const { message, history = [], personality, provider, language } = body;
 
@@ -213,8 +216,35 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // Send done signal
-      controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true, reply: fullReply })}\n\n`));
+      // Send done signal with debug metadata (if requested)
+      const totalMs = Date.now() - requestStart;
+      const doneData: any = { done: true, reply: fullReply };
+      if (body.debug) {
+        // Estimate tokens (rough: 1 token ≈ 4 chars)
+        const inputTokens = Math.ceil((systemPrompt.length + message.length + history.map(h => h.content).join("").length) / 4);
+        const outputTokens = Math.ceil(fullReply.length / 4);
+        doneData.debug = {
+          log: {
+            id: requestId,
+            timestamp: requestStart,
+            requestId,
+            provider: finalProvider?.providerId ?? "unknown",
+            model: finalProvider?.model ?? "unknown",
+            personality: personality?.name ?? "Default (CTO)",
+            durationMs: totalMs,
+            queueMs: 0,
+            generationMs: totalMs,
+            status: lastError ? "error" : "success",
+            statusCode: lastError ? 500 : 200,
+            error: lastError,
+            retryCount: 0,
+            inputTokens,
+            outputTokens,
+            totalTokens: inputTokens + outputTokens,
+          },
+        };
+      }
+      controller.enqueue(encoder.encode(`data: ${JSON.stringify(doneData)}\n\n`));
 
       // Persist to DB
       if (body.analysisId && fullReply.trim()) {
