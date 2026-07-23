@@ -544,18 +544,19 @@ export function LandingView() {
                 name: "Team",
                 price: "$29",
                 period: "/month",
-                desc: "For teams of 5",
+                desc: "For teams & enterprises",
                 features: [
                   "Everything in Pro",
                   "500 analyses / month",
                   "10000 chat messages / month",
-                  "Shared provider configs",
-                  "Team usage analytics",
+                  "Admin-managed plan",
                   "Priority support",
+                  "Custom onboarding",
                 ],
                 color: "#34d399",
                 highlight: false,
-                cta: "Contact us",
+                cta: "Contact Sales",
+                contact: true, // custom flag → mailto instead of checkout
               },
             ].map((plan, i) => (
               <motion.div
@@ -596,6 +597,9 @@ export function LandingView() {
                       if (plan.highlight) {
                         // Pro plan → direct Stripe checkout
                         upgrade("pro");
+                      } else if ((plan as any).contact) {
+                        // Team/Enterprise → email contact (admin-managed plan)
+                        window.location.href = "mailto:vanhoi04082006@gmail.com?subject=CodeInsight%20AI%20Team%20Plan&body=Hi,%20I'm%20interested%20in%20the%20Team%20plan%20for%20CodeInsight%20AI.";
                       } else {
                         // Free plan → GitHub sign-in
                         setView("dashboard");
@@ -603,7 +607,7 @@ export function LandingView() {
                     }}
                     disabled={plan.highlight && upgrading}
                     variant="outline"
-                    className={`mt-6 w-full ${plan.highlight ? "border-violet-400/40 text-violet-300 hover:bg-violet-400/10" : ""}`}
+                    className={`mt-6 w-full ${plan.highlight ? "border-violet-400/40 text-violet-300 hover:bg-violet-400/10" : (plan as any).contact ? "border-emerald-400/40 text-emerald-300 hover:bg-emerald-400/10" : ""}`}
                   >
                     {plan.highlight && upgrading ? (
                       <>
@@ -618,7 +622,8 @@ export function LandingView() {
             ))}
           </div>
           <p className="mt-6 text-center text-xs text-muted-foreground">
-            Need team access or on-premise? <button onClick={() => setView("settings")} className="text-cyan-300 hover:underline">Contact us</button>
+            Team plan is admin-managed — contact us for setup. Need on-premise or custom enterprise?{" "}
+            <a href="mailto:vanhoi04082006@gmail.com?subject=CodeInsight%20AI%20Enterprise" className="text-cyan-300 hover:underline">Email us</a>
           </p>
         </div>
       </section>
