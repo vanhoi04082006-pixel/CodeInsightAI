@@ -41,7 +41,7 @@ interface PlatformProvider {
 export function AIModeToggle({ compact = false }: { compact?: boolean }) {
   const aiMode = useProvidersStore((s) => s.aiMode);
   const setAiMode = useProvidersStore((s) => s.setAiMode);
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const { upgrade, loading } = useUpgrade();
   const [justSwitched, setJustSwitched] = useState(false);
 
@@ -54,12 +54,11 @@ export function AIModeToggle({ compact = false }: { compact?: boolean }) {
   const role = (session as any)?.role ?? "user";
   const isPro = plan !== "free" || role === "admin";
   const isPlatform = aiMode === "platform";
-  const sessionStatus = status; // 'loading' | 'authenticated' | 'unauthenticated'
 
   // Load platform providers for Pro users
-  // Depends on sessionStatus so it re-runs when session loads
+  // Depends on `status` so it re-runs when session finishes loading
   useEffect(() => {
-    if (sessionStatus !== "authenticated") return;
+    if (status !== "authenticated") return;
     if (!isPro) return;
     fetch("/api/platform-ai/options")
       .then((r) => r.json())
@@ -78,7 +77,7 @@ export function AIModeToggle({ compact = false }: { compact?: boolean }) {
         }
       })
       .catch(() => {});
-  }, [isPro, sessionStatus]);
+  }, [isPro, status]);
 
   // Save selection to localStorage when changed
   useEffect(() => {
