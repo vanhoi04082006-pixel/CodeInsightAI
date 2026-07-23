@@ -690,8 +690,9 @@ function PlatformAITab() {
   const [editModels, setEditModels] = useState<string[]>([]);
   const [editEnabled, setEditEnabled] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [testing, setTesting] = useState<string | null>(null); // providerId being tested
+  const [testing, setTesting] = useState<string | null>(null);
   const [testResults, setTestResults] = useState<Record<string, { status: "ok" | "error" | "testing"; latency?: number; error?: string }>>({});
+  const [testModelSelection, setTestModelSelection] = useState<Record<string, string>>({});
 
   const load = async () => {
     setLoading(true);
@@ -770,49 +771,17 @@ function PlatformAITab() {
     }
   };
 
-  // Test API key connectivity — calls /api/providers/test with admin's key
+  // Test API key connectivity — admin endpoint decrypts key server-side
+  // model param: specific model to test (from dropdown selection)
   const handleTestKey = async (providerId: string, apiKey?: string, baseUrl?: string, model?: string) => {
     setTesting(providerId);
     setTestResults((prev) => ({ ...prev, [providerId]: { status: "testing" } }));
     try {
-      // If no apiKey provided, fetch from DB (admin already saved it)
-      let keyToTest = apiKey;
-      if (!keyToTest) {
-        // Read from DB via admin API
-        const configRes = await fetch("/api/admin/platform-ai");
-        const configData = await configRes.json();
-        const config = configData.configured?.find((c: any) => c.providerId === providerId);
-        if (config?.maskedKey && config.maskedKey !== "••••") {
-          // Key exists in DB — use the admin API to test it (server decrypts)
-          // We can't send the masked key to /api/providers/test — so we call
-          // a special admin test endpoint that decrypts server-side
-          const testRes = await fetch("/api/admin/platform-ai/test", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ providerId }),
-          });
-          const testData = await testRes.json();
-          setTestResults((prev) => ({
-            ...prev,
-            [providerId]: testData.status === "connected"
-              ? { status: "ok", latency: testData.latencyMs }
-              : { status: "error", error: testData.error },
-          }));
-          return;
-        }
-      }
-
-      // If we have a raw key (from edit form), test it directly
-      const models = editModels.length > 0 ? editModels : [];
-      const testRes = await fetch("/api/providers/test", {
+      // Always use admin test endpoint (server decrypts key)
+      const testRes = await fetch("/api/admin/platform-ai/test", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          providerId,
-          apiKey: keyToTest,
-          baseUrl: baseUrl || editBaseUrl,
-          model: model || models[0] || "",
-        }),
+        body: JSON.stringify({ providerId, model }),
       });
       const testData = await testRes.json();
       setTestResults((prev) => ({
@@ -891,17 +860,32 @@ function PlatformAITab() {
                       {testResult?.error && <span className="text-rose-400"> · {testResult.error.slice(0, 60)}</span>}
                     </p>
                   </div>
-                  {/* Test Key button */}
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleTestKey(c.providerId)}
-                    disabled={testing === c.providerId}
-                    className="border-cyan-400/30 text-cyan-300 hover:bg-cyan-400/10"
-                  >
-                    {testing === c.providerId ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <Zap className="mr-1 h-3.5 w-3.5" />}
-                    Test
-                  </Button>
+                  {/* Model selector + Test button */}
+                  <div className="flex items-center gap-1.5">
+                    <Select
+                      value={testModelSelection[c.providerId] || c.models[0] || ""}
+                      onValueChange={(v) => setTestModelSelection((prev) => ({ ...prev, [c.providerId]: v }))}
+                    >
+                      <SelectTrigger className="h-7 w-36 border-white/10 bg-white/[0.03] text-[10px]">
+                        <SelectValue placeholder="Select model" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {c.models.map((m: string) => (
+                          <SelectItem key={m} value={m} className="text-xs font-mono">{m}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleTestKey(c.providerId, undefined, undefined, testModelSelection[c.providerId])}
+                      disabled={testing === c.providerId}
+                      className="border-cyan-400/30 text-cyan-300 hover:bg-cyan-400/10"
+                    >
+                      {testing === c.providerId ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <Zap className="mr-1 h-3.5 w-3.5" />}
+                      Test
+                    </Button>
+                  </div>
                   <Button size="sm" variant="ghost" onClick={() => handleEdit(c)} title="Edit">
                     <Settings2 className="h-3.5 w-3.5" />
                   </Button>

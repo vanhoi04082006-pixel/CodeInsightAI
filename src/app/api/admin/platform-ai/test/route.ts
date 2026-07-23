@@ -1,6 +1,8 @@
 // POST /api/admin/platform-ai/test — Test admin-saved provider key
-// Decrypts the key server-side and sends a ping to the provider.
-// Never exposes the raw key to the frontend.
+// Body: { providerId, model? }
+// - If model provided → test with that specific model
+// - If model not provided → test with first model from config
+// Decrypts the key server-side and sends a ping. Never exposes raw key.
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/admin";
@@ -15,7 +17,7 @@ export async function POST(req: NextRequest) {
   if (!adminId) return NextResponse.json({ error: "Admin only" }, { status: 403 });
 
   try {
-    const { providerId } = await req.json();
+    const { providerId, model: requestedModel } = await req.json();
     if (!providerId) return NextResponse.json({ error: "providerId required" }, { status: 400 });
 
     const config = await db.platformAIConfig.findUnique({ where: { providerId } });
@@ -32,28 +34,10 @@ export async function POST(req: NextRequest) {
     const preset = PRESET_BY_ID[providerId];
     const models = JSON.parse(config.models || "[]");
 
-    // For testing, use a CHEAP + RELIABLE model per provider.
-    // Don't use the first model from the list (might be expensive or deprecated).
-    // This is just a "ping" to verify the API key works — not a real analysis.
-    const TEST_MODELS: Record<string, string> = {
-      openrouter: "openai/gpt-4o-mini",        // cheapest OpenRouter model
-      openai: "gpt-4o-mini",
-      anthropic: "claude-3-5-haiku-20241022",   // cheapest Anthropic model
-      gemini: "gemini-1.5-flash",
-      deepseek: "deepseek-chat",
-      groq: "llama-3.1-8b-instant",
-      together: "meta-llama/Llama-3.3-70B-Instruct-Turbo",
-      fireworks: "accounts/fireworks/models/llama-v3p3-70b-instruct",
-      mistral: "mistral-small-latest",
-      xai: "grok-2-mini",
-      azure: models[0] || "gpt-4o-mini",
-      custom: models[0] || "gpt-4o-mini",
-    };
-
-    let model = TEST_MODELS[providerId] || models[0] || preset?.defaultModel || "gpt-4o-mini";
+    // Use requested model, or first from config, or preset default
+    const model = requestedModel || models[0] || preset?.defaultModel || "gpt-4o-mini";
     const start = Date.now();
 
-    // Build test request based on provider
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 30000);
 
@@ -89,8 +73,8 @@ export async function POST(req: NextRequest) {
         let errMsg = `HTTP ${res.status}`;
         try { const j = JSON.parse(errText); errMsg = j.error?.message || j.message || errMsg; } catch { if (errText) errMsg = errText.slice(0, 200); }
         if (res.status === 401 || res.status === 403) errMsg = `Auth failed (${res.status}). Check API key.`;
-        if (res.status === 404) errMsg = `Model or endpoint not found (404). Verify model name.`;
-        return NextResponse.json({ status: "error", latencyMs, error: errMsg });
+        if (res.status === 404) errMsg = `Model "${model}" not found (404). Try a different model.`;
+        return NextResponse.json({ status: "error", latencyMs, error: errMsg, model });
       }
 
       return NextResponse.json({ status: "connected", latencyMs, model });
