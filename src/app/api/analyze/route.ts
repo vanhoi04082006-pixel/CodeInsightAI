@@ -27,9 +27,20 @@ async function getGithubAccessToken(): Promise<string | null> {
   if (userId) {
     const account = await db.account.findFirst({
       where: { userId, provider: "github" },
-      select: { access_token: true },
+      select: { access_token: true, expires_at: true },
     });
-    return account?.access_token ?? null;
+    // Check if token is expired (expires_at is a Unix timestamp in seconds)
+    if (account?.access_token) {
+      const now = Math.floor(Date.now() / 1000);
+      const isExpired = account.expires_at && account.expires_at < now;
+      if (isExpired) {
+        console.warn("[getGithubAccessToken] GitHub token expired — user needs to re-authenticate");
+        // Still return the token — GitHub sometimes accepts expired tokens
+        // for public repos (just not private ones)
+        return account.access_token;
+      }
+      return account.access_token;
+    }
   }
   return null;
 }

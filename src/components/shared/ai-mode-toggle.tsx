@@ -90,7 +90,7 @@ export function AIModeToggle({ compact = false }: { compact?: boolean }) {
     }
   }, [selectedProvider, selectedModel, isPlatform]);
 
-  const handleToggle = () => {
+  const handleToggle = async () => {
     if (isPlatform) {
       setAiMode("byok");
       setJustSwitched(true);
@@ -101,7 +101,29 @@ export function AIModeToggle({ compact = false }: { compact?: boolean }) {
         upgrade("pro");
         return;
       }
+      // If providers not loaded yet, try loading now (might be timing issue)
       if (platformProviders.length === 0) {
+        toast.loading("Loading Platform AI providers…", { id: "load-providers" });
+        try {
+          const res = await fetch("/api/platform-ai/options");
+          const data = await res.json();
+          if (data.providers?.length > 0) {
+            setPlatformProviders(data.providers);
+            const first = data.providers[0];
+            setSelectedProvider(first.providerId);
+            setSelectedModel(first.models[0] || "");
+            toast.dismiss("load-providers");
+            // Now switch to platform
+            setAiMode("platform");
+            setJustSwitched(true);
+            setTimeout(() => setJustSwitched(false), 1000);
+            toast.success("Switched to Platform AI", {
+              description: `Using ${first.name} / ${first.models[0] || "default"}`,
+            });
+            return;
+          }
+        } catch {}
+        toast.dismiss("load-providers");
         toast.error("No Platform AI providers configured", {
           description: "Admin needs to configure at least one AI provider in Admin Dashboard.",
         });
