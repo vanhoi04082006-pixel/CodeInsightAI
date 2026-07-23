@@ -346,15 +346,33 @@ Use this graph knowledge to answer questions about function callers, callees, de
     try {
       if (finalProvider) {
         // Use unified ai-client (supports all 14 providers)
-        const result = await callAI(
-          finalProvider,
-          llmMessages as AIMessage[],
-          {
-            temperature: personality?.temperature ?? 0.7,
-            maxTokens: personality?.maxTokens && personality.maxTokens > 0 ? personality.maxTokens : 4096,
+        // RETRY: If first call returns empty, retry once (timing issue with cold start)
+        for (let attempt = 0; attempt < 2; attempt++) {
+          try {
+            const result = await callAI(
+              finalProvider,
+              llmMessages as AIMessage[],
+              {
+                temperature: personality?.temperature ?? 0.7,
+                maxTokens: personality?.maxTokens && personality.maxTokens > 0 ? personality.maxTokens : 4096,
+                timeout: 60,
+              }
+            );
+            reply = result.content;
+            if (reply && reply.trim()) break; // success — exit retry loop
+            if (attempt === 0) {
+              console.warn(`[/api/chat] Empty response on attempt 1 — retrying...`);
+              await new Promise(r => setTimeout(r, 500)); // wait 500ms before retry
+            }
+          } catch (callErr) {
+            if (attempt === 0) {
+              console.warn(`[/api/chat] Call failed on attempt 1 — retrying...`, callErr);
+              await new Promise(r => setTimeout(r, 500));
+            } else {
+              throw callErr;
+            }
           }
-        );
-        reply = result.content;
+        }
       } else {
         // Fallback: try z-ai built-in SDK
         try {

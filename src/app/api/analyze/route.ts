@@ -33,21 +33,26 @@ async function getGithubAccessToken(): Promise<string | null> {
       const now = Math.floor(Date.now() / 1000);
       const isExpired = account.expires_at && account.expires_at < now;
       if (isExpired) {
-        console.warn("[getGithubAccessToken] GitHub token expired — user needs to re-authenticate");
+        // CRITICAL: Do NOT return expired tokens!
+        // Expired token → GitHub returns 401 (worse than no token at all).
+        // Without token → anonymous access → public repos still work (60 req/hour).
+        console.warn("[getGithubAccessToken] GitHub token EXPIRED — skipping (anonymous access for public repos)");
+      } else {
+        return account.access_token;
       }
-      return account.access_token;
     }
   }
 
-  // FALLBACK: User has no GitHub account (e.g. logged in with Google).
+  // FALLBACK: User has no GitHub account or token expired.
   // Use server-side fallback token for PUBLIC repo access.
-  // Without any token, GitHub API limits anonymous to 60 req/hour (very low).
   const fallbackToken = getFallbackGithubToken();
   if (fallbackToken) {
-    console.log("[getGithubAccessToken] No user GitHub token — using fallback token for public repos");
+    console.log("[getGithubAccessToken] Using fallback token for public repos");
     return fallbackToken;
   }
 
+  // No token at all — anonymous access (60 req/hour, public repos only)
+  console.log("[getGithubAccessToken] No GitHub token — anonymous access (60 req/hour limit)");
   return null;
 }
 
