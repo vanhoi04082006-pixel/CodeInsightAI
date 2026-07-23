@@ -61,6 +61,7 @@ import { FileTreePanel } from "@/components/mission/file-tree-panel";
 import { AgentNetworkGraph } from "@/components/mission/agent-network-graph";
 import type { TerminalLine as LiveTerminalLine } from "@/components/mission/live-terminal";
 import type { AIProviderConfig } from "@/lib/mission-store";
+import { MissionHeader } from "@/components/mission-tabs/mission-header";
 
 const STATUS_META: Record<
   string,
@@ -1037,29 +1038,3 @@ export function MissionControlView() {
   );
 }
 
-function MissionHeader() {
-  const { t } = useT();
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
-    >
-      <div>
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Rocket className="h-4 w-4 text-cyan-300" />
-          <span>{t("mission", "subtitle") || "AI Operating System"}</span>
-        </div>
-        <h1 className="mt-1 text-2xl font-bold md:text-3xl">
-          <GradientText>
-            {t("mission", "title") || "Mission Control"}
-          </GradientText>
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {t("mission", "description") ||
-            "Give your AI team a goal. They plan, execute, verify, and ship — autonomously."}
-        </p>
-      </div>
-    </motion.div>
-  );
-}

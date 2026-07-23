@@ -68,3 +68,4 @@ coverage/
 worklog.md
 skills/
 .env.local-backup
+.github/
