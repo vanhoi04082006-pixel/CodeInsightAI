@@ -37,7 +37,7 @@ export async function GET() {
       orderBy: { createdAt: "asc" },
     });
 
-    const providers = configs.map((c) => {
+    let providers = configs.map((c) => {
       const preset = PRESET_BY_ID[c.providerId];
       return {
         providerId: c.providerId,
@@ -47,6 +47,19 @@ export async function GET() {
         models: JSON.parse(c.models || "[]"),
       };
     });
+
+    // FALLBACK: If no DB configs, check env vars (PLATFORM_AI_API_KEY etc.)
+    if (providers.length === 0 && process.env.PLATFORM_AI_API_KEY) {
+      const envProviderId = process.env.PLATFORM_AI_PROVIDER || "openrouter";
+      const preset = PRESET_BY_ID[envProviderId];
+      providers = [{
+        providerId: envProviderId,
+        name: preset?.name || envProviderId,
+        category: preset?.category || "Cloud",
+        baseUrl: process.env.PLATFORM_AI_BASE_URL || preset?.defaultBaseUrl || "",
+        models: preset?.models || [process.env.PLATFORM_AI_MODEL || "gpt-4o-mini"],
+      }];
+    }
 
     return NextResponse.json({ providers, isPro: true });
   } catch (e) {
