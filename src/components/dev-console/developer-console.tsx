@@ -9,9 +9,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
-  Pin,
-  PinOff,
-  PanelRightOpen,
   Brain,
   Boxes,
   Cpu,
@@ -37,7 +34,6 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useDeveloperModeStore, type DebugSnapshot, type AIRequestLog } from "@/lib/developer-mode-store";
 import { useAppStore } from "@/lib/store";
 import { CodeBlock } from "./code-block";
@@ -45,10 +41,7 @@ import { RequestTimeline, MetricCard, EmptyState, LoadingSkeleton } from "./shar
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
-type PinMode = "pinned" | "floating" | "autohide";
-
 const STORAGE_WIDTH_KEY = "codeinsight-dev-width";
-const STORAGE_PIN_KEY = "codeinsight-dev-pin-mode";
 
 export function DeveloperConsole({
   snapshot,
@@ -67,19 +60,15 @@ export function DeveloperConsole({
   const activeReport = useAppStore((s) => s.activeReport);
 
   const [width, setWidth] = useState(380);
-  const [pinMode, setPinMode] = useState<PinMode>("pinned");
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState("overview");
-  const [autoHidden, setAutoHidden] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  // Restore width + pin mode from localStorage (use microtask to avoid setState-in-effect)
+  // Restore width from localStorage (use microtask to avoid setState-in-effect)
   useEffect(() => {
     const savedWidth = localStorage.getItem(STORAGE_WIDTH_KEY);
-    const savedPin = localStorage.getItem(STORAGE_PIN_KEY) as PinMode | null;
     Promise.resolve().then(() => {
       if (savedWidth) setWidth(Math.min(520, Math.max(280, parseInt(savedWidth))));
-      if (savedPin) setPinMode(savedPin);
     });
   }, []);
 
@@ -87,11 +76,6 @@ export function DeveloperConsole({
   useEffect(() => {
     localStorage.setItem(STORAGE_WIDTH_KEY, String(width));
   }, [width]);
-
-  // Persist pin mode
-  useEffect(() => {
-    localStorage.setItem(STORAGE_PIN_KEY, pinMode);
-  }, [pinMode]);
 
   // Resize drag
   const dragRef = useRef<{ startX: number; startWidth: number } | null>(null);
@@ -158,11 +142,6 @@ export function DeveloperConsole({
   const model = snapshot?.model ?? "—";
   const environment = process.env.NODE_ENV ?? "development";
 
-  // Pin mode behavior
-  const isFloating = pinMode === "floating";
-  const isAutohide = pinMode === "autohide";
-  const showSidebar = !isAutohide || !autoHidden;
-
   const consoleContent = (
     <motion.div
       initial={{ x: 20, opacity: 0 }}
@@ -216,21 +195,6 @@ export function DeveloperConsole({
             </div>
           </div>
           <div className="flex items-center gap-1">
-            <TooltipProvider delayDuration={300}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={() => setPinMode((p) => (p === "pinned" ? "floating" : p === "floating" ? "autohide" : "pinned"))}
-                    className="rounded p-1.5 text-muted-foreground transition hover:bg-white/5 hover:text-foreground"
-                  >
-                    {pinMode === "pinned" ? <Pin className="h-3.5 w-3.5" /> : pinMode === "floating" ? <PanelRightOpen className="h-3.5 w-3.5" /> : <PinOff className="h-3.5 w-3.5" />}
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">
-                  <p>Pin mode: {pinMode}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
             <button
               onClick={() => {
                 if (snapshot) {
@@ -244,13 +208,18 @@ export function DeveloperConsole({
                   toast.success("Snapshot exported");
                 }
               }}
-              className="rounded p-1.5 text-muted-foreground transition hover:bg-white/5 hover:text-foreground"
+              className="rounded-lg p-2 text-muted-foreground transition hover:bg-white/5 hover:text-foreground"
               title="Export snapshot"
             >
-              <Download className="h-3.5 w-3.5" />
+              <Download className="h-4 w-4" />
             </button>
-            <button onClick={onClose} className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-rose-500/15 hover:text-rose-300" aria-label="Close console" title="Close console">
-              <X className="h-4 w-4" />
+            <button
+              onClick={onClose}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-white/10 text-muted-foreground transition hover:border-rose-400/40 hover:bg-rose-500/15 hover:text-rose-300"
+              aria-label="Close Developer Console"
+              title="Close Developer Console"
+            >
+              <X className="h-5 w-5" />
             </button>
           </div>
         </div>
@@ -332,29 +301,12 @@ export function DeveloperConsole({
   return (
     <>
       {/* Desktop: sidebar */}
-      {showSidebar && (
-        <aside
-          className="relative hidden h-full shrink-0 md:block"
-          style={{ width: pinMode === "floating" ? 0 : width }}
-        >
-          {isFloating ? (
-            <div className="fixed right-0 top-0 z-40 h-full" style={{ width }}>
-              <AnimatePresence>{consoleContent}</AnimatePresence>
-            </div>
-          ) : (
-            consoleContent
-          )}
-        </aside>
-      )}
-
-      {/* Autohide edge trigger */}
-      {isAutohide && autoHidden && (
-        <button
-          onMouseEnter={() => setAutoHidden(false)}
-          className="absolute right-0 top-0 z-30 hidden h-full w-1 cursor-pointer bg-cyan-400/0 transition hover:bg-cyan-400/30 md:block"
-          aria-label="Show Developer Console"
-        />
-      )}
+      <aside
+        className="relative hidden h-full shrink-0 md:block"
+        style={{ width }}
+      >
+        {consoleContent}
+      </aside>
 
       {/* Mobile: floating button + drawer */}
       <button
