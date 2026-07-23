@@ -21,6 +21,7 @@ import { GlassCard, ScoreGauge, GradientText, StatPill } from "@/components/shar
 import { Button } from "@/components/ui/button";
 import { ProFeaturesCard } from "@/components/shared/pro-features-card";
 import { UsageWidget } from "@/components/shared/usage-widget";
+import { TrendsCard } from "@/components/shared/trends-card";
 import { useAppStore } from "@/lib/store";
 import { useT } from "@/lib/i18n";
 import {
@@ -300,6 +301,9 @@ export function DashboardView() {
           </div>
         </GlassCard>
       </div>
+
+      {/* 30-day trends: score progression, top languages, deltas */}
+      <TrendsCard />
 
       {/* Maintainability trend + dead code summary */}
       <div className="grid gap-4 lg:grid-cols-3">

@@ -32,6 +32,7 @@ import { UserMenu } from "@/components/shared/user-menu";
 import { ProGate } from "@/components/shared/pro-gate";
 import { OnboardingOverlay } from "@/components/shared/onboarding-overlay";
 import { HydrationGuard } from "@/components/shared/hydration-guard";
+import { KeyboardShortcutsHelp } from "@/components/shared/keyboard-shortcuts-help";
 import { Heart, Sparkles, Github, Rocket } from "lucide-react";
 
 export default function Home() {
@@ -319,6 +320,7 @@ export default function Home() {
       <MobileNav />
       <CommandPalette />
       <OnboardingOverlay />
+      <KeyboardShortcutsHelp />
       <CustomCursor />
     </div>
     </HydrationGuard>
@@ -351,6 +353,18 @@ function Footer() {
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
             <a href="/terms" className="hover:text-foreground">Terms</a>
             <a href="/privacy" className="hover:text-foreground">Privacy</a>
+            <span className="text-muted-foreground/50">·</span>
+            <button
+              onClick={() => {
+                // Dispatch a "?" keydown so KeyboardShortcutsHelp opens
+                window.dispatchEvent(new KeyboardEvent("keydown", { key: "?" }));
+              }}
+              className="flex items-center gap-1 transition hover:text-foreground"
+              aria-label="Show keyboard shortcuts"
+            >
+              <kbd className="rounded border border-white/10 bg-white/[0.04] px-1.5 py-0.5 text-[10px]">?</kbd>
+              <span>Shortcuts</span>
+            </button>
             <span className="text-muted-foreground/50">·</span>
             <span className="flex items-center gap-1">Built with <Heart className="h-3 w-3 fill-rose-400 text-rose-400" /> for developers</span>
           </div>

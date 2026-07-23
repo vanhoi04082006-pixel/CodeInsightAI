@@ -1,26 +1,26 @@
-// CodeInsight AI — Prisma schema (PostgreSQL)
+// CodeInsight AI — Prisma schema (LOCAL DEVELOPMENT — SQLite)
 //
-// This single schema is used for BOTH local development AND production.
-// Local dev connects to Neon (or a local Postgres if you prefer), and
-// production connects to Neon via the DATABASE_URL env var on Vercel.
+// This schema is used for LOCAL DEVELOPMENT with a SQLite database file
+// (DATABASE_URL=file:./db/custom.db in .env). SQLite is fast, zero-config,
+// and perfect for sandboxed local dev where no Neon/Postgres instance is
+// available.
 //
-// We previously split this into schema.prisma (sqlite) + schema.prod.prisma
-// (postgresql), but Prisma's runtime client only reads schema.prisma —
-// the PRISMA_SCHEMA env var is only respected by the CLI at generate time,
-// not by the generated client at runtime. This caused production to fail
-// with "the URL must start with the protocol `file:`" because the runtime
-// was loading the sqlite schema while DATABASE_URL was postgresql.
+// PRODUCTION uses prisma/schema.prod.prisma (PostgreSQL on Neon) instead.
+// The Vercel build runs `prisma generate --schema prisma/schema.prod.prisma`
+// before `next build`, so the production Prisma Client is generated against
+// the PostgreSQL schema. Both schemas must be kept in sync — only the
+// datasource provider differs.
 //
-// Migrating to PostgreSQL for local dev is fine — Neon's free tier is more
-// than enough, and it means local + prod use the exact same DB engine
-// (no more "works on my machine" SQLite vs Postgres quirks).
+// To switch which schema Prisma uses locally, set the PRISMA_SCHEMA env var:
+//   PRISMA_SCHEMA=prisma/schema.prisma           (default — SQLite)
+//   PRISMA_SCHEMA=prisma/schema.prod.prisma      (PostgreSQL on Neon)
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
