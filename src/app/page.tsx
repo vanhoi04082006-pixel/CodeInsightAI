@@ -180,7 +180,7 @@ export default function Home() {
             Go to CodeInsight AI →
           </button>
         </div>
-        <main className="flex-1">
+        <main id="main-content" className="flex-1">
           {/* Pass isShared prop to ProjectView so it hides action buttons */}
           <ProjectView isShared />
         </main>
@@ -273,7 +273,7 @@ export default function Home() {
             </div>
           </header>
 
-          <main className="flex-1">
+          <main id="main-content" className="flex-1">
             <LandingView />
           </main>
 
@@ -285,7 +285,7 @@ export default function Home() {
           <AppSidebar />
           <div className="flex min-w-0 flex-1 flex-col">
             <AppTopbar />
-            <main className="flex-1 pb-20 md:pb-0">
+            <main id="main-content" className="flex-1 pb-20 md:pb-0">
               <AnimatePresence mode="wait">
                 <motion.div
                   key={view}
