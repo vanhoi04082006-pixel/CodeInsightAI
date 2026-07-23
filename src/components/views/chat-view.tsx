@@ -18,9 +18,11 @@ import {
   Code2,
   Check,
   Copy,
+  ScrollText,
 } from "lucide-react";
 import { GlassCard, GradientText } from "@/components/shared/ui";
-import { DeveloperPanel, LogViewer } from "@/components/shared/debug-panel";
+import { DeveloperPanel } from "@/components/shared/debug-panel";
+import { RequestLogSidebar } from "@/components/shared/request-log-sidebar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useAppStore } from "@/lib/store";
@@ -49,6 +51,11 @@ export function ChatView() {
   const [loading, setLoading] = useState(false);
   const [restoring, setRestoring] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Request log sidebar state
+  const [logSidebarCollapsed, setLogSidebarCollapsed] = useState(false);
+  const [logSidebarClosed, setLogSidebarClosed] = useState(false);
+  const [mobileLogOpen, setMobileLogOpen] = useState(false);
 
   const SUGGESTIONS = [
     { icon: Shield, text: t("chat", "suggestions.security"), color: "#f472b6" },
@@ -306,34 +313,47 @@ export function ChatView() {
   }
 
   return (
-    <div className="mx-auto flex h-[calc(100vh-8rem)] max-w-4xl flex-col px-4 py-4 md:px-6">
-      {/* header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-400/30 to-violet-500/30">
-            <Bot className="h-5 w-5 text-cyan-300" />
-            <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-background bg-emerald-400" />
+    <div className="flex h-[calc(100vh-8rem)] px-2 py-3 md:px-4 md:py-4">
+      {/* Chat area — flexes to fill remaining space */}
+      <div className="relative flex min-w-0 flex-1 flex-col">
+        <div className="mx-auto flex h-full w-full max-w-4xl flex-col px-2 md:px-4">
+          {/* header */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-400/30 to-violet-500/30">
+                <Bot className="h-5 w-5 text-cyan-300" />
+                <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-background bg-emerald-400" />
+              </div>
+              <div>
+                <h1 className="text-sm font-semibold">{t("chat", "title")}</h1>
+                <p className="text-[11px] text-muted-foreground">
+                  <FolderGit2 className="mr-1 inline h-3 w-3" />
+                  {report.repoOwner}/{report.repoName}
+                </p>
+              </div>
+              <button
+                onClick={() => useAppStore.getState().setView("personalities")}
+                className="ml-2 flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[10px] transition hover:border-cyan-400/40"
+                title={t("chat", "personalityLabel")}
+              >
+                <span className="h-1.5 w-1.5 rounded-full" style={{ background: activePersonality.accent }} />
+                <span className="font-medium">{activePersonality.name}</span>
+              </button>
+            </div>
+            <div className="flex items-center gap-2">
+              {/* Mobile: open log drawer */}
+              <button
+                onClick={() => setMobileLogOpen(true)}
+                className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-1.5 text-xs text-muted-foreground transition hover:bg-white/5 md:hidden"
+                aria-label="Open request log"
+              >
+                <ScrollText className="h-3.5 w-3.5" />
+              </button>
+              <Button variant="ghost" size="sm" onClick={() => { clearChat(); toast.success(t("chat", "clearToast")); }}>
+                <Trash2 className="mr-1.5 h-3.5 w-3.5" /> {t("chat", "clear")}
+              </Button>
+            </div>
           </div>
-          <div>
-            <h1 className="text-sm font-semibold">{t("chat", "title")}</h1>
-            <p className="text-[11px] text-muted-foreground">
-              <FolderGit2 className="mr-1 inline h-3 w-3" />
-              {report.repoOwner}/{report.repoName}
-            </p>
-          </div>
-          <button
-            onClick={() => useAppStore.getState().setView("personalities")}
-            className="ml-2 flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[10px] transition hover:border-cyan-400/40"
-            title={t("chat", "personalityLabel")}
-          >
-            <span className="h-1.5 w-1.5 rounded-full" style={{ background: activePersonality.accent }} />
-            <span className="font-medium">{activePersonality.name}</span>
-          </button>
-        </div>
-        <Button variant="ghost" size="sm" onClick={() => { clearChat(); toast.success(t("chat", "clearToast")); }}>
-          <Trash2 className="mr-1.5 h-3.5 w-3.5" /> {t("chat", "clear")}
-        </Button>
-      </div>
 
       {/* messages */}
       <div ref={scrollRef} className="mt-4 flex-1 space-y-4 overflow-y-auto scrollbar-thin pr-1">
@@ -390,7 +410,6 @@ export function ChatView() {
 
       <div className="mt-3 space-y-2">
         <DeveloperPanel snapshot={latestSnapshot} />
-        <LogViewer />
       </div>
 
       {/* composer */}
@@ -424,6 +443,30 @@ export function ChatView() {
           {t("chat", "footerNote")}
         </p>
       </div>
+        </div>
+      </div>
+
+      {/* Right sidebar: Request / Response Log */}
+      {!logSidebarClosed && (
+        <RequestLogSidebar
+          collapsed={logSidebarCollapsed}
+          onToggleCollapse={() => setLogSidebarCollapsed((v) => !v)}
+          onClose={() => setLogSidebarClosed(true)}
+          mobileOpen={mobileLogOpen}
+          onMobileClose={() => setMobileLogOpen(false)}
+        />
+      )}
+
+      {/* Reopen button when sidebar is closed (desktop) */}
+      {logSidebarClosed && (
+        <button
+          onClick={() => setLogSidebarClosed(false)}
+          className="glass-strong absolute right-0 top-1/2 z-30 hidden -translate-y-1/2 items-center gap-1 rounded-l-xl border border-r-0 border-white/10 px-2 py-4 text-muted-foreground transition hover:bg-white/5 hover:text-foreground md:flex"
+          aria-label="Open log sidebar"
+        >
+          <ScrollText className="h-4 w-4" />
+        </button>
+      )}
     </div>
   );
 }
