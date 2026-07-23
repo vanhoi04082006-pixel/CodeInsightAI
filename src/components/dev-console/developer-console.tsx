@@ -148,22 +148,16 @@ export function DeveloperConsole({
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: 20, opacity: 0 }}
       transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-      className={cn(
-        "glass-strong flex h-full flex-col border-l border-white/10",
-        isFloating && "absolute right-0 top-0 z-40 shadow-2xl"
-      )}
-      style={{ width: isFloating ? width : "100%" }}
-      onMouseEnter={() => isAutohide && setAutoHidden(false)}
+      className="glass-strong flex h-full flex-col border-l border-white/10"
+      style={{ width: "100%" }}
     >
-      {/* Drag handle (desktop only, not floating) */}
-      {!isFloating && (
-        <div
-          onMouseDown={onDragStart}
-          className="absolute -left-1 top-0 z-10 hidden h-full w-2 cursor-col-resize md:block"
-        >
-          <div className="h-full w-0.5 bg-transparent transition hover:bg-cyan-400/30" />
-        </div>
-      )}
+      {/* Drag handle (desktop only) */}
+      <div
+        onMouseDown={onDragStart}
+        className="absolute -left-1 top-0 z-10 hidden h-full w-2 cursor-col-resize md:block"
+      >
+        <div className="h-full w-0.5 bg-transparent transition hover:bg-cyan-400/30" />
+      </div>
 
       {/* Header — fixed */}
       <div className="shrink-0 border-b border-white/10 px-4 py-3">
