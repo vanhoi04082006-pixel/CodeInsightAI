@@ -19,9 +19,11 @@ import {
   Check,
   Copy,
   ScrollText,
+  Terminal,
 } from "lucide-react";
 import { GlassCard, GradientText } from "@/components/shared/ui";
 import { DeveloperConsole } from "@/components/dev-console/developer-console";
+import { RequestLogSidebar } from "@/components/shared/request-log-sidebar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useAppStore } from "@/lib/store";
@@ -45,6 +47,7 @@ export function ChatView() {
   const setAnalysisId = useAppStore((s) => s.setActiveAnalysisId);
   const activePersonality = usePersonalityStore((s) => s.getActive());
   const latestSnapshot = useDeveloperModeStore((s) => s.snapshots[0] ?? null);
+  const devModeEnabled = useDeveloperModeStore((s) => s.enabled);
 
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -53,6 +56,11 @@ export function ChatView() {
 
   // Developer console state (replaces old RequestLogSidebar)
   const [devConsoleClosed, setDevConsoleClosed] = useState(false);
+
+  // Request log sidebar state (independent toggle)
+  const [logSidebarOpen, setLogSidebarOpen] = useState(false);
+  const [logSidebarCollapsed, setLogSidebarCollapsed] = useState(false);
+  const [mobileLogOpen, setMobileLogOpen] = useState(false);
 
   const SUGGESTIONS = [
     { icon: Shield, text: t("chat", "suggestions.security"), color: "#f472b6" },
@@ -375,6 +383,38 @@ export function ChatView() {
               </button>
             </div>
             <div className="flex items-center gap-2">
+              {/* Toggle: Request Log sidebar */}
+              <button
+                onClick={() => setLogSidebarOpen((v) => !v)}
+                className={cn(
+                  "flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs transition",
+                  logSidebarOpen
+                    ? "border-cyan-400/40 bg-cyan-500/10 text-cyan-300"
+                    : "border-white/10 bg-white/[0.03] text-muted-foreground hover:bg-white/5 hover:text-foreground"
+                )}
+                aria-label="Toggle Request Log"
+                title="Toggle Request Log sidebar"
+              >
+                <ScrollText className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Nhật ký</span>
+              </button>
+              {/* Toggle: Developer Console (only if dev mode enabled) */}
+              {devModeEnabled && (
+                <button
+                  onClick={() => setDevConsoleClosed((v) => !v)}
+                  className={cn(
+                    "flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs transition",
+                    !devConsoleClosed
+                      ? "border-violet-400/40 bg-violet-500/10 text-violet-300"
+                      : "border-white/10 bg-white/[0.03] text-muted-foreground hover:bg-white/5 hover:text-foreground"
+                  )}
+                  aria-label="Toggle Developer Console"
+                  title="Toggle Developer Console sidebar"
+                >
+                  <Terminal className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Dev</span>
+                </button>
+              )}
               <Button variant="ghost" size="sm" onClick={() => { clearChat(); toast.success(t("chat", "clearToast")); }}>
                 <Trash2 className="mr-1.5 h-3.5 w-3.5" /> {t("chat", "clear")}
               </Button>
@@ -468,13 +508,24 @@ export function ChatView() {
         </div>
       </div>
 
-      {/* Right sidebar: Developer Console (replaces old RequestLogSidebar) */}
+      {/* Right sidebar: Developer Console (independent toggle) */}
       <DeveloperConsole
         snapshot={latestSnapshot}
         closed={devConsoleClosed}
         onClose={() => setDevConsoleClosed(true)}
         onOpen={() => setDevConsoleClosed(false)}
       />
+
+      {/* Right sidebar: Request Log (independent toggle) */}
+      {logSidebarOpen && (
+        <RequestLogSidebar
+          collapsed={logSidebarCollapsed}
+          onToggleCollapse={() => setLogSidebarCollapsed((v) => !v)}
+          onClose={() => setLogSidebarOpen(false)}
+          mobileOpen={mobileLogOpen}
+          onMobileClose={() => setMobileLogOpen(false)}
+        />
+      )}
     </div>
   );
 }
