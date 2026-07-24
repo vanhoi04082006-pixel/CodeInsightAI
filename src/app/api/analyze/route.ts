@@ -144,7 +144,7 @@ export async function POST(req: NextRequest) {
         console.warn(`[${jobId}] No GitHub token — private repos will fail with 404. User should sign in with GitHub.`);
       }
       // Run analysis in background (non-blocking)
-      runAnalysisInBackground(job.id, parsed.owner, parsed.name, parsed.url, !!force, ghToken, userId).catch(e => {
+      runAnalysisInBackground(job.id, parsed.owner, parsed.name, parsed.url, !!force, ghToken, userId, body.aiEnhance !== false, platformProvider, platformModel).catch(e => {
         console.error(`[job ${job.id}] background error:`, e);
         failJob(job.id, e.message || "Unknown error");
       });
@@ -378,7 +378,10 @@ async function runAnalysisInBackground(
   repoUrl: string,
   force: boolean,
   ghToken: string | null = null,
-  userId: string | null = null
+  userId: string | null = null,
+  enableAiEnhance: boolean = true,
+  platformProvider?: string,
+  platformModel?: string
 ) {
   startJob(jobId);
 
@@ -489,6 +492,76 @@ async function runAnalysisInBackground(
     setJobProgress(jobId, 75, "Running security analysis...");
     const { analyzeParsedRepository } = await import("@/lib/analysis-engine-v2");
     const report = analyzeParsedRepository(parsedRepo, fileContents);
+
+    if (isCancelled(jobId)) { failJob(jobId, "Cancelled"); return; }
+
+    // Stage 5.5: Deep AI Analysis (7-pass) — runs in async mode too!
+    if (enableAiEnhance) {
+      setJobProgress(jobId, 80, "Running 7-pass AI analysis...");
+      try {
+        const { runDeepAnalysis } = await import("@/lib/ai-deep-analysis");
+        const { getPlatformAIProvider, getPlatformAIConfig } = await import("@/lib/platform-ai");
+        const { decrypt } = await import("@/lib/crypto");
+
+        let aiConfig = null;
+
+        // 1. Pro user selected a specific platform provider + model
+        if (platformProvider) {
+          aiConfig = await getPlatformAIProvider(platformProvider, platformModel);
+        }
+
+        // 2. Fallback: first available Platform AI (DB or env)
+        if (!aiConfig) {
+          aiConfig = await getPlatformAIConfig();
+        }
+
+        // 3. BYOK — look up user's saved credential
+        if (!aiConfig && userId) {
+          const cred = await db.providerCredential.findFirst({
+            where: { userId, enabled: true },
+            orderBy: { updatedAt: "desc" },
+          });
+          if (cred) {
+            try {
+              aiConfig = {
+                providerId: cred.providerId, apiKey: decrypt(cred.encryptedApiKey),
+                baseUrl: cred.baseUrl, model: cred.model,
+                temperature: cred.temperature ?? 0.7, maxTokens: cred.maxTokens ?? 4096, timeout: 60,
+              };
+            } catch {}
+          }
+        }
+
+        if (aiConfig) {
+          console.log(`[job ${jobId}] Running 7-pass AI analysis (async) with ${aiConfig.providerId}/${aiConfig.model}`);
+          const analysisContext = parsedRepo || {
+            owner, name: repo, url: repoUrl,
+            totalFiles: report.totalFiles, totalLines: report.totalLines,
+            languages: report.languages, frameworks: report.frameworks,
+            files: report.files.map(f => ({
+              path: f.path, language: f.language, lines: f.lines,
+              complexity: f.complexity, description: f.description,
+              imports: [], exports: [], functions: [], classes: [], components: [], routes: [],
+            })),
+          };
+          const deepResult = await runDeepAnalysis(analysisContext as any, report, aiConfig);
+          if (deepResult) {
+            (report as any).deepAnalysis = deepResult;
+            (report as any).aiEnhancement = {
+              aiSummary: deepResult.executiveSummary,
+              aiBadge: "ai-enhanced",
+            };
+            console.log(`[job ${jobId}] AI analysis complete (async) — badge: deep-ai`);
+          } else {
+            console.warn(`[job ${jobId}] runDeepAnalysis returned null (async) — check AI provider errors`);
+          }
+        } else {
+          console.warn(`[job ${jobId}] No AI provider available (async) — static analysis only`);
+        }
+      } catch (e) {
+        console.warn(`[job ${jobId}] AI analysis failed (async, non-fatal):`, e);
+      }
+    }
 
     if (isCancelled(jobId)) { failJob(jobId, "Cancelled"); return; }
 
