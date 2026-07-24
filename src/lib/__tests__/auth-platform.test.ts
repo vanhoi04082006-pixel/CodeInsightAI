@@ -114,9 +114,9 @@ describe("AI Client Types", () => {
 });
 
 describe("Provider Presets", () => {
-  it("should have 14 provider presets", async () => {
+  it("should have 15 provider presets", async () => {
     const { PROVIDER_PRESETS } = await import("@/lib/providers");
-    expect(PROVIDER_PRESETS.length).toBe(14);
+    expect(PROVIDER_PRESETS.length).toBe(15);
   });
 
   it("should include OpenRouter, OpenAI, Anthropic, Gemini", async () => {

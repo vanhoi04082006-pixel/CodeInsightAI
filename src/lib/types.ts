@@ -29,6 +29,7 @@ export type ProviderId =
   | "fireworks"
   | "mistral"
   | "xai"
+  | "shopaikey"
   | "custom";
 
 export type FeatureKind =
