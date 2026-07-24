@@ -175,18 +175,12 @@ export function AnalyzeView() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          repoUrl: parsed.url, async: false, force: true,
+          repoUrl: parsed.url, async: true, force: true,
           aiEnhance: useAI, // send AI toggle state
           ...aiBody,
         }),
       });
       const startData = await startRes.json();
-
-      // Animate progress while waiting (sync mode — no real progress updates)
-      // Stages: 0=Fetch, 1=Parse, 2=Analyze, 3=AI, 4=Save
-      setTargetProgress(10);
-      setStageIdx(0);
-      setStageProgress(20);
 
       // ERROR: server returned error
       if (!startRes.ok || startData.error) {
