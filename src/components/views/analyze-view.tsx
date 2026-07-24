@@ -171,149 +171,66 @@ export function AnalyzeView() {
         aiBody.aiMode = "byok";
       }
 
+      // Simulate progress while waiting for sync API response
+      // Stages: 0=Fetch(0-20%), 1=Parse(20-40%), 2=Analyze(40-60%), 3=AI(60-85%), 4=Save(85-100%)
+      const progressStages = [
+        { target: 15, delay: 500, stage: 0 },
+        { target: 30, delay: 1500, stage: 1 },
+        { target: 45, delay: 3000, stage: 2 },
+        { target: 60, delay: 5000, stage: 3 },
+        { target: 75, delay: 8000, stage: 3 },
+        { target: 85, delay: 12000, stage: 3 },
+      ];
+      progressStages.forEach((ps) => {
+        timers.current.push(setTimeout(() => {
+          setTargetProgress(ps.target);
+          setStageIdx(ps.stage);
+          setStageProgress(((ps.target / (100 / ANALYSIS_STAGES.length)) % 1) * 100);
+        }, ps.delay));
+      });
+
       const startRes = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          repoUrl: parsed.url, async: true, force: true,
-          aiEnhance: useAI, // send AI toggle state
+          repoUrl: parsed.url, async: false, force: true,
+          aiEnhance: useAI,
           ...aiBody,
         }),
       });
       const startData = await startRes.json();
 
+      // Clear simulated progress timers
+      clearTimers();
+
       // ERROR: server returned error
       if (!startRes.ok || startData.error) {
+        stopProgressAnimation();
         setPhase("error");
         toast.error(startData.error || "Analysis failed");
         return;
       }
 
-      // If cached result returned immediately
+      // Success — sync mode returns report directly
       if (startData.report) {
+        setTargetProgress(100);
+        setStageIdx(ANALYSIS_STAGES.length - 1);
+        setStageProgress(100);
         setReport(startData.report);
         setActiveAnalysisId(startData.id ?? null);
         clearChat();
-        setPhase("done");
-        toast.success(`Analysis complete — ${startData.report.scores.overall}/100`);
+        setTimeout(() => {
+          setPhase("done");
+          stopProgressAnimation();
+          toast.success(`Analysis complete — ${startData.report.scores.overall}/100`);
+        }, 600);
         return;
       }
 
-      // If we got a jobId, poll for progress
-      if (startData.jobId) {
-        const jobId = startData.jobId;
-        let pollCount = 0;
-        const maxPolls = 360; // 360 polls × 1s = 6 minutes (enough for 7-pass AI)
-
-        const poll = async () => {
-          pollCount++;
-          if (pollCount > maxPolls) {
-            // Last resort: check DB before showing timeout error
-            // (analysis might have completed on another Vercel instance)
-            try {
-              const historyRes = await fetch("/api/analyze?limit=1");
-              const historyData = await historyRes.json();
-              if (historyData.items?.length > 0) {
-                const latest = historyData.items[0];
-                const ageMs = Date.now() - new Date(latest.createdAt).getTime();
-                if (ageMs < 10 * 60 * 1000) {
-                  // Found recent analysis — load it
-                  const reportRes = await fetch(`/api/report?id=${latest.id}`);
-                  const reportData = await reportRes.json();
-                  if (reportData.report) {
-                    setReport(reportData.report);
-                    setActiveAnalysisId(latest.id);
-                    clearChat();
-                    setPhase("done");
-                    setTargetProgress(100);
-                    setStageIdx(ANALYSIS_STAGES.length - 1);
-                    setStageProgress(100);
-                    stopProgressAnimation();
-                    toast.success("Analysis complete!");
-                    return;
-                  }
-                }
-              }
-            } catch {}
-            setPhase("error");
-            toast.error("Analysis timed out. Please try again.");
-            return;
-          }
-
-          try {
-            const res = await fetch(`/api/jobs/${jobId}`);
-            const data = await res.json();
-            const job = data.job;
-
-            if (!job) {
-              setPhase("error");
-              toast.error("Job not found");
-              return;
-            }
-
-            // Map job progress to visual stages.
-            // We set the TARGET progress — the rAF loop interpolates the
-            // DISPLAYED progress smoothly (1-2-3-4-5 instead of 5-10-15 jumps).
-            const progress = job.progress || 0;
-            setTargetProgress(progress);
-            // Stages update based on target (so stage transitions happen at
-            // the right moment even before the bar catches up visually).
-            const sIdx = Math.min(Math.floor((progress / 100) * ANALYSIS_STAGES.length), ANALYSIS_STAGES.length - 1);
-            setStageIdx(sIdx);
-            const stagePct = ((progress / (100 / ANALYSIS_STAGES.length)) % 1) * 100;
-            setStageProgress(stagePct);
-
-            if (job.status === "completed" && job.result) {
-              setTargetProgress(100);
-              setStageIdx(ANALYSIS_STAGES.length - 1);
-              setStageProgress(100);
-              // Give the animation ~600ms to reach 100% before switching view.
-              setTimeout(() => {
-                setReport(job.result.report);
-                setActiveAnalysisId(job.result.id ?? null);
-                clearChat();
-                setPhase("done");
-                stopProgressAnimation();
-                const score = job.result.report?.scores?.overall ?? 0;
-                toast.success(`Analysis complete — ${score}/100`);
-              }, 600);
-            } else if (job.status === "failed") {
-              stopProgressAnimation();
-              setPhase("error");
-              toast.error(job.error || "Analysis failed");
-            } else if (job.status === "cancelled") {
-              stopProgressAnimation();
-              setPhase("error");
-              toast.error("Analysis cancelled");
-            } else {
-              // Still running — poll again after 1s
-              timers.current.push(setTimeout(poll, 1000));
-            }
-          } catch (e) {
-            console.error("Poll error:", e);
-            timers.current.push(setTimeout(poll, 2000));
-          }
-        };
-
-        timers.current.push(setTimeout(poll, 1000));
-        return;
-      }
-
-      // Fallback: sync API call
-      const res = await fetch("/api/analyze", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ repoUrl: parsed.url }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error ?? "Analysis failed");
-      setReport(data.report);
-      setActiveAnalysisId(data.id ?? null);
-      clearChat();
-      setPhase("done");
-      toast.success(`Analysis complete — ${data.report.scores.overall}/100`);
     } catch (e) {
       console.error(e);
+      clearTimers();
+      stopProgressAnimation();
       setPhase("error");
       toast.error("Analysis failed. Please try again.");
     }
