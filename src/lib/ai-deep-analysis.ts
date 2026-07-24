@@ -112,9 +112,9 @@ const MODEL_MAX_TOKENS: Record<string, number> = {
   "gpt-4o-mini": 2000,
   "gpt-5-mini": 3000,
   "gpt-4.1-mini": 4000,
-  "claude-sonnet-4-5": 4000,
+  "grok-4-fast-reasoning": 2000,
   "deepseek-chat": 3000,
-  "grok-4-fast": 2000,
+  "qwen3-coder-flash": 3000,
 };
 
 function getMaxTokensForModel(model: string): number {
