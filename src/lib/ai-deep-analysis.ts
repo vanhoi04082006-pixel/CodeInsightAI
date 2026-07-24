@@ -118,32 +118,56 @@ async function runPass(
   ];
 
   // Attempt 1: with response_format: json_object (some providers support this)
-  // maxTokens: 1500 (conservative — avoids 402 credit errors on OpenRouter free tier)
+  // maxTokens: 4096 — Pro quality (user pays for Pro, deserves best)
+  // If 402 (credits), retry with lower maxTokens
   try {
     const result = await callAI(provider, messages, {
       temperature: 0.3,
-      maxTokens: 1500,
-      timeout: 45,
+      maxTokens: 4096,
+      timeout: 60,
       responseFormat: "json_object",
     });
 
     if (result.content) {
       const parsed = safeJsonParse(result.content);
       if (parsed) {
-        console.log(`[deep-analysis] Pass ${passType}: OK (json_object mode)`);
+        console.log(`[deep-analysis] Pass ${passType}: OK (json_object mode, 4096 tokens)`);
         return parsed;
       }
     }
   } catch (e: any) {
-    console.warn(`[deep-analysis] Pass ${passType} attempt 1 (json_object) failed:`, e?.message?.slice(0, 200));
+    const errMsg = e?.message || "";
+    console.warn(`[deep-analysis] Pass ${passType} attempt 1 (4096 tokens) failed:`, errMsg.slice(0, 200));
+
+    // If 402 (credits exhausted), retry with lower maxTokens
+    if (errMsg.includes("402") || errMsg.includes("credits") || errMsg.includes("afford")) {
+      console.warn(`[deep-analysis] Pass ${passType}: 402 credits error — retrying with 1500 tokens`);
+      try {
+        const result = await callAI(provider, messages, {
+          temperature: 0.3,
+          maxTokens: 1500,
+          timeout: 60,
+          responseFormat: "json_object",
+        });
+        if (result.content) {
+          const parsed = safeJsonParse(result.content);
+          if (parsed) {
+            console.log(`[deep-analysis] Pass ${passType}: OK (json_object mode, 1500 tokens fallback)`);
+            return parsed;
+          }
+        }
+      } catch (e2: any) {
+        console.warn(`[deep-analysis] Pass ${passType} 402-retry failed:`, e2?.message?.slice(0, 200));
+      }
+    }
   }
 
   // Attempt 2: without response_format (fallback for providers that don't support it)
   try {
     const result = await callAI(provider, messages, {
       temperature: 0.3,
-      maxTokens: 1500,
-      timeout: 45,
+      maxTokens: 4096,
+      timeout: 60,
       // No responseFormat — let AI return plain text, we extract JSON
     });
 
