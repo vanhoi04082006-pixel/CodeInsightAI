@@ -175,7 +175,7 @@ export function AnalyzeView() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          repoUrl: parsed.url, async: true, force: true,
+          repoUrl: parsed.url, async: false, force: true,
           aiEnhance: useAI, // send AI toggle state
           ...aiBody,
         }),

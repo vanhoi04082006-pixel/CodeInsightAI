@@ -9,6 +9,7 @@ import { checkQuota, incrementUsage } from "@/lib/billing/usage";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 300; // 5 minutes — allows full analysis + 7-pass AI
 
 /**
  * Get the current user's GitHub access token (from session JWT or DB Account).
