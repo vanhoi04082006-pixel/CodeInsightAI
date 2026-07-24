@@ -222,7 +222,7 @@ export async function POST(req: NextRequest) {
         }
 
         if (aiConfig) {
-          // DEV: console.log(`[${jobId}] Running 7-pass AI analysis with ${aiConfig.providerId}/${aiConfig.model}`);
+          console.log(`[${jobId}] Running 7-pass AI analysis with ${aiConfig.providerId}/${aiConfig.model}`);
           // Use parsedRepoData if available, otherwise build minimal context from report
           const analysisContext = parsedRepoData || {
             owner: parsed.owner,
@@ -245,10 +245,12 @@ export async function POST(req: NextRequest) {
               aiSummary: deepResult.executiveSummary,
               aiBadge: "ai-enhanced",
             };
-            // DEV: console.log(`[${jobId}] AI analysis complete — badge: deep-ai`);
+            console.log(`[${jobId}] AI analysis complete — badge: deep-ai`);
+          } else {
+            console.warn(`[${jobId}] runDeepAnalysis returned null — check AI provider errors above`);
           }
         } else {
-          // DEV: console.log(`[${jobId}] No AI provider available — static analysis only`);
+          console.warn(`[${jobId}] No AI provider available — static analysis only (platformProvider=${platformProvider}, platformModel=${platformModel})`);
         }
       } catch (e) {
         console.warn(`[${jobId}] AI analysis failed (non-fatal):`, e);
