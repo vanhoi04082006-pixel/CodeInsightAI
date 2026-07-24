@@ -118,10 +118,11 @@ async function runPass(
   ];
 
   // Attempt 1: with response_format: json_object (some providers support this)
+  // maxTokens: 1500 (conservative — avoids 402 credit errors on OpenRouter free tier)
   try {
     const result = await callAI(provider, messages, {
       temperature: 0.3,
-      maxTokens: 2000,
+      maxTokens: 1500,
       timeout: 45,
       responseFormat: "json_object",
     });
@@ -141,7 +142,7 @@ async function runPass(
   try {
     const result = await callAI(provider, messages, {
       temperature: 0.3,
-      maxTokens: 2000,
+      maxTokens: 1500,
       timeout: 45,
       // No responseFormat — let AI return plain text, we extract JSON
     });
