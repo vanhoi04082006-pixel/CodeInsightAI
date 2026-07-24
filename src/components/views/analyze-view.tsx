@@ -182,6 +182,19 @@ export function AnalyzeView() {
       });
       const startData = await startRes.json();
 
+      // Animate progress while waiting (sync mode — no real progress updates)
+      // Stages: 0=Fetch, 1=Parse, 2=Analyze, 3=AI, 4=Save
+      setTargetProgress(10);
+      setStageIdx(0);
+      setStageProgress(20);
+
+      // ERROR: server returned error
+      if (!startRes.ok || startData.error) {
+        setPhase("error");
+        toast.error(startData.error || "Analysis failed");
+        return;
+      }
+
       // If cached result returned immediately
       if (startData.report) {
         setReport(startData.report);
