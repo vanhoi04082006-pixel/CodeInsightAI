@@ -431,16 +431,9 @@ function AIModeToggle() {
           </div>
         </button>
 
-        {/* Platform AI = Default */}
+        {/* Default (Platform AI) — available for ALL users (free + pro) */}
         <button
-          onClick={() => {
-            if (plan === "free") {
-              toast.info("Upgrade to Pro to use Platform AI — no API key needed.");
-              upgrade();
-            } else {
-              setAiMode("platform");
-            }
-          }}
+          onClick={() => setAiMode("platform")}
           className={`rounded-xl border p-4 text-left transition ${
             aiMode === "platform"
               ? "border-violet-400/40 bg-violet-400/[0.06]"
@@ -450,25 +443,21 @@ function AIModeToggle() {
           <div className="flex items-center justify-between">
             <span className="text-sm font-semibold text-violet-300">
               🤖 Default (Platform AI)
-              {plan === "free" && (
-                <span className="ml-2 rounded-full bg-violet-500/20 px-1.5 py-0.5 text-[8px] font-bold uppercase text-violet-300">PRO</span>
-              )}
             </span>
             {aiMode === "platform" && <Check className="h-4 w-4 text-violet-300" />}
           </div>
           <p className="mt-1 text-[11px] text-muted-foreground">
             {plan === "free"
-              ? "Free: 1M tokens/month · Pro: 10M tokens/month"
-              : "Active — using admin's default provider (ShopAIKey)"}
+              ? "Free: 1M tokens/month · 1 default model"
+              : "Pro: 10M tokens/month · 8 models to choose"}
           </p>
-          {plan !== "free" && (
+          {plan === "free" ? (
+            <div className="mt-2">
+              <span className="rounded-full bg-cyan-500/10 px-2 py-0.5 text-[9px] text-cyan-300">Free plan — 1M tokens included</span>
+            </div>
+          ) : (
             <div className="mt-2">
               <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[9px] text-emerald-300">Pro plan active</span>
-            </div>
-          )}
-          {loading && (
-            <div className="mt-2">
-              <Loader2 className="h-3 w-3 animate-spin text-violet-300" />
             </div>
           )}
         </button>
