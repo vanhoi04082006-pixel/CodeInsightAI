@@ -28,6 +28,7 @@ import { LanguageSwitcher } from "@/components/shared/language-switcher";
 import { UserMenu } from "@/components/shared/user-menu";
 import { AIModeToggle } from "@/components/shared/ai-mode-toggle";
 import { SystemStatusIndicator } from "@/components/shared/system-status-indicator";
+import { TokenUsageWidget } from "@/components/shared/token-usage-widget";
 import { useSession } from "next-auth/react";
 import { isProduction } from "@/lib/env";
 import { Lock } from "lucide-react";
@@ -234,6 +235,7 @@ export function AppTopbar() {
           <span>{t("common", "actions.quickSearch")}</span>
           <kbd className="rounded bg-white/5 px-1.5 py-0.5 text-[10px]">⌘K</kbd>
         </button>
+        <TokenUsageWidget compact />
         <SystemStatusIndicator />
         <AIModeToggle />
         <LanguageSwitcher compact />

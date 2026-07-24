@@ -50,14 +50,15 @@ export async function GET() {
 
     // FALLBACK: If no DB configs, check env vars (PLATFORM_AI_API_KEY etc.)
     if (providers.length === 0 && process.env.PLATFORM_AI_API_KEY) {
-      const envProviderId = process.env.PLATFORM_AI_PROVIDER || "openrouter";
+      const envProviderId = process.env.PLATFORM_AI_PROVIDER || "shopaikey";
       const preset = PRESET_BY_ID[envProviderId];
       providers = [{
         providerId: envProviderId,
         name: preset?.name || envProviderId,
         category: preset?.category || "Cloud",
         baseUrl: process.env.PLATFORM_AI_BASE_URL || preset?.defaultBaseUrl || "",
-        models: preset?.models || [process.env.PLATFORM_AI_MODEL || "gpt-4o-mini"],
+        // Use ALL models from preset (8 models for ShopAIKey), not just PLATFORM_AI_MODEL
+        models: preset?.models || [process.env.PLATFORM_AI_MODEL || "gpt-4.1-mini"],
       }];
     }
 

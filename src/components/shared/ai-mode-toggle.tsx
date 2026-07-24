@@ -102,7 +102,7 @@ export function AIModeToggle({ compact = false }: { compact?: boolean }) {
       }
       // If providers not loaded yet, try loading now (might be timing issue)
       if (platformProviders.length === 0) {
-        toast.loading("Loading Platform AI providers…", { id: "load-providers" });
+        toast.loading("Loading ShopAIKey providers…", { id: "load-providers" });
         try {
           const res = await fetch("/api/platform-ai/options");
           const data = await res.json();
@@ -116,14 +116,14 @@ export function AIModeToggle({ compact = false }: { compact?: boolean }) {
             setAiMode("platform");
             setJustSwitched(true);
             setTimeout(() => setJustSwitched(false), 1000);
-            toast.success("Switched to Platform AI", {
+            toast.success("Switched to ShopAIKey", {
               description: `Using ${first.name} / ${first.models[0] || "default"}`,
             });
             return;
           }
         } catch {}
         toast.dismiss("load-providers");
-        toast.error("No Platform AI providers configured", {
+        toast.error("No ShopAIKey providers configured", {
           description: "Admin needs to configure at least one AI provider in Admin Dashboard.",
         });
         return;
@@ -131,14 +131,14 @@ export function AIModeToggle({ compact = false }: { compact?: boolean }) {
       setAiMode("platform");
       setJustSwitched(true);
       setTimeout(() => setJustSwitched(false), 1000);
-      toast.success("Switched to Platform AI", {
+      toast.success("Switched to ShopAIKey", {
         description: `Using ${platformProviders.find(p => p.providerId === selectedProvider)?.name || "admin key"}`,
       });
     }
   };
 
   const Icon = isPlatform ? Sparkles : KeyRound;
-  const color = isPlatform ? "#a78bfa" : "#22d3ee";
+  const color = isPlatform ? "#10b981" : "#22d3ee"; // emerald for ShopAIKey
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -197,7 +197,7 @@ export function AIModeToggle({ compact = false }: { compact?: boolean }) {
               onClick={handleToggle}
               disabled={loading}
               className="group relative flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-1.5 text-xs font-medium transition hover:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-60"
-              aria-label={`AI Mode: ${isPlatform ? "Platform AI" : "BYOK"} — click to switch`}
+              aria-label={`AI Mode: ${isPlatform ? "ShopAIKey" : "BYOK"} — click to switch`}
             >
               {loading ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin text-violet-300" />
@@ -215,7 +215,7 @@ export function AIModeToggle({ compact = false }: { compact?: boolean }) {
               )}
               {!compact && (
                 <span className="hidden sm:inline" style={{ color }}>
-                  {isPlatform ? "Platform AI" : "BYOK"}
+                  {isPlatform ? "ShopAIKey" : "BYOK"}
                 </span>
               )}
               {!isPro && !isPlatform && (
@@ -228,7 +228,7 @@ export function AIModeToggle({ compact = false }: { compact?: boolean }) {
           <TooltipContent side="bottom" className="max-w-xs">
             <div className="space-y-1 text-xs">
               <p className="font-semibold">
-                AI Mode: {isPlatform ? "🤖 Platform AI" : "🔑 BYOK (Bring Your Own Key)"}
+                AI Mode: {isPlatform ? "🤖 ShopAIKey" : "🔑 BYOK (Bring Your Own Key)"}
               </p>
               <p className="text-muted-foreground">
                 {isPlatform
@@ -239,7 +239,7 @@ export function AIModeToggle({ compact = false }: { compact?: boolean }) {
                 <p className="text-violet-300">Click to upgrade to Pro — $9/mo</p>
               )}
               {isPro && platformProviders.length === 0 && (
-                <p className="text-amber-300">No Platform AI providers configured. Ask admin to add one.</p>
+                <p className="text-amber-300">No ShopAIKey providers configured. Ask admin to add one.</p>
               )}
               <p className="text-muted-foreground/70">Click to switch mode</p>
             </div>
