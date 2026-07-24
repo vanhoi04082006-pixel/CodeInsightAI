@@ -70,7 +70,7 @@ export const useProvidersStore = create<ProvidersState>()(
   persist(
     (set, get) => ({
       providers: [],
-      aiMode: "byok",
+      aiMode: "platform", // Default = admin's Platform AI key (free: 1M tokens, no setup needed)
       routing: {},
       platformAiConfigured: false,
 
@@ -173,6 +173,15 @@ export const useProvidersStore = create<ProvidersState>()(
     }),
     {
       name: "codeinsight-ai-providers",
+      version: 2,
+      // Migrate: force all users to "platform" (Default) mode
+      // Previously default was "byok" (Custom) — new users should use Default
+      migrate: (persistedState: any, version: number) => {
+        if (version < 2 && persistedState) {
+          persistedState.aiMode = "platform";
+        }
+        return persistedState;
+      },
       // Only persist providers + routing + aiMode — never runtime status.
       // In production, we ALSO strip the apiKey from localStorage so even
       // if the user inspects localStorage, no secrets are visible.

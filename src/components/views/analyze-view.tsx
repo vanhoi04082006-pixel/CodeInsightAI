@@ -203,11 +203,38 @@ export function AnalyzeView() {
       if (startData.jobId) {
         const jobId = startData.jobId;
         let pollCount = 0;
-        const maxPolls = 120;
+        const maxPolls = 360; // 360 polls × 1s = 6 minutes (enough for 7-pass AI)
 
         const poll = async () => {
           pollCount++;
           if (pollCount > maxPolls) {
+            // Last resort: check DB before showing timeout error
+            // (analysis might have completed on another Vercel instance)
+            try {
+              const historyRes = await fetch("/api/analyze?limit=1");
+              const historyData = await historyRes.json();
+              if (historyData.items?.length > 0) {
+                const latest = historyData.items[0];
+                const ageMs = Date.now() - new Date(latest.createdAt).getTime();
+                if (ageMs < 10 * 60 * 1000) {
+                  // Found recent analysis — load it
+                  const reportRes = await fetch(`/api/report?id=${latest.id}`);
+                  const reportData = await reportRes.json();
+                  if (reportData.report) {
+                    setReport(reportData.report);
+                    setActiveAnalysisId(latest.id);
+                    clearChat();
+                    setPhase("done");
+                    setTargetProgress(100);
+                    setStageIdx(ANALYSIS_STAGES.length - 1);
+                    setStageProgress(100);
+                    stopProgressAnimation();
+                    toast.success("Analysis complete!");
+                    return;
+                  }
+                }
+              }
+            } catch {}
             setPhase("error");
             toast.error("Analysis timed out. Please try again.");
             return;
@@ -259,8 +286,8 @@ export function AnalyzeView() {
               setPhase("error");
               toast.error("Analysis cancelled");
             } else {
-              // Still running — poll again after 500ms (faster for smoother UX)
-              timers.current.push(setTimeout(poll, 500));
+              // Still running — poll again after 1s
+              timers.current.push(setTimeout(poll, 1000));
             }
           } catch (e) {
             console.error("Poll error:", e);
@@ -268,7 +295,7 @@ export function AnalyzeView() {
           }
         };
 
-        timers.current.push(setTimeout(poll, 500));
+        timers.current.push(setTimeout(poll, 1000));
         return;
       }
 
