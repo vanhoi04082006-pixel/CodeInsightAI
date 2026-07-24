@@ -81,7 +81,7 @@ describe("Platform AI Config Resolution", () => {
     if (origKey) process.env.PLATFORM_AI_API_KEY = origKey;
   });
 
-  it("should default to openrouter when provider not specified", async () => {
+  it("should default to shopaikey when provider not specified", async () => {
     const { getPlatformAIConfigFromEnv } = await import("@/lib/platform-ai");
 
     const origKey = process.env.PLATFORM_AI_API_KEY;
@@ -92,7 +92,7 @@ describe("Platform AI Config Resolution", () => {
 
     const config = getPlatformAIConfigFromEnv();
     expect(config).not.toBeNull();
-    expect(config!.providerId).toBe("openrouter");
+    expect(config!.providerId).toBe("shopaikey");
 
     if (origKey) process.env.PLATFORM_AI_API_KEY = origKey;
     else delete process.env.PLATFORM_AI_API_KEY;

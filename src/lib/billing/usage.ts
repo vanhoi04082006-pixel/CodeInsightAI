@@ -8,6 +8,7 @@ export interface PlanLimits {
   maxProviders: number;
   streaming: boolean;
   exportFormats: string[];
+  tokensPerMonth: number; // -1 = unlimited (custom/BYOK), 0 = N/A
 }
 
 export const PLAN_LIMITS: Record<string, PlanLimits> = {
@@ -18,6 +19,7 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     maxProviders: 3,
     streaming: false,
     exportFormats: ["markdown"],
+    tokensPerMonth: 1_000_000, // 1M tokens/tháng (free default)
   },
   pro: {
     analysesPerMonth: 100,
@@ -26,6 +28,7 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     maxProviders: 20,
     streaming: true,
     exportFormats: ["markdown", "json", "pdf"],
+    tokensPerMonth: 10_000_000, // 10M tokens/tháng
   },
   team: {
     analysesPerMonth: 500,
@@ -34,6 +37,7 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     maxProviders: 50,
     streaming: true,
     exportFormats: ["markdown", "json", "pdf"],
+    tokensPerMonth: 50_000_000, // 50M tokens/tháng
   },
   enterprise: {
     analysesPerMonth: -1, // unlimited
@@ -42,6 +46,7 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     maxProviders: -1,
     streaming: true,
     exportFormats: ["markdown", "json", "pdf", "csv"],
+    tokensPerMonth: -1, // unlimited
   },
 };
 

@@ -105,12 +105,29 @@ export async function runDeepAnalysis(
   }
 }
 
+// Model-specific maxTokens — balances quality vs cost
+const MODEL_MAX_TOKENS: Record<string, number> = {
+  "gpt-5-nano": 1000,
+  "gpt-4.1-nano": 1500,
+  "gpt-4o-mini": 2000,
+  "gpt-5-mini": 3000,
+  "gpt-4.1-mini": 4000,
+  "claude-sonnet-4-5": 4000,
+  "deepseek-chat": 3000,
+  "grok-4-fast": 2000,
+};
+
+function getMaxTokensForModel(model: string): number {
+  return MODEL_MAX_TOKENS[model] ?? 2000; // default 2000
+}
+
 async function runPass(
   provider: AIProviderConfig,
   passType: "summary" | "security" | "architecture" | "quality" | "priorities" | "performance" | "bestPractices",
   parsed: ParsedRepository,
   report: AnalysisReport
 ): Promise<any> {
+  const maxTokens = getMaxTokensForModel(provider.model);
   const prompt = buildPrompt(passType, parsed, report);
   const messages: AIMessage[] = [
     { role: "system", content: "You are a Senior Staff Engineer. Respond in valid JSON only, no markdown fences, no explanation. Start your response with { and end with }." },
@@ -118,12 +135,11 @@ async function runPass(
   ];
 
   // Attempt 1: with response_format: json_object (some providers support this)
-  // maxTokens: 4096 — Pro quality (user pays for Pro, deserves best)
-  // If 402 (credits), retry with lower maxTokens
+  // maxTokens: model-specific (balances quality vs cost)
   try {
     const result = await callAI(provider, messages, {
       temperature: 0.3,
-      maxTokens: 4096,
+      maxTokens,
       timeout: 60,
       responseFormat: "json_object",
     });
@@ -131,21 +147,22 @@ async function runPass(
     if (result.content) {
       const parsed = safeJsonParse(result.content);
       if (parsed) {
-        console.log(`[deep-analysis] Pass ${passType}: OK (json_object mode, 4096 tokens)`);
+        console.log(`[deep-analysis] Pass ${passType}: OK (json_object mode, ${maxTokens} tokens)`);
         return parsed;
       }
     }
   } catch (e: any) {
     const errMsg = e?.message || "";
-    console.warn(`[deep-analysis] Pass ${passType} attempt 1 (4096 tokens) failed:`, errMsg.slice(0, 200));
+    console.warn(`[deep-analysis] Pass ${passType} attempt 1 (${maxTokens} tokens) failed:`, errMsg.slice(0, 200));
 
-    // If 402 (credits exhausted), retry with lower maxTokens
+    // If 402 (credits exhausted), retry with half maxTokens
     if (errMsg.includes("402") || errMsg.includes("credits") || errMsg.includes("afford")) {
-      console.warn(`[deep-analysis] Pass ${passType}: 402 credits error — retrying with 1500 tokens`);
+      const fallbackTokens = Math.min(1500, Math.floor(maxTokens / 2));
+      console.warn(`[deep-analysis] Pass ${passType}: 402 credits error — retrying with ${fallbackTokens} tokens`);
       try {
         const result = await callAI(provider, messages, {
           temperature: 0.3,
-          maxTokens: 1500,
+          maxTokens: fallbackTokens,
           timeout: 60,
           responseFormat: "json_object",
         });
@@ -166,7 +183,7 @@ async function runPass(
   try {
     const result = await callAI(provider, messages, {
       temperature: 0.3,
-      maxTokens: 4096,
+      maxTokens,
       timeout: 60,
       // No responseFormat — let AI return plain text, we extract JSON
     });

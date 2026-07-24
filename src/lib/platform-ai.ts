@@ -140,10 +140,10 @@ export function getPlatformAIConfigFromEnv(): AIProviderConfig | null {
   const apiKey = process.env.PLATFORM_AI_API_KEY;
   if (!apiKey || apiKey.length === 0) return null;
 
-  const providerId = process.env.PLATFORM_AI_PROVIDER || "openrouter";
+  const providerId = process.env.PLATFORM_AI_PROVIDER || "shopaikey";
   const preset = PRESET_BY_ID[providerId];
-  const baseUrl = process.env.PLATFORM_AI_BASE_URL || preset?.defaultBaseUrl || "https://openrouter.ai/api/v1";
-  const model = process.env.PLATFORM_AI_MODEL || preset?.defaultModel || "anthropic/claude-3.5-sonnet";
+  const baseUrl = process.env.PLATFORM_AI_BASE_URL || preset?.defaultBaseUrl || "https://api.shopaikey.com/v1";
+  const model = process.env.PLATFORM_AI_MODEL || preset?.defaultModel || "gpt-4.1-mini";
 
   return { providerId, apiKey, baseUrl, model, temperature: 0.7, maxTokens: 4096, timeout: 60 };
 }

@@ -143,31 +143,16 @@ export function AIModeToggle({ compact = false }: { compact?: boolean }) {
   return (
     <TooltipProvider delayDuration={300}>
       <div className="flex items-center gap-1.5">
-        {/* Provider/model selector (Pro + Platform mode only) */}
+        {/* Model selector (Pro + Platform mode only) — Provider removed, use admin default */}
         {isPlatform && isPro && platformProviders.length > 0 && (
           <div className="hidden items-center gap-1 sm:flex">
-            <Select value={selectedProvider} onValueChange={(v) => {
-              setSelectedProvider(v);
-              const p = platformProviders.find((x) => x.providerId === v);
-              if (p) setSelectedModel(p.models[0] || "");
-            }}>
-              <SelectTrigger className="h-7 w-28 border-white/10 bg-white/[0.03] text-[10px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {platformProviders.map((p) => (
-                  <SelectItem key={p.providerId} value={p.providerId} className="text-xs">
-                    {p.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
             <Select value={selectedModel} onValueChange={setSelectedModel}>
-              <SelectTrigger className="h-7 w-40 border-white/10 bg-white/[0.03] text-[10px]">
+              <SelectTrigger className="h-7 w-44 border-white/10 bg-white/[0.03] text-[10px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {platformProviders.find((p) => p.providerId === selectedProvider)?.models.map((m) => (
+                {/* Aggregate all models from all providers (provider is admin's default) */}
+                {platformProviders.flatMap((p) => p.models).map((m) => (
                   <SelectItem key={m} value={m} className="text-xs font-mono">
                     {m}
                   </SelectItem>
