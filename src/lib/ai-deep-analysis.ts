@@ -113,10 +113,11 @@ async function runPass(
 ): Promise<any> {
   const prompt = buildPrompt(passType, parsed, report);
   const messages: AIMessage[] = [
-    { role: "system", content: "You are a Senior Staff Engineer. Respond in valid JSON only, no markdown fences." },
+    { role: "system", content: "You are a Senior Staff Engineer. Respond in valid JSON only, no markdown fences, no explanation. Start your response with { and end with }." },
     { role: "user", content: prompt },
   ];
 
+  // Attempt 1: with response_format: json_object (some providers support this)
   try {
     const result = await callAI(provider, messages, {
       temperature: 0.3,
@@ -125,13 +126,86 @@ async function runPass(
       responseFormat: "json_object",
     });
 
-    if (!result.content) return null;
-    const cleaned = result.content.replace(/^```json\s*/i, "").replace(/\s*```$/i, "").trim();
-    return JSON.parse(cleaned);
-  } catch (e) {
-    console.error(`[deep-analysis] Pass ${passType} failed:`, e);
-    return null;
+    if (result.content) {
+      const parsed = safeJsonParse(result.content);
+      if (parsed) {
+        console.log(`[deep-analysis] Pass ${passType}: OK (json_object mode)`);
+        return parsed;
+      }
+    }
+  } catch (e: any) {
+    console.warn(`[deep-analysis] Pass ${passType} attempt 1 (json_object) failed:`, e?.message?.slice(0, 200));
   }
+
+  // Attempt 2: without response_format (fallback for providers that don't support it)
+  try {
+    const result = await callAI(provider, messages, {
+      temperature: 0.3,
+      maxTokens: 2000,
+      timeout: 45,
+      // No responseFormat — let AI return plain text, we extract JSON
+    });
+
+    if (result.content) {
+      const parsed = safeJsonParse(result.content);
+      if (parsed) {
+        console.log(`[deep-analysis] Pass ${passType}: OK (plain text mode)`);
+        return parsed;
+      }
+      console.warn(`[deep-analysis] Pass ${passType}: JSON parse failed. Content: ${result.content.slice(0, 200)}`);
+    } else {
+      console.warn(`[deep-analysis] Pass ${passType}: Empty response`);
+    }
+  } catch (e: any) {
+    console.error(`[deep-analysis] Pass ${passType} attempt 2 failed:`, e?.message?.slice(0, 200));
+  }
+
+  return null;
+}
+
+/**
+ * Robust JSON parser — handles:
+ * - Plain JSON
+ * - JSON wrapped in ```json ... ``` fences
+ * - JSON embedded in text (extracts first { ... } block)
+ * - Trailing commas (removed)
+ */
+function safeJsonParse(text: string): any | null {
+  if (!text) return null;
+  let cleaned = text.trim();
+
+  // Remove markdown fences
+  cleaned = cleaned.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "");
+
+  // Try direct parse
+  try {
+    return JSON.parse(cleaned);
+  } catch {}
+
+  // Try extracting first { ... } block
+  const firstBrace = cleaned.indexOf("{");
+  const lastBrace = cleaned.lastIndexOf("}");
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    const jsonStr = cleaned.slice(firstBrace, lastBrace + 1);
+    try {
+      return JSON.parse(jsonStr);
+    } catch {}
+    // Remove trailing commas
+    try {
+      return JSON.parse(jsonStr.replace(/,(\s*[}\]])/g, "$1"));
+    } catch {}
+  }
+
+  // Try first [ ... ] block (for arrays)
+  const firstBracket = cleaned.indexOf("[");
+  const lastBracket = cleaned.lastIndexOf("]");
+  if (firstBracket !== -1 && lastBracket !== -1 && lastBracket > firstBracket) {
+    try {
+      return JSON.parse(cleaned.slice(firstBracket, lastBracket + 1));
+    } catch {}
+  }
+
+  return null;
 }
 
 function buildPrompt(
