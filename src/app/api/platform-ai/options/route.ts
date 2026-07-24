@@ -26,10 +26,9 @@ export async function GET() {
     });
     const isPro = (user?.plan !== "free") || (user?.role === "admin");
 
-    if (!isPro) {
-      // Free users — empty list (they use BYOK)
-      return NextResponse.json({ providers: [], isPro: false });
-    }
+    // ALL users (free + pro) can use Default (Platform AI)
+    // Free users: limited to first model + 1M tokens/month
+    // Pro users: all models + 10M tokens/month
 
     // Pro/Admin — return all enabled admin-configured providers
     const configs = await db.platformAIConfig.findMany({
@@ -39,12 +38,15 @@ export async function GET() {
 
     let providers = configs.map((c) => {
       const preset = PRESET_BY_ID[c.providerId];
+      const allModels = JSON.parse(c.models || "[]");
       return {
         providerId: c.providerId,
         name: preset?.name || c.providerId,
         category: preset?.category || "Unknown",
         baseUrl: c.baseUrl,
-        models: JSON.parse(c.models || "[]"),
+        // Free users: only first model (default cheapest)
+        // Pro users: all models
+        models: isPro ? allModels : allModels.slice(0, 1),
       };
     });
 
@@ -52,17 +54,19 @@ export async function GET() {
     if (providers.length === 0 && process.env.PLATFORM_AI_API_KEY) {
       const envProviderId = process.env.PLATFORM_AI_PROVIDER || "shopaikey";
       const preset = PRESET_BY_ID[envProviderId];
+      const allModels = preset?.models || [process.env.PLATFORM_AI_MODEL || "gpt-4.1-mini"];
       providers = [{
         providerId: envProviderId,
         name: preset?.name || envProviderId,
         category: preset?.category || "Cloud",
         baseUrl: process.env.PLATFORM_AI_BASE_URL || preset?.defaultBaseUrl || "",
-        // Use ALL models from preset (8 models for ShopAIKey), not just PLATFORM_AI_MODEL
-        models: preset?.models || [process.env.PLATFORM_AI_MODEL || "gpt-4.1-mini"],
+        // Free users: only first model (cheapest default)
+        // Pro users: all 8 models
+        models: isPro ? allModels : allModels.slice(0, 1),
       }];
     }
 
-    return NextResponse.json({ providers, isPro: true });
+    return NextResponse.json({ providers, isPro });
   } catch (e) {
     console.error("[/api/platform-ai/options]", e);
     return NextResponse.json({ providers: [], isPro: false });

@@ -55,11 +55,10 @@ export function AIModeToggle({ compact = false }: { compact?: boolean }) {
   const isPro = plan !== "free" || role === "admin";
   const isPlatform = aiMode === "platform";
 
-  // Load platform providers for Pro users
-  // Depends on `status` so it re-runs when session finishes loading
+  // Load platform providers for ALL users (free + pro)
+  // Free users get 1 model (default), Pro users get all models
   useEffect(() => {
     if (status !== "authenticated") return;
-    if (!isPro) return;
     fetch("/api/platform-ai/options")
       .then((r) => r.json())
       .then((data) => {
@@ -91,18 +90,18 @@ export function AIModeToggle({ compact = false }: { compact?: boolean }) {
 
   const handleToggle = async () => {
     if (isPlatform) {
+      // Switch from Default → Custom
       setAiMode("byok");
       setJustSwitched(true);
       setTimeout(() => setJustSwitched(false), 1000);
-      toast.success("Switched to BYOK mode", { description: "Using your own API keys (free)." });
+      toast.success("Switched to Custom Mode", { description: "Using your own API keys." });
     } else {
-      if (!isPro) {
-        upgrade("pro");
-        return;
-      }
-      // If providers not loaded yet, try loading now (might be timing issue)
+      // Switch from Custom → Default (available for ALL users, including free)
+      // Default = admin's Platform AI key (free: 1M tokens, Pro: 10M tokens)
+
+      // If providers not loaded yet, try loading now
       if (platformProviders.length === 0) {
-        toast.loading("Loading Platform AI providers…", { id: "load-providers" });
+        toast.loading("Loading providers…", { id: "load-providers" });
         try {
           const res = await fetch("/api/platform-ai/options");
           const data = await res.json();
@@ -110,20 +109,20 @@ export function AIModeToggle({ compact = false }: { compact?: boolean }) {
             setPlatformProviders(data.providers);
             const first = data.providers[0];
             setSelectedProvider(first.providerId);
+            // Pro users can choose model, free users use first model
             setSelectedModel(first.models[0] || "");
             toast.dismiss("load-providers");
-            // Now switch to platform
             setAiMode("platform");
             setJustSwitched(true);
             setTimeout(() => setJustSwitched(false), 1000);
-            toast.success("Switched to Platform AI", {
-              description: `Using ${first.name} / ${first.models[0] || "default"}`,
+            toast.success("Switched to Default", {
+              description: `Using admin's key (${first.name}) — ${isPro ? "10M" : "1M"} tokens/month`,
             });
             return;
           }
         } catch {}
         toast.dismiss("load-providers");
-        toast.error("No Platform AI providers configured", {
+        toast.error("No default provider configured", {
           description: "Admin needs to configure at least one AI provider in Admin Dashboard.",
         });
         return;
@@ -131,8 +130,8 @@ export function AIModeToggle({ compact = false }: { compact?: boolean }) {
       setAiMode("platform");
       setJustSwitched(true);
       setTimeout(() => setJustSwitched(false), 1000);
-      toast.success("Switched to Platform AI", {
-        description: `Using ${platformProviders.find(p => p.providerId === selectedProvider)?.name || "admin key"}`,
+      toast.success("Switched to Default", {
+        description: `Using admin's key — ${isPro ? "10M" : "1M"} tokens/month`,
       });
     }
   };
@@ -143,7 +142,7 @@ export function AIModeToggle({ compact = false }: { compact?: boolean }) {
   return (
     <TooltipProvider delayDuration={300}>
       <div className="flex items-center gap-1.5">
-        {/* Model selector ONLY (Pro + Platform mode) — Provider is admin's default, no dropdown */}
+        {/* Model selector (Default mode + Pro users only) — Free users use default model */}
         {isPlatform && isPro && platformProviders.length > 0 && (
           <div className="hidden items-center gap-1 sm:flex">
             <Select value={selectedModel} onValueChange={setSelectedModel}>
@@ -177,7 +176,7 @@ export function AIModeToggle({ compact = false }: { compact?: boolean }) {
               onClick={handleToggle}
               disabled={loading}
               className="group relative flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-1.5 text-xs font-medium transition hover:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-60"
-              aria-label={`AI Mode: ${isPlatform ? "Platform AI" : "BYOK"} — click to switch`}
+              aria-label={`AI Mode: ${isPlatform ? "Default" : "Custom"} — click to switch`}
             >
               {loading ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin text-violet-300" />
@@ -195,7 +194,7 @@ export function AIModeToggle({ compact = false }: { compact?: boolean }) {
               )}
               {!compact && (
                 <span className="hidden sm:inline" style={{ color }}>
-                  {isPlatform ? "Platform AI" : "BYOK"}
+                  {isPlatform ? "Default" : "Custom"}
                 </span>
               )}
               {!isPro && !isPlatform && (
@@ -208,7 +207,7 @@ export function AIModeToggle({ compact = false }: { compact?: boolean }) {
           <TooltipContent side="bottom" className="max-w-xs">
             <div className="space-y-1 text-xs">
               <p className="font-semibold">
-                AI Mode: {isPlatform ? "🤖 Platform AI" : "🔑 BYOK (Bring Your Own Key)"}
+                AI Mode: {isPlatform ? "🤖 Default" : "🔑 Custom (BYOK)"}
               </p>
               <p className="text-muted-foreground">
                 {isPlatform
@@ -216,10 +215,10 @@ export function AIModeToggle({ compact = false }: { compact?: boolean }) {
                   : "Using your own API keys from OpenRouter, OpenAI, etc. (free)"}
               </p>
               {!isPro && !isPlatform && (
-                <p className="text-violet-300">Click to upgrade to Pro — $9/mo</p>
+                <p className="text-cyan-300">Click to use Default (1M tokens/month free)</p>
               )}
               {isPro && platformProviders.length === 0 && (
-                <p className="text-amber-300">No Platform AI providers configured. Ask admin to add one.</p>
+                <p className="text-amber-300">No default provider configured. Ask admin to add one.</p>
               )}
               <p className="text-muted-foreground/70">Click to switch mode</p>
             </div>
