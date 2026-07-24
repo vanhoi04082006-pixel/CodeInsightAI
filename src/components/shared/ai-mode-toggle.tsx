@@ -143,20 +143,48 @@ export function AIModeToggle({ compact = false }: { compact?: boolean }) {
   return (
     <TooltipProvider delayDuration={300}>
       <div className="flex items-center gap-1.5">
-        {/* Model selector (Pro + Platform mode only) — Provider removed, use admin default */}
+        {/* Provider + Model selector (Pro + Platform mode only) */}
         {isPlatform && isPro && platformProviders.length > 0 && (
           <div className="hidden items-center gap-1 sm:flex">
-            <Select value={selectedModel} onValueChange={setSelectedModel}>
-              <SelectTrigger className="h-7 w-44 border-white/10 bg-white/[0.03] text-[10px]">
+            {/* Provider dropdown — ShopAIKey default, others as fallback */}
+            <Select value={selectedProvider} onValueChange={(v) => {
+              setSelectedProvider(v);
+              const p = platformProviders.find((x) => x.providerId === v);
+              if (p) setSelectedModel(p.models[0] || "");
+            }}>
+              <SelectTrigger className="h-7 w-32 border-white/10 bg-white/[0.03] text-[10px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {/* Aggregate all models from all providers (provider is admin's default) */}
-                {platformProviders.flatMap((p) => p.models).map((m) => (
-                  <SelectItem key={m} value={m} className="text-xs font-mono">
-                    {m}
+                {platformProviders.map((p) => (
+                  <SelectItem key={p.providerId} value={p.providerId} className="text-xs">
+                    <span className="flex items-center gap-1.5">
+                      {p.providerId === "shopaikey" && <span className="text-[8px] font-bold text-emerald-400">★</span>}
+                      {p.name}
+                    </span>
                   </SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+            {/* Model dropdown — with use-case badges */}
+            <Select value={selectedModel} onValueChange={setSelectedModel}>
+              <SelectTrigger className="h-7 w-52 border-white/10 bg-white/[0.03] text-[10px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {platformProviders.find((p) => p.providerId === selectedProvider)?.models.map((m) => {
+                  const info = getModelInfo(selectedProvider, m);
+                  return (
+                    <SelectItem key={m} value={m} className="text-xs">
+                      <div className="flex flex-col">
+                        <span className="font-mono">{m}</span>
+                        {info && (
+                          <span className="text-[9px] text-muted-foreground">{info.badge}</span>
+                        )}
+                      </div>
+                    </SelectItem>
+                  );
+                })}
               </SelectContent>
             </Select>
           </div>
@@ -220,4 +248,26 @@ export function AIModeToggle({ compact = false }: { compact?: boolean }) {
       </div>
     </TooltipProvider>
   );
+}
+
+/**
+ * Get model info (use-case badge, maxTokens) from preset.
+ * Returns undefined if no modelInfo for this provider/model.
+ */
+function getModelInfo(providerId: string, modelId: string): { useCase: string; badge: string; maxTokens: number } | undefined {
+  // Only ShopAIKey has modelInfo for now
+  const SHOPAIKEY_MODELS: Record<string, { useCase: string; badge: string; maxTokens: number }> = {
+    "gpt-5-nano": { useCase: "budget", badge: "Cheapest · Free default", maxTokens: 1000 },
+    "gpt-4.1-nano": { useCase: "fast", badge: "Fast · Low cost", maxTokens: 1500 },
+    "gpt-4o-mini": { useCase: "vision", badge: "Vision · Multimodal", maxTokens: 2000 },
+    "gpt-5-mini": { useCase: "chat", badge: "Best for Chat", maxTokens: 3000 },
+    "gpt-4.1-mini": { useCase: "analyze", badge: "Best for Analyze", maxTokens: 4000 },
+    "claude-sonnet-4-5": { useCase: "deep", badge: "Deep Analysis · Premium", maxTokens: 4000 },
+    "deepseek-chat": { useCase: "code", badge: "Best for Code", maxTokens: 3000 },
+    "grok-4-fast": { useCase: "fast", badge: "Fast Reasoning", maxTokens: 2000 },
+  };
+  if (providerId === "shopaikey") {
+    return SHOPAIKEY_MODELS[modelId];
+  }
+  return undefined;
 }

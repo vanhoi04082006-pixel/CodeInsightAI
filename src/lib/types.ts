@@ -62,6 +62,13 @@ export interface AIProvider {
   error?: string;
 }
 
+export interface ModelInfo {
+  id: string;
+  useCase: "analyze" | "chat" | "fast" | "deep" | "code" | "vision" | "budget";
+  badge: string; // short label: "Best for Analyze", "Fastest", etc.
+  maxTokens: number;
+}
+
 export interface ProviderPreset {
   providerId: ProviderId;
   name: string;
@@ -70,6 +77,7 @@ export interface ProviderPreset {
   docsUrl: string;
   defaultModel: string;
   models: string[];
+  modelInfo?: ModelInfo[]; // detailed model metadata (use-case, maxTokens)
   requiresKey: boolean;
   accent: string;
   local: boolean; // runs locally (ollama, lmstudio)
