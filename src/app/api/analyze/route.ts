@@ -188,16 +188,25 @@ export async function POST(req: NextRequest) {
 
         // 1. Pro user selected a specific platform provider + model
         if (platformProvider) {
+          console.log(`[${jobId}] Trying platform provider: ${platformProvider}/${platformModel}`);
           aiConfig = await getPlatformAIProvider(platformProvider, platformModel);
+          if (!aiConfig) {
+            console.warn(`[${jobId}] getPlatformAIProvider returned null for ${platformProvider}`);
+          }
         }
 
         // 2. Fallback: first available Platform AI (DB or env)
         if (!aiConfig) {
+          console.log(`[${jobId}] Trying getPlatformAIConfig (first available)...`);
           aiConfig = await getPlatformAIConfig();
+          if (!aiConfig) {
+            console.warn(`[${jobId}] getPlatformAIConfig returned null (no DB providers, no env vars)`);
+          }
         }
 
         // 3. BYOK — look up user's saved credential
         if (!aiConfig) {
+          console.log(`[${jobId}] Trying BYOK credential from DB...`);
           const cred = await db.providerCredential.findFirst({
             where: { userId, enabled: true },
             orderBy: { updatedAt: "desc" },
@@ -209,7 +218,12 @@ export async function POST(req: NextRequest) {
                 baseUrl: cred.baseUrl, model: cred.model,
                 temperature: cred.temperature ?? 0.7, maxTokens: cred.maxTokens ?? 4096, timeout: 60,
               };
-            } catch {}
+              console.log(`[${jobId}] BYOK credential found: ${cred.providerId}`);
+            } catch (e) {
+              console.warn(`[${jobId}] BYOK decrypt failed:`, e);
+            }
+          } else {
+            console.warn(`[${jobId}] No BYOK credential found for user ${userId}`);
           }
         }
 
@@ -220,6 +234,7 @@ export async function POST(req: NextRequest) {
             baseUrl: body.provider.baseUrl || "", model: body.provider.model || "",
             temperature: 0.7, maxTokens: 4096, timeout: 60,
           };
+          console.log(`[${jobId}] Using client-provided provider: ${aiConfig.providerId}`);
         }
 
         if (aiConfig) {
