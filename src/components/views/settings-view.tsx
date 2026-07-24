@@ -408,7 +408,7 @@ function AIModeToggle() {
       </p>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        {/* BYOK */}
+        {/* BYOK = Custom Mode */}
         <button
           onClick={() => setAiMode("byok")}
           className={`rounded-xl border p-4 text-left transition ${
@@ -418,18 +418,20 @@ function AIModeToggle() {
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className="text-sm font-semibold text-cyan-300">Bring Your Own Key</span>
+            <span className="text-sm font-semibold text-cyan-300">🔑 Custom Mode (BYOK)</span>
             {aiMode === "byok" && <Check className="h-4 w-4 text-cyan-300" />}
           </div>
-          <p className="mt-1 text-[11px] text-muted-foreground">Free — use your own API keys from 14 providers</p>
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            Set your own API key — unlimited tokens, you pay provider directly
+          </p>
           <div className="mt-2 flex flex-wrap gap-1">
-            {["OpenRouter", "OpenAI", "Anthropic", "Ollama"].map(p => (
+            {["ShopAIKey", "OpenRouter", "OpenAI", "Anthropic", "Ollama"].map(p => (
               <span key={p} className="rounded-full bg-white/5 px-2 py-0.5 text-[9px] text-muted-foreground">{p}</span>
             ))}
           </div>
         </button>
 
-        {/* Platform AI */}
+        {/* Platform AI = Default */}
         <button
           onClick={() => {
             if (plan === "free") {
@@ -447,7 +449,7 @@ function AIModeToggle() {
         >
           <div className="flex items-center justify-between">
             <span className="text-sm font-semibold text-violet-300">
-              Platform AI
+              🤖 Default (Platform AI)
               {plan === "free" && (
                 <span className="ml-2 rounded-full bg-violet-500/20 px-1.5 py-0.5 text-[8px] font-bold uppercase text-violet-300">PRO</span>
               )}
@@ -455,7 +457,9 @@ function AIModeToggle() {
             {aiMode === "platform" && <Check className="h-4 w-4 text-violet-300" />}
           </div>
           <p className="mt-1 text-[11px] text-muted-foreground">
-            {plan === "free" ? "$9/mo — no key needed, Claude 3.5 / GPT-4o" : "Active — using CodeInsight AI"}
+            {plan === "free"
+              ? "Free: 1M tokens/month · Pro: 10M tokens/month"
+              : "Active — using admin's default provider (ShopAIKey)"}
           </p>
           {plan !== "free" && (
             <div className="mt-2">

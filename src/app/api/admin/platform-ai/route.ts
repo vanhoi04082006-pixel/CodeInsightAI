@@ -22,7 +22,7 @@ export async function GET() {
   try {
     const configs = await db.platformAIConfig.findMany({ orderBy: { createdAt: "asc" } });
 
-    const configured = configs.map((c) => {
+    const configured = configs.map((c, i) => {
       let maskedKey = "••••";
       try { maskedKey = maskApiKey(decrypt(c.encryptedApiKey)); } catch {}
       const preset = PRESET_BY_ID[c.providerId];
@@ -36,6 +36,7 @@ export async function GET() {
         enabled: c.enabled,
         maskedKey,
         updatedAt: c.updatedAt,
+        isDefault: i === 0, // first in list = default
       };
     });
 
@@ -127,3 +128,50 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: "Failed to delete" }, { status: 500 });
   }
 }
+
+// PATCH — Set provider as default (reorder: move to first position)
+export async function PATCH(req: NextRequest) {
+  const adminId = await requireAdmin();
+  if (!adminId) return NextResponse.json({ error: "Admin only" }, { status: 403 });
+
+  try {
+    const body = await req.json();
+    if (body.action === "set-default" && body.providerId) {
+      const providerId = body.providerId as string;
+
+      // Get the provider to set as default
+      const target = await db.platformAIConfig.findUnique({ where: { providerId } });
+      if (!target) return NextResponse.json({ error: "Provider not found" }, { status: 404 });
+
+      // Delete all and recreate with target first
+      const all = await db.platformAIConfig.findMany({ orderBy: { createdAt: "asc" } });
+      const reordered = [target, ...all.filter((c) => c.providerId !== providerId)];
+
+      // Use transaction to reorder
+      await db.$transaction([
+        db.platformAIConfig.deleteMany({}),
+        ...reordered.map((c, i) =>
+          db.platformAIConfig.create({
+            data: {
+              providerId: c.providerId,
+              encryptedApiKey: c.encryptedApiKey,
+              baseUrl: c.baseUrl,
+              models: c.models,
+              enabled: c.enabled,
+              createdAt: new Date(Date.now() + i * 1000), // ensure order
+            },
+          })
+        ),
+      ]);
+
+      await logAdminAction(adminId, "set_default_platform_ai", null, { providerId });
+
+      return NextResponse.json({ success: true, defaultProvider: providerId });
+    }
+    return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+  } catch (e) {
+    console.error("[/api/admin/platform-ai PATCH]", e);
+    return NextResponse.json({ error: "Failed to set default" }, { status: 500 });
+  }
+}
+

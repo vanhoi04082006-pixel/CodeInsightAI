@@ -25,6 +25,7 @@ import { GlassCard, ScoreGauge, GradientText, StatPill } from "@/components/shar
 import { Button } from "@/components/ui/button";
 import { ProFeaturesCard } from "@/components/shared/pro-features-card";
 import { UsageWidget } from "@/components/shared/usage-widget";
+import { TokenUsageWidget } from "@/components/shared/token-usage-widget";
 import { TrendsCard } from "@/components/shared/trends-card";
 import { useAppStore } from "@/lib/store";
 import { useT } from "@/lib/i18n";
@@ -115,6 +116,9 @@ export function DashboardView() {
         <ProFeaturesCard />
         <UsageWidget />
       </div>
+
+      {/* Token usage widget (full version) */}
+      <TokenUsageWidget />
 
       {/* top row: overall gauge + score cards */}
       <div className="grid gap-4 lg:grid-cols-3">

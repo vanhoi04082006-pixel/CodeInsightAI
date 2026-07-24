@@ -58,6 +58,26 @@ export function PlatformAITab() {
     setShowAddForm(true);
   };
 
+  // Set provider as default (first in list = default for Pro users)
+  const handleSetDefault = async (providerId: string) => {
+    try {
+      // Reorder: move this provider to first position
+      const res = await fetch("/api/admin/platform-ai", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "set-default", providerId }),
+      });
+      if (res.ok) {
+        toast.success(`${providerId} set as default`);
+        load();
+      } else {
+        toast.error("Failed to set default");
+      }
+    } catch {
+      toast.error("Failed to set default");
+    }
+  };
+
   const handleEdit = (c: any) => {
     setEditProviderId(c.providerId);
     setEditApiKey("");
@@ -199,6 +219,22 @@ export function PlatformAITab() {
                   </div>
                   {/* Model selector + Test button */}
                   <div className="flex items-center gap-1.5">
+                    {/* Set as Default badge/button */}
+                    {c.isDefault ? (
+                      <Badge className="bg-violet-500/15 text-violet-300">
+                        ★ Default
+                      </Badge>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleSetDefault(c.providerId)}
+                        className="text-[10px] text-muted-foreground hover:text-violet-300"
+                        title="Set as default provider"
+                      >
+                        ★ Set Default
+                      </Button>
+                    )}
                     <Select
                       value={testModelSelection[c.providerId] || c.models[0] || ""}
                       onValueChange={(v) => setTestModelSelection((prev) => ({ ...prev, [c.providerId]: v }))}
