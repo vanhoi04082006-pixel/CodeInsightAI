@@ -199,7 +199,7 @@ export function CustomCursor() {
     if (qualityRef.current === "minimal") return;
     if (!rippleContainerRef.current) return;
     const ripple = document.createElement("div");
-    ripple.style.cssText = `position:fixed;left:${x}px;top:${y}px;width:0;height:0;border-radius:50%;border:2px solid ${color};box-shadow:0 0 14px ${color};pointer-events:none;z-index:9998;transform:translate(-50%,-50%);animation:cursor-ripple ${RIPPLE_LIFETIME}ms cubic-bezier(0.16,1,0.3,1) forwards;will-change:width,height,opacity;`;
+    ripple.style.cssText = `position:fixed;left:${x}px;top:${y}px;width:0;height:0;border-radius:50%;border:2px solid ${color};box-shadow:0 0 14px ${color};pointer-events:none;z-index:2147483646;transform:translate(-50%,-50%);animation:cursor-ripple ${RIPPLE_LIFETIME}ms cubic-bezier(0.16,1,0.3,1) forwards;will-change:width,height,opacity;`;
     rippleContainerRef.current.appendChild(ripple);
     setTimeout(() => { ripple.remove(); }, RIPPLE_LIFETIME + 20);
   }, []);
@@ -511,7 +511,7 @@ export function CustomCursor() {
       {cfg.spotlight && (
         <div
           ref={spotlightRef}
-          className="pointer-events-none fixed left-0 top-0 z-[9990] hidden md:block"
+          className="pointer-events-none fixed left-0 top-0 z-[2147483644] hidden md:block"
           style={{
             width: cfg.spotlightSize,
             height: cfg.spotlightSize,
@@ -531,7 +531,7 @@ export function CustomCursor() {
       {cfg.trail && (
         <svg
           ref={trailSvgRef}
-          className="pointer-events-none fixed left-0 top-0 z-[9992] hidden md:block"
+          className="pointer-events-none fixed left-0 top-0 z-[2147483645] hidden md:block"
           style={{ width: "100vw", height: "100vh", pointerEvents: "none" }}
         >
           <defs>
@@ -556,7 +556,7 @@ export function CustomCursor() {
       {/* Outer ring */}
       <div
         ref={ringRef}
-        className="pointer-events-none fixed left-0 top-0 z-[9999] flex items-center justify-center"
+        className="pointer-events-none fixed left-0 top-0 z-[2147483647] flex items-center justify-center"
         style={{
           width: isText ? 2 : ringSize,
           height: isText ? 18 : ringSize,
@@ -577,7 +577,7 @@ export function CustomCursor() {
       {!isText && (
         <div
           ref={glowRingRef}
-          className="pointer-events-none fixed left-0 top-0 z-[9998] flex items-center justify-center"
+          className="pointer-events-none fixed left-0 top-0 z-[2147483646] flex items-center justify-center"
           style={{
             width: ringSize * 0.55,
             height: ringSize * 0.55,
@@ -596,7 +596,7 @@ export function CustomCursor() {
       {!isText && (
         <div
           ref={dotRef}
-          className="pointer-events-none fixed left-0 top-0 z-[10000]"
+          className="pointer-events-none fixed left-0 top-0 z-[2147483647]"
           style={{
             width: dotSize,
             height: dotSize,
@@ -613,13 +613,13 @@ export function CustomCursor() {
       )}
 
       {/* Ripple container */}
-      <div ref={rippleContainerRef} className="pointer-events-none fixed inset-0 z-[9997]" />
+      <div ref={rippleContainerRef} className="pointer-events-none fixed inset-0 z-[2147483645]" />
 
       {/* Loading ring */}
       {isLoading && (
         <div
           ref={loadingRingRef}
-          className="pointer-events-none fixed left-0 top-0 z-[10001] flex items-center justify-center"
+          className="pointer-events-none fixed left-0 top-0 z-[2147483647] flex items-center justify-center"
           style={{
             width: 42,
             height: 42,
