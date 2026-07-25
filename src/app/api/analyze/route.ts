@@ -211,14 +211,9 @@ export async function POST(req: NextRequest) {
 
     incrementUsage(userId, "analysis").catch(() => {});
 
-    // ── PHASE 2: Fire AI analysis in background (non-blocking) ──
-    if (enableAi) {
-      runAIAnalysisInBackground(created.id, userId, parsed, report, parsedRepo, body, platformProvider, platformModel, language || "en").catch(e => {
-        console.warn(`[analyze] Background AI failed for ${created.id}:`, e?.message?.slice(0, 200));
-        // Mark as failed in DB
-        db.analysis.update({ where: { id: created.id }, data: { aiStatus: "failed" } }).catch(() => {});
-      });
-    }
+    // ── PHASE 2: AI passes run via /api/analyze/ai-pass (frontend calls) ──
+    // No fire-and-forget — frontend calls ai-pass endpoint for each pass
+    // This is Hobby-compatible (each pass <60s) and durable (DB tracks status)
 
     return NextResponse.json({
       id: created.id,

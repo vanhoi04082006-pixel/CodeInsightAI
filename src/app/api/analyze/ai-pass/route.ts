@@ -1,0 +1,219 @@
+// POST /api/analyze/ai-pass — Run a single AI pass for an analysis
+// Each pass runs in its own request (<60s, Hobby-compatible)
+// Updates DB with partial results after each pass
+import { NextRequest, NextResponse } from "next/server";
+import { requireUserId } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { callAI, type AIMessage } from "@/lib/ai-client";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const maxDuration = 55; // Under 60s Hobby limit
+
+type PassType = "summary" | "security" | "architecture" | "quality" | "priorities" | "performance" | "bestPractices" | "duplicates";
+
+const MODEL_MAX_TOKENS: Record<string, number> = {
+  "gpt-5-nano": 1000, "gpt-4.1-nano": 1500, "gpt-4o-mini": 2000,
+  "gpt-5-mini": 3000, "gpt-4.1-mini": 4000, "claude-sonnet-4-5": 4000,
+  "deepseek-chat": 3000, "grok-4-fast-reasoning": 2000, "qwen3-coder-flash": 3000,
+};
+
+export async function POST(req: NextRequest) {
+  const userId = await requireUserId();
+  if (!userId) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+
+  try {
+    const body = await req.json();
+    const { analysisId, passType, language, platformProvider, platformModel } = body as {
+      analysisId: string; passType: PassType; language?: string;
+      platformProvider?: string; platformModel?: string;
+    };
+
+    if (!analysisId || !passType) {
+      return NextResponse.json({ error: "analysisId and passType required" }, { status: 400 });
+    }
+
+    // Verify ownership
+    const analysis = await db.analysis.findUnique({
+      where: { id: analysisId },
+      select: { userId: true, report: true, parsedData: true, aiStatus: true },
+    });
+    if (!analysis || analysis.userId !== userId) {
+      return NextResponse.json({ error: "Analysis not found" }, { status: 404 });
+    }
+
+    const report = JSON.parse(analysis.report);
+    const parsedRepo = analysis.parsedData ? JSON.parse(analysis.parsedData) : null;
+    const lang = language || "en";
+
+    // Resolve AI provider
+    const { getPlatformAIProvider, getPlatformAIConfig } = await import("@/lib/platform-ai");
+    const { decrypt } = await import("@/lib/crypto");
+
+    let aiConfig = null;
+    if (platformProvider) {
+      aiConfig = await getPlatformAIProvider(platformProvider, platformModel);
+    }
+    if (!aiConfig) aiConfig = await getPlatformAIConfig();
+    if (!aiConfig) {
+      const cred = await db.providerCredential.findFirst({
+        where: { userId, enabled: true },
+        orderBy: { updatedAt: "desc" },
+      });
+      if (cred) {
+        try {
+          aiConfig = {
+            providerId: cred.providerId, apiKey: decrypt(cred.encryptedApiKey),
+            baseUrl: cred.baseUrl, model: cred.model,
+            temperature: cred.temperature ?? 0.7, maxTokens: cred.maxTokens ?? 4096, timeout: 50,
+          };
+        } catch {}
+      }
+    }
+
+    if (!aiConfig) {
+      return NextResponse.json({ error: "No AI provider available", passType, status: "skipped" });
+    }
+
+    // Build prompt for this pass
+    const { buildPromptForPass } = await import("@/lib/ai-deep-analysis-helpers");
+    const prompt = buildPromptForPass(passType, parsedRepo || {
+      owner: report.repoOwner, name: report.repoName, url: report.repoUrl,
+      totalFiles: report.totalFiles, totalLines: report.totalLines,
+      languages: report.languages, frameworks: report.frameworks,
+      files: report.files.map((f: any) => ({
+        path: f.path, language: f.language, lines: f.lines,
+        complexity: f.complexity, description: f.description,
+        imports: [], exports: [], functions: [], classes: [], components: [], routes: [],
+      })),
+    }, report);
+
+    const maxTokens = MODEL_MAX_TOKENS[aiConfig.model] ?? 2000;
+    const langInstruction = lang === "vi"
+      ? "\n\nQUAN TRỌNG: Trả lời bằng tiếng Việt. Giữ nguyên code, file paths, thuật ngữ kỹ thuật bằng tiếng Anh."
+      : "";
+
+    const messages: AIMessage[] = [
+      { role: "system", content: "You are a Senior Staff Engineer. Respond in valid JSON only, no markdown fences, no explanation. Start with { and end with }." + langInstruction },
+      { role: "user", content: prompt },
+    ];
+
+    // Run AI pass (2 attempts: json_object → plain text)
+    let result: any = null;
+    try {
+      const aiResult = await callAI(aiConfig, messages, {
+        temperature: 0.3, maxTokens, timeout: 45,
+        responseFormat: "json_object",
+      });
+      if (aiResult.content) result = safeJsonParse(aiResult.content);
+    } catch (e: any) {
+      const errMsg = e?.message || "";
+      if (errMsg.includes("402") || errMsg.includes("credits")) {
+        // Retry with half tokens
+        try {
+          const aiResult = await callAI(aiConfig, messages, {
+            temperature: 0.3, maxTokens: Math.min(1500, Math.floor(maxTokens / 2)), timeout: 45,
+            responseFormat: "json_object",
+          });
+          if (aiResult.content) result = safeJsonParse(aiResult.content);
+        } catch {}
+      }
+    }
+
+    if (!result) {
+      // Attempt 2: without response_format
+      try {
+        const aiResult = await callAI(aiConfig, messages, {
+          temperature: 0.3, maxTokens, timeout: 45,
+        });
+        if (aiResult.content) result = safeJsonParse(aiResult.content);
+      } catch (e: any) {
+        console.warn(`[ai-pass] ${passType} failed:`, e?.message?.slice(0, 200));
+      }
+    }
+
+    // Update report with this pass result
+    if (result) {
+      updateReportWithPassResult(report, passType, result);
+
+      // Check if all passes are done
+      const allPasses = ["summary", "security", "architecture", "quality", "priorities", "performance", "bestPractices", "duplicates"];
+      const completedPasses = (report as any)._aiPassesCompleted || [];
+      if (!completedPasses.includes(passType)) completedPasses.push(passType);
+      (report as any)._aiPassesCompleted = completedPasses;
+
+      const allDone = allPasses.every(p => completedPasses.includes(p));
+      const aiStatus = allDone ? "done" : "pending";
+
+      await db.analysis.update({
+        where: { id: analysisId },
+        data: {
+          report: JSON.stringify(report),
+          aiStatus,
+        },
+      });
+
+      return NextResponse.json({
+        passType, status: "done", result,
+        completedPasses, totalPasses: allPasses.length,
+        allDone: aiStatus === "done",
+        report, // return updated report so frontend can update
+      });
+    } else {
+      return NextResponse.json({
+        passType, status: "failed",
+        error: "AI returned no valid result",
+      });
+    }
+  } catch (e: any) {
+    console.error("[/api/analyze/ai-pass] Error:", e);
+    return NextResponse.json({ error: e?.message || "AI pass failed" }, { status: 500 });
+  }
+}
+
+function safeJsonParse(text: string): any | null {
+  if (!text) return null;
+  let cleaned = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "");
+  try { return JSON.parse(cleaned); } catch {}
+  const firstBrace = cleaned.indexOf("{");
+  const lastBrace = cleaned.lastIndexOf("}");
+  if (firstBrace !== -1 && lastBrace !== -1) {
+    try { return JSON.parse(cleaned.slice(firstBrace, lastBrace + 1)); } catch {}
+    try { return JSON.parse(cleaned.slice(firstBrace, lastBrace + 1).replace(/,(\s*[}\]])/g, "$1")); } catch {}
+  }
+  return null;
+}
+
+function updateReportWithPassResult(report: any, passType: PassType, result: any) {
+  if (!report.deepAnalysis) report.deepAnalysis = { badge: "deep-ai" };
+  const deep = report.deepAnalysis;
+
+  switch (passType) {
+    case "summary":
+      deep.executiveSummary = result.summary || report.summary;
+      report.aiEnhancement = { aiSummary: deep.executiveSummary, aiBadge: "ai-enhanced" };
+      break;
+    case "security":
+      deep.securityReview = result.reviews || [];
+      break;
+    case "architecture":
+      deep.architectureReview = result || { strengths: [], weaknesses: [], suggestions: [] };
+      break;
+    case "quality":
+      deep.codeQualityReview = result.reviews || [];
+      break;
+    case "priorities":
+      deep.priorities = result.priorities || [];
+      deep.roadmap = result.roadmap || [];
+      break;
+    case "performance":
+      deep.performanceReview = result.reviews || [];
+      break;
+    case "bestPractices":
+      deep.bestPracticesAudit = result || { framework: "Unknown", passed: [], failed: [], score: 0 };
+      break;
+    case "duplicates":
+      deep.duplicateAnalysis = result.duplicates || [];
+      break;
+  }
+}

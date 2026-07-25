@@ -504,32 +504,39 @@ function EmptyDashboard() {
         setActiveAnalysisId(id);
         useAppStore.getState().clearChat();
 
-        // Resume AI polling if AI is still pending (e.g. after refresh)
+        // Resume AI passes if AI is still pending (e.g. after refresh)
         if (d.aiStatus === "pending") {
           useAppStore.getState().setAiPending(true);
-          // Start polling for AI results
-          const pollAI = async (attempts = 0) => {
-            if (attempts > 120) {
-              useAppStore.getState().setAiPending(false);
-              return;
-            }
-            try {
-              const r = await fetch(`/api/report?id=${id}`, { cache: "no-store" });
-              const data = await r.json();
-              if (data.aiStatus === "done" && data.report) {
-                setActiveReport(data.report);
-                useAppStore.getState().setAiPending(false);
-                toast.success("AI deep analysis complete!");
-              } else if (data.aiStatus === "failed" || data.aiStatus === "none") {
-                useAppStore.getState().setAiPending(false);
-              } else {
-                setTimeout(() => pollAI(attempts + 1), 3000);
+          // Check which passes are already done
+          const completedPasses = (d.report as any)?._aiPassesCompleted || [];
+          const allPasses = ["summary", "priorities", "security", "architecture", "quality", "performance", "bestPractices", "duplicates"];
+          const remainingPasses = allPasses.filter(p => !completedPasses.includes(p));
+
+          if (remainingPasses.length === 0) {
+            // All done — just update report
+            useAppStore.getState().setAiPending(false);
+          } else {
+            // Run remaining passes
+            const runRemaining = async () => {
+              for (const passType of remainingPasses) {
+                try {
+                  const res = await fetch("/api/analyze/ai-pass", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ analysisId: id, passType, language: "en" }),
+                  });
+                  const data = await res.json();
+                  if (data.status === "done" && data.report) {
+                    setActiveReport(data.report);
+                  }
+                } catch {}
+                await new Promise(r => setTimeout(r, 500));
               }
-            } catch {
-              setTimeout(() => pollAI(attempts + 1), 5000);
-            }
-          };
-          setTimeout(() => pollAI(0), 3000);
+              useAppStore.getState().setAiPending(false);
+              toast.success("AI deep analysis complete!");
+            };
+            setTimeout(runRemaining, 2000);
+          }
         }
       }
     } catch { /* ignore */ }

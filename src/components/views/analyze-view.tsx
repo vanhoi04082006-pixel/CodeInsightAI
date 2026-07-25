@@ -128,55 +128,88 @@ export function AnalyzeView() {
 
   // AI status: "idle" | "pending" | "done" | "failed"
   const [aiStatus, setAiStatus] = useState<"idle" | "pending" | "done" | "failed">("idle");
+  const [aiPassProgress, setAiPassProgress] = useState<{ current: number; total: number; passName: string } | null>(null);
 
-  // Poll for AI results (background AI analysis)
-  const pollForAIResults = useCallback(async (analysisId: string) => {
+  // Run AI passes one by one (each pass = 1 API call, <60s, Hobby-compatible)
+  const runAIPasses = useCallback(async (analysisId: string, language: string, aiBody: Record<string, any>) => {
     setAiStatus("pending");
     useAppStore.getState().setAiPending(true);
-    let attempts = 0;
-    const maxAttempts = 120; // 120 × 3s = 6 minutes
 
-    const poll = async () => {
-      attempts++;
-      if (attempts > maxAttempts) {
-        setAiStatus("failed");
-        useAppStore.getState().setAiPending(false);
-        toast.warning("AI analysis timed out. Static results are still available.");
-        return;
-      }
+    const passes = [
+      { type: "summary", name: "Executive Summary" },
+      { type: "priorities", name: "Priorities & Roadmap" },
+      { type: "security", name: "Security Review" },
+      { type: "architecture", name: "Architecture Review" },
+      { type: "quality", name: "Code Quality" },
+      { type: "performance", name: "Performance Review" },
+      { type: "bestPractices", name: "Best Practices Audit" },
+      { type: "duplicates", name: "Duplicate Code Analysis" },
+    ];
+
+    let completedCount = 0;
+
+    for (const pass of passes) {
+      setAiPassProgress({ current: completedCount + 1, total: passes.length, passName: pass.name });
 
       try {
-        const res = await fetch(`/api/report?id=${analysisId}`, { cache: "no-store" });
-        if (!res.ok) { setTimeout(poll, 3000); return; }
+        const res = await fetch("/api/analyze/ai-pass", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            analysisId,
+            passType: pass.type,
+            language,
+            ...aiBody,
+          }),
+        });
         const data = await res.json();
 
-        if (data.aiStatus === "done" && data.report) {
-          // AI complete — update report with AI insights
+        if (data.status === "done" && data.report) {
+          // Update report with this pass result
           setReport(data.report);
-          setAiStatus("done");
-          useAppStore.getState().setAiPending(false);
-          toast.success("AI deep analysis complete!", {
-            description: "7-pass insights are now available in AI Insights tab",
-            duration: 5000,
-          });
-          return;
-        }
+          useAppStore.getState().setActiveReport(data.report);
+          completedCount++;
 
-        if (data.aiStatus === "failed") {
-          setAiStatus("failed");
-          useAppStore.getState().setAiPending(false);
-          toast.warning("AI analysis failed. Static results are still available.");
-          return;
+          // If all done, mark complete
+          if (data.allDone) {
+            setAiStatus("done");
+            setAiPassProgress(null);
+            useAppStore.getState().setAiPending(false);
+            toast.success("AI deep analysis complete!", {
+              description: "All 8 AI passes finished. Check AI Insights tab.",
+              duration: 6000,
+            });
+            return;
+          }
+        } else if (data.status === "failed") {
+          console.warn(`[ai-pass] ${pass.type} failed:`, data.error);
+          completedCount++; // Count as attempted, continue
         }
-
-        // Still pending — poll again
-        setTimeout(poll, 3000);
-      } catch {
-        setTimeout(poll, 5000);
+      } catch (e) {
+        console.warn(`[ai-pass] ${pass.type} error:`, e);
+        completedCount++; // Count as attempted, continue
       }
-    };
 
-    setTimeout(poll, 3000); // Start polling after 3s
+      // Small delay between passes to avoid rate limiting
+      await new Promise(r => setTimeout(r, 500));
+    }
+
+    // All passes attempted
+    setAiStatus("done");
+    setAiPassProgress(null);
+    useAppStore.getState().setAiPending(false);
+
+    // Final check — reload report from DB
+    try {
+      const res = await fetch(`/api/report?id=${analysisId}`, { cache: "no-store" });
+      const data = await res.json();
+      if (data.report) {
+        setReport(data.report);
+        useAppStore.getState().setActiveReport(data.report);
+      }
+    } catch {}
+
+    toast.success("AI analysis complete!", { duration: 5000 });
   }, []);
 
   const start = async () => {
@@ -303,9 +336,9 @@ export function AnalyzeView() {
           }
         }, 600);
 
-        // If AI is pending, poll for AI results
+        // Run AI passes one by one (each pass = 1 API call)
         if (startData.aiStatus === "pending" && startData.id) {
-          pollForAIResults(startData.id);
+          runAIPasses(startData.id, useI18nStore.getState().locale, aiBody);
         }
         return;
       }
@@ -557,6 +590,32 @@ export function AnalyzeView() {
             </motion.div>
           </div>
         </GlassCard>
+
+        {/* AI pass progress (shows when AI passes are running) */}
+        {aiPassProgress && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="relative z-10 mt-4"
+          >
+            <GlassCard className="border-violet-400/20 bg-violet-500/[0.04] p-4">
+              <div className="flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin text-violet-300" />
+                <span className="text-sm font-semibold text-violet-300">
+                  AI Pass {aiPassProgress.current}/{aiPassProgress.total}
+                </span>
+                <span className="text-xs text-muted-foreground">— {aiPassProgress.passName}</span>
+              </div>
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/5">
+                <motion.div
+                  className="h-full rounded-full bg-gradient-to-r from-violet-500 to-cyan-500"
+                  animate={{ width: `${(aiPassProgress.current / aiPassProgress.total) * 100}%` }}
+                  transition={{ duration: 0.5 }}
+                />
+              </div>
+            </GlassCard>
+          </motion.div>
+        )}
       </div>
     );
   }
