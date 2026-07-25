@@ -37,9 +37,43 @@
   "none": "Không",
   "building": "Đang xây dựng CodeGraph…",
   "legend": "Chú giải",
+  "badgeStats": "{vn}/{tn} nút · {ve}/{te} cạnh",
+  "fitToScreen": "Vừa khung hình",
   "zoomControls": {
     "zoomIn": "Phóng to",
     "zoomOut": "Thu nhỏ",
     "reset": "Đặt lại"
+  },
+  "depGraph": {
+    "legend": {
+      "entry": "Entry",
+      "core": "Core",
+      "service": "Service",
+      "util": "Util",
+      "component": "Component",
+      "config": "Config"
+    },
+    "circular": "vòng",
+    "inspector": "Trình kiểm tra",
+    "pathLabel": "Đường dẫn:",
+    "typeLabel": "Loại:",
+    "groupLabel": "Nhóm:",
+    "connectionsLabel": "Kết nối:",
+    "moduleFallback": "Module trong codebase.",
+    "clickHint": "Nhấp vào nút để kiểm tra vai trò và kết nối.",
+    "graphStats": "Thống kê đồ thị",
+    "nodesLabel": "Nút",
+    "edgesLabel": "Cạnh",
+    "circularDeps": "Phụ thuộc vòng",
+    "avgConnectivity": "Kết nối TB",
+    "circularDepsTitle": "Phụ thuộc vòng",
+    "nodeExplanations": {
+      "entry": "Điểm vào của ứng dụng — khởi tạo runtime và mount app.",
+      "core": "Module domain cốt lõi — đóng gói một năng lực chính của business.",
+      "service": "Lớp service — điều phối use-case và các lệnh gọi hạ tầng.",
+      "util": "Tiện ích dùng chung — helper stateless tái sử dụng giữa các module.",
+      "component": "UI component — logic trình bày với ít business rule.",
+      "config": "Cấu hình — cài đặt tĩnh, env loader và feature flag."
+    }
   }
 }

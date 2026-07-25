@@ -2,6 +2,7 @@
   "panel": "Bảng điều khiển nhà phát triển",
   "noRequests": "Chưa có yêu cầu",
   "sendToPopulate": "Gửi tin nhắn để điền bảng điều khiển nhà phát triển.",
+  "lastRequestSummary": "Yêu cầu cuối · {ms}ms · {tokens} token",
   "sections": {
     "tokenUsage": "Sử dụng Token",
     "performance": "Hiệu suất",
@@ -27,7 +28,9 @@
     "contextWindow": "Cửa sổ ngữ cảnh",
     "temperature": "Nhiệt độ",
     "maxTokens": "Token tối đa",
-    "streaming": "Phát trực tiếp"
+    "streaming": "Phát trực tiếp",
+    "streamingOn": "bật",
+    "streamingOff": "tắt"
   },
   "prompt": {
     "systemPrompt": "System Prompt",
@@ -36,6 +39,7 @@
     "retrievedChunks": "Đoạn truy xuất",
     "finalPrompt": "Prompt cuối cùng gửi cho AI",
     "chars": "ký tự",
+    "score": "điểm",
     "emptyTitle": "Chưa có dữ liệu prompt",
     "emptyDesc": "Gửi tin nhắn để xem pipeline prompt.",
     "emptyDesc2": "Dữ liệu prompt sẽ xuất hiện ở đây sau tin nhắn đầu tiên.",
@@ -64,7 +68,9 @@
   "raw": {
     "show": "Hiển thị phản hồi thô",
     "hide": "Ẩn phản hồi thô",
-    "chars": "ký tự"
+    "chars": "ký tự",
+    "showChars": "Hiển thị phản hồi thô ({count} ký tự)",
+    "hideChars": "Ẩn phản hồi thô ({count} ký tự)"
   },
   "advanced": {
     "embeddingResults": "Kết quả Embedding",

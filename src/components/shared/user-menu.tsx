@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useAppStore } from "@/lib/store";
 import { useUpgrade } from "@/hooks/use-upgrade";
+import { useT } from "@/lib/i18n";
 import { toast } from "sonner";
 
 /**
@@ -37,6 +38,7 @@ import { toast } from "sonner";
  * there is never a hydration mismatch (no random values, no Date.now()).
  */
 export function UserMenu() {
+  const { t } = useT();
   const { data: session, status } = useSession();
   const setView = useAppStore((s) => s.setView);
   const { upgrade } = useUpgrade();
@@ -55,7 +57,7 @@ export function UserMenu() {
     return null;
   }
 
-  const name = session.user.name ?? session.user.email ?? "User";
+  const name = session.user.name ?? session.user.email ?? t("common", "userMenu.userFallback");
   const email = session.user.email ?? "";
   const image = session.user.image ?? null;
   const plan = (session as any).plan ?? "free";
@@ -65,12 +67,12 @@ export function UserMenu() {
 
   const handleLogout = async () => {
     setSigningOut(true);
-    toast.loading("Signing out…", { id: "signout" });
+    toast.loading(t("common", "userMenu.signOutToastLoading"), { id: "signout" });
     try {
       await signOut({ callbackUrl: "/", redirect: true });
-      toast.success("Signed out successfully");
+      toast.success(t("common", "userMenu.signOutToastSuccess"));
     } catch {
-      toast.error("Failed to sign out");
+      toast.error(t("common", "userMenu.signOutToastError"));
     } finally {
       setSigningOut(false);
       toast.dismiss("signout");
@@ -83,7 +85,7 @@ export function UserMenu() {
         <DropdownMenuTrigger asChild>
           <button
             className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] py-1 pl-1 pr-2 text-left transition hover:bg-white/[0.06]"
-            aria-label="User menu"
+            aria-label={t("common", "userMenu.ariaLabel")}
           >
             {image ? (
               <img
@@ -106,7 +108,7 @@ export function UserMenu() {
                 ) : null}
               </div>
               <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                {isAdmin ? "Admin" : `${plan} plan`}
+                {isAdmin ? t("common", "userMenu.adminBadge") : t("common", "userMenu.planSuffix", { plan })}
               </div>
             </div>
             <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
@@ -128,11 +130,11 @@ export function UserMenu() {
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => setView("settings")} className="cursor-pointer">
-            <UserIcon className="mr-2 h-4 w-4" /> Profile & Settings
+            <UserIcon className="mr-2 h-4 w-4" /> {t("common", "userMenu.profileSettings")}
           </DropdownMenuItem>
           {isAdmin && (
             <DropdownMenuItem onClick={() => setView("admin")} className="cursor-pointer text-cyan-300">
-              <Shield className="mr-2 h-4 w-4" /> Admin Dashboard
+              <Shield className="mr-2 h-4 w-4" /> {t("common", "userMenu.adminDashboard")}
             </DropdownMenuItem>
           )}
           {!isAdmin && plan === "free" && (
@@ -140,7 +142,7 @@ export function UserMenu() {
               onClick={() => upgrade("pro")}
               className="cursor-pointer text-amber-300"
             >
-              <Crown className="mr-2 h-4 w-4" /> Upgrade to Pro
+              <Crown className="mr-2 h-4 w-4" /> {t("common", "userMenu.upgradeToPro")}
             </DropdownMenuItem>
           )}
           <DropdownMenuSeparator />
@@ -149,7 +151,7 @@ export function UserMenu() {
               className="cursor-pointer text-rose-300 focus:text-rose-200"
               onSelect={(e) => e.preventDefault()}
             >
-              <LogOut className="mr-2 h-4 w-4" /> Sign out
+              <LogOut className="mr-2 h-4 w-4" /> {t("common", "userMenu.signOut")}
             </DropdownMenuItem>
           </AlertDialogTrigger>
         </DropdownMenuContent>
@@ -159,15 +161,14 @@ export function UserMenu() {
         <AlertDialogHeader>
           <AlertDialogTitle className="flex items-center gap-2">
             <ShieldCheck className="h-5 w-5 text-cyan-300" />
-            Sign out of CodeInsight AI?
+            {t("common", "userMenu.signOutTitle")}
           </AlertDialogTitle>
           <AlertDialogDescription>
-            You will be returned to the landing page. Your settings and API keys are saved securely and
-            will be available when you sign back in with GitHub.
+            {t("common", "userMenu.signOutDesc")}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={signingOut}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={signingOut}>{t("common", "actions.cancel")}</AlertDialogCancel>
           <AlertDialogAction
             onClick={handleLogout}
             disabled={signingOut}
@@ -175,11 +176,11 @@ export function UserMenu() {
           >
             {signingOut ? (
               <>
-                <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> Signing out…
+                <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> {t("common", "userMenu.signingOut")}
               </>
             ) : (
               <>
-                <LogOut className="mr-1.5 h-4 w-4" /> Sign out
+                <LogOut className="mr-1.5 h-4 w-4" /> {t("common", "userMenu.signOut")}
               </>
             )}
           </AlertDialogAction>

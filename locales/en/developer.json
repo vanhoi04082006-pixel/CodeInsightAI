@@ -2,6 +2,7 @@
   "panel": "Developer Panel",
   "noRequests": "No requests yet",
   "sendToPopulate": "Send a message to populate the developer panel.",
+  "lastRequestSummary": "Last request · {ms}ms · {tokens} tokens",
   "sections": {
     "tokenUsage": "Token Usage",
     "performance": "Performance",
@@ -27,7 +28,9 @@
     "contextWindow": "Context window",
     "temperature": "Temperature",
     "maxTokens": "Max tokens",
-    "streaming": "Streaming"
+    "streaming": "Streaming",
+    "streamingOn": "on",
+    "streamingOff": "off"
   },
   "prompt": {
     "systemPrompt": "System Prompt",
@@ -36,6 +39,7 @@
     "retrievedChunks": "Retrieved Chunks",
     "finalPrompt": "Final Prompt Sent to AI",
     "chars": "chars",
+    "score": "score",
     "emptyTitle": "No prompt data",
     "emptyDesc": "Send a message to see the prompt pipeline.",
     "emptyDesc2": "Prompt data will appear here after first message.",
@@ -64,7 +68,9 @@
   "raw": {
     "show": "Show raw response",
     "hide": "Hide raw response",
-    "chars": "chars"
+    "chars": "chars",
+    "showChars": "Show raw response ({count} chars)",
+    "hideChars": "Hide raw response ({count} chars)"
   },
   "advanced": {
     "embeddingResults": "Embedding Results",

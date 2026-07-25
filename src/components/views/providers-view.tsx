@@ -97,10 +97,10 @@ export function ProvidersView() {
       </motion.div>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <StatCard icon={Power} label={t("providers", "statEnabled")} value={enabledCount} sub={`of ${providers.length} added`} color="#22d3ee" />
-        <StatCard icon={Check} label={t("providers", "statConnected")} value={connectedCount} sub="reachable now" color="#34d399" />
-        <StatCard icon={HardDrive} label={t("providers", "statLocalModels")} value={localCount} sub="Ollama / LM Studio" color="#a78bfa" />
-        <StatCard icon={Clock} label={t("providers", "statAvgLatency")} value={avgLatency} sub="ms (last test)" color="#fbbf24" suffix="ms" />
+        <StatCard icon={Power} label={t("providers", "statEnabled")} value={enabledCount} sub={t("providers", "statSub.ofAdded", { count: providers.length })} color="#22d3ee" />
+        <StatCard icon={Check} label={t("providers", "statConnected")} value={connectedCount} sub={t("providers", "statSub.reachableNow")} color="#34d399" />
+        <StatCard icon={HardDrive} label={t("providers", "statLocalModels")} value={localCount} sub={t("providers", "statSub.ollamaLmStudio")} color="#a78bfa" />
+        <StatCard icon={Clock} label={t("providers", "statAvgLatency")} value={avgLatency} sub={t("providers", "statSub.msLastTest")} color="#fbbf24" suffix="ms" />
       </div>
 
       <FeatureRoutingCard />
@@ -181,7 +181,7 @@ function FeatureRoutingCard() {
               <div className="flex items-center justify-between">
                 <span className="text-xs font-medium">{FEATURE_LABELS[f]}</span>
                 <span className="rounded bg-white/5 px-1.5 py-0.5 text-[9px] uppercase text-muted-foreground">
-                  default {preset.name}
+                  {t("providers", "labels.defaultInline", { name: preset.name })}
                 </span>
               </div>
               <Select
@@ -211,7 +211,7 @@ function FeatureRoutingCard() {
       </div>
       {enabledProviders.length === 0 && (
         <p className="mt-3 rounded-lg border border-amber-500/20 bg-amber-500/[0.04] p-3 text-xs text-amber-300">
-          Enable at least one provider to customise routing. Until then, the built-in AI is used for all features.
+          {t("providers", "featureRoutingEmpty")}
         </p>
       )}
     </GlassCard>
@@ -263,8 +263,8 @@ function ProviderCard({ provider }: { provider: AIProvider }) {
   const maskedKey = provider.apiKey
     ? `${provider.apiKey.slice(0, 4)}...${provider.apiKey.slice(-4)}`
     : isSavedServerSide
-      ? "•••• (saved server-side)"
-      : "Not set";
+      ? t("providers", "labels.savedServerSide")
+      : t("providers", "labels.notSet");
 
   /**
    * Persist the credential to the backend (encrypted). Called when the user
@@ -301,9 +301,9 @@ function ProviderCard({ provider }: { provider: AIProvider }) {
       });
       // After save, re-sync to get the masked key back from the server.
       await syncFromBackend();
-      toast.success("Saved securely (encrypted)");
+      toast.success(t("providers", "toast.savedEncrypted"));
     } catch (e) {
-      toast.error("Failed to save credential");
+      toast.error(t("providers", "toast.saveCredentialFailed"));
     } finally {
       setSaving(false);
     }
@@ -331,11 +331,11 @@ function ProviderCard({ provider }: { provider: AIProvider }) {
       if (!contentType.includes("application/json")) {
         const text = await res.text().catch(() => "");
         if (text.includes("logo") || text.includes("setTimeout")) {
-          setStatus(provider.id, "error", 0, "Server is starting up. Please wait 10 seconds and try again.");
-          toast.error("Server is starting up. Please retry in 10s.");
+          setStatus(provider.id, "error", 0, t("providers", "toast.serverStartingWait"));
+          toast.error(t("providers", "toast.serverStartingRetry"));
         } else {
-          setStatus(provider.id, "error", 0, `Server error ${res.status}`);
-          toast.error(`Server error ${res.status}`);
+          setStatus(provider.id, "error", 0, t("providers", "toast.serverError", { status: res.status }));
+          toast.error(t("providers", "toast.serverError", { status: res.status }));
         }
         return;
       }
@@ -350,8 +350,8 @@ function ProviderCard({ provider }: { provider: AIProvider }) {
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      const display = msg.includes("aborted") ? "Request timed out (30s)"
-        : msg.includes("JSON") ? "Network error — server returned HTML instead of JSON"
+      const display = msg.includes("aborted") ? t("providers", "toast.requestTimedOut")
+        : msg.includes("JSON") ? t("providers", "toast.networkErrorHtml")
         : msg;
       setStatus(provider.id, "error", undefined, display);
       toast.error(display);
@@ -428,7 +428,7 @@ function ProviderCard({ provider }: { provider: AIProvider }) {
                     {preset.models.map((m) => (
                       <SelectItem key={m} value={m}>{m}</SelectItem>
                     ))}
-                    <SelectItem value={provider.model}>{provider.model} (custom)</SelectItem>
+                    <SelectItem value={provider.model}>{t("providers", "labels.customInline", { value: provider.model })}</SelectItem>
                   </SelectContent>
                 </Select>
               </Field>
@@ -439,14 +439,14 @@ function ProviderCard({ provider }: { provider: AIProvider }) {
                   onChange={(e) => update(provider.id, { apiKey: e.target.value })}
                   placeholder={
                     isSavedServerSide && !provider.apiKey
-                      ? "•••• (saved — type new key to replace)"
-                      : preset.requiresKey ? "sk-..." : "Optional for local"
+                      ? t("providers", "placeholders.savedTypeNew")
+                      : preset.requiresKey ? t("providers", "placeholders.apiKeySk") : t("providers", "placeholders.optionalLocal")
                   }
                   className="bg-white/[0.03] font-mono"
                 />
                 {isSavedServerSide && !provider.apiKey && (
                   <p className="mt-1 flex items-center gap-1 text-[10px] text-emerald-400">
-                    <Check className="h-3 w-3" /> API key saved securely (encrypted). Leave empty to keep current key.
+                    <Check className="h-3 w-3" /> {t("providers", "apiKeySavedHint")}
                   </p>
                 )}
               </Field>
@@ -500,7 +500,7 @@ function ProviderCard({ provider }: { provider: AIProvider }) {
                   disabled={saving}
                 >
                   {saving ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <ShieldCheck className="mr-1.5 h-3.5 w-3.5" />}
-                  {saving ? "Saving…" : "Save (encrypted)"}
+                  {saving ? t("providers", "saveButton.saving") : t("providers", "saveButton.save")}
                 </Button>
                 <Button
                   size="sm"
@@ -569,8 +569,7 @@ function AddProviderDialog({ open, onOpenChange, onPick }: { open: boolean; onOp
           </p>
           {isProduction && (
             <p className="mt-2 rounded-lg border border-cyan-400/20 bg-cyan-400/[0.04] p-2.5 text-[11px] text-cyan-200">
-              Production mode: local providers (Ollama, LM Studio) are hidden because they
-              can&apos;t be reached from a browser on this domain.
+              {t("providers", "productionLocalHidden")}
             </p>
           )}
         </DialogHeader>

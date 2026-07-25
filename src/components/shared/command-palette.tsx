@@ -26,16 +26,16 @@ import {
 } from "@/components/ui/dialog";
 
 const COMMANDS: { id: View; labelKey: string; icon: typeof Home; group: string }[] = [
-  { id: "landing", labelKey: "nav.home", icon: Home, group: "Navigation" },
-  { id: "dashboard", labelKey: "nav.dashboard", icon: LayoutDashboard, group: "Navigation" },
-  { id: "analyze", labelKey: "actions.newAnalysis", icon: ScanSearch, group: "Actions" },
-  { id: "project", labelKey: "nav.project", icon: FolderGit2, group: "Navigation" },
-  { id: "chat", labelKey: "nav.chat", icon: MessagesSquare, group: "Actions" },
-  { id: "history", labelKey: "nav.history", icon: History, group: "Navigation" },
-  { id: "providers", labelKey: "nav.providers", icon: Plug, group: "Actions" },
-  { id: "personalities", labelKey: "nav.personalities", icon: Bot, group: "Actions" },
-  { id: "mission", labelKey: "nav.mission", icon: Rocket, group: "Actions" },
-  { id: "settings", labelKey: "nav.settings", icon: Settings, group: "Navigation" },
+  { id: "landing", labelKey: "nav.home", icon: Home, group: "groupNavigation" },
+  { id: "dashboard", labelKey: "nav.dashboard", icon: LayoutDashboard, group: "groupNavigation" },
+  { id: "analyze", labelKey: "actions.newAnalysis", icon: ScanSearch, group: "groupActions" },
+  { id: "project", labelKey: "nav.project", icon: FolderGit2, group: "groupNavigation" },
+  { id: "chat", labelKey: "nav.chat", icon: MessagesSquare, group: "groupActions" },
+  { id: "history", labelKey: "nav.history", icon: History, group: "groupNavigation" },
+  { id: "providers", labelKey: "nav.providers", icon: Plug, group: "groupActions" },
+  { id: "personalities", labelKey: "nav.personalities", icon: Bot, group: "groupActions" },
+  { id: "mission", labelKey: "nav.mission", icon: Rocket, group: "groupActions" },
+  { id: "settings", labelKey: "nav.settings", icon: Settings, group: "groupNavigation" },
 ];
 
 export function CommandPalette() {
@@ -57,12 +57,12 @@ export function CommandPalette() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="max-w-xl gap-0 overflow-hidden border-white/10 bg-popover/90 p-0 backdrop-blur-2xl">
-        <DialogTitle className="sr-only">Command Palette</DialogTitle>
+        <DialogTitle className="sr-only">{t("common", "commandPalette.title")}</DialogTitle>
         <div className="flex items-center gap-2 border-b border-white/10 px-4 py-3">
           <Search className="h-4 w-4 text-muted-foreground" />
           <input
             autoFocus
-            placeholder="Type a command or search…"
+            placeholder={t("common", "commandPalette.placeholder")}
             className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
           />
           <kbd className="rounded bg-white/5 px-1.5 py-0.5 text-[10px] text-muted-foreground">esc</kbd>
@@ -75,7 +75,7 @@ export function CommandPalette() {
             }, {})
           ).map(([group, items]) => (
             <div key={group} className="mb-2">
-              <p className="px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground">{group}</p>
+              <p className="px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground">{t("common", `commandPalette.${group}`)}</p>
               {items.map((c) => {
                 const Icon = c.icon;
                 const disabled = (c.id === "project" || c.id === "chat") && !activeReport;
@@ -96,7 +96,7 @@ export function CommandPalette() {
         </div>
         <div className="flex items-center justify-between border-t border-white/10 px-4 py-2 text-[10px] text-muted-foreground">
           <span className="flex items-center gap-1"><Sparkles className="h-3 w-3" /> CodeInsight AI</span>
-          <span>↑↓ navigate · ↵ select</span>
+          <span>{t("common", "commandPalette.hint")}</span>
         </div>
       </DialogContent>
     </Dialog>

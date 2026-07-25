@@ -23,6 +23,7 @@ import {
   Legend,
 } from "recharts";
 import { GlassCard, GradientText } from "@/components/shared/ui";
+import { useT } from "@/lib/i18n";
 
 type TrendPoint = {
   date: string;
@@ -90,6 +91,7 @@ function DeltaBadge({ value, label }: { value: number; label: string }) {
  * Shows an empty state when the user has no analyses yet.
  */
 export function TrendsCard() {
+  const { t } = useT();
   const [data, setData] = useState<TrendsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -119,7 +121,7 @@ export function TrendsCard() {
       <GlassCard className="flex h-64 items-center justify-center p-6">
         <div className="flex flex-col items-center gap-2 text-muted-foreground">
           <Loader2 className="h-5 w-5 animate-spin text-cyan-400" />
-          <span className="text-xs">Loading trends…</span>
+          <span className="text-xs">{t("common", "trends.loading")}</span>
         </div>
       </GlassCard>
     );
@@ -130,7 +132,7 @@ export function TrendsCard() {
       <GlassCard className="flex h-64 items-center justify-center p-6">
         <div className="flex flex-col items-center gap-2 text-muted-foreground">
           <Activity className="h-5 w-5 text-amber-400" />
-          <span className="text-xs">Trends unavailable</span>
+          <span className="text-xs">{t("common", "trends.unavailable")}</span>
           {error && <span className="text-[10px] text-muted-foreground/60">{error}</span>}
         </div>
       </GlassCard>
@@ -144,9 +146,9 @@ export function TrendsCard() {
         <div className="flex h-12 w-12 items-center justify-center rounded-full bg-cyan-500/10">
           <TrendingUp className="h-6 w-6 text-cyan-300" />
         </div>
-        <p className="mt-3 text-sm font-medium">No analyses yet</p>
+        <p className="mt-3 text-sm font-medium">{t("common", "trends.emptyTitle")}</p>
         <p className="mt-1 max-w-xs text-xs text-muted-foreground">
-          Run your first repository analysis to start tracking score trends over time.
+          {t("common", "trends.emptyDesc")}
         </p>
       </GlassCard>
     );
@@ -166,12 +168,12 @@ export function TrendsCard() {
           <h3 className="flex items-center gap-2 text-sm font-semibold">
             <TrendingUp className="h-4 w-4 text-cyan-300" />
             <span>
-              30-Day <GradientText>Trends</GradientText>
+              {t("common", "trends.title30Day")} <GradientText>{t("common", "trends.titleTrends")}</GradientText>
             </span>
           </h3>
           <p className="mt-0.5 text-[11px] text-muted-foreground">
-            {data.totalAnalyses} {data.totalAnalyses === 1 ? "analysis" : "analyses"} ·{" "}
-            {data.uniqueRepos} {data.uniqueRepos === 1 ? "repo" : "repos"}
+            {data.totalAnalyses} {data.totalAnalyses === 1 ? t("common", "trends.analysisSingular") : t("common", "trends.analysisPlural")} ·{" "}
+            {data.uniqueRepos} {data.uniqueRepos === 1 ? t("common", "trends.repoSingular") : t("common", "trends.repoPlural")}
           </p>
         </div>
         <div className="flex gap-1.5">
@@ -193,10 +195,10 @@ export function TrendsCard() {
           animate={{ opacity: 1, y: 0 }}
           className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4"
         >
-          <DeltaBadge value={data.deltas.overall} label="Overall" />
-          <DeltaBadge value={data.deltas.security} label="Security" />
-          <DeltaBadge value={data.deltas.performance} label="Performance" />
-          <DeltaBadge value={data.deltas.architecture} label="Architecture" />
+          <DeltaBadge value={data.deltas.overall} label={t("common", "trends.overall")} />
+          <DeltaBadge value={data.deltas.security} label={t("common", "trends.security")} />
+          <DeltaBadge value={data.deltas.performance} label={t("common", "trends.performance")} />
+          <DeltaBadge value={data.deltas.architecture} label={t("common", "trends.architecture")} />
         </motion.div>
       )}
 
@@ -238,7 +240,7 @@ export function TrendsCard() {
               strokeWidth={2}
               dot={{ r: 2, fill: "#22d3ee" }}
               activeDot={{ r: 4 }}
-              name="Overall"
+              name={t("common", "trends.overall")}
             />
             <Line
               type="monotone"
@@ -246,7 +248,7 @@ export function TrendsCard() {
               stroke="#f472b6"
               strokeWidth={1.5}
               dot={false}
-              name="Security"
+              name={t("common", "trends.security")}
             />
             <Line
               type="monotone"
@@ -254,7 +256,7 @@ export function TrendsCard() {
               stroke="#34d399"
               strokeWidth={1.5}
               dot={false}
-              name="Performance"
+              name={t("common", "trends.performance")}
             />
             <Line
               type="monotone"
@@ -262,7 +264,7 @@ export function TrendsCard() {
               stroke="#a78bfa"
               strokeWidth={1.5}
               dot={false}
-              name="Architecture"
+              name={t("common", "trends.architecture")}
             />
           </LineChart>
         </ResponsiveContainer>
@@ -273,7 +275,7 @@ export function TrendsCard() {
         <div className="mt-4 border-t border-white/5 pt-3">
           <p className="mb-2 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
             <Layers className="h-3 w-3" />
-            Top Languages Analyzed
+            {t("common", "trends.topLanguages")}
           </p>
           <div className="flex flex-wrap gap-1.5">
             {data.topLanguages.map((lang) => {
@@ -304,7 +306,7 @@ export function TrendsCard() {
 
       {/* Average score footer */}
       <div className="mt-3 flex items-center justify-between border-t border-white/5 pt-3">
-        <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Avg Overall Score</span>
+        <span className="text-[10px] uppercase tracking-wide text-muted-foreground">{t("common", "trends.avgOverall")}</span>
         <span className="text-lg font-bold tabular-nums text-cyan-300" style={{ textShadow: "0 0 12px #22d3ee80" }}>
           {data.avgOverall}
         </span>

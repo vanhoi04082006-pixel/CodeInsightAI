@@ -65,14 +65,14 @@ import { MissionHeader } from "@/components/mission-tabs/mission-header";
 
 const STATUS_META: Record<
   string,
-  { color: string; label: string; icon: typeof Circle; animating: boolean }
+  { color: string; icon: typeof Circle; animating: boolean }
 > = {
-  idle: { color: "#64748b", label: "Idle", icon: Circle, animating: false },
-  planning: { color: "#fbbf24", label: "Planning", icon: Loader2, animating: true },
-  executing: { color: "#22d3ee", label: "Executing", icon: Activity, animating: true },
-  verifying: { color: "#a78bfa", label: "Verifying", icon: Loader2, animating: true },
-  completed: { color: "#34d399", label: "Completed", icon: Sparkles, animating: false },
-  failed: { color: "#f472b6", label: "Failed", icon: Pause, animating: false },
+  idle: { color: "#64748b", icon: Circle, animating: false },
+  planning: { color: "#fbbf24", icon: Loader2, animating: true },
+  executing: { color: "#22d3ee", icon: Activity, animating: true },
+  verifying: { color: "#a78bfa", icon: Loader2, animating: true },
+  completed: { color: "#34d399", icon: Sparkles, animating: false },
+  failed: { color: "#f472b6", icon: Pause, animating: false },
 };
 
 export function MissionControlView() {
@@ -155,7 +155,7 @@ export function MissionControlView() {
           type: "terminal:output",
           timestamp: Date.now(),
           stream: "system",
-          data: "— terminal cleared —",
+          data: t("mission", "toasts.terminalCleared"),
         });
         return;
       }
@@ -179,15 +179,15 @@ export function MissionControlView() {
 
   const onStart = async () => {
     if (!goal.trim()) {
-      toast.error("Please describe a mission goal first.");
+      toast.error(t("mission", "toasts.describeGoal"));
       return;
     }
     setStarting(true);
     try {
       await startMission();
-      toast.success("Mission dispatched.");
+      toast.success(t("mission", "toasts.dispatched"));
     } catch {
-      toast.error("Failed to start mission.");
+      toast.error(t("mission", "toasts.startFailed"));
     } finally {
       setStarting(false);
     }
@@ -195,17 +195,17 @@ export function MissionControlView() {
 
   const onDemo = () => {
     if (!goal.trim()) {
-      setGoal("Demo mission: explore the codebase and identify 3 quick wins.");
+      setGoal(t("mission", "form.demoGoal"));
     }
     startDemoMode();
-    toast("Demo mode started — simulating agent events.", {
+    toast(t("mission", "toasts.demoStarted"), {
       icon: "🧪",
     });
   };
 
   const onStop = () => {
     cancelMission();
-    toast("Mission stopped.");
+    toast(t("mission", "toasts.stopped"));
   };
 
   const onApplyTemplate = (tplGoal: string) => {
@@ -241,11 +241,10 @@ export function MissionControlView() {
             <Rocket className="h-6 w-6 text-cyan-300" />
           </div>
           <h2 className="mt-4 text-xl font-bold">
-            {t("mission", "empty.title") || "No Repository Selected"}
+            {t("mission", "empty.title")}
           </h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            {t("mission", "empty.description") ||
-              "Select an analysis from History or analyze a new repository to start a mission. Mission Control binds to the active analysis — just like AI Chat and AI Report."}
+            {t("mission", "empty.description")}
           </p>
           <div className="mt-5 flex items-center justify-center gap-2">
             <Button
@@ -254,14 +253,14 @@ export function MissionControlView() {
               className="gap-1.5"
             >
               <History className="h-4 w-4" />
-              {t("mission", "empty.historyButton") || "Open History"}
+              {t("mission", "empty.historyButton")}
             </Button>
             <Button
               onClick={() => setView("analyze")}
               className="gap-1.5 bg-gradient-to-r from-cyan-500 to-violet-500 text-white"
             >
               <Target className="h-4 w-4" />
-              {t("mission", "empty.analyzeButton") || "Analyze Repo"}
+              {t("mission", "empty.analyzeButton")}
             </Button>
           </div>
         </div>
@@ -280,12 +279,11 @@ export function MissionControlView() {
             <div className="flex items-center gap-2">
               <Target className="h-4 w-4 text-cyan-300" />
               <h2 className="text-sm font-semibold">
-                {t("mission", "form.title") || "Define Your Mission"}
+                {t("mission", "form.title")}
               </h2>
             </div>
             <p className="mt-1 text-xs text-muted-foreground">
-              {t("mission", "form.description") ||
-                "Describe what you want your AI team to accomplish. They'll plan, execute, verify, and ship."}
+              {t("mission", "form.description")}
             </p>
           </div>
 
@@ -293,12 +291,12 @@ export function MissionControlView() {
             {/* Goal */}
             <div className="space-y-2">
               <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                {t("mission", "form.goalLabel") || "Mission Goal"}
+                {t("mission", "form.goalLabel")}
               </label>
               <Textarea
                 value={goal}
                 onChange={(e) => setGoal(e.target.value)}
-                placeholder="e.g., Add Google OAuth login with JWT session handling and write tests for the new auth flow"
+                placeholder={t("mission", "form.goalPlaceholder")}
                 className="min-h-[88px] resize-none border-white/10 bg-white/[0.02] font-mono text-sm"
               />
             </div>
@@ -307,7 +305,7 @@ export function MissionControlView() {
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  {t("mission", "form.repoLabel") || "Repository URL"}
+                  {t("mission", "form.repoLabel")}
                 </label>
                 <div className="relative">
                   <Github className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -322,19 +320,19 @@ export function MissionControlView() {
 
               <div className="space-y-2">
                 <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  {t("mission", "form.providerLabel") || "AI Provider"}
+                  {t("mission", "form.providerLabel")}
                 </label>
                 <Select
                   value={provider?.providerId ?? "none"}
                   onValueChange={onProviderChange}
                 >
                   <SelectTrigger className="border-white/10 bg-white/[0.02]">
-                    <SelectValue placeholder="Select an enabled provider" />
+                    <SelectValue placeholder={t("mission", "form.providerPlaceholder")} />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">
                       <span className="text-muted-foreground">
-                        Built-in (no AI provider)
+                        {t("mission", "form.builtinProvider")}
                       </span>
                     </SelectItem>
                     {enabledProviders.map((p) => (
@@ -352,8 +350,7 @@ export function MissionControlView() {
                 </Select>
                 {enabledProviders.length === 0 && (
                   <p className="text-[11px] text-amber-400/80">
-                    {t("mission", "form.noProviders") ||
-                      "No enabled providers — workflow will use built-in fallbacks. Add one in Providers."}
+                    {t("mission", "form.noProviders")}
                   </p>
                 )}
               </div>
@@ -363,7 +360,7 @@ export function MissionControlView() {
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               <div className="space-y-2 md:col-span-1">
                 <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  {t("mission", "form.maxIterations") || "Max Iterations"}
+                  {t("mission", "form.maxIterations")}
                 </label>
                 <Input
                   type="number"
@@ -378,8 +375,7 @@ export function MissionControlView() {
               </div>
               <div className="md:col-span-2 md:flex md:items-end">
                 <p className="text-[11px] leading-relaxed text-muted-foreground">
-                  {t("mission", "form.iterationsHint") ||
-                    "Each iteration = one observe → think → act → verify → reflect cycle. The Executive may stop earlier if confidence is high."}
+                  {t("mission", "form.iterationsHint")}
                 </p>
               </div>
             </div>
@@ -387,7 +383,7 @@ export function MissionControlView() {
             {/* Templates */}
             <div className="space-y-2">
               <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                {t("mission", "form.templates") || "Quick Templates"}
+                {t("mission", "form.templates")}
               </label>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
                 {MISSION_TEMPLATES.map((tpl) => (
@@ -422,8 +418,7 @@ export function MissionControlView() {
             {/* Actions */}
             <div className="flex flex-col gap-2 border-t border-white/5 pt-4 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-[11px] text-muted-foreground">
-                {t("mission", "form.disclaimer") ||
-                  "Missions execute locally — your code never leaves your machine."}
+                {t("mission", "form.disclaimer")}
               </p>
               <div className="flex items-center gap-2">
                 <Button
@@ -432,7 +427,7 @@ export function MissionControlView() {
                   className="gap-1.5 border-white/10"
                 >
                   <Beaker className="h-4 w-4" />
-                  <span>{t("mission", "form.demo") || "Demo Mode"}</span>
+                  <span>{t("mission", "form.demo")}</span>
                 </Button>
                 <Button
                   onClick={onStart}
@@ -446,8 +441,8 @@ export function MissionControlView() {
                   )}
                   <span>
                     {starting
-                      ? t("mission", "form.starting") || "Starting…"
-                      : t("mission", "form.startButton") || "Start Mission"}
+                      ? t("mission", "form.starting")
+                      : t("mission", "form.startButton")}
                   </span>
                 </Button>
               </div>
@@ -461,7 +456,7 @@ export function MissionControlView() {
             <div className="mb-3 flex items-center gap-2">
               <History className="h-4 w-4 text-muted-foreground" />
               <h3 className="text-sm font-semibold">
-                {t("mission", "history.title") || "Mission History"}
+                {t("mission", "history.title")}
               </h3>
             </div>
             <div className="space-y-2">
@@ -485,7 +480,7 @@ export function MissionControlView() {
                     <p className="truncate text-xs text-foreground/90">{h.goal}</p>
                     <p className="text-[10px] text-muted-foreground">
                       {new Date(h.startedAt).toLocaleString()} · {h.iteration}{" "}
-                      iterations · {h.filesModified} files
+                      {t("mission", "history.iterationsUnit")} · {h.filesModified} {t("mission", "history.filesUnit")}
                     </p>
                   </div>
                   <Badge
@@ -533,27 +528,27 @@ export function MissionControlView() {
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <span className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.2em] text-cyan-300">
-                Mission
+                {t("mission", "commandBar.missionLabel")}
               </span>
               {demoMode && (
                 <span className="shrink-0 rounded-full border border-amber-400/30 bg-amber-400/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-amber-300">
-                  Demo
+                  {t("mission", "commandBar.demoLabel")}
                 </span>
               )}
               {connected ? (
                 <span className="flex shrink-0 items-center gap-1 text-[10px] text-emerald-400">
-                  <Wifi className="h-3 w-3" /> Live
+                  <Wifi className="h-3 w-3" /> {t("mission", "commandBar.live")}
                 </span>
               ) : (
                 !demoMode && (
                   <span className="flex shrink-0 items-center gap-1 text-[10px] text-muted-foreground">
-                    <WifiOff className="h-3 w-3" /> Disconnected
+                    <WifiOff className="h-3 w-3" /> {t("mission", "commandBar.disconnected")}
                   </span>
                 )
               )}
             </div>
             <p className="mt-0.5 truncate text-sm font-semibold text-foreground">
-              {goal || "Untitled mission"}
+              {goal || t("mission", "commandBar.untitledMission")}
             </p>
             {repoUrl && (
               <p className="mt-0.5 truncate font-mono text-[11px] text-muted-foreground">
@@ -583,7 +578,7 @@ export function MissionControlView() {
               )}
             />
             <span className="status-badge-dot-animated hidden sm:inline-block" style={{ background: statusMeta.color }} />
-            <span>{statusMeta.label}</span>
+            <span>{t("mission", `statusMeta.${status}`)}</span>
           </span>
           <span className="phase-pill">
             <Activity className="h-3 w-3" />
@@ -636,10 +631,16 @@ export function MissionControlView() {
             </div>
             <div className="hidden flex-col leading-tight lg:flex">
               <span className="text-[9px] uppercase tracking-wider text-muted-foreground">
-                Confidence
+                {t("mission", "worldState.confidence")}
               </span>
               <span className="text-[10px] font-semibold" style={{ color: confColor }}>
-                {confidence < 30 ? "Exploring" : confidence < 60 ? "Building" : confidence < 85 ? "Confident" : "Trusted"}
+                {confidence < 30
+                  ? t("mission", "worldState.confidenceLabels.exploring")
+                  : confidence < 60
+                  ? t("mission", "worldState.confidenceLabels.building")
+                  : confidence < 85
+                  ? t("mission", "worldState.confidenceLabels.confident")
+                  : t("mission", "worldState.confidenceLabels.trusted")}
               </span>
             </div>
           </div>
@@ -647,7 +648,7 @@ export function MissionControlView() {
           <button onClick={onStop} className="stop-btn">
             <Square className="h-3 w-3 fill-current" />
             <span className="hidden sm:inline">
-              {t("mission", "actions.stop") || "Stop"}
+              {t("mission", "actions.stop")}
             </span>
           </button>
 
@@ -656,11 +657,11 @@ export function MissionControlView() {
             variant="ghost"
             onClick={reset}
             className="gap-1.5 text-[11px] text-muted-foreground hover:text-foreground"
-            title="Start a new mission"
+            title={t("mission", "commandBar.newMissionTitle")}
           >
             <Sparkles className="h-3.5 w-3.5" />
             <span className="hidden lg:inline">
-              {t("mission", "actions.newMission") || "New"}
+              {t("mission", "actions.newMission")}
             </span>
           </Button>
         </div>
@@ -679,7 +680,7 @@ export function MissionControlView() {
               <div className="panel-header">
                 <div className="panel-header-title">
                   <NetworkIcon className="h-3.5 w-3.5 text-cyan-300" />
-                  Agent Network Graph (Fullscreen)
+                  {t("mission", "networkGraph.fullscreen")}
                 </div>
                 <div className="panel-header-actions">
                   <Button
@@ -689,7 +690,7 @@ export function MissionControlView() {
                     className="h-7 gap-1.5 text-[11px]"
                   >
                     <Minimize2 className="h-3.5 w-3.5" />
-                    Exit Fullscreen
+                    {t("mission", "commandBar.exitFullscreen")}
                   </Button>
                 </div>
               </div>
@@ -713,9 +714,9 @@ export function MissionControlView() {
               <div className="panel-header">
                 <div className="panel-header-title">
                   <Activity className="h-3.5 w-3.5 text-cyan-300" />
-                  {t("mission", "feed.title") || "AI Activity Feed"}
+                  {t("mission", "feed.title")}
                   <span className="ml-2 font-mono text-[10px] text-muted-foreground/60 normal-case">
-                    {events.length} events
+                    {t("mission", "feed.eventsCount", { count: events.length })}
                   </span>
                 </div>
                 <div className="panel-header-actions">
@@ -726,7 +727,7 @@ export function MissionControlView() {
                     className="h-7 gap-1.5 text-[11px]"
                   >
                     <Minimize2 className="h-3.5 w-3.5" />
-                    Exit Fullscreen
+                    {t("mission", "commandBar.exitFullscreen")}
                   </Button>
                 </div>
               </div>
@@ -754,7 +755,7 @@ export function MissionControlView() {
                     data-state={rightTab === "tree" ? "active" : "inactive"}
                     className="mc-tab"
                   >
-                    <ListTree className="h-3 w-3" /> Files
+                    <ListTree className="h-3 w-3" /> {t("mission", "tabs.files")}
                     {filesModified.length > 0 && (
                       <span className="ml-1 rounded-full bg-white/5 px-1 text-[9px] text-muted-foreground">
                         {filesModified.length}
@@ -766,14 +767,14 @@ export function MissionControlView() {
                     data-state={rightTab === "diff" ? "active" : "inactive"}
                     className="mc-tab"
                   >
-                    <FileDiffIcon className="h-3 w-3" /> Diff
+                    <FileDiffIcon className="h-3 w-3" /> {t("mission", "tabs.diff")}
                   </button>
                   <button
                     onClick={() => setRightTab("world")}
                     data-state={rightTab === "world" ? "active" : "inactive"}
                     className="mc-tab"
                   >
-                    <Globe className="h-3 w-3" /> World
+                    <Globe className="h-3 w-3" /> {t("mission", "tabs.world")}
                   </button>
                 </div>
                 <div className="panel-header-actions">
@@ -784,7 +785,7 @@ export function MissionControlView() {
                     className="h-7 gap-1.5 text-[11px]"
                   >
                     <Minimize2 className="h-3.5 w-3.5" />
-                    Exit Fullscreen
+                    {t("mission", "commandBar.exitFullscreen")}
                   </Button>
                 </div>
               </div>
@@ -848,17 +849,17 @@ export function MissionControlView() {
                       <div className="panel-header">
                         <div className="panel-header-title">
                           <Activity className="h-3.5 w-3.5 text-cyan-300" />
-                          {t("mission", "feed.title") || "AI Activity Feed"}
+                          {t("mission", "feed.title")}
                           <span className="ml-2 font-mono text-[10px] text-muted-foreground/60 normal-case">
-                            {events.length} events
+                            {t("mission", "feed.eventsCount", { count: events.length })}
                           </span>
                         </div>
                         <div className="panel-header-actions">
                           <button
                             onClick={() => setFeedMaximized(true)}
                             className="panel-max-btn"
-                            title="Maximize Activity Feed"
-                            aria-label="Maximize Activity Feed"
+                            title={t("mission", "commandBar.maximizeActivityFeed")}
+                            aria-label={t("mission", "commandBar.maximizeActivityFeed")}
                           >
                             <Maximize2 className="h-3 w-3" />
                           </button>
@@ -890,15 +891,15 @@ export function MissionControlView() {
                           <CollapsibleTrigger className="flex items-center gap-1.5 rounded-md px-1 py-0.5 transition hover:bg-white/[0.02]">
                             <NetworkIcon className="h-3.5 w-3.5 text-cyan-300" />
                             <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                              Agent Network Graph
+                              {t("mission", "networkGraph.title")}
                             </span>
                             <ChevronDown className="h-3.5 w-3.5 text-muted-foreground transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
                           </CollapsibleTrigger>
                           <button
                             onClick={() => setNetworkMaximized(true)}
                             className="panel-max-btn"
-                            title="Maximize Network Graph"
-                            aria-label="Maximize Network Graph"
+                            title={t("mission", "commandBar.maximizeNetworkGraph")}
+                            aria-label={t("mission", "commandBar.maximizeNetworkGraph")}
                           >
                             <Maximize2 className="h-3 w-3" />
                           </button>
@@ -920,7 +921,7 @@ export function MissionControlView() {
                             data-state={rightTab === "tree" ? "active" : "inactive"}
                             className="mc-tab"
                           >
-                            <ListTree className="h-3 w-3" /> Files
+                            <ListTree className="h-3 w-3" /> {t("mission", "tabs.files")}
                             {filesModified.length > 0 && (
                               <span className="ml-1 rounded-full bg-white/5 px-1 text-[9px] text-muted-foreground">
                                 {filesModified.length}
@@ -932,22 +933,22 @@ export function MissionControlView() {
                             data-state={rightTab === "diff" ? "active" : "inactive"}
                             className="mc-tab"
                           >
-                            <FileDiffIcon className="h-3 w-3" /> Diff
+                            <FileDiffIcon className="h-3 w-3" /> {t("mission", "tabs.diff")}
                           </button>
                           <button
                             onClick={() => setRightTab("world")}
                             data-state={rightTab === "world" ? "active" : "inactive"}
                             className="mc-tab"
                           >
-                            <Globe className="h-3 w-3" /> World
+                            <Globe className="h-3 w-3" /> {t("mission", "tabs.world")}
                           </button>
                         </div>
                         <div className="panel-header-actions">
                           <button
                             onClick={() => setRightMaximized(true)}
                             className="panel-max-btn"
-                            title="Maximize Panel"
-                            aria-label="Maximize Panel"
+                            title={t("mission", "commandBar.maximizePanel")}
+                            aria-label={t("mission", "commandBar.maximizePanel")}
                           >
                             <Maximize2 className="h-3 w-3" />
                           </button>
@@ -1003,12 +1004,12 @@ export function MissionControlView() {
               <div className="mb-2 flex items-center justify-between">
                 <div className="panel-header-title">
                   <Users className="h-3.5 w-3.5 text-cyan-300" />
-                  {t("mission", "agents.title") || "Agent Team"} · 11 agents
+                  {t("mission", "agents.title")} · {t("mission", "agents.agentCount", { count: 11 })}
                 </div>
                 <div className="flex items-center gap-2 text-[10px] text-muted-foreground/80">
                   <span className="flex items-center gap-1">
                     <span className="h-1.5 w-1.5 rounded-full bg-cyan-400" style={{ boxShadow: "0 0 6px #22d3ee" }} />
-                    Active: {activeAgentsCount}
+                    {t("mission", "agents.activeLabel", { count: activeAgentsCount })}
                   </span>
                 </div>
               </div>

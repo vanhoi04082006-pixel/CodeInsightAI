@@ -73,5 +73,69 @@
   "empty": {
     "noMessages": "No messages",
     "noActivity": "No activity"
+  },
+  "userMenu": {
+    "userFallback": "User",
+    "ariaLabel": "User menu",
+    "adminBadge": "Admin",
+    "planSuffix": "{plan} plan",
+    "profileSettings": "Profile & Settings",
+    "adminDashboard": "Admin Dashboard",
+    "upgradeToPro": "Upgrade to Pro",
+    "signOut": "Sign out",
+    "signOutTitle": "Sign out of CodeInsight AI?",
+    "signOutDesc": "You will be returned to the landing page. Your settings and API keys are saved securely and will be available when you sign back in with GitHub.",
+    "signingOut": "Signing out…",
+    "signOutToastLoading": "Signing out…",
+    "signOutToastSuccess": "Signed out successfully",
+    "signOutToastError": "Failed to sign out"
+  },
+  "login": {
+    "welcomePrefix": "Welcome to",
+    "subtitle": "Sign in with GitHub to analyze repositories, chat with AI agents, and ship code autonomously.",
+    "redirecting": "Redirecting…",
+    "signInWithGithub": "Sign in with GitHub",
+    "scopePrefix": "We request",
+    "scopeAnd": "and",
+    "scopeSuffix": "scopes (so we can analyze your private repositories). You can revoke access anytime from your GitHub settings.",
+    "feature1": "Analyze any GitHub repository with 12 AI agents",
+    "feature2": "66 static analysis rules (security, bugs, performance)",
+    "feature3": "Bring your own API key — or use Platform AI (Pro)",
+    "backToLanding": "← Back to landing",
+    "privacyNote": "Your API keys are AES-256-GCM encrypted on the server and never exposed to the frontend.",
+    "redirectingToast": "Redirecting to GitHub…",
+    "signInFailed": "Failed to start GitHub sign-in. Please try again."
+  },
+  "commandPalette": {
+    "title": "Command Palette",
+    "placeholder": "Type a command or search…",
+    "groupNavigation": "Navigation",
+    "groupActions": "Actions",
+    "hint": "↑↓ navigate · ↵ select"
+  },
+  "trends": {
+    "loading": "Loading trends…",
+    "unavailable": "Trends unavailable",
+    "emptyTitle": "No analyses yet",
+    "emptyDesc": "Run your first repository analysis to start tracking score trends over time.",
+    "title30Day": "30-Day",
+    "titleTrends": "Trends",
+    "analysisSingular": "analysis",
+    "analysisPlural": "analyses",
+    "repoSingular": "repo",
+    "repoPlural": "repos",
+    "overall": "Overall",
+    "security": "Security",
+    "performance": "Performance",
+    "architecture": "Architecture",
+    "topLanguages": "Top Languages Analyzed",
+    "avgOverall": "Avg Overall Score"
+  },
+  "codeViewer": {
+    "files": "Files",
+    "copy": "Copy",
+    "copied": "Copied",
+    "aiExplanation": "AI Explanation",
+    "codeCopiedToast": "Code copied"
   }
 }

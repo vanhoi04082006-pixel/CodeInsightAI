@@ -137,7 +137,7 @@ export function PersonalitiesView() {
             <span>{t("personality", "title")}</span>
           </div>
           <h1 className="mt-1 text-2xl font-bold md:text-3xl">
-            AI <GradientText>Personalities</GradientText>
+            {t("personality", "titlePrefix")} <GradientText>{t("personality", "titleSuffix")}</GradientText>
           </h1>
           <p className="text-sm text-muted-foreground">
             {t("personality", "subtitle")}
@@ -205,7 +205,7 @@ export function PersonalitiesView() {
               >
                 {isActive && (
                   <div className="absolute -right-8 top-5 rotate-45 bg-gradient-to-r from-cyan-500 to-violet-500 px-10 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
-                    Active
+                    {t("personality", "activeBadge")}
                   </div>
                 )}
                 <div className="flex items-start gap-3">
@@ -356,7 +356,7 @@ function PersonalityEditor({ personality, onClose }: { personality: Personality;
         <div className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label={t("personality", "editor.name")}>
-              <Input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="e.g. Code Reviewer" className="bg-white/[0.03]" />
+              <Input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder={t("personality", "editor.namePlaceholder")} className="bg-white/[0.03]" />
             </Field>
             <Field label={t("personality", "editor.icon")}>
               <Select value={draft.icon} onValueChange={(v) => setDraft({ ...draft, icon: v })}>
@@ -376,7 +376,7 @@ function PersonalityEditor({ personality, onClose }: { personality: Personality;
           </div>
 
           <Field label={t("personality", "editor.description")}>
-            <Input value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} placeholder="Short summary of how this personality behaves" className="bg-white/[0.03]" />
+            <Input value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} placeholder={t("personality", "editor.descriptionPlaceholder")} className="bg-white/[0.03]" />
           </Field>
 
           <Field label={t("personality", "editor.systemPrompt")} hint={t("personality", "editor.systemPromptHint")}>
@@ -384,7 +384,7 @@ function PersonalityEditor({ personality, onClose }: { personality: Personality;
               value={draft.systemPrompt}
               onChange={(e) => setDraft({ ...draft, systemPrompt: e.target.value })}
               rows={8}
-              placeholder="You are CodeInsight AI operating in [mode]..."
+              placeholder={t("personality", "editor.systemPromptPlaceholder")}
               className="bg-white/[0.03] font-mono text-xs"
             />
           </Field>
@@ -400,7 +400,7 @@ function PersonalityEditor({ personality, onClose }: { personality: Personality;
 
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label={t("personality", "editor.preferredModel")}>
-              <Input value={draft.preferredModel ?? ""} onChange={(e) => setDraft({ ...draft, preferredModel: e.target.value })} placeholder="gpt-4o" className="bg-white/[0.03]" />
+              <Input value={draft.preferredModel ?? ""} onChange={(e) => setDraft({ ...draft, preferredModel: e.target.value })} placeholder={t("personality", "editor.preferredModelPlaceholder")} className="bg-white/[0.03]" />
             </Field>
             <Field label={t("personality", "editor.accent")}>
               <div className="flex items-center gap-2">
@@ -414,7 +414,7 @@ function PersonalityEditor({ personality, onClose }: { personality: Personality;
             <Input
               value={draft.tags.join(", ")}
               onChange={(e) => setDraft({ ...draft, tags: e.target.value.split(",").map((t) => t.trim()).filter(Boolean) })}
-              placeholder="concise, opinionated"
+              placeholder={t("personality", "editor.tagsPlaceholder")}
               className="bg-white/[0.03]"
             />
           </Field>

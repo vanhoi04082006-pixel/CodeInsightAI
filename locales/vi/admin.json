@@ -1,6 +1,7 @@
 {
   "title": "Bảng điều khiển Quản trị",
   "subtitle": "Quản lý người dùng, theo dõi sử dụng và giám sát nền tảng.",
+  "dashboardLabel": "Bảng điều khiển Quản trị",
   "adminAccessRequired": "Yêu cầu quyền Quản trị",
   "adminAccessDesc": "Bạn không có quyền xem trang này. Chỉ tài khoản quản trị mới có thể truy cập bảng điều khiển quản trị.",
   "tabs": {
@@ -105,11 +106,19 @@
     "stripeCustomer": "Khách hàng Stripe",
     "analyses": "Phân tích",
     "updated": "Đã cập nhật",
-    "noSubs": "Chưa có người đăng ký trả phí."
+    "noSubs": "Chưa có người đăng ký trả phí.",
+    "failedToLoad": "Tải danh sách subscription thất bại",
+    "unknown": "Không rõ"
   },
   "audit": {
     "title": "Hành động Quản trị",
-    "noActions": "Chưa có hành động quản trị nào được ghi."
+    "noActions": "Chưa có hành động quản trị nào được ghi.",
+    "failedToLoad": "Tải nhật ký audit thất bại",
+    "admin": "Quản trị",
+    "target": "mục tiêu:"
+  },
+  "miniChart": {
+    "noData": "Chưa có dữ liệu."
   },
   "system": {
     "title": "Tình trạng Hệ thống",
@@ -122,6 +131,8 @@
     "uptime": "Thời gian hoạt động",
     "memory": "Bộ nhớ",
     "analyses": "Phân tích",
-    "loading": "Đang tải…"
+    "loading": "Đang tải…",
+    "set": "đã đặt",
+    "missing": "thiếu"
   }
 }

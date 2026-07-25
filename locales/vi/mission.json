@@ -24,7 +24,8 @@
     "starting": "Đang bắt đầu…",
     "goalPlaceholder": "e.g., Add Google OAuth login with JWT session handling and write tests for the new auth flow",
     "providerPlaceholder": "Select an enabled provider",
-    "builtinProvider": "Built-in (no AI provider)"
+    "builtinProvider": "Built-in (no AI provider)",
+    "demoGoal": "Mission demo: khám phá codebase và xác định 3 quick wins."
   },
   "feed": {
     "title": "AI Activity Feed",
@@ -270,6 +271,44 @@
     "dispatched": "Mission dispatched.",
     "startFailed": "Failed to start mission.",
     "demoStarted": "Demo mode started — simulating agent events.",
-    "stopped": "Mission stopped."
+    "stopped": "Mission stopped.",
+    "terminalCleared": "— terminal đã xóa —"
+  },
+  "requestLog": {
+    "title": "Nhật ký Yêu cầu",
+    "subtitle": "Nhật ký Request / Response",
+    "searchPlaceholder": "Tìm kiếm trong nhật ký...",
+    "filters": {
+      "all": "Tất cả",
+      "user": "Người dùng",
+      "ai": "AI",
+      "error": "Lỗi",
+      "warning": "Cảnh báo",
+      "success": "Thành công"
+    },
+    "empty": "Chưa có request nào được ghi",
+    "emptyFiltered": "Không có log khớp với bộ lọc",
+    "clearFilters": "Xóa bộ lọc",
+    "export": "Xuất JSON",
+    "clearAll": "Xóa tất cả",
+    "clearConfirm": "Xóa tất cả nhật ký? Hành động này không thể hoàn tác.",
+    "logCopiedToast": "Đã sao chép log vào clipboard",
+    "exportedToast": "Đã xuất {count} log",
+    "clearedToast": "Đã xóa tất cả nhật ký",
+    "aria": {
+      "collapseSidebar": "Thu gọn sidebar",
+      "closePanel": "Đóng bảng log",
+      "expandSidebar": "Mở rộng sidebar log",
+      "copyLog": "Sao chép log",
+      "pinLog": "Ghim log",
+      "unpinLog": "Bỏ ghim log"
+    },
+    "actions": {
+      "copy": "Sao chép",
+      "pin": "Ghim",
+      "unpin": "Bỏ ghim"
+    },
+    "userDisplayName": "Bạn",
+    "aiDisplayName": "AI CTO"
   }
 }

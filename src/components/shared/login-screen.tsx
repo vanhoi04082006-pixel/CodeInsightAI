@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { Github, Sparkles, ArrowRight, ShieldCheck, Zap, Code2, Loader2 } from "lucide-react";
 import { GlassCard, GradientText } from "@/components/shared/ui";
 import { signIn } from "next-auth/react";
+import { useT } from "@/lib/i18n";
 import { toast } from "sonner";
 
 /**
@@ -18,19 +19,20 @@ import { toast } from "sonner";
  *    success or surfaces `?error=…` from the URL.
  */
 export function LoginScreen({ onBack }: { onBack?: () => void }) {
+  const { t } = useT();
   const [redirecting, setRedirecting] = useState(false);
 
   const handleSignIn = async () => {
     if (redirecting) return;
     setRedirecting(true);
-    toast.loading("Redirecting to GitHub…", { id: "github-redirect" });
+    toast.loading(t("common", "login.redirectingToast"), { id: "github-redirect" });
     try {
       // signIn() navigates away — if it returns, the redirect failed
       await signIn("github", { callbackUrl: "/" });
     } catch (e) {
       setRedirecting(false);
       toast.dismiss("github-redirect");
-      toast.error("Failed to start GitHub sign-in. Please try again.");
+      toast.error(t("common", "login.signInFailed"));
     }
   };
 
@@ -53,10 +55,10 @@ export function LoginScreen({ onBack }: { onBack?: () => void }) {
           </div>
 
           <h1 className="mt-5 text-2xl font-bold">
-            Welcome to <GradientText>CodeInsight AI</GradientText>
+            {t("common", "login.welcomePrefix")} <GradientText>CodeInsight AI</GradientText>
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Sign in with GitHub to analyze repositories, chat with AI agents, and ship code autonomously.
+            {t("common", "login.subtitle")}
           </p>
 
           {/* GitHub Login Button */}
@@ -70,12 +72,12 @@ export function LoginScreen({ onBack }: { onBack?: () => void }) {
             {redirecting ? (
               <>
                 <Loader2 className="h-5 w-5 animate-spin" />
-                Redirecting…
+                {t("common", "login.redirecting")}
               </>
             ) : (
               <>
                 <Github className="h-5 w-5" />
-                Sign in with GitHub
+                {t("common", "login.signInWithGithub")}
                 <ArrowRight className="ml-1 h-4 w-4" />
               </>
             )}
@@ -85,19 +87,21 @@ export function LoginScreen({ onBack }: { onBack?: () => void }) {
           <div className="mt-4 flex items-start gap-2 rounded-lg border border-white/5 bg-white/[0.02] p-3 text-left">
             <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-400" />
             <p className="text-[11px] leading-relaxed text-muted-foreground">
-              We request <code className="rounded bg-white/5 px-1 text-cyan-300">read:user</code>,{" "}
-              <code className="rounded bg-white/5 px-1 text-cyan-300">user:email</code>, and{" "}
-              <code className="rounded bg-white/5 px-1 text-cyan-300">repo</code> scopes (so we can analyze your
-              private repositories). You can revoke access anytime from your GitHub settings.
+              {t("common", "login.scopePrefix")}{" "}
+              <code className="rounded bg-white/5 px-1 text-cyan-300">read:user</code>,{" "}
+              <code className="rounded bg-white/5 px-1 text-cyan-300">user:email</code>,{" "}
+              {t("common", "login.scopeAnd")}{" "}
+              <code className="rounded bg-white/5 px-1 text-cyan-300">repo</code>{" "}
+              {t("common", "login.scopeSuffix")}
             </p>
           </div>
 
           {/* Features */}
           <div className="mt-6 space-y-2.5">
             {[
-              { icon: Code2, text: "Analyze any GitHub repository with 12 AI agents" },
-              { icon: ShieldCheck, text: "66 static analysis rules (security, bugs, performance)" },
-              { icon: Zap, text: "Bring your own API key — or use Platform AI (Pro)" },
+              { icon: Code2, text: t("common", "login.feature1") },
+              { icon: ShieldCheck, text: t("common", "login.feature2") },
+              { icon: Zap, text: t("common", "login.feature3") },
             ].map((f, i) => {
               const Icon = f.icon;
               return (
@@ -123,13 +127,13 @@ export function LoginScreen({ onBack }: { onBack?: () => void }) {
               onClick={onBack}
               className="mt-6 text-xs text-muted-foreground transition hover:text-foreground"
             >
-              ← Back to landing
+              {t("common", "login.backToLanding")}
             </button>
           )}
 
           {/* Privacy note */}
           <p className="mt-6 text-[10px] leading-relaxed text-muted-foreground/60">
-            Your API keys are AES-256-GCM encrypted on the server and never exposed to the frontend.
+            {t("common", "login.privacyNote")}
             <Sparkles className="mx-auto mt-2 h-3 w-3 text-cyan-300/40" />
           </p>
         </GlassCard>

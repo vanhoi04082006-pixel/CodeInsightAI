@@ -6,10 +6,12 @@ import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { motion, AnimatePresence } from "framer-motion";
 import { Copy, Check, FileCode, Sparkles, ChevronRight } from "lucide-react";
 import type { CodeSnippet } from "@/lib/types";
+import { useT } from "@/lib/i18n";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 export function CodeViewer({ snippets }: { snippets: CodeSnippet[] }) {
+  const { t } = useT();
   const [active, setActive] = useState(0);
   const [copied, setCopied] = useState(false);
   const snippet = snippets[active];
@@ -17,7 +19,7 @@ export function CodeViewer({ snippets }: { snippets: CodeSnippet[] }) {
   const copy = () => {
     navigator.clipboard.writeText(snippet.code);
     setCopied(true);
-    toast.success("Code copied");
+    toast.success(t("common", "codeViewer.codeCopiedToast"));
     setTimeout(() => setCopied(false), 1500);
   };
 
@@ -27,7 +29,7 @@ export function CodeViewer({ snippets }: { snippets: CodeSnippet[] }) {
     <div className="grid gap-4 lg:grid-cols-[260px_1fr]">
       {/* file list */}
       <div className="space-y-1.5">
-        <p className="px-1 text-[10px] uppercase tracking-wider text-muted-foreground">Files</p>
+        <p className="px-1 text-[10px] uppercase tracking-wider text-muted-foreground">{t("common", "codeViewer.files")}</p>
         {snippets.map((s, i) => (
           <button
             key={s.file}
@@ -66,7 +68,7 @@ export function CodeViewer({ snippets }: { snippets: CodeSnippet[] }) {
             className="flex items-center gap-1.5 rounded-md border border-white/10 bg-white/5 px-2 py-1 text-[11px] text-muted-foreground transition hover:bg-white/10 hover:text-foreground"
           >
             {copied ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
-            {copied ? "Copied" : "Copy"}
+            {copied ? t("common", "codeViewer.copied") : t("common", "codeViewer.copy")}
           </button>
         </div>
         {/* code */}
@@ -91,7 +93,7 @@ export function CodeViewer({ snippets }: { snippets: CodeSnippet[] }) {
         {/* AI explanation */}
         <div className="border-t border-white/10 bg-cyan-400/[0.03] p-4">
           <p className="flex items-center gap-1.5 text-xs font-semibold text-cyan-300">
-            <Sparkles className="h-3.5 w-3.5" /> AI Explanation
+            <Sparkles className="h-3.5 w-3.5" /> {t("common", "codeViewer.aiExplanation")}
           </p>
           <p className="mt-1.5 text-xs leading-relaxed text-foreground/85">{snippet.explanation}</p>
         </div>

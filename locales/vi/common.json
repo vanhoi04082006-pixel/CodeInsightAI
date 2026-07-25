@@ -73,5 +73,69 @@
   "empty": {
     "noMessages": "Không có tin nhắn",
     "noActivity": "Không có hoạt động"
+  },
+  "userMenu": {
+    "userFallback": "Người dùng",
+    "ariaLabel": "Menu người dùng",
+    "adminBadge": "Quản trị",
+    "planSuffix": "Gói {plan}",
+    "profileSettings": "Hồ sơ & Cài đặt",
+    "adminDashboard": "Bảng điều khiển Admin",
+    "upgradeToPro": "Nâng cấp lên Pro",
+    "signOut": "Đăng xuất",
+    "signOutTitle": "Đăng xuất khỏi CodeInsight AI?",
+    "signOutDesc": "Bạn sẽ được đưa về trang chủ. Cài đặt và khóa API của bạn được lưu an toàn và sẽ sẵn có khi bạn đăng nhập lại bằng GitHub.",
+    "signingOut": "Đang đăng xuất…",
+    "signOutToastLoading": "Đang đăng xuất…",
+    "signOutToastSuccess": "Đã đăng xuất thành công",
+    "signOutToastError": "Đăng xuất thất bại"
+  },
+  "login": {
+    "welcomePrefix": "Chào mừng đến",
+    "subtitle": "Đăng nhập bằng GitHub để phân tích kho lưu trữ, trò chuyện với AI agents và giao code tự động.",
+    "redirecting": "Đang chuyển hướng…",
+    "signInWithGithub": "Đăng nhập bằng GitHub",
+    "scopePrefix": "Chúng tôi yêu cầu",
+    "scopeAnd": "và",
+    "scopeSuffix": "scopes (để chúng tôi có thể phân tích kho lưu trữ riêng tư của bạn). Bạn có thể thu hồi quyền truy cập bất cứ lúc nào từ cài đặt GitHub.",
+    "feature1": "Phân tích bất kỳ kho GitHub nào với 12 AI agents",
+    "feature2": "66 quy tắc phân tích tĩnh (bảo mật, lỗi, hiệu năng)",
+    "feature3": "Mang theo API key của riêng bạn — hoặc dùng Platform AI (Pro)",
+    "backToLanding": "← Về trang chủ",
+    "privacyNote": "Khóa API của bạn được mã hóa AES-256-GCM trên máy chủ và không bao giờ tiết lộ cho frontend.",
+    "redirectingToast": "Đang chuyển hướng đến GitHub…",
+    "signInFailed": "Không thể bắt đầu đăng nhập GitHub. Vui lòng thử lại."
+  },
+  "commandPalette": {
+    "title": "Bảng lệnh",
+    "placeholder": "Nhập lệnh hoặc tìm kiếm…",
+    "groupNavigation": "Điều hướng",
+    "groupActions": "Hành động",
+    "hint": "↑↓ điều hướng · ↵ chọn"
+  },
+  "trends": {
+    "loading": "Đang tải xu hướng…",
+    "unavailable": "Xu hướng không khả dụng",
+    "emptyTitle": "Chưa có phân tích nào",
+    "emptyDesc": "Chạy phân tích kho lưu trữ đầu tiên để bắt đầu theo dõi xu hướng điểm theo thời gian.",
+    "title30Day": "30 ngày",
+    "titleTrends": "Xu hướng",
+    "analysisSingular": "phân tích",
+    "analysisPlural": "lượt phân tích",
+    "repoSingular": "repo",
+    "repoPlural": "repo",
+    "overall": "Tổng quan",
+    "security": "Bảo mật",
+    "performance": "Hiệu năng",
+    "architecture": "Kiến trúc",
+    "topLanguages": "Ngôn ngữ được phân tích nhiều nhất",
+    "avgOverall": "Điểm tổng quan TB"
+  },
+  "codeViewer": {
+    "files": "Tệp",
+    "copy": "Sao chép",
+    "copied": "Đã sao chép",
+    "aiExplanation": "Giải thích AI",
+    "codeCopiedToast": "Đã sao chép code"
   }
 }

@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import * as d3 from "d3-force";
 import type { AnalysisReport } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 
 const GROUP_COLORS = ["#22d3ee", "#a78bfa", "#f472b6", "#34d399", "#fbbf24"];
 
@@ -42,6 +43,7 @@ interface SimLink extends d3.SimulationLinkDatum<SimNode> {
 }
 
 export function DependencyGraph({ report }: { report: AnalysisReport }) {
+  const { t } = useT();
   const svgRef = useRef<SVGSVGElement>(null);
   const [hovered, setHovered] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
@@ -227,14 +229,14 @@ export function DependencyGraph({ report }: { report: AnalysisReport }) {
 
         {/* Legend */}
         <div className="absolute bottom-3 left-3 flex flex-wrap gap-2 rounded-lg border border-white/10 bg-black/40 p-2 backdrop-blur-md">
-          {["Entry", "Core", "Service", "Util", "Component", "Config"].map((l, i) => (
+          {["entry", "core", "service", "util", "component", "config"].map((l, i) => (
             <span key={l} className="flex items-center gap-1 text-[10px] text-muted-foreground">
               <span className="h-2 w-2 rounded-full" style={{ background: GROUP_COLORS[i % GROUP_COLORS.length] }} />
-              {l}
+              {t("codegraph", `depGraph.legend.${l}`)}
             </span>
           ))}
           <span className="flex items-center gap-1 text-[10px] text-rose-400">
-            <span className="h-0.5 w-3 bg-rose-400" /> circular
+            <span className="h-0.5 w-3 bg-rose-400" /> {t("codegraph", "depGraph.circular")}
           </span>
         </div>
       </div>
@@ -242,42 +244,44 @@ export function DependencyGraph({ report }: { report: AnalysisReport }) {
       {/* Inspector */}
       <div className="space-y-3">
         <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Inspector</p>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("codegraph", "depGraph.inspector")}</p>
           {selNode ? (
             <div className="mt-2 space-y-2">
               <p className="font-mono text-sm text-cyan-300">{selNode.label}</p>
-              <p className="text-xs text-muted-foreground">Path: <span className="text-foreground">{selNode.id}</span></p>
-              <p className="text-xs text-muted-foreground">Type: <span className="text-foreground">{selNode.type}</span></p>
-              <p className="text-xs text-muted-foreground">Group: <span className="text-foreground">{selNode.group}</span></p>
-              <p className="text-xs text-muted-foreground">Connections: <span className="text-foreground">{edges.filter((e) => e.from === selNode.id || e.to === selNode.id).length}</span></p>
+              <p className="text-xs text-muted-foreground">{t("codegraph", "depGraph.pathLabel")} <span className="text-foreground">{selNode.id}</span></p>
+              <p className="text-xs text-muted-foreground">{t("codegraph", "depGraph.typeLabel")} <span className="text-foreground">{selNode.type}</span></p>
+              <p className="text-xs text-muted-foreground">{t("codegraph", "depGraph.groupLabel")} <span className="text-foreground">{selNode.group}</span></p>
+              <p className="text-xs text-muted-foreground">{t("codegraph", "depGraph.connectionsLabel")} <span className="text-foreground">{edges.filter((e) => e.from === selNode.id || e.to === selNode.id).length}</span></p>
               <p className="mt-2 text-xs leading-relaxed text-foreground/80">
-                {NODE_EXPLANATIONS[selNode.type] || "Module in the codebase."}
+                {(["entry", "core", "service", "util", "component", "config"].includes(selNode.type)
+                  ? t("codegraph", `depGraph.nodeExplanations.${selNode.type}`)
+                  : t("codegraph", "depGraph.moduleFallback"))}
               </p>
             </div>
           ) : (
-            <p className="mt-2 text-xs text-muted-foreground">Click a node to inspect its role and connections.</p>
+            <p className="mt-2 text-xs text-muted-foreground">{t("codegraph", "depGraph.clickHint")}</p>
           )}
         </div>
 
         <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Graph stats</p>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("codegraph", "depGraph.graphStats")}</p>
           <div className="mt-2 space-y-1.5 text-xs">
             <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Nodes</span>
+              <span className="text-muted-foreground">{t("codegraph", "depGraph.nodesLabel")}</span>
               <span className="font-medium">{nodes.length}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Edges</span>
+              <span className="text-muted-foreground">{t("codegraph", "depGraph.edgesLabel")}</span>
               <span className="font-medium">{edges.length}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Circular deps</span>
+              <span className="text-muted-foreground">{t("codegraph", "depGraph.circularDeps")}</span>
               <span className="font-medium" style={{ color: report.dependencies.circular.length ? "#ff5470" : undefined }}>
                 {report.dependencies.circular.length}
               </span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Avg connectivity</span>
+              <span className="text-muted-foreground">{t("codegraph", "depGraph.avgConnectivity")}</span>
               <span className="font-medium">{nodes.length > 0 ? (edges.length / nodes.length).toFixed(2) : 0}</span>
             </div>
           </div>
@@ -285,7 +289,7 @@ export function DependencyGraph({ report }: { report: AnalysisReport }) {
 
         {report.dependencies.circular.length > 0 && (
           <div className="rounded-xl border border-rose-500/20 bg-rose-500/[0.04] p-4">
-            <p className="text-[10px] uppercase tracking-wider text-rose-400">Circular dependencies</p>
+            <p className="text-[10px] uppercase tracking-wider text-rose-400">{t("codegraph", "depGraph.circularDepsTitle")}</p>
             <div className="mt-2 space-y-1.5">
               {report.dependencies.circular.map((c, i) => (
                 <div key={i} className="font-mono text-[11px] text-rose-300">
@@ -299,12 +303,3 @@ export function DependencyGraph({ report }: { report: AnalysisReport }) {
     </div>
   );
 }
-
-const NODE_EXPLANATIONS: Record<string, string> = {
-  entry: "Application entry point — bootstraps the runtime and mounts the app.",
-  core: "Core domain module — encapsulates a primary business capability.",
-  service: "Service layer — orchestrates use-cases and coordinates infrastructure calls.",
-  util: "Shared utility — stateless helpers reused across modules.",
-  component: "UI component — presentation logic with minimal business rules.",
-  config: "Configuration — static settings, env loaders, and feature flags.",
-};

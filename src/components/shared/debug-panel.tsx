@@ -55,7 +55,7 @@ export function DeveloperPanel({ snapshot }: { snapshot: DebugSnapshot | null })
         <div className="flex-1">
           <p className="text-sm font-semibold">{t("developer", "panel")}</p>
           <p className="text-[11px] text-muted-foreground">
-            {snapshot ? `Last request · ${snapshot.totalMs}ms · ${snapshot.totalTokens} tokens` : "No requests yet"}
+            {snapshot ? t("developer", "lastRequestSummary", { ms: snapshot.totalMs, tokens: snapshot.totalTokens }) : t("developer", "noRequests")}
           </p>
         </div>
         <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", open && "rotate-180")} />
@@ -103,16 +103,16 @@ export function TokenUsageCard({ snapshot }: { snapshot: DebugSnapshot }) {
   const show = useDeveloperModeStore((s) => s.showTokenUsage);
   if (!show) return null;
   return (
-    <DebugSection icon={Hash} title="Token Usage" color="#22d3ee">
+    <DebugSection icon={Hash} title={t("developer", "sections.tokenUsage")} color="#22d3ee">
       <div className="grid grid-cols-3 gap-2">
-        <Metric label="Input" value={snapshot.inputTokens} icon={ArrowDown} color="#22d3ee" />
-        <Metric label="Output" value={snapshot.outputTokens} icon={ArrowUp} color="#34d399" />
-        <Metric label="Total" value={snapshot.totalTokens} icon={Hash} color="#a78bfa" highlight />
+        <Metric label={t("developer", "metrics.input")} value={snapshot.inputTokens} icon={ArrowDown} color="#22d3ee" />
+        <Metric label={t("developer", "metrics.output")} value={snapshot.outputTokens} icon={ArrowUp} color="#34d399" />
+        <Metric label={t("developer", "metrics.total")} value={snapshot.totalTokens} icon={Hash} color="#a78bfa" highlight />
       </div>
       {snapshot.tokenCostEstimate && (
         <div className="mt-2 flex items-center gap-1.5 text-[11px] text-muted-foreground">
           <DollarSign className="h-3 w-3" />
-          est. cost: {snapshot.tokenCostEstimate.totalCost.toFixed(4)} {snapshot.tokenCostEstimate.currency}
+          {t("developer", "metrics.estCost")}: {snapshot.tokenCostEstimate.totalCost.toFixed(4)} {snapshot.tokenCostEstimate.currency}
         </div>
       )}
     </DebugSection>
@@ -127,12 +127,12 @@ export function ResponseTimeCard({ snapshot }: { snapshot: DebugSnapshot }) {
   const show = useDeveloperModeStore((s) => s.showResponseTime);
   if (!show) return null;
   return (
-    <DebugSection icon={Clock} title="Performance" color="#fbbf24">
+    <DebugSection icon={Clock} title={t("developer", "sections.performance")} color="#fbbf24">
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <Metric label="Queue" value={`${snapshot.queueMs}ms`} icon={Clock} color="#fbbf24" />
-        <Metric label="Generation" value={`${snapshot.generationMs}ms`} icon={Zap} color="#34d399" />
-        <Metric label="Total" value={`${snapshot.totalMs}ms`} icon={Gauge} color="#22d3ee" highlight />
-        <Metric label="Tokens/s" value={snapshot.generationMs > 0 ? Math.round(snapshot.outputTokens / (snapshot.generationMs / 1000)) : 0} icon={Activity} color="#a78bfa" />
+        <Metric label={t("developer", "metrics.queue")} value={`${snapshot.queueMs}ms`} icon={Clock} color="#fbbf24" />
+        <Metric label={t("developer", "metrics.generation")} value={`${snapshot.generationMs}ms`} icon={Zap} color="#34d399" />
+        <Metric label={t("developer", "metrics.total")} value={`${snapshot.totalMs}ms`} icon={Gauge} color="#22d3ee" highlight />
+        <Metric label={t("developer", "metrics.tokensPerSec")} value={snapshot.generationMs > 0 ? Math.round(snapshot.outputTokens / (snapshot.generationMs / 1000)) : 0} icon={Activity} color="#a78bfa" />
       </div>
     </DebugSection>
   );
@@ -146,15 +146,15 @@ export function ModelInfoCard({ snapshot }: { snapshot: DebugSnapshot }) {
   const show = useDeveloperModeStore((s) => s.showModelDebug);
   if (!show) return null;
   return (
-    <DebugSection icon={Cpu} title="Model Information" color="#a78bfa">
+    <DebugSection icon={Cpu} title={t("developer", "sections.modelInfo")} color="#a78bfa">
       <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[11px]">
-        <Row label="Provider" value={snapshot.provider} />
-        <Row label="Model" value={snapshot.model} />
-        <Row label="Personality" value={snapshot.personality} />
-        <Row label="Context window" value={snapshot.contextWindow.toLocaleString()} />
-        <Row label="Temperature" value={snapshot.temperature.toFixed(2)} />
-        <Row label="Max tokens" value={snapshot.maxTokens === -1 ? "∞" : snapshot.maxTokens.toLocaleString()} />
-        <Row label="Streaming" value={snapshot.streaming ? "on" : "off"} />
+        <Row label={t("developer", "model.provider")} value={snapshot.provider} />
+        <Row label={t("developer", "model.model")} value={snapshot.model} />
+        <Row label={t("developer", "model.personality")} value={snapshot.personality} />
+        <Row label={t("developer", "model.contextWindow")} value={snapshot.contextWindow.toLocaleString()} />
+        <Row label={t("developer", "model.temperature")} value={snapshot.temperature.toFixed(2)} />
+        <Row label={t("developer", "model.maxTokens")} value={snapshot.maxTokens === -1 ? "∞" : snapshot.maxTokens.toLocaleString()} />
+        <Row label={t("developer", "model.streaming")} value={snapshot.streaming ? t("developer", "model.streamingOn") : t("developer", "model.streamingOff")} />
       </div>
     </DebugSection>
   );
@@ -168,19 +168,19 @@ export function PromptDebugger({ snapshot }: { snapshot: DebugSnapshot }) {
   const show = useDeveloperModeStore((s) => s.showPromptDebug);
   if (!show) return null;
   return (
-    <DebugSection icon={Quote} title="Prompt Debug" color="#34d399">
-      <CollapsibleText label="System Prompt" text={maskSecrets(snapshot.systemPrompt)} />
-      <CollapsibleText label="User Prompt" text={maskSecrets(snapshot.userPrompt)} />
-      <CollapsibleText label="Repository Context" text={maskSecrets(snapshot.repositoryContext)} />
+    <DebugSection icon={Quote} title={t("developer", "sections.promptDebug")} color="#34d399">
+      <CollapsibleText label={t("developer", "prompt.systemPrompt")} text={maskSecrets(snapshot.systemPrompt)} />
+      <CollapsibleText label={t("developer", "prompt.userPrompt")} text={maskSecrets(snapshot.userPrompt)} />
+      <CollapsibleText label={t("developer", "prompt.repoContext")} text={maskSecrets(snapshot.repositoryContext)} />
       {snapshot.retrievedChunks.length > 0 && (
         <div>
-          <p className="mt-2 text-[10px] uppercase tracking-wider text-muted-foreground">Retrieved Chunks ({snapshot.retrievedChunks.length})</p>
+          <p className="mt-2 text-[10px] uppercase tracking-wider text-muted-foreground">{t("developer", "prompt.retrievedChunks")} ({snapshot.retrievedChunks.length})</p>
           <div className="mt-1 space-y-1">
             {snapshot.retrievedChunks.map((c, i) => (
               <div key={i} className="rounded border border-white/5 bg-black/30 p-2">
                 <div className="flex items-center justify-between text-[10px]">
                   <span className="font-mono text-cyan-300">{c.path}</span>
-                  <span className="text-amber-400">score {c.score.toFixed(3)}</span>
+                  <span className="text-amber-400">{t("developer", "prompt.score")} {c.score.toFixed(3)}</span>
                 </div>
                 <p className="mt-1 line-clamp-2 text-[10px] text-muted-foreground">{c.snippet}</p>
               </div>
@@ -188,7 +188,7 @@ export function PromptDebugger({ snapshot }: { snapshot: DebugSnapshot }) {
           </div>
         </div>
       )}
-      <CollapsibleText label="Final Prompt Sent to AI" text={maskSecrets(snapshot.finalPrompt)} defaultOpen={false} />
+      <CollapsibleText label={t("developer", "prompt.finalPrompt")} text={maskSecrets(snapshot.finalPrompt)} defaultOpen={false} />
     </DebugSection>
   );
 }
@@ -202,12 +202,12 @@ export function ModelDebugger({ snapshot }: { snapshot: DebugSnapshot }) {
   if (!show) return null;
   const caps = snapshot.capabilities;
   return (
-    <DebugSection icon={Brain} title="Model Capabilities" color="#f472b6">
+    <DebugSection icon={Brain} title={t("developer", "sections.modelCapabilities")} color="#f472b6">
       <div className="grid grid-cols-2 gap-2">
-        <Capability label="Vision" supported={caps.vision} icon={Eye} />
-        <Capability label="Tool calling" supported={caps.toolCalling} icon={Wrench} />
-        <Capability label="Function calling" supported={caps.functionCalling} icon={Wrench} />
-        <Capability label="Reasoning" supported={caps.reasoning} icon={Brain} />
+        <Capability label={t("developer", "capabilities.vision")} supported={caps.vision} icon={Eye} />
+        <Capability label={t("developer", "capabilities.toolCalling")} supported={caps.toolCalling} icon={Wrench} />
+        <Capability label={t("developer", "capabilities.functionCalling")} supported={caps.functionCalling} icon={Wrench} />
+        <Capability label={t("developer", "capabilities.reasoning")} supported={caps.reasoning} icon={Brain} />
       </div>
     </DebugSection>
   );
@@ -222,10 +222,10 @@ export function RawResponseViewer({ snapshot }: { snapshot: DebugSnapshot }) {
   const [open, setOpen] = useState(false);
   if (!show) return null;
   return (
-    <DebugSection icon={ScrollText} title="Raw AI Response" color="#60a5fa">
+    <DebugSection icon={ScrollText} title={t("developer", "sections.rawResponse")} color="#60a5fa">
       <button onClick={() => setOpen((o) => !o)} className="flex w-full items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground">
         <ChevronDown className={cn("h-3 w-3 transition-transform", open && "rotate-180")} />
-        {open ? "Hide" : "Show"} raw response ({snapshot.rawResponse.length} chars)
+        {open ? t("developer", "raw.hideChars", { count: snapshot.rawResponse.length }) : t("developer", "raw.showChars", { count: snapshot.rawResponse.length })}
       </button>
       {open && (
         <pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap rounded-lg border border-white/5 bg-black/40 p-3 font-mono text-[10px] leading-relaxed text-foreground/70 scrollbar-thin">
@@ -244,10 +244,10 @@ export function AdvancedDebugCard({ snapshot }: { snapshot: DebugSnapshot }) {
   const show = useDeveloperModeStore((s) => s.showAdvancedDebug);
   if (!show) return null;
   return (
-    <DebugSection icon={FileSearch} title="Advanced Debugging" color="#fb7185">
+    <DebugSection icon={FileSearch} title={t("developer", "sections.advancedDebug")} color="#fb7185">
       {snapshot.embeddingResults && (
         <div>
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Embedding Results ({snapshot.embeddingResults.length})</p>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("developer", "advanced.embeddingResults")} ({snapshot.embeddingResults.length})</p>
           <div className="mt-1 space-y-0.5">
             {snapshot.embeddingResults.slice(0, 5).map((e) => (
               <div key={e.id} className="flex justify-between text-[10px]">
@@ -260,7 +260,7 @@ export function AdvancedDebugCard({ snapshot }: { snapshot: DebugSnapshot }) {
       )}
       {snapshot.vectorSearchResults && (
         <div className="mt-2">
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Vector Search Results ({snapshot.vectorSearchResults.length})</p>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("developer", "advanced.vectorSearch")} ({snapshot.vectorSearchResults.length})</p>
           <div className="mt-1 space-y-1">
             {snapshot.vectorSearchResults.slice(0, 3).map((v) => (
               <div key={v.id} className="rounded border border-white/5 bg-black/30 p-1.5 text-[10px]">
@@ -276,7 +276,7 @@ export function AdvancedDebugCard({ snapshot }: { snapshot: DebugSnapshot }) {
       )}
       {snapshot.chunkRanking && (
         <div className="mt-2">
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Chunk Ranking</p>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("developer", "advanced.chunkRanking")}</p>
           <div className="mt-1 space-y-0.5">
             {snapshot.chunkRanking.slice(0, 5).map((c) => (
               <div key={c.path} className="flex items-center gap-2 text-[10px]">
@@ -290,16 +290,16 @@ export function AdvancedDebugCard({ snapshot }: { snapshot: DebugSnapshot }) {
       )}
       <div className="mt-2 grid grid-cols-2 gap-2">
         {snapshot.repositoryIndex && (
-          <MiniStat icon={FileSearch} label="Repo index" value={`${snapshot.repositoryIndex.files}f / ${snapshot.repositoryIndex.chunks}c / ${snapshot.repositoryIndex.embeddings}e`} />
+          <MiniStat icon={FileSearch} label={t("developer", "advanced.repoIndex")} value={`${snapshot.repositoryIndex.files}f / ${snapshot.repositoryIndex.chunks}c / ${snapshot.repositoryIndex.embeddings}e`} />
         )}
         {snapshot.dependencyGraphData && (
-          <MiniStat icon={Network} label="Dep graph" value={`${snapshot.dependencyGraphData.nodes}n / ${snapshot.dependencyGraphData.edges}e / ${snapshot.dependencyGraphData.circular}cyc`} />
+          <MiniStat icon={Network} label={t("developer", "advanced.depGraph")} value={`${snapshot.dependencyGraphData.nodes}n / ${snapshot.dependencyGraphData.edges}e / ${snapshot.dependencyGraphData.circular}cyc`} />
         )}
         {snapshot.staticAnalysisOutput && (
-          <MiniStat icon={ListChecks} label="Static analysis" value={`${snapshot.staticAnalysisOutput.issues}iss`} />
+          <MiniStat icon={ListChecks} label={t("developer", "advanced.staticAnalysis")} value={`${snapshot.staticAnalysisOutput.issues}iss`} />
         )}
         {snapshot.tokenCostEstimate && (
-          <MiniStat icon={DollarSign} label="Token cost" value={`${snapshot.tokenCostEstimate.totalCost.toFixed(4)} ${snapshot.tokenCostEstimate.currency}`} />
+          <MiniStat icon={DollarSign} label={t("developer", "advanced.tokenCost")} value={`${snapshot.tokenCostEstimate.totalCost.toFixed(4)} ${snapshot.tokenCostEstimate.currency}`} />
         )}
       </div>
     </DebugSection>
@@ -327,7 +327,7 @@ export function LogViewer() {
       </div>
       <div className="mt-3 max-h-64 space-y-1 overflow-y-auto scrollbar-thin">
         {logs.length === 0 ? (
-          <p className="py-4 text-center text-xs text-muted-foreground">No requests logged yet.</p>
+          <p className="py-4 text-center text-xs text-muted-foreground">{t("developer", "logs.empty")}</p>
         ) : (
           logs.map((log) => <LogRow key={log.id} log={log} />)
         )}
@@ -393,9 +393,9 @@ function ExportButtons({ snapshot }: { snapshot: DebugSnapshot }) {
   };
   return (
     <div className="flex flex-wrap gap-1.5">
-      <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => exportAs("json")}><Download className="mr-1 h-3 w-3" /> JSON</Button>
-      <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => exportAs("markdown")}><Download className="mr-1 h-3 w-3" /> Markdown</Button>
-      <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => exportAs("txt")}><Download className="mr-1 h-3 w-3" /> TXT</Button>
+      <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => exportAs("json")}><Download className="mr-1 h-3 w-3" /> {t("developer", "export.json")}</Button>
+      <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => exportAs("markdown")}><Download className="mr-1 h-3 w-3" /> {t("developer", "export.markdown")}</Button>
+      <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => exportAs("txt")}><Download className="mr-1 h-3 w-3" /> {t("developer", "export.txt")}</Button>
     </div>
   );
 }
@@ -435,11 +435,12 @@ function Row({ label, value }: { label: string; value: string }) {
 }
 
 function Capability({ label, supported, icon: Icon }: { label: string; supported: boolean; icon: typeof Eye }) {
+  const { t } = useT();
   return (
     <div className={cn("flex items-center gap-2 rounded-lg border p-2", supported ? "border-emerald-400/20 bg-emerald-400/[0.04]" : "border-white/5 bg-white/[0.02]")}>
       <Icon className={cn("h-3.5 w-3.5", supported ? "text-emerald-400" : "text-muted-foreground")} />
       <span className="text-[11px]">{label}</span>
-      <span className={cn("ml-auto text-[10px] font-semibold", supported ? "text-emerald-400" : "text-muted-foreground")}>{supported ? "yes" : "no"}</span>
+      <span className={cn("ml-auto text-[10px] font-semibold", supported ? "text-emerald-400" : "text-muted-foreground")}>{supported ? t("developer", "capabilities.yes") : t("developer", "capabilities.no")}</span>
     </div>
   );
 }
@@ -456,12 +457,13 @@ function MiniStat({ icon: Icon, label, value }: { icon: typeof Hash; label: stri
 }
 
 function CollapsibleText({ label, text, defaultOpen = true }: { label: string; text: string; defaultOpen?: boolean }) {
+  const { t } = useT();
   const [open, setOpen] = useState(defaultOpen);
   return (
     <div className="mt-1">
       <button onClick={() => setOpen((o) => !o)} className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground">
         <ChevronDown className={cn("h-3 w-3 transition-transform", open && "rotate-180")} />
-        {label} ({text.length} chars)
+        {label} ({text.length} {t("developer", "prompt.chars")})
       </button>
       {open && (
         <pre className="mt-1 max-h-40 overflow-auto whitespace-pre-wrap rounded border border-white/5 bg-black/40 p-2 font-mono text-[10px] leading-relaxed text-foreground/70 scrollbar-thin">

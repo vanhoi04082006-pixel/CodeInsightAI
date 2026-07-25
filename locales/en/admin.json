@@ -1,6 +1,7 @@
 {
   "title": "Admin Console",
   "subtitle": "Manage users, monitor usage, and oversee the platform.",
+  "dashboardLabel": "Admin Dashboard",
   "adminAccessRequired": "Admin Access Required",
   "adminAccessDesc": "You don't have permission to view this page. Only admin accounts can access the admin dashboard.",
   "tabs": {
@@ -105,11 +106,19 @@
     "stripeCustomer": "Stripe Customer",
     "analyses": "Analyses",
     "updated": "Updated",
-    "noSubs": "No paid subscribers yet."
+    "noSubs": "No paid subscribers yet.",
+    "failedToLoad": "Failed to load subscriptions",
+    "unknown": "Unknown"
   },
   "audit": {
     "title": "Admin Actions",
-    "noActions": "No admin actions recorded yet."
+    "noActions": "No admin actions recorded yet.",
+    "failedToLoad": "Failed to load audit log",
+    "admin": "Admin",
+    "target": "target:"
+  },
+  "miniChart": {
+    "noData": "No data yet."
   },
   "system": {
     "title": "System Health",
@@ -122,6 +131,8 @@
     "uptime": "Uptime",
     "memory": "Memory",
     "analyses": "Analyses",
-    "loading": "Loading…"
+    "loading": "Loading…",
+    "set": "set",
+    "missing": "missing"
   }
 }

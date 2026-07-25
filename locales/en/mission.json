@@ -2,14 +2,12 @@
   "title": "Mission Control",
   "subtitle": "AI Operating System",
   "description": "Give your AI team a goal. They plan, execute, verify, and ship — autonomously.",
-
   "empty": {
     "title": "No Repository Selected",
     "description": "Select an analysis from History or analyze a new repository to start a mission. Mission Control binds to the active analysis — just like AI Chat and AI Report.",
     "historyButton": "Open History",
     "analyzeButton": "Analyze Repo"
   },
-
   "form": {
     "title": "Define Your Mission",
     "description": "Describe what you want your AI team to accomplish. They'll plan, execute, verify, and ship.",
@@ -26,9 +24,9 @@
     "disclaimer": "Missions execute locally — your code never leaves your machine.",
     "demo": "Demo Mode",
     "startButton": "Start Mission",
-    "starting": "Starting…"
+    "starting": "Starting…",
+    "demoGoal": "Demo mission: explore the codebase and identify 3 quick wins."
   },
-
   "feed": {
     "title": "AI Activity Feed",
     "eventsCount": "{count} events",
@@ -60,7 +58,6 @@
       "iterationStarted": "Iteration #{n} started"
     }
   },
-
   "worldState": {
     "title": "World State",
     "confidence": "Confidence",
@@ -87,7 +84,6 @@
       "trusted": "Trusted"
     }
   },
-
   "agents": {
     "title": "Agent Team",
     "agentCount": "{count} agents",
@@ -115,7 +111,6 @@
       "default": "Specialist agent in the CodeInsight AI multi-agent system."
     }
   },
-
   "dock": {
     "hideDock": "Hide dock",
     "showDock": "Show agent dock",
@@ -134,22 +129,31 @@
     "success": "success",
     "failed": "failed"
   },
-
   "networkGraph": {
     "title": "Agent Network Graph",
     "fullscreen": "Agent Network Graph (Fullscreen)",
-    "ariaLabel": "Agent network graph showing 11 agents and their collaboration links"
+    "ariaLabel": "Agent network graph showing 11 agents and their collaboration links",
+    "description": "Interactions between agents",
+    "nodes": "{count} agents",
+    "edges": "{count} connections",
+    "noInteractions": "No interactions yet"
   },
-
   "statusMeta": {
     "idle": "Idle",
     "planning": "Planning",
     "executing": "Executing",
     "verifying": "Verifying",
     "completed": "Completed",
-    "failed": "Failed"
+    "failed": "Failed",
+    "queued": "Queued",
+    "running": "Running",
+    "cancelled": "Cancelled",
+    "duration": "Duration",
+    "iterations": "Iterations",
+    "agents": "Agents",
+    "filesModified": "Files modified",
+    "decisions": "Decisions"
   },
-
   "commandBar": {
     "missionLabel": "Mission",
     "demoLabel": "Demo",
@@ -160,9 +164,12 @@
     "maximizeActivityFeed": "Maximize Activity Feed",
     "maximizeNetworkGraph": "Maximize Network Graph",
     "maximizePanel": "Maximize Panel",
-    "exitFullscreen": "Exit Fullscreen"
+    "exitFullscreen": "Exit Fullscreen",
+    "title": "Command Bar",
+    "placeholder": "Type a command or question...",
+    "send": "Send",
+    "hint": "Press Enter to send, Shift+Enter for newline"
   },
-
   "tabs": {
     "files": "Files",
     "diff": "Diff",
@@ -170,9 +177,12 @@
     "terminal": "Terminal",
     "git": "Git",
     "fileDiff": "File Diff",
-    "logs": "Logs"
+    "logs": "Logs",
+    "timeline": "Timeline",
+    "agents": "Agents",
+    "state": "State",
+    "graph": "Graph"
   },
-
   "fileTree": {
     "title": "File Tree",
     "showOnlyModified": "Show only modified files",
@@ -183,9 +193,11 @@
       "modified": "Modified",
       "added": "Added",
       "deleted": "Deleted"
-    }
+    },
+    "created": "Created",
+    "deleted": "Deleted",
+    "noChanges": "No changes"
   },
-
   "fileDiff": {
     "noFileSelected": "No file selected",
     "selectFileHint": "Select a file to view its diff.",
@@ -204,9 +216,12 @@
       "added": "Added",
       "deleted": "Deleted",
       "renamed": "Renamed"
-    }
+    },
+    "title": "File Diff",
+    "added": "Added",
+    "removed": "Removed",
+    "modified": "Modified"
   },
-
   "bottomPanel": {
     "rawEventLog": "Raw Event Log",
     "copyJson": "Copy JSON",
@@ -219,21 +234,22 @@
     "filesModified": "Files Modified",
     "noFileSelected": "No file selected.",
     "refresh": "Refresh",
-    "clear": "Clear"
+    "clear": "Clear",
+    "title": "Bottom Panel",
+    "terminal": "Terminal",
+    "logs": "Logs",
+    "events": "Events"
   },
-
   "sidebar": {
     "title": "Missions",
     "history": "History",
     "templates": "Templates"
   },
-
   "history": {
     "title": "Mission History",
     "iterationsUnit": "iterations",
     "filesUnit": "files"
   },
-
   "actions": {
     "stop": "Stop",
     "collapseBottom": "Collapse Panel",
@@ -241,12 +257,58 @@
     "newMission": "New Mission",
     "newMissionShort": "New"
   },
-
   "toasts": {
     "describeGoal": "Please describe a mission goal first.",
     "dispatched": "Mission dispatched.",
     "startFailed": "Failed to start mission.",
     "demoStarted": "Demo mode started — simulating agent events.",
-    "stopped": "Mission stopped."
+    "stopped": "Mission stopped.",
+    "missionStarted": "Mission started",
+    "missionCompleted": "Mission completed",
+    "missionFailed": "Mission failed",
+    "agentError": "Agent error",
+    "fileSaved": "File saved",
+    "buildPassed": "Build passed",
+    "buildFailed": "Build failed",
+    "testsPassed": "Tests passed",
+    "testsFailed": "Tests failed",
+    "terminalCleared": "— terminal cleared —"
+  },
+  "requestLog": {
+    "title": "Request Log",
+    "subtitle": "Request / Response log",
+    "searchPlaceholder": "Search logs…",
+    "filters": {
+      "all": "All",
+      "user": "User",
+      "ai": "AI",
+      "error": "Error",
+      "warning": "Warning",
+      "success": "Success"
+    },
+    "empty": "No requests logged yet",
+    "emptyFiltered": "No logs match your filters",
+    "clearFilters": "Clear filters",
+    "export": "Export JSON",
+    "clearAll": "Clear all",
+    "clearConfirm": "Delete all logs? This action cannot be undone.",
+    "logCopiedToast": "Log copied to clipboard",
+    "exportedToast": "Exported {count} logs",
+    "clearedToast": "All logs cleared",
+    "aria": {
+      "collapseSidebar": "Collapse sidebar",
+      "closePanel": "Close log panel",
+      "expandSidebar": "Expand log sidebar",
+      "copyLog": "Copy log",
+      "pinLog": "Pin log",
+      "unpinLog": "Unpin log"
+    },
+    "actions": {
+      "copy": "Copy",
+      "pin": "Pin",
+      "unpin": "Unpin"
+    },
+    "userDisplayName": "You",
+    "aiDisplayName": "AI CTO"
   }
 }

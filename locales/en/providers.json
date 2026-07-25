@@ -52,7 +52,11 @@
   "labels": {
     "default": "Default",
     "custom": "Custom",
-    "pro": "Pro"
+    "pro": "Pro",
+    "notSet": "Not set",
+    "defaultInline": "default {name}",
+    "customInline": "{value} (custom)",
+    "savedServerSide": "•••• (saved server-side)"
   },
   "aria": {
     "label": "AI Mode: {mode} — click to switch"
@@ -74,6 +78,31 @@
     "switchedToDefaultDesc": "Using admin's key ({name}) — {tokens} tokens/month",
     "switchedToDefaultShortDesc": "Using admin's key — {tokens} tokens/month",
     "noDefaultProvider": "No default provider configured",
-    "noDefaultProviderDesc": "Admin needs to configure at least one AI provider in Admin Dashboard."
-  }
+    "noDefaultProviderDesc": "Admin needs to configure at least one AI provider in Admin Dashboard.",
+    "savedEncrypted": "Saved securely (encrypted)",
+    "saveCredentialFailed": "Failed to save credential",
+    "serverStartingRetry": "Server is starting up. Please retry in 10s.",
+    "serverStartingWait": "Server is starting up. Please wait 10 seconds and try again.",
+    "serverError": "Server error {status}",
+    "requestTimedOut": "Request timed out (30s)",
+    "networkErrorHtml": "Network error — server returned HTML instead of JSON"
+  },
+  "statSub": {
+    "ofAdded": "of {count} added",
+    "reachableNow": "reachable now",
+    "ollamaLmStudio": "Ollama / LM Studio",
+    "msLastTest": "ms (last test)"
+  },
+  "featureRoutingEmpty": "Enable at least one provider to customise routing. Until then, the built-in AI is used for all features.",
+  "placeholders": {
+    "savedTypeNew": "•••• (saved — type new key to replace)",
+    "apiKeySk": "sk-...",
+    "optionalLocal": "Optional for local"
+  },
+  "apiKeySavedHint": "API key saved securely (encrypted). Leave empty to keep current key.",
+  "saveButton": {
+    "saving": "Saving…",
+    "save": "Save (encrypted)"
+  },
+  "productionLocalHidden": "Production mode: local providers (Ollama, LM Studio) are hidden because they can't be reached from a browser on this domain."
 }

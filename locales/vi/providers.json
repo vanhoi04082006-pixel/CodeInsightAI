@@ -52,7 +52,11 @@
   "labels": {
     "default": "Mặc định",
     "custom": "Tùy chỉnh",
-    "pro": "Pro"
+    "pro": "Pro",
+    "notSet": "Chưa đặt",
+    "defaultInline": "mặc định {name}",
+    "customInline": "{value} (tùy chỉnh)",
+    "savedServerSide": "•••• (đã lưu trên máy chủ)"
   },
   "aria": {
     "label": "Chế độ AI: {mode} — nhấp để chuyển"
@@ -74,6 +78,31 @@
     "switchedToDefaultDesc": "Đang dùng khóa admin ({name}) — {tokens} token/tháng",
     "switchedToDefaultShortDesc": "Đang dùng khóa admin — {tokens} token/tháng",
     "noDefaultProvider": "Chưa cấu hình nhà cung cấp mặc định",
-    "noDefaultProviderDesc": "Admin cần cấu hình ít nhất một nhà cung cấp AI trong Bảng điều khiển Admin."
-  }
+    "noDefaultProviderDesc": "Admin cần cấu hình ít nhất một nhà cung cấp AI trong Bảng điều khiển Admin.",
+    "savedEncrypted": "Đã lưu an toàn (đã mã hóa)",
+    "saveCredentialFailed": "Lưu credential thất bại",
+    "serverStartingRetry": "Máy chủ đang khởi động. Vui lòng thử lại sau 10 giây.",
+    "serverStartingWait": "Máy chủ đang khởi động. Vui lòng đợi 10 giây và thử lại.",
+    "serverError": "Lỗi máy chủ {status}",
+    "requestTimedOut": "Yêu cầu hết thời gian (30 giây)",
+    "networkErrorHtml": "Lỗi mạng — máy chủ trả về HTML thay vì JSON"
+  },
+  "statSub": {
+    "ofAdded": "trên {count} đã thêm",
+    "reachableNow": "đang hoạt động",
+    "ollamaLmStudio": "Ollama / LM Studio",
+    "msLastTest": "ms (lần kiểm tra cuối)"
+  },
+  "featureRoutingEmpty": "Bật ít nhất một nhà cung cấp để tùy chỉnh định tuyến. Cho đến khi đó, AI có sẵn sẽ được dùng cho mọi tính năng.",
+  "placeholders": {
+    "savedTypeNew": "•••• (đã lưu — nhập khóa mới để thay thế)",
+    "apiKeySk": "sk-...",
+    "optionalLocal": "Tùy chọn cho local"
+  },
+  "apiKeySavedHint": "Khóa API đã được lưu an toàn (đã mã hóa). Để trống để giữ khóa hiện tại.",
+  "saveButton": {
+    "saving": "Đang lưu…",
+    "save": "Lưu (đã mã hóa)"
+  },
+  "productionLocalHidden": "Chế độ production: các nhà cung cấp local (Ollama, LM Studio) bị ẩn vì không thể truy cập từ trình duyệt trên tên miền này."
 }

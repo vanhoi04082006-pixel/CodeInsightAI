@@ -48,6 +48,7 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
+import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 type Stats = {
@@ -104,6 +105,7 @@ type AuditEntry = {
 };
 
 export function AdminView() {
+  const { t } = useT();
   const { data: session } = useSession();
   const role = (session as any)?.role ?? "user";
   const isAdmin = role === "admin";
@@ -113,9 +115,9 @@ export function AdminView() {
       <div className="mx-auto flex min-h-[60vh] max-w-xl flex-col items-center justify-center px-4 text-center">
         <GlassCard className="p-10">
           <Shield className="mx-auto h-10 w-10 text-rose-400" />
-          <h2 className="mt-4 text-xl font-bold">Admin Access Required</h2>
+          <h2 className="mt-4 text-xl font-bold">{t("admin", "adminAccessRequired")}</h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            You don&apos;t have permission to view this page. Only admin accounts can access the admin dashboard.
+            {t("admin", "adminAccessDesc")}
           </p>
         </GlassCard>
       </div>
@@ -127,24 +129,24 @@ export function AdminView() {
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Shield className="h-4 w-4 text-cyan-300" />
-          <span>Admin Dashboard</span>
+          <span>{t("admin", "dashboardLabel")}</span>
         </div>
         <h1 className="mt-1 text-2xl font-bold md:text-3xl">
-          <GradientText>Admin Console</GradientText>
+          <GradientText>{t("admin", "title")}</GradientText>
         </h1>
         <p className="text-sm text-muted-foreground">
-          Manage users, monitor usage, and oversee the platform.
+          {t("admin", "subtitle")}
         </p>
       </motion.div>
 
       <Tabs defaultValue="overview">
         <TabsList className="grid w-full grid-cols-2 sm:grid-cols-6">
-          <TabsTrigger value="overview" className="gap-1.5"><Activity className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Overview</span></TabsTrigger>
-          <TabsTrigger value="users" className="gap-1.5"><Users className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Users</span></TabsTrigger>
-          <TabsTrigger value="platform-ai" className="gap-1.5"><Cpu className="h-3.5 w-3.5" /> <span className="hidden sm:inline">AI Config</span></TabsTrigger>
-          <TabsTrigger value="subscriptions" className="gap-1.5"><Crown className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Subs</span></TabsTrigger>
-          <TabsTrigger value="audit" className="gap-1.5"><ScrollText className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Audit</span></TabsTrigger>
-          <TabsTrigger value="system" className="gap-1.5"><Server className="h-3.5 w-3.5" /> <span className="hidden sm:inline">System</span></TabsTrigger>
+          <TabsTrigger value="overview" className="gap-1.5"><Activity className="h-3.5 w-3.5" /> <span className="hidden sm:inline">{t("admin", "tabs.overview")}</span></TabsTrigger>
+          <TabsTrigger value="users" className="gap-1.5"><Users className="h-3.5 w-3.5" /> <span className="hidden sm:inline">{t("admin", "tabs.users")}</span></TabsTrigger>
+          <TabsTrigger value="platform-ai" className="gap-1.5"><Cpu className="h-3.5 w-3.5" /> <span className="hidden sm:inline">{t("admin", "tabs.platformAi")}</span></TabsTrigger>
+          <TabsTrigger value="subscriptions" className="gap-1.5"><Crown className="h-3.5 w-3.5" /> <span className="hidden sm:inline">{t("admin", "tabs.subs")}</span></TabsTrigger>
+          <TabsTrigger value="audit" className="gap-1.5"><ScrollText className="h-3.5 w-3.5" /> <span className="hidden sm:inline">{t("admin", "tabs.audit")}</span></TabsTrigger>
+          <TabsTrigger value="system" className="gap-1.5"><Server className="h-3.5 w-3.5" /> <span className="hidden sm:inline">{t("admin", "tabs.system")}</span></TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="mt-4"><AdminOverview /></TabsContent>
@@ -162,6 +164,7 @@ export function AdminView() {
 
 /* ---------- Users Tab ---------- */
 function SubscriptionsTab() {
+  const { t } = useT();
   const [subs, setSubs] = useState<Subscriber[]>([]);
   const [mrr, setMrr] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -170,9 +173,9 @@ function SubscriptionsTab() {
     fetch("/api/admin/subscriptions")
       .then((r) => r.json())
       .then((d) => { setSubs(d.subscribers || []); setMrr(d.mrr || 0); })
-      .catch(() => toast.error("Failed to load subscriptions"))
+      .catch(() => toast.error(t("admin", "subscriptions.failedToLoad")))
       .finally(() => setLoading(false));
-  }, []);
+  }, [t]);
 
   if (loading) return <LoadingCard />;
 
@@ -180,32 +183,32 @@ function SubscriptionsTab() {
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
         <GlassCard className="p-4">
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Total Subscribers</p>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("admin", "subscriptions.totalSubscribers")}</p>
           <p className="mt-1 text-2xl font-bold text-amber-300">{subs.length}</p>
         </GlassCard>
         <GlassCard className="p-4">
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">MRR</p>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("admin", "subscriptions.mrr")}</p>
           <p className="mt-1 text-2xl font-bold text-emerald-300">${mrr}/mo</p>
         </GlassCard>
         <GlassCard className="p-4">
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">ARR (est.)</p>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("admin", "subscriptions.arr")}</p>
           <p className="mt-1 text-2xl font-bold text-cyan-300">${mrr * 12}/yr</p>
         </GlassCard>
       </div>
 
       <GlassCard className="overflow-hidden">
         {subs.length === 0 ? (
-          <div className="p-8 text-center text-sm text-muted-foreground">No paid subscribers yet.</div>
+          <div className="p-8 text-center text-sm text-muted-foreground">{t("admin", "subscriptions.noSubs")}</div>
         ) : (
           <div className="overflow-x-auto scrollbar-thin">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-white/5 text-left text-[10px] uppercase tracking-wider text-muted-foreground">
-                  <th className="p-3">Subscriber</th>
-                  <th className="p-3">Plan</th>
-                  <th className="p-3">Stripe Customer</th>
-                  <th className="p-3 text-center">Analyses</th>
-                  <th className="p-3">Updated</th>
+                  <th className="p-3">{t("admin", "subscriptions.subscriber")}</th>
+                  <th className="p-3">{t("admin", "subscriptions.plan")}</th>
+                  <th className="p-3">{t("admin", "subscriptions.stripeCustomer")}</th>
+                  <th className="p-3 text-center">{t("admin", "subscriptions.analyses")}</th>
+                  <th className="p-3">{t("admin", "subscriptions.updated")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -215,7 +218,7 @@ function SubscriptionsTab() {
                       <div className="flex items-center gap-2">
                         <Avatar name={s.name ?? s.email ?? "?"} image={s.image} size={28} />
                         <div className="min-w-0">
-                          <p className="truncate font-medium">{s.name ?? "Unknown"}</p>
+                          <p className="truncate font-medium">{s.name ?? t("admin", "subscriptions.unknown")}</p>
                           <p className="truncate text-[10px] text-muted-foreground">{s.email}</p>
                         </div>
                       </div>
@@ -245,6 +248,7 @@ function SubscriptionsTab() {
 
 /* ---------- Audit Tab ---------- */
 function AuditTab() {
+  const { t } = useT();
   const [logs, setLogs] = useState<AuditEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -252,17 +256,17 @@ function AuditTab() {
     fetch("/api/admin/audit?limit=100")
       .then((r) => r.json())
       .then((d) => setLogs(d.logs || []))
-      .catch(() => toast.error("Failed to load audit log"))
+      .catch(() => toast.error(t("admin", "audit.failedToLoad")))
       .finally(() => setLoading(false));
-  }, []);
+  }, [t]);
 
   if (loading) return <LoadingCard />;
 
   return (
     <GlassCard className="p-5">
-      <h3 className="flex items-center gap-2 text-sm font-semibold"><ScrollText className="h-4 w-4 text-cyan-300" /> Admin Actions</h3>
+      <h3 className="flex items-center gap-2 text-sm font-semibold"><ScrollText className="h-4 w-4 text-cyan-300" /> {t("admin", "audit.title")}</h3>
       {logs.length === 0 ? (
-        <p className="mt-4 text-center text-sm text-muted-foreground">No admin actions recorded yet.</p>
+        <p className="mt-4 text-center text-sm text-muted-foreground">{t("admin", "audit.noActions")}</p>
       ) : (
         <div className="mt-3 space-y-2 max-h-[60vh] overflow-y-auto scrollbar-thin">
           {logs.map((log) => (
@@ -272,11 +276,11 @@ function AuditTab() {
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-sm">
-                  <span className="font-medium">{log.admin.name ?? log.admin.email ?? "Admin"}</span>{" "}
+                  <span className="font-medium">{log.admin.name ?? log.admin.email ?? t("admin", "audit.admin")}</span>{" "}
                   <span className="text-muted-foreground">{formatAction(log.action)}</span>
                 </p>
                 {log.targetId && (
-                  <p className="mt-0.5 font-mono text-[10px] text-muted-foreground">target: {log.targetId}</p>
+                  <p className="mt-0.5 font-mono text-[10px] text-muted-foreground">{t("admin", "audit.target")} {log.targetId}</p>
                 )}
                 {log.details && log.details !== "{}" && (
                   <p className="mt-0.5 font-mono text-[10px] text-muted-foreground/70">{log.details}</p>
@@ -293,6 +297,7 @@ function AuditTab() {
 
 /* ---------- System Tab ---------- */
 function SystemTab() {
+  const { t } = useT();
   const [health, setHealth] = useState<any>(null);
 
   useEffect(() => {
@@ -302,15 +307,15 @@ function SystemTab() {
   return (
     <div className="space-y-4">
       <GlassCard className="p-5">
-        <h3 className="flex items-center gap-2 text-sm font-semibold"><Server className="h-4 w-4 text-cyan-300" /> System Health</h3>
+        <h3 className="flex items-center gap-2 text-sm font-semibold"><Server className="h-4 w-4 text-cyan-300" /> {t("admin", "system.title")}</h3>
         {health ? (
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
-            <HealthItem label="Status" value={health.status} ok={health.status === "healthy"} />
-            <HealthItem label="Database" value={health.services?.database} ok={health.services?.database === "ok"} />
-            <HealthItem label="Job Queue" value={health.services?.jobQueue} ok={health.services?.jobQueue === "ok"} />
-            <HealthItem label="Uptime" value={`${health.stats?.uptime ?? 0}s`} />
-            <HealthItem label="Memory" value={health.stats?.memory ? `${health.stats.memory.used} / ${health.stats.memory.total}` : "—"} />
-            <HealthItem label="Analyses" value={health.stats?.analyses ?? 0} />
+            <HealthItem label={t("admin", "system.status")} value={health.status} ok={health.status === "healthy"} />
+            <HealthItem label={t("admin", "system.database")} value={health.services?.database} ok={health.services?.database === "ok"} />
+            <HealthItem label={t("admin", "system.jobQueue")} value={health.services?.jobQueue} ok={health.services?.jobQueue === "ok"} />
+            <HealthItem label={t("admin", "system.uptime")} value={`${health.stats?.uptime ?? 0}s`} />
+            <HealthItem label={t("admin", "system.memory")} value={health.stats?.memory ? `${health.stats.memory.used} / ${health.stats.memory.total}` : "—"} />
+            <HealthItem label={t("admin", "system.analyses")} value={health.stats?.analyses ?? 0} />
           </div>
         ) : (
           <div className="mt-3"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
@@ -318,20 +323,20 @@ function SystemTab() {
       </GlassCard>
 
       <GlassCard className="p-5">
-        <h3 className="text-sm font-semibold">Environment</h3>
+        <h3 className="text-sm font-semibold">{t("admin", "system.environment")}</h3>
         {health?.env ? (
           <div className="mt-3 grid gap-2 text-xs sm:grid-cols-2">
             <EnvItem label="NODE_ENV" value={health.env.nodeEnv} />
             <EnvItem label="APP_ENV" value={health.env.appEnv} />
             <EnvItem label="DATABASE_URL" value={health.env.databaseUrlProtocol + "://…"} ok={health.env.databaseUrlProtocol === "postgresql"} />
             <EnvItem label="NEXTAUTH_URL" value={health.env.nextAuthUrl} />
-            <EnvItem label="GITHUB_ID" value={health.env.hasGithubId ? "set" : "missing"} ok={health.env.hasGithubId} />
-            <EnvItem label="GITHUB_SECRET" value={health.env.hasGithubSecret ? "set" : "missing"} ok={health.env.hasGithubSecret} />
-            <EnvItem label="NEXTAUTH_SECRET" value={health.env.hasNextAuthSecret ? "set" : "missing"} ok={health.env.hasNextAuthSecret} />
-            <EnvItem label="PLATFORM_AI_API_KEY" value={health.env.hasPlatformAiKey ? "set" : "missing"} ok={health.env.hasPlatformAiKey} />
+            <EnvItem label="GITHUB_ID" value={health.env.hasGithubId ? t("admin", "system.set") : t("admin", "system.missing")} ok={health.env.hasGithubId} />
+            <EnvItem label="GITHUB_SECRET" value={health.env.hasGithubSecret ? t("admin", "system.set") : t("admin", "system.missing")} ok={health.env.hasGithubSecret} />
+            <EnvItem label="NEXTAUTH_SECRET" value={health.env.hasNextAuthSecret ? t("admin", "system.set") : t("admin", "system.missing")} ok={health.env.hasNextAuthSecret} />
+            <EnvItem label="PLATFORM_AI_API_KEY" value={health.env.hasPlatformAiKey ? t("admin", "system.set") : t("admin", "system.missing")} ok={health.env.hasPlatformAiKey} />
           </div>
         ) : (
-          <p className="mt-3 text-xs text-muted-foreground">Loading…</p>
+          <p className="mt-3 text-xs text-muted-foreground">{t("admin", "system.loading")}</p>
         )}
       </GlassCard>
     </div>
@@ -360,8 +365,9 @@ export function Avatar({ name, image, size = 32 }: { name: string; image?: strin
 }
 
 function MiniChart({ data, color }: { data: Array<{ date: string; count: number }>; color: string }) {
+  const { t } = useT();
   if (data.length === 0) {
-    return <p className="mt-4 text-xs text-muted-foreground">No data yet.</p>;
+    return <p className="mt-4 text-xs text-muted-foreground">{t("admin", "miniChart.noData")}</p>;
   }
   const max = Math.max(...data.map((d) => d.count), 1);
   return (

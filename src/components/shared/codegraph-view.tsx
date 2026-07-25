@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 
 interface GraphNode extends d3.SimulationNodeDatum {
   id: string;
@@ -31,14 +32,14 @@ interface GraphEdge {
 }
 
 const GROUP_COLORS = ["#22d3ee", "#a78bfa", "#f472b6", "#34d399", "#fbbf24", "#60a5fa", "#fb923c"];
-const TYPE_META: Record<string, { icon: any; color: string; label: string }> = {
-  file: { icon: FileCode, color: "#22d3ee", label: "File" },
-  function: { icon: Zap, color: "#a78bfa", label: "Function" },
-  class: { icon: Database, color: "#f472b6", label: "Class" },
-  module: { icon: Package, color: "#fbbf24", label: "Module" },
-  route: { icon: RouteIcon, color: "#34d399", label: "Route" },
-  component: { icon: Box, color: "#60a5fa", label: "Component" },
-  import: { icon: GitBranch, color: "#fb923c", label: "Import" },
+const TYPE_META: Record<string, { icon: any; color: string }> = {
+  file: { icon: FileCode, color: "#22d3ee" },
+  function: { icon: Zap, color: "#a78bfa" },
+  class: { icon: Database, color: "#f472b6" },
+  module: { icon: Package, color: "#fbbf24" },
+  route: { icon: RouteIcon, color: "#34d399" },
+  component: { icon: Box, color: "#60a5fa" },
+  import: { icon: GitBranch, color: "#fb923c" },
 };
 
 const EDGE_COLORS: Record<string, string> = {
@@ -74,6 +75,7 @@ function nodeRadius(n: GraphNode, degree: number): number {
  * - Performance: virtual rendering for large graphs (>500 nodes)
  */
 export function CodeGraphView({ analysisId }: { analysisId: string | null }) {
+  const { t } = useT();
   const svgRef = useRef<SVGSVGElement>(null);
   const minimapRef = useRef<SVGSVGElement>(null);
   const [allNodes, setAllNodes] = useState<GraphNode[]>([]);
@@ -248,7 +250,7 @@ export function CodeGraphView({ analysisId }: { analysisId: string | null }) {
       <GlassCard className="flex h-96 items-center justify-center">
         <div className="text-center">
           <Loader2 className="mx-auto h-8 w-8 animate-spin text-cyan-300" />
-          <p className="mt-2 text-sm text-muted-foreground">Building CodeGraph…</p>
+          <p className="mt-2 text-sm text-muted-foreground">{t("codegraph", "building")}</p>
         </div>
       </GlassCard>
     );
@@ -265,13 +267,18 @@ export function CodeGraphView({ analysisId }: { analysisId: string | null }) {
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search nodes…"
+              placeholder={t("codegraph", "searchNodes")}
               className="h-8 w-48 pl-8 text-xs bg-white/[0.03]"
             />
           </div>
           {stats && (
             <Badge variant="outline" className="text-[10px]">
-              {visibleNodes.length}/{stats.totalNodes} nodes · {visibleEdges.length}/{stats.totalEdges} edges
+              {t("codegraph", "badgeStats", {
+                vn: visibleNodes.length,
+                tn: stats.totalNodes,
+                ve: visibleEdges.length,
+                te: stats.totalEdges,
+              })}
             </Badge>
           )}
           <Button
@@ -279,7 +286,7 @@ export function CodeGraphView({ analysisId }: { analysisId: string | null }) {
             variant="ghost"
             onClick={() => setShowFilters((s) => !s)}
             className={cn("h-8 px-2", showFilters && "bg-white/10")}
-            title="Filter by type"
+            title={t("codegraph", "filterByType")}
           >
             <Filter className="h-3.5 w-3.5" />
           </Button>
@@ -292,7 +299,7 @@ export function CodeGraphView({ analysisId }: { analysisId: string | null }) {
             animate={{ opacity: 1, y: 0 }}
             className="absolute left-3 top-14 z-10 rounded-lg border border-white/10 bg-black/60 p-2 backdrop-blur-md"
           >
-            <p className="mb-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">Filter by type</p>
+            <p className="mb-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">{t("codegraph", "filterByType")}</p>
             <div className="grid grid-cols-2 gap-1">
               {Object.entries(TYPE_META).map(([type, meta]) => {
                 const Icon = meta.icon;
@@ -308,7 +315,7 @@ export function CodeGraphView({ analysisId }: { analysisId: string | null }) {
                     )}
                   >
                     <Icon className="h-3 w-3" style={{ color: meta.color }} />
-                    {meta.label} ({count})
+                    {t("codegraph", `nodeTypes.${type}`)} ({count})
                   </button>
                 );
               })}
@@ -320,7 +327,7 @@ export function CodeGraphView({ analysisId }: { analysisId: string | null }) {
         <div className="absolute right-3 top-3 z-10 flex flex-col gap-1">
           <button onClick={() => setZoom((z) => Math.min(4, z + 0.2))} className="flex h-7 w-7 items-center justify-center rounded-md border border-white/10 bg-white/5 text-sm hover:bg-white/10"><ZoomIn className="h-3.5 w-3.5" /></button>
           <button onClick={() => setZoom((z) => Math.max(0.3, z - 0.2))} className="flex h-7 w-7 items-center justify-center rounded-md border border-white/10 bg-white/5 text-sm hover:bg-white/10"><ZoomOut className="h-3.5 w-3.5" /></button>
-          <button onClick={fitToScreen} className="flex h-7 w-7 items-center justify-center rounded-md border border-white/10 bg-white/5 text-xs hover:bg-white/10" title="Fit to screen"><Maximize className="h-3.5 w-3.5" /></button>
+          <button onClick={fitToScreen} className="flex h-7 w-7 items-center justify-center rounded-md border border-white/10 bg-white/5 text-xs hover:bg-white/10" title={t("codegraph", "fitToScreen")}><Maximize className="h-3.5 w-3.5" /></button>
         </div>
 
         {/* Legend */}
@@ -328,17 +335,17 @@ export function CodeGraphView({ analysisId }: { analysisId: string | null }) {
           {Object.entries(TYPE_META).slice(0, 6).map(([type, meta]) => (
             <span key={type} className="flex items-center gap-1 text-[10px] text-muted-foreground">
               <span className="h-2.5 w-2.5 rounded-full" style={{ background: meta.color }} />
-              {meta.label}
+              {t("codegraph", `nodeTypes.${type}`)}
             </span>
           ))}
         </div>
 
         {/* Edge legend */}
         <div className="absolute bottom-3 right-3 z-10 flex flex-wrap gap-2 rounded-lg border border-white/10 bg-black/40 p-2 backdrop-blur-md">
-          {["imports", "calls", "exports", "depends_on"].map((t) => (
-            <span key={t} className="flex items-center gap-1 text-[10px] text-muted-foreground">
-              <span className="h-0.5 w-3" style={{ background: EDGE_COLORS[t] }} />
-              {t}
+          {["imports", "calls", "exports", "depends_on"].map((edgeType) => (
+            <span key={edgeType} className="flex items-center gap-1 text-[10px] text-muted-foreground">
+              <span className="h-0.5 w-3" style={{ background: EDGE_COLORS[edgeType] }} />
+              {t("codegraph", `edgeTypes.${edgeType}`)}
             </span>
           ))}
         </div>
@@ -470,7 +477,7 @@ export function CodeGraphView({ analysisId }: { analysisId: string | null }) {
                 fill="none" stroke="#22d3ee" strokeWidth="1" opacity="0.6"
               />
             </svg>
-            <p className="mt-0.5 text-center text-[8px] text-muted-foreground">Minimap</p>
+            <p className="mt-0.5 text-center text-[8px] text-muted-foreground">{t("codegraph", "minimap")}</p>
           </div>
         )}
       </GlassCard>
@@ -480,7 +487,7 @@ export function CodeGraphView({ analysisId }: { analysisId: string | null }) {
         <GlassCard className="p-4">
           <div className="flex items-center gap-2">
             <Network className="h-4 w-4 text-cyan-300" />
-            <h3 className="text-sm font-semibold"><GradientText>Inspector</GradientText></h3>
+            <h3 className="text-sm font-semibold"><GradientText>{t("codegraph", "inspector")}</GradientText></h3>
           </div>
           {inspector ? (
             <div className="mt-3 space-y-2">
@@ -497,21 +504,21 @@ export function CodeGraphView({ analysisId }: { analysisId: string | null }) {
               </div>
               <div className="grid grid-cols-2 gap-2 text-[11px]">
                 <div className="rounded border border-white/5 bg-white/[0.02] p-2">
-                  <span className="text-muted-foreground">Type</span>
+                  <span className="text-muted-foreground">{t("codegraph", "type")}</span>
                   <p className="font-medium capitalize">{inspector.node.type}</p>
                 </div>
                 <div className="rounded border border-white/5 bg-white/[0.02] p-2">
-                  <span className="text-muted-foreground">Language</span>
+                  <span className="text-muted-foreground">{t("codegraph", "language")}</span>
                   <p className="font-medium">{inspector.node.language}</p>
                 </div>
                 {inspector.node.metadata.linesOfCode != null && (
                   <div className="rounded border border-white/5 bg-white/[0.02] p-2">
-                    <span className="text-muted-foreground">Lines</span>
+                    <span className="text-muted-foreground">{t("codegraph", "lines")}</span>
                     <p className="font-medium tabular-nums">{inspector.node.metadata.linesOfCode}</p>
                   </div>
                 )}
                 <div className="rounded border border-white/5 bg-white/[0.02] p-2">
-                  <span className="text-muted-foreground">Degree</span>
+                  <span className="text-muted-foreground">{t("codegraph", "degree")}</span>
                   <p className="font-medium tabular-nums">{degreeMap.get(inspector.node.id) || 0}</p>
                 </div>
               </div>
@@ -519,7 +526,7 @@ export function CodeGraphView({ analysisId }: { analysisId: string | null }) {
                 <p className="text-[11px] leading-relaxed text-muted-foreground">{(inspector.node.metadata as any).description}</p>
               )}
               <div className="space-y-1">
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Incoming ({inspector.neighbors.incoming.length})</p>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("codegraph", "incoming")} ({inspector.neighbors.incoming.length})</p>
                 <div className="max-h-24 space-y-0.5 overflow-y-auto scrollbar-thin">
                   {inspector.neighbors.incoming.slice(0, 10).map((n: any) => (
                     <button key={n.id} onClick={() => handleNodeClick(n)} className="flex w-full items-center gap-1 rounded p-1 text-left text-[10px] hover:bg-white/5">
@@ -527,11 +534,11 @@ export function CodeGraphView({ analysisId }: { analysisId: string | null }) {
                       <span className="truncate font-mono">{n.label}</span>
                     </button>
                   ))}
-                  {inspector.neighbors.incoming.length === 0 && <p className="text-[10px] text-muted-foreground">None</p>}
+                  {inspector.neighbors.incoming.length === 0 && <p className="text-[10px] text-muted-foreground">{t("codegraph", "none")}</p>}
                 </div>
               </div>
               <div className="space-y-1">
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Outgoing ({inspector.neighbors.outgoing.length})</p>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("codegraph", "outgoing")} ({inspector.neighbors.outgoing.length})</p>
                 <div className="max-h-24 space-y-0.5 overflow-y-auto scrollbar-thin">
                   {inspector.neighbors.outgoing.slice(0, 10).map((n: any) => (
                     <button key={n.id} onClick={() => handleNodeClick(n)} className="flex w-full items-center gap-1 rounded p-1 text-left text-[10px] hover:bg-white/5">
@@ -539,29 +546,29 @@ export function CodeGraphView({ analysisId }: { analysisId: string | null }) {
                       <span className="truncate font-mono">{n.label}</span>
                     </button>
                   ))}
-                  {inspector.neighbors.outgoing.length === 0 && <p className="text-[10px] text-muted-foreground">None</p>}
+                  {inspector.neighbors.outgoing.length === 0 && <p className="text-[10px] text-muted-foreground">{t("codegraph", "none")}</p>}
                 </div>
               </div>
             </div>
           ) : (
-            <p className="mt-3 text-xs text-muted-foreground">Click a node to inspect its connections and metadata.</p>
+            <p className="mt-3 text-xs text-muted-foreground">{t("codegraph", "clickToInspect")}</p>
           )}
         </GlassCard>
 
         {stats && (
           <GlassCard className="p-4">
-            <h3 className="text-sm font-semibold">Graph Stats</h3>
+            <h3 className="text-sm font-semibold">{t("codegraph", "graphStats")}</h3>
             <div className="mt-2 space-y-1.5 text-xs">
-              <div className="flex justify-between"><span className="text-muted-foreground">Total Nodes</span><span className="font-medium tabular-nums">{stats.totalNodes}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Total Edges</span><span className="font-medium tabular-nums">{stats.totalEdges}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Visible</span><span className="font-medium tabular-nums">{visibleNodes.length} / {visibleEdges.length}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">{t("codegraph", "totalNodes")}</span><span className="font-medium tabular-nums">{stats.totalNodes}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">{t("codegraph", "totalEdges")}</span><span className="font-medium tabular-nums">{stats.totalEdges}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">{t("codegraph", "visible")}</span><span className="font-medium tabular-nums">{visibleNodes.length} / {visibleEdges.length}</span></div>
               {Object.entries(stats.byType).map(([type, count]) => {
                 const meta = TYPE_META[type];
                 return (
                   <div key={type} className="flex items-center justify-between">
                     <span className="flex items-center gap-1 text-muted-foreground">
                       {meta && <span className="h-2 w-2 rounded-full" style={{ background: meta.color }} />}
-                      {meta?.label || type}
+                      {meta ? t("codegraph", `nodeTypes.${type}`) : type}
                     </span>
                     <span className="font-medium tabular-nums">{count}</span>
                   </div>

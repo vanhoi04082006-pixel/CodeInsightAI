@@ -37,9 +37,43 @@
   "none": "None",
   "building": "Building CodeGraph…",
   "legend": "Legend",
+  "badgeStats": "{vn}/{tn} nodes · {ve}/{te} edges",
+  "fitToScreen": "Fit to screen",
   "zoomControls": {
     "zoomIn": "Zoom In",
     "zoomOut": "Zoom Out",
     "reset": "Reset View"
+  },
+  "depGraph": {
+    "legend": {
+      "entry": "Entry",
+      "core": "Core",
+      "service": "Service",
+      "util": "Util",
+      "component": "Component",
+      "config": "Config"
+    },
+    "circular": "circular",
+    "inspector": "Inspector",
+    "pathLabel": "Path:",
+    "typeLabel": "Type:",
+    "groupLabel": "Group:",
+    "connectionsLabel": "Connections:",
+    "moduleFallback": "Module in the codebase.",
+    "clickHint": "Click a node to inspect its role and connections.",
+    "graphStats": "Graph stats",
+    "nodesLabel": "Nodes",
+    "edgesLabel": "Edges",
+    "circularDeps": "Circular deps",
+    "avgConnectivity": "Avg connectivity",
+    "circularDepsTitle": "Circular dependencies",
+    "nodeExplanations": {
+      "entry": "Application entry point — bootstraps the runtime and mounts the app.",
+      "core": "Core domain module — encapsulates a primary business capability.",
+      "service": "Service layer — orchestrates use-cases and coordinates infrastructure calls.",
+      "util": "Shared utility — stateless helpers reused across modules.",
+      "component": "UI component — presentation logic with minimal business rules.",
+      "config": "Configuration — static settings, env loaders, and feature flags."
+    }
   }
 }

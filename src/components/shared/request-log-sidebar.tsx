@@ -30,13 +30,13 @@ import { toast } from "sonner";
 
 type LogFilter = "all" | "user" | "ai" | "error" | "warning" | "success";
 
-const FILTERS: { id: LogFilter; label: string; color: string }[] = [
-  { id: "all", label: "All", color: "#a78bfa" },
-  { id: "user", label: "User", color: "#22d3ee" },
-  { id: "ai", label: "AI", color: "#34d399" },
-  { id: "error", label: "Error", color: "#ff5470" },
-  { id: "warning", label: "Warning", color: "#fbbf24" },
-  { id: "success", label: "Success", color: "#34d399" },
+const FILTERS: { id: LogFilter; color: string }[] = [
+  { id: "all", color: "#a78bfa" },
+  { id: "user", color: "#22d3ee" },
+  { id: "ai", color: "#34d399" },
+  { id: "error", color: "#ff5470" },
+  { id: "warning", color: "#fbbf24" },
+  { id: "success", color: "#34d399" },
 ];
 
 /**
@@ -122,7 +122,7 @@ export function RequestLogSidebar({
   const handleCopy = (log: AIRequestLog) => {
     const text = `[${log.requestId}] ${log.provider}/${log.model} — ${log.statusCode} (${log.durationMs}ms)\nTokens: ${log.totalTokens} (in: ${log.inputTokens}, out: ${log.outputTokens})${log.error ? `\nError: ${log.error}` : ""}`;
     navigator.clipboard.writeText(text);
-    toast.success("Log copied to clipboard");
+    toast.success(t("mission", "requestLog.logCopiedToast"));
   };
 
   const handlePin = (id: string) => {
@@ -143,7 +143,7 @@ export function RequestLogSidebar({
     a.download = `codeinsight-logs-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success(`Exported ${logs.length} logs`);
+    toast.success(t("mission", "requestLog.exportedToast", { count: logs.length }));
   };
 
   // Desktop sidebar content
@@ -155,8 +155,8 @@ export function RequestLogSidebar({
           <ScrollText className="h-4 w-4 text-cyan-300" />
         </div>
         <div className="flex-1 min-w-0">
-          <h3 className="truncate text-sm font-semibold">Nhật ký Yêu cầu</h3>
-          <p className="text-[10px] text-muted-foreground">Request / Response log</p>
+          <h3 className="truncate text-sm font-semibold">{t("mission", "requestLog.title")}</h3>
+          <p className="text-[10px] text-muted-foreground">{t("mission", "requestLog.subtitle")}</p>
         </div>
         <span className="rounded-full bg-cyan-500/15 px-2 py-0.5 text-[10px] font-bold text-cyan-300">
           {filteredLogs.length}
@@ -164,14 +164,14 @@ export function RequestLogSidebar({
         <button
           onClick={onToggleCollapse}
           className="hidden rounded-md p-1.5 text-muted-foreground transition hover:bg-white/5 hover:text-foreground md:block"
-          aria-label="Collapse sidebar"
+          aria-label={t("mission", "requestLog.aria.collapseSidebar")}
         >
           <ChevronRight className="h-4 w-4" />
         </button>
         <button
           onClick={onClose}
           className="rounded-md p-1.5 text-muted-foreground transition hover:bg-white/5 hover:text-foreground"
-          aria-label="Close log panel"
+          aria-label={t("mission", "requestLog.aria.closePanel")}
         >
           <X className="h-4 w-4" />
         </button>
@@ -185,7 +185,7 @@ export function RequestLogSidebar({
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Tìm kiếm trong nhật ký..."
+            placeholder={t("mission", "requestLog.searchPlaceholder")}
             className="w-full rounded-lg border border-white/10 bg-white/[0.03] py-1.5 pl-8 pr-8 text-xs text-foreground placeholder:text-muted-foreground/60 focus:border-cyan-400/40 focus:outline-none focus:ring-1 focus:ring-cyan-400/20"
           />
           {search && (
@@ -218,7 +218,7 @@ export function RequestLogSidebar({
                 : { border: "1px solid rgba(255,255,255,0.08)" }
             }
           >
-            {f.label}
+            {t("mission", `requestLog.filters.${f.id}`)}
           </button>
         ))}
       </div>
@@ -231,7 +231,7 @@ export function RequestLogSidebar({
               <ScrollText className="h-5 w-5 text-muted-foreground/50" />
             </div>
             <p className="mt-3 text-xs text-muted-foreground">
-              {search || filter !== "all" ? "No logs match your filters" : "No requests logged yet"}
+              {search || filter !== "all" ? t("mission", "requestLog.emptyFiltered") : t("mission", "requestLog.empty")}
             </p>
             {(search || filter !== "all") && (
               <button
@@ -241,7 +241,7 @@ export function RequestLogSidebar({
                 }}
                 className="mt-2 text-[10px] text-cyan-300 hover:underline"
               >
-                Clear filters
+                {t("mission", "requestLog.clearFilters")}
               </button>
             )}
           </div>
@@ -267,21 +267,21 @@ export function RequestLogSidebar({
             className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.03] py-2 text-[11px] font-medium transition hover:border-cyan-400/30 hover:bg-white/[0.05] disabled:cursor-not-allowed disabled:opacity-40"
           >
             <Download className="h-3.5 w-3.5" />
-            <span>Xuất JSON</span>
+            <span>{t("mission", "requestLog.export")}</span>
           </button>
           <button
             onClick={() => {
-              if (confirm("Xóa tất cả nhật ký? Hành động này không thể hoàn tác.")) {
+              if (confirm(t("mission", "requestLog.clearConfirm"))) {
                 clearLogs();
                 setPinnedIds(new Set());
-                toast.success("Đã xóa tất cả nhật ký");
+                toast.success(t("mission", "requestLog.clearedToast"));
               }
             }}
             disabled={logs.length === 0}
             className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-rose-500/20 bg-rose-500/10 py-2 text-[11px] font-medium text-rose-300 transition hover:bg-rose-500/20 disabled:cursor-not-allowed disabled:opacity-40"
           >
             <Trash2 className="h-3.5 w-3.5" />
-            <span>Xóa tất cả</span>
+            <span>{t("mission", "requestLog.clearAll")}</span>
           </button>
         </div>
       </div>
@@ -311,7 +311,7 @@ export function RequestLogSidebar({
         <button
           onClick={onToggleCollapse}
           className="glass-strong absolute right-0 top-1/2 z-30 hidden -translate-y-1/2 items-center gap-1 rounded-l-xl border border-r-0 border-white/10 px-2 py-4 text-muted-foreground transition hover:bg-white/5 hover:text-foreground md:flex"
-          aria-label="Expand log sidebar"
+          aria-label={t("mission", "requestLog.aria.expandSidebar")}
         >
           <ChevronLeft className="h-4 w-4" />
           <ScrollText className="h-4 w-4" />
@@ -357,6 +357,7 @@ function LogCard({
   onCopy: () => void;
   onPin: () => void;
 }) {
+  const { t } = useT();
   const isUser = log.inputTokens > 0 && log.outputTokens === 0;
   const isError = log.status === "error";
   const isWarning = log.retryCount > 0 || log.statusCode >= 400;
@@ -372,7 +373,7 @@ function LogCard({
     hour12: false,
   });
 
-  const displayName = isUser ? "Bạn" : "AI CTO";
+  const displayName = isUser ? t("mission", "requestLog.userDisplayName") : t("mission", "requestLog.aiDisplayName");
   const contentPreview = log.error
     ? log.error.slice(0, 80)
     : `${log.provider}/${log.model} · ${log.personality} · ${log.totalTokens} tokens`;
@@ -445,8 +446,8 @@ function LogCard({
         <button
           onClick={onCopy}
           className="flex h-6 w-6 items-center justify-center rounded-md border border-white/10 bg-background/80 backdrop-blur-sm transition hover:border-cyan-400/30 hover:text-cyan-300"
-          aria-label="Copy log"
-          title="Copy"
+          aria-label={t("mission", "requestLog.aria.copyLog")}
+          title={t("mission", "requestLog.actions.copy")}
         >
           <Copy className="h-3 w-3" />
         </button>
@@ -456,8 +457,8 @@ function LogCard({
             "flex h-6 w-6 items-center justify-center rounded-md border border-white/10 bg-background/80 backdrop-blur-sm transition hover:border-cyan-400/30 hover:text-cyan-300",
             pinned && "text-cyan-300"
           )}
-          aria-label={pinned ? "Unpin log" : "Pin log"}
-          title={pinned ? "Unpin" : "Pin"}
+          aria-label={pinned ? t("mission", "requestLog.aria.unpinLog") : t("mission", "requestLog.aria.pinLog")}
+          title={pinned ? t("mission", "requestLog.actions.unpin") : t("mission", "requestLog.actions.pin")}
         >
           <Pin className={cn("h-3 w-3", pinned && "fill-cyan-300")} />
         </button>
