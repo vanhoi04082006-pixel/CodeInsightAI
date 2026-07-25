@@ -262,14 +262,17 @@ export default function Home() {
               </div>
             </button>
             <nav className="hidden items-center gap-6 text-sm text-muted-foreground md:flex">
+              <button onClick={() => setView("dashboard")} className="hover:text-foreground">{t("common", "nav.dashboard")}</button>
               {useProvidersStore.getState().aiMode === "byok" && (
                 <button onClick={() => setView("providers")} className="hover:text-foreground">{t("common", "nav.providers")}</button>
               )}
               <button onClick={() => setView("history")} className="hover:text-foreground">{t("common", "nav.history")}</button>
               <button onClick={() => setView("settings")} className="hover:text-foreground">{t("common", "nav.settings")}</button>
+              <a href="/guide" className="hover:text-foreground">Guide</a>
+              <a href="https://github.com/vanhoi04082006-pixel/CodeInsightAI" target="_blank" rel="noreferrer" className="hover:text-foreground">GitHub</a>
             </nav>
             <div className="flex items-center gap-2">
-              <ThemeSwitcher />
+              <ThemeSwitcher compact />
               <LanguageSwitcher />
               {isAuthenticated ? (
                 <>
@@ -359,35 +362,22 @@ function Footer() {
             <span>CodeInsight <span className="text-neon-cyan">AI</span></span>
             <span className="text-muted-foreground/50">·</span>
             <span className="text-xs">v1.0</span>
+            <span className="text-muted-foreground/50">·</span>
+            <span className="flex items-center gap-1">Built with <Heart className="h-3 w-3 fill-rose-400 text-rose-400" /> for developers</span>
           </div>
-          <nav className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1 text-xs text-muted-foreground">
-            <button onClick={() => setView("landing")} className="hover:text-foreground">{t("common", "nav.home")}</button>
-            <button onClick={() => setView("dashboard")} className="hover:text-foreground">{t("common", "nav.dashboard")}</button>
-            {useProvidersStore.getState().aiMode === "byok" && (
-              <button onClick={() => setView("providers")} className="hover:text-foreground">{t("common", "nav.providers")}</button>
-            )}
-            <button onClick={() => setView("history")} className="hover:text-foreground">{t("common", "nav.history")}</button>
-            <button onClick={() => setView("settings")} className="hover:text-foreground">{t("common", "nav.settings")}</button>
-            <a href="https://github.com/vanhoi04082006-pixel/CodeInsightAI" target="_blank" rel="noreferrer" className="hover:text-foreground">GitHub</a>
-          </nav>
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
             <a href="/guide" className="hover:text-foreground">Guide</a>
             <a href="/terms" className="hover:text-foreground">Terms</a>
             <a href="/privacy" className="hover:text-foreground">Privacy</a>
             <span className="text-muted-foreground/50">·</span>
             <button
-              onClick={() => {
-                // Dispatch a "?" keydown so KeyboardShortcutsHelp opens
-                window.dispatchEvent(new KeyboardEvent("keydown", { key: "?" }));
-              }}
+              onClick={() => window.dispatchEvent(new KeyboardEvent("keydown", { key: "?" }))}
               className="flex items-center gap-1 transition hover:text-foreground"
               aria-label="Show keyboard shortcuts"
             >
               <kbd className="rounded border border-white/10 bg-white/[0.04] px-1.5 py-0.5 text-[10px]">?</kbd>
               <span>Shortcuts</span>
             </button>
-            <span className="text-muted-foreground/50">·</span>
-            <span className="flex items-center gap-1">Built with <Heart className="h-3 w-3 fill-rose-400 text-rose-400" /> for developers</span>
           </div>
         </div>
       </div>
