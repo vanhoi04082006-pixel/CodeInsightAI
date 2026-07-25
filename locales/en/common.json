@@ -34,7 +34,9 @@
     "export": "Export",
     "import": "Import",
     "search": "Search",
-    "quickSearch": "Quick search"
+    "quickSearch": "Quick search",
+    "signIn": "Sign in",
+    "shortcuts": "Shortcuts"
   },
   "status": {
     "connected": "Connected",
@@ -43,6 +45,33 @@
     "disabled": "Disabled",
     "testing": "Testing…",
     "ready": "Ready",
-    "loading": "Loading…"
+    "loading": "Loading…",
+    "redirecting": "Redirecting…",
+    "loadingDashboard": "Loading dashboard…",
+    "loadingShared": "Loading shared report…"
+  },
+  "shared": {
+    "banner": "📋 Shared report — read-only view",
+    "goToApp": "Go to CodeInsight AI →",
+    "loaded": "Shared report loaded",
+    "loadedDesc": "Expires {date}",
+    "notFound": "Share link not found or expired",
+    "loadFailed": "Failed to load shared report"
+  },
+  "footer": {
+    "builtWithPrefix": "Built with",
+    "builtWithSuffix": "for developers",
+    "guide": "Guide",
+    "terms": "Terms",
+    "privacy": "Privacy",
+    "shortcutsAriaLabel": "Show keyboard shortcuts"
+  },
+  "unknown": "Unknown",
+  "anonymous": "Anonymous",
+  "noRepo": "No repo",
+  "noData": "No data",
+  "empty": {
+    "noMessages": "No messages",
+    "noActivity": "No activity"
   }
 }

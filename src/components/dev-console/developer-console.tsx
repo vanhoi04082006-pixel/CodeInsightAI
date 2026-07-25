@@ -40,6 +40,7 @@ import { CodeBlock } from "./code-block";
 import { RequestTimeline, MetricCard, EmptyState, LoadingSkeleton } from "./shared";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useT } from "@/lib/i18n";
 
 const STORAGE_WIDTH_KEY = "codeinsight-dev-width";
 
@@ -58,6 +59,7 @@ export function DeveloperConsole({
   const logs = useDeveloperModeStore((s) => s.logs);
   const clearLogs = useDeveloperModeStore((s) => s.clearLogs);
   const activeReport = useAppStore((s) => s.activeReport);
+  const { t } = useT();
 
   const [width, setWidth] = useState(380);
   const [search, setSearch] = useState("");
@@ -129,15 +131,15 @@ export function DeveloperConsole({
       <button
         onClick={onOpen}
         className="glass-strong absolute right-2 top-1/2 z-30 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 text-violet-300 shadow-lg transition hover:scale-110 hover:border-violet-400/40 hover:bg-violet-400/10 hover:text-violet-200 md:flex"
-        aria-label="Open Developer Console"
-        title="Open Developer Console"
+        aria-label={t("developer", "aria.open")}
+        title={t("developer", "aria.open")}
       >
         <Terminal className="h-5 w-5" />
       </button>
     );
   }
 
-  const repoName = activeReport ? `${activeReport.repoOwner}/${activeReport.repoName}` : "No repo";
+  const repoName = activeReport ? `${activeReport.repoOwner}/${activeReport.repoName}` : t("common", "noRepo");
   const provider = snapshot?.provider ?? "—";
   const model = snapshot?.model ?? "—";
   const environment = process.env.NODE_ENV ?? "development";
@@ -168,14 +170,14 @@ export function DeveloperConsole({
             </div>
             <div className="min-w-0">
               <p className="flex items-center gap-1.5 text-sm font-semibold">
-                Developer Console
+                {t("developer", "title")}
                 <span className="flex items-center gap-0.5 rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[8px] font-bold uppercase text-emerald-300">
                   <span className="h-1 w-1 animate-pulse rounded-full bg-emerald-400" />
-                  Live
+                  {t("developer", "badgeLive")}
                 </span>
-                <span className="rounded-full bg-violet-500/15 px-1.5 py-0.5 text-[8px] font-bold uppercase text-violet-300">Debug</span>
+                <span className="rounded-full bg-violet-500/15 px-1.5 py-0.5 text-[8px] font-bold uppercase text-violet-300">{t("developer", "badgeDebug")}</span>
                 {snapshot?.streaming && (
-                  <span className="rounded-full bg-cyan-500/15 px-1.5 py-0.5 text-[8px] font-bold uppercase text-cyan-300">Stream</span>
+                  <span className="rounded-full bg-cyan-500/15 px-1.5 py-0.5 text-[8px] font-bold uppercase text-cyan-300">{t("developer", "badgeStream")}</span>
                 )}
               </p>
               <p className="truncate text-[10px] text-muted-foreground">
@@ -184,7 +186,7 @@ export function DeveloperConsole({
               </p>
               <p className="truncate text-[9px] text-muted-foreground/70">
                 <Globe className="mr-1 inline h-2.5 w-2.5" />
-                {environment} · {snapshot?.requestId?.slice(0, 12) || "no session"}
+                {environment} · {snapshot?.requestId?.slice(0, 12) || t("developer", "noSession")}
               </p>
             </div>
           </div>
@@ -199,19 +201,19 @@ export function DeveloperConsole({
                   a.download = `dev-snapshot-${snapshot.requestId}.json`;
                   a.click();
                   URL.revokeObjectURL(url);
-                  toast.success("Snapshot exported");
+                  toast.success(t("developer", "export.snapshotExported"));
                 }
               }}
               className="rounded-lg p-2 text-muted-foreground transition hover:bg-white/5 hover:text-foreground"
-              title="Export snapshot"
+              title={t("developer", "export.buttonTitle")}
             >
               <Download className="h-4 w-4" />
             </button>
             <button
               onClick={onClose}
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-white/10 text-muted-foreground transition hover:border-rose-400/40 hover:bg-rose-500/15 hover:text-rose-300"
-              aria-label="Close Developer Console"
-              title="Close Developer Console"
+              aria-label={t("developer", "aria.close")}
+              title={t("developer", "aria.close")}
             >
               <X className="h-5 w-5" />
             </button>
@@ -225,7 +227,7 @@ export function DeveloperConsole({
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search console…"
+            placeholder={t("developer", "searchPlaceholder")}
             className="w-full rounded-lg border border-white/10 bg-white/[0.03] py-1.5 pl-8 pr-8 text-xs placeholder:text-muted-foreground/60 focus:border-cyan-400/40 focus:outline-none focus:ring-1 focus:ring-cyan-400/20"
           />
           {search && (
@@ -241,27 +243,27 @@ export function DeveloperConsole({
         <TabsList className="grid w-full shrink-0 grid-cols-6 rounded-none border-b border-white/10 bg-transparent p-0">
           <TabsTrigger value="overview" className="flex flex-col items-center gap-0.5 rounded-none border-b-2 border-transparent py-2 text-[10px] data-[state=active]:border-cyan-400 data-[state=active]:bg-transparent">
             <LayoutDashboard className="h-3.5 w-3.5" />
-            <span className="hidden lg:inline">Overview</span>
+            <span className="hidden lg:inline">{t("developer", "tabs.overview")}</span>
           </TabsTrigger>
           <TabsTrigger value="prompt" className="flex flex-col items-center gap-0.5 rounded-none border-b-2 border-transparent py-2 text-[10px] data-[state=active]:border-violet-400 data-[state=active]:bg-transparent">
             <Brain className="h-3.5 w-3.5" />
-            <span className="hidden lg:inline">Prompt</span>
+            <span className="hidden lg:inline">{t("developer", "tabs.prompt")}</span>
           </TabsTrigger>
           <TabsTrigger value="context" className="flex flex-col items-center gap-0.5 rounded-none border-b-2 border-transparent py-2 text-[10px] data-[state=active]:border-emerald-400 data-[state=active]:bg-transparent">
             <Boxes className="h-3.5 w-3.5" />
-            <span className="hidden lg:inline">Context</span>
+            <span className="hidden lg:inline">{t("developer", "tabs.context")}</span>
           </TabsTrigger>
           <TabsTrigger value="runtime" className="flex flex-col items-center gap-0.5 rounded-none border-b-2 border-transparent py-2 text-[10px] data-[state=active]:border-amber-400 data-[state=active]:bg-transparent">
             <Cpu className="h-3.5 w-3.5" />
-            <span className="hidden lg:inline">Runtime</span>
+            <span className="hidden lg:inline">{t("developer", "tabs.runtime")}</span>
           </TabsTrigger>
           <TabsTrigger value="capabilities" className="flex flex-col items-center gap-0.5 rounded-none border-b-2 border-transparent py-2 text-[10px] data-[state=active]:border-pink-400 data-[state=active]:bg-transparent">
             <Zap className="h-3.5 w-3.5" />
-            <span className="hidden lg:inline">Cap</span>
+            <span className="hidden lg:inline">{t("developer", "tabs.capabilities")}</span>
           </TabsTrigger>
           <TabsTrigger value="logs" className="flex flex-col items-center gap-0.5 rounded-none border-b-2 border-transparent py-2 text-[10px] data-[state=active]:border-cyan-400 data-[state=active]:bg-transparent">
             <ScrollText className="h-3.5 w-3.5" />
-            <span className="hidden lg:inline">Logs</span>
+            <span className="hidden lg:inline">{t("developer", "tabs.logs")}</span>
           </TabsTrigger>
         </TabsList>
 
@@ -306,7 +308,7 @@ export function DeveloperConsole({
       <button
         onClick={() => setMobileOpen(true)}
         className="fixed bottom-20 right-4 z-30 flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-cyan-500 text-white shadow-lg md:hidden"
-        aria-label="Open Developer Console"
+        aria-label={t("developer", "aria.open")}
       >
         <Terminal className="h-5 w-5" />
       </button>
@@ -335,31 +337,32 @@ export function DeveloperConsole({
 
 /* ─────────── Overview Tab ─────────── */
 function OverviewTab({ snapshot, activeReport, search }: { snapshot: DebugSnapshot | null; activeReport: any; search: string }) {
+  const { t } = useT();
   if (!snapshot) {
-    return <EmptyState icon={LayoutDashboard} title="No request yet" description="Send a message in chat to populate the developer console." />;
+    return <EmptyState icon={LayoutDashboard} title={t("developer", "overview.emptyTitle")} description={t("developer", "overview.emptyDesc")} />;
   }
 
   const timelineSteps = [
-    { label: "Context", timeMs: snapshot.queueMs, status: "done" as const },
-    { label: "Assembly", timeMs: 0, status: "done" as const },
-    { label: "Request", timeMs: 0, status: "done" as const },
-    { label: "Generation", timeMs: snapshot.generationMs, status: "done" as const },
-    { label: "Complete", timeMs: snapshot.totalMs, status: "done" as const },
+    { label: t("developer", "overview.timelineContext"), timeMs: snapshot.queueMs, status: "done" as const },
+    { label: t("developer", "overview.timelineAssembly"), timeMs: 0, status: "done" as const },
+    { label: t("developer", "overview.timelineRequest"), timeMs: 0, status: "done" as const },
+    { label: t("developer", "overview.timelineGeneration"), timeMs: snapshot.generationMs, status: "done" as const },
+    { label: t("developer", "overview.timelineComplete"), timeMs: snapshot.totalMs, status: "done" as const },
   ];
 
   return (
     <div className="space-y-4">
       {/* Current Request Summary */}
       <div className="rounded-xl border border-cyan-400/20 bg-cyan-500/[0.03] p-3">
-        <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-cyan-300">Current Request</p>
+        <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-cyan-300">{t("developer", "overview.currentRequest")}</p>
         <div className="space-y-1.5 text-xs">
           <div className="flex items-center gap-1.5">
             <FolderGit2 className="h-3 w-3 text-muted-foreground" />
-            <span className="truncate">{activeReport ? `${activeReport.repoOwner}/${activeReport.repoName}` : "No repo"}</span>
+            <span className="truncate">{activeReport ? `${activeReport.repoOwner}/${activeReport.repoName}` : t("common", "noRepo")}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <Bot className="h-3 w-3 text-muted-foreground" />
-            <span className="truncate">{snapshot.personality || "Default"}</span>
+            <span className="truncate">{snapshot.personality || t("developer", "overview.defaultPersonality")}</span>
           </div>
           {snapshot.userPrompt && (
             <div className="flex items-start gap-1.5">
@@ -369,35 +372,35 @@ function OverviewTab({ snapshot, activeReport, search }: { snapshot: DebugSnapsh
           )}
           <div className="flex items-center gap-1.5">
             <span className={cn("h-1.5 w-1.5 rounded-full", snapshot.streaming ? "animate-pulse bg-cyan-400" : "bg-emerald-400")} />
-            <span className="text-muted-foreground">{snapshot.streaming ? "Streaming" : "Completed"} · {snapshot.totalMs}ms</span>
+            <span className="text-muted-foreground">{snapshot.streaming ? t("developer", "overview.streaming") : t("developer", "overview.completed")} · {snapshot.totalMs}ms</span>
           </div>
         </div>
       </div>
 
       {/* Metrics grid */}
       <div className="grid grid-cols-2 gap-2">
-        <MetricCard label="Provider" value={snapshot.provider} icon={Cpu} color="#22d3ee" index={0} />
-        <MetricCard label="Model" value={snapshot.model?.split("/").pop() || snapshot.model} icon={Brain} color="#a78bfa" index={1} />
-        <MetricCard label="Latency" value={`${snapshot.totalMs}ms`} icon={Clock} color="#34d399" index={2} />
-        <MetricCard label="Tokens" value={snapshot.totalTokens} icon={Hash} color="#fbbf24" sub={`${snapshot.inputTokens} in / ${snapshot.outputTokens} out`} index={3} />
+        <MetricCard label={t("developer", "overview.metricProvider")} value={snapshot.provider} icon={Cpu} color="#22d3ee" index={0} />
+        <MetricCard label={t("developer", "overview.metricModel")} value={snapshot.model?.split("/").pop() || snapshot.model} icon={Brain} color="#a78bfa" index={1} />
+        <MetricCard label={t("developer", "overview.metricLatency")} value={`${snapshot.totalMs}ms`} icon={Clock} color="#34d399" index={2} />
+        <MetricCard label={t("developer", "overview.metricTokens")} value={snapshot.totalTokens} icon={Hash} color="#fbbf24" sub={t("developer", "overview.tokensSub", { in: snapshot.inputTokens, out: snapshot.outputTokens })} index={3} />
         {snapshot.temperature != null && (
-          <MetricCard label="Temperature" value={snapshot.temperature} icon={Activity} color="#f472b6" index={4} />
+          <MetricCard label={t("developer", "overview.metricTemperature")} value={snapshot.temperature} icon={Activity} color="#f472b6" index={4} />
         )}
         {snapshot.maxTokens > 0 && (
-          <MetricCard label="Max Tokens" value={snapshot.maxTokens} icon={Zap} color="#60a5fa" index={5} />
+          <MetricCard label={t("developer", "overview.metricMaxTokens")} value={snapshot.maxTokens} icon={Zap} color="#60a5fa" index={5} />
         )}
       </div>
 
       {/* Timeline */}
       <div>
-        <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Request Timeline</p>
+        <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{t("developer", "overview.requestTimeline")}</p>
         <RequestTimeline steps={timelineSteps} totalMs={snapshot.totalMs} />
       </div>
 
       {/* Context usage (if available) */}
       {snapshot.contextWindow > 0 && (
         <div>
-          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Context Window</p>
+          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{t("developer", "overview.contextWindow")}</p>
           <div className="rounded-lg border border-white/5 bg-white/[0.02] p-3">
             <div className="flex items-center justify-between text-xs">
               <span className="text-muted-foreground">{snapshot.totalTokens.toLocaleString()} / {snapshot.contextWindow.toLocaleString()}</span>
@@ -422,7 +425,8 @@ function OverviewTab({ snapshot, activeReport, search }: { snapshot: DebugSnapsh
 
 /* ─────────── Prompt Tab (Pipeline Accordion) ─────────── */
 function PromptTab({ snapshot, search }: { snapshot: DebugSnapshot | null; search: string }) {
-  if (!snapshot) return <EmptyState icon={Brain} title="No prompt data" description="Send a message to see the prompt pipeline." />;
+  const { t } = useT();
+  if (!snapshot) return <EmptyState icon={Brain} title={t("developer", "prompt.emptyTitle")} description={t("developer", "prompt.emptyDesc")} />;
 
   const highlight = (text: string) => {
     if (!search.trim()) return text;
@@ -432,14 +436,14 @@ function PromptTab({ snapshot, search }: { snapshot: DebugSnapshot | null; searc
   };
 
   const sections = [
-    { id: "system", label: "1. System Prompt", icon: Bot, content: snapshot.systemPrompt, tokens: Math.ceil((snapshot.systemPrompt || "").length / 4) },
-    { id: "repo", label: "3. Repository Context", icon: FolderGit2, content: snapshot.repositoryContext, tokens: Math.ceil((snapshot.repositoryContext || "").length / 4) },
-    { id: "user", label: "7. User Message", icon: Sparkles, content: snapshot.userPrompt, tokens: Math.ceil((snapshot.userPrompt || "").length / 4) },
-    { id: "final", label: "8. Final Prompt (Sent to AI)", icon: FileCode, content: snapshot.finalPrompt, tokens: snapshot.inputTokens },
+    { id: "system", label: t("developer", "prompt.sectionSystem"), icon: Bot, content: snapshot.systemPrompt, tokens: Math.ceil((snapshot.systemPrompt || "").length / 4) },
+    { id: "repo", label: t("developer", "prompt.sectionRepo"), icon: FolderGit2, content: snapshot.repositoryContext, tokens: Math.ceil((snapshot.repositoryContext || "").length / 4) },
+    { id: "user", label: t("developer", "prompt.sectionUser"), icon: Sparkles, content: snapshot.userPrompt, tokens: Math.ceil((snapshot.userPrompt || "").length / 4) },
+    { id: "final", label: t("developer", "prompt.sectionFinal"), icon: FileCode, content: snapshot.finalPrompt, tokens: snapshot.inputTokens },
   ].filter((s) => s.content && s.content.trim());
 
   if (sections.length === 0) {
-    return <EmptyState icon={Brain} title="No prompt data" description="Prompt data will appear here after first message." />;
+    return <EmptyState icon={Brain} title={t("developer", "prompt.emptyTitle")} description={t("developer", "prompt.emptyDesc2")} />;
   }
 
   return (
@@ -469,8 +473,9 @@ function PromptTab({ snapshot, search }: { snapshot: DebugSnapshot | null; searc
 
 /* ─────────── Context Tab ─────────── */
 function ContextTab({ snapshot, activeReport, search }: { snapshot: DebugSnapshot | null; activeReport: any; search: string }) {
+  const { t } = useT();
   if (!snapshot && !activeReport) {
-    return <EmptyState icon={Boxes} title="No context data" description="Repository context will appear here after analysis." />;
+    return <EmptyState icon={Boxes} title={t("developer", "context.emptyTitle")} description={t("developer", "context.emptyDesc")} />;
   }
 
   const sections: Array<{ id: string; label: string; icon: typeof FolderGit2; content: React.ReactNode }> = [];
@@ -479,16 +484,16 @@ function ContextTab({ snapshot, activeReport, search }: { snapshot: DebugSnapsho
   if (activeReport) {
     sections.push({
       id: "repo",
-      label: "Repository Summary",
+      label: t("developer", "context.sectionRepoSummary"),
       icon: FolderGit2,
       content: (
         <div className="grid grid-cols-2 gap-2 text-xs">
-          <div><span className="text-muted-foreground">Repo:</span> {activeReport.repoOwner}/{activeReport.repoName}</div>
-          <div><span className="text-muted-foreground">Branch:</span> {activeReport.repoBranch}</div>
-          <div><span className="text-muted-foreground">Language:</span> {activeReport.primaryLanguage}</div>
-          <div><span className="text-muted-foreground">Files:</span> {activeReport.totalFiles}</div>
-          <div><span className="text-muted-foreground">Lines:</span> {activeReport.totalLines.toLocaleString()}</div>
-          <div><span className="text-muted-foreground">Score:</span> <span className="text-cyan-300">{activeReport.scores?.overall}</span></div>
+          <div><span className="text-muted-foreground">{t("developer", "context.fieldRepo")}</span> {activeReport.repoOwner}/{activeReport.repoName}</div>
+          <div><span className="text-muted-foreground">{t("developer", "context.fieldBranch")}</span> {activeReport.repoBranch}</div>
+          <div><span className="text-muted-foreground">{t("developer", "context.fieldLanguage")}</span> {activeReport.primaryLanguage}</div>
+          <div><span className="text-muted-foreground">{t("developer", "context.fieldFiles")}</span> {activeReport.totalFiles}</div>
+          <div><span className="text-muted-foreground">{t("developer", "context.fieldLines")}</span> {activeReport.totalLines.toLocaleString()}</div>
+          <div><span className="text-muted-foreground">{t("developer", "context.fieldScore")}</span> <span className="text-cyan-300">{activeReport.scores?.overall}</span></div>
         </div>
       ),
     });
@@ -498,14 +503,14 @@ function ContextTab({ snapshot, activeReport, search }: { snapshot: DebugSnapsho
   if (activeReport) {
     sections.push({
       id: "analysis",
-      label: "Analysis Context",
+      label: t("developer", "context.sectionAnalysisContext"),
       icon: Activity,
       content: (
         <div className="space-y-1.5 text-xs">
-          <div className="flex justify-between"><span className="text-muted-foreground">Architecture:</span> <span>{activeReport.architecture?.pattern}</span></div>
-          <div className="flex justify-between"><span className="text-muted-foreground">Tech Debt:</span> <span className="text-amber-300">{activeReport.technicalDebt?.score}</span></div>
-          <div className="flex justify-between"><span className="text-muted-foreground">Frameworks:</span> <span>{activeReport.frameworks?.length || 0}</span></div>
-          <div className="flex justify-between"><span className="text-muted-foreground">Issues:</span> <span>{(activeReport.issues?.security?.length || 0) + (activeReport.issues?.performance?.length || 0) + (activeReport.issues?.bugs?.length || 0)}</span></div>
+          <div className="flex justify-between"><span className="text-muted-foreground">{t("developer", "context.fieldArchitecture")}</span> <span>{activeReport.architecture?.pattern}</span></div>
+          <div className="flex justify-between"><span className="text-muted-foreground">{t("developer", "context.fieldTechDebt")}</span> <span className="text-amber-300">{activeReport.technicalDebt?.score}</span></div>
+          <div className="flex justify-between"><span className="text-muted-foreground">{t("developer", "context.fieldFrameworks")}</span> <span>{activeReport.frameworks?.length || 0}</span></div>
+          <div className="flex justify-between"><span className="text-muted-foreground">{t("developer", "context.fieldIssues")}</span> <span>{(activeReport.issues?.security?.length || 0) + (activeReport.issues?.performance?.length || 0) + (activeReport.issues?.bugs?.length || 0)}</span></div>
         </div>
       ),
     });
@@ -515,7 +520,7 @@ function ContextTab({ snapshot, activeReport, search }: { snapshot: DebugSnapsho
   if (snapshot?.retrievedChunks && snapshot.retrievedChunks.length > 0) {
     sections.push({
       id: "sources",
-      label: `Retrieved Sources (${snapshot.retrievedChunks.length})`,
+      label: t("developer", "context.sectionRetrievedSources", { count: snapshot.retrievedChunks.length }),
       icon: FileCode,
       content: (
         <div className="space-y-1.5">
@@ -534,13 +539,13 @@ function ContextTab({ snapshot, activeReport, search }: { snapshot: DebugSnapsho
   if (snapshot?.repositoryIndex) {
     sections.push({
       id: "index",
-      label: "Repository Index",
+      label: t("developer", "context.sectionRepoIndex"),
       icon: Database,
       content: (
         <div className="grid grid-cols-3 gap-2 text-xs">
-          <div className="text-center"><p className="text-muted-foreground">Files</p><p className="font-semibold text-cyan-300">{snapshot.repositoryIndex.files}</p></div>
-          <div className="text-center"><p className="text-muted-foreground">Chunks</p><p className="font-semibold text-violet-300">{snapshot.repositoryIndex.chunks}</p></div>
-          <div className="text-center"><p className="text-muted-foreground">Embeds</p><p className="font-semibold text-emerald-300">{snapshot.repositoryIndex.embeddings}</p></div>
+          <div className="text-center"><p className="text-muted-foreground">{t("developer", "context.statFiles")}</p><p className="font-semibold text-cyan-300">{snapshot.repositoryIndex.files}</p></div>
+          <div className="text-center"><p className="text-muted-foreground">{t("developer", "context.statChunks")}</p><p className="font-semibold text-violet-300">{snapshot.repositoryIndex.chunks}</p></div>
+          <div className="text-center"><p className="text-muted-foreground">{t("developer", "context.statEmbeds")}</p><p className="font-semibold text-emerald-300">{snapshot.repositoryIndex.embeddings}</p></div>
         </div>
       ),
     });
@@ -550,20 +555,20 @@ function ContextTab({ snapshot, activeReport, search }: { snapshot: DebugSnapsho
   if (snapshot?.dependencyGraphData) {
     sections.push({
       id: "deps",
-      label: "Dependency Graph",
+      label: t("developer", "context.sectionDepGraph"),
       icon: Network,
       content: (
         <div className="grid grid-cols-3 gap-2 text-xs">
-          <div className="text-center"><p className="text-muted-foreground">Nodes</p><p className="font-semibold text-cyan-300">{snapshot.dependencyGraphData.nodes}</p></div>
-          <div className="text-center"><p className="text-muted-foreground">Edges</p><p className="font-semibold text-violet-300">{snapshot.dependencyGraphData.edges}</p></div>
-          <div className="text-center"><p className="text-muted-foreground">Circular</p><p className="font-semibold text-rose-300">{snapshot.dependencyGraphData.circular}</p></div>
+          <div className="text-center"><p className="text-muted-foreground">{t("developer", "context.statNodes")}</p><p className="font-semibold text-cyan-300">{snapshot.dependencyGraphData.nodes}</p></div>
+          <div className="text-center"><p className="text-muted-foreground">{t("developer", "context.statEdges")}</p><p className="font-semibold text-violet-300">{snapshot.dependencyGraphData.edges}</p></div>
+          <div className="text-center"><p className="text-muted-foreground">{t("developer", "context.statCircular")}</p><p className="font-semibold text-rose-300">{snapshot.dependencyGraphData.circular}</p></div>
         </div>
       ),
     });
   }
 
   if (sections.length === 0) {
-    return <EmptyState icon={Boxes} title="No context data" />;
+    return <EmptyState icon={Boxes} title={t("developer", "context.emptyTitle")} />;
   }
 
   return (
@@ -586,24 +591,25 @@ function ContextTab({ snapshot, activeReport, search }: { snapshot: DebugSnapsho
 
 /* ─────────── Runtime Tab ─────────── */
 function RuntimeTab({ snapshot, search }: { snapshot: DebugSnapshot | null; search: string }) {
-  if (!snapshot) return <EmptyState icon={Cpu} title="No runtime data" description="Runtime metrics will appear here." />;
+  const { t } = useT();
+  if (!snapshot) return <EmptyState icon={Cpu} title={t("developer", "runtime.emptyTitle")} description={t("developer", "runtime.emptyDesc")} />;
 
   const cards: Array<{ label: string; value: string | number; icon: typeof Cpu; color: string; sub?: string }> = [];
 
-  if (snapshot.provider) cards.push({ label: "Provider", value: snapshot.provider, icon: Cpu, color: "#22d3ee" });
-  if (snapshot.model) cards.push({ label: "Model", value: snapshot.model, icon: Brain, color: "#a78bfa" });
-  if (snapshot.temperature != null) cards.push({ label: "Temperature", value: snapshot.temperature, icon: Activity, color: "#f472b6" });
-  if (snapshot.maxTokens > 0) cards.push({ label: "Max Tokens", value: snapshot.maxTokens, icon: Zap, color: "#60a5fa" });
-  if (snapshot.streaming != null) cards.push({ label: "Streaming", value: snapshot.streaming ? "Enabled" : "Disabled", icon: Layers, color: snapshot.streaming ? "#34d399" : "#64748b" });
-  if (snapshot.contextWindow > 0) cards.push({ label: "Context Window", value: snapshot.contextWindow.toLocaleString(), icon: Hash, color: "#fbbf24" });
-  if (snapshot.totalMs > 0) cards.push({ label: "Total Time", value: `${snapshot.totalMs}ms`, icon: Clock, color: "#34d399" });
-  if (snapshot.generationMs > 0) cards.push({ label: "Generation Time", value: `${snapshot.generationMs}ms`, icon: Clock, color: "#22d3ee" });
-  if (snapshot.queueMs > 0) cards.push({ label: "Queue Time", value: `${snapshot.queueMs}ms`, icon: Clock, color: "#fbbf24" });
-  if (snapshot.inputTokens > 0) cards.push({ label: "Input Tokens", value: snapshot.inputTokens, icon: Hash, color: "#22d3ee" });
-  if (snapshot.outputTokens > 0) cards.push({ label: "Output Tokens", value: snapshot.outputTokens, icon: Hash, color: "#34d399" });
-  if (snapshot.totalTokens > 0) cards.push({ label: "Total Tokens", value: snapshot.totalTokens, icon: Hash, color: "#a78bfa" });
+  if (snapshot.provider) cards.push({ label: t("developer", "runtime.metricProvider"), value: snapshot.provider, icon: Cpu, color: "#22d3ee" });
+  if (snapshot.model) cards.push({ label: t("developer", "runtime.metricModel"), value: snapshot.model, icon: Brain, color: "#a78bfa" });
+  if (snapshot.temperature != null) cards.push({ label: t("developer", "runtime.metricTemperature"), value: snapshot.temperature, icon: Activity, color: "#f472b6" });
+  if (snapshot.maxTokens > 0) cards.push({ label: t("developer", "runtime.metricMaxTokens"), value: snapshot.maxTokens, icon: Zap, color: "#60a5fa" });
+  if (snapshot.streaming != null) cards.push({ label: t("developer", "runtime.metricStreaming"), value: snapshot.streaming ? t("developer", "runtime.valueEnabled") : t("developer", "runtime.valueDisabled"), icon: Layers, color: snapshot.streaming ? "#34d399" : "#64748b" });
+  if (snapshot.contextWindow > 0) cards.push({ label: t("developer", "runtime.metricContextWindow"), value: snapshot.contextWindow.toLocaleString(), icon: Hash, color: "#fbbf24" });
+  if (snapshot.totalMs > 0) cards.push({ label: t("developer", "runtime.metricTotalTime"), value: `${snapshot.totalMs}ms`, icon: Clock, color: "#34d399" });
+  if (snapshot.generationMs > 0) cards.push({ label: t("developer", "runtime.metricGenerationTime"), value: `${snapshot.generationMs}ms`, icon: Clock, color: "#22d3ee" });
+  if (snapshot.queueMs > 0) cards.push({ label: t("developer", "runtime.metricQueueTime"), value: `${snapshot.queueMs}ms`, icon: Clock, color: "#fbbf24" });
+  if (snapshot.inputTokens > 0) cards.push({ label: t("developer", "runtime.metricInputTokens"), value: snapshot.inputTokens, icon: Hash, color: "#22d3ee" });
+  if (snapshot.outputTokens > 0) cards.push({ label: t("developer", "runtime.metricOutputTokens"), value: snapshot.outputTokens, icon: Hash, color: "#34d399" });
+  if (snapshot.totalTokens > 0) cards.push({ label: t("developer", "runtime.metricTotalTokens"), value: snapshot.totalTokens, icon: Hash, color: "#a78bfa" });
 
-  if (cards.length === 0) return <EmptyState icon={Cpu} title="No runtime data" />;
+  if (cards.length === 0) return <EmptyState icon={Cpu} title={t("developer", "runtime.emptyTitle")} />;
 
   return (
     <div className="grid grid-cols-2 gap-2">
@@ -616,16 +622,17 @@ function RuntimeTab({ snapshot, search }: { snapshot: DebugSnapshot | null; sear
 
 /* ─────────── Capabilities Tab ─────────── */
 function CapabilitiesTab({ snapshot }: { snapshot: DebugSnapshot | null }) {
-  if (!snapshot?.capabilities) return <EmptyState icon={Zap} title="No capabilities data" />;
+  const { t } = useT();
+  if (!snapshot?.capabilities) return <EmptyState icon={Zap} title={t("developer", "capabilities.emptyTitle")} />;
 
   const caps = snapshot.capabilities;
   const capabilities = [
-    { label: "Vision", icon: Eye, enabled: caps.vision, color: "#22d3ee" },
-    { label: "Tool Calling", icon: Wrench, enabled: caps.toolCalling, color: "#a78bfa" },
-    { label: "Function Calling", icon: Zap, enabled: caps.functionCalling, color: "#fbbf24" },
-    { label: "Streaming", icon: Layers, enabled: snapshot.streaming, color: "#34d399" },
-    { label: "Long Context", icon: Hash, enabled: snapshot.contextWindow >= 100000, color: "#60a5fa" },
-    { label: "Reasoning", icon: Brain, enabled: caps.reasoning, color: "#f472b6" },
+    { label: t("developer", "capabilities.labelVision"), icon: Eye, enabled: caps.vision, color: "#22d3ee" },
+    { label: t("developer", "capabilities.labelToolCalling"), icon: Wrench, enabled: caps.toolCalling, color: "#a78bfa" },
+    { label: t("developer", "capabilities.labelFunctionCalling"), icon: Zap, enabled: caps.functionCalling, color: "#fbbf24" },
+    { label: t("developer", "capabilities.labelStreaming"), icon: Layers, enabled: snapshot.streaming, color: "#34d399" },
+    { label: t("developer", "capabilities.labelLongContext"), icon: Hash, enabled: snapshot.contextWindow >= 100000, color: "#60a5fa" },
+    { label: t("developer", "capabilities.labelReasoning"), icon: Brain, enabled: caps.reasoning, color: "#f472b6" },
   ];
 
   return (
@@ -650,7 +657,7 @@ function CapabilitiesTab({ snapshot }: { snapshot: DebugSnapshot | null }) {
               {cap.label}
             </span>
             <span className={cn("text-[9px] font-bold uppercase", cap.enabled ? "text-emerald-400" : "text-muted-foreground/50")}>
-              {cap.enabled ? "✓ Supported" : "✗ N/A"}
+              {cap.enabled ? t("developer", "capabilities.valueSupported") : t("developer", "capabilities.valueNotAvailable")}
             </span>
           </motion.div>
         );
@@ -661,6 +668,7 @@ function CapabilitiesTab({ snapshot }: { snapshot: DebugSnapshot | null }) {
 
 /* ─────────── Logs Tab (DevTools Timeline) ─────────── */
 function LogsTab({ logs, clearLogs, snapshot, search }: { logs: AIRequestLog[]; clearLogs: () => void; snapshot: DebugSnapshot | null; search: string }) {
+  const { t } = useT();
   const [filter, setFilter] = useState<"all" | "error" | "success">("all");
 
   const filtered = useMemo(() => {
@@ -676,11 +684,11 @@ function LogsTab({ logs, clearLogs, snapshot, search }: { logs: AIRequestLog[]; 
 
   // Current request timeline (from snapshot)
   const currentTimeline = snapshot ? [
-    { label: "Context Loaded", timeMs: snapshot.queueMs, status: "done" as const },
-    { label: "Prompt Assembled", timeMs: 0, status: "done" as const },
-    { label: "API Request Sent", timeMs: 0, status: "done" as const },
-    { label: "Generation Started", timeMs: snapshot.generationMs, status: "done" as const },
-    { label: "Response Complete", timeMs: snapshot.totalMs, status: "done" as const },
+    { label: t("developer", "logs.timelineContextLoaded"), timeMs: snapshot.queueMs, status: "done" as const },
+    { label: t("developer", "logs.timelinePromptAssembled"), timeMs: 0, status: "done" as const },
+    { label: t("developer", "logs.timelineApiRequestSent"), timeMs: 0, status: "done" as const },
+    { label: t("developer", "logs.timelineGenerationStarted"), timeMs: snapshot.generationMs, status: "done" as const },
+    { label: t("developer", "logs.timelineResponseComplete"), timeMs: snapshot.totalMs, status: "done" as const },
   ] : [];
 
   return (
@@ -688,7 +696,7 @@ function LogsTab({ logs, clearLogs, snapshot, search }: { logs: AIRequestLog[]; 
       {/* Current request timeline */}
       {snapshot && (
         <div>
-          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Current Request Timeline</p>
+          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{t("developer", "logs.currentTimeline")}</p>
           <RequestTimeline steps={currentTimeline} totalMs={snapshot.totalMs} />
         </div>
       )}
@@ -697,7 +705,7 @@ function LogsTab({ logs, clearLogs, snapshot, search }: { logs: AIRequestLog[]; 
       <div>
         <div className="mb-2 flex items-center justify-between">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-            Request History ({filtered.length})
+            {t("developer", "logs.requestHistory", { count: filtered.length })}
           </p>
           <div className="flex items-center gap-1">
             {(["all", "success", "error"] as const).map((f) => (
@@ -711,11 +719,11 @@ function LogsTab({ logs, clearLogs, snapshot, search }: { logs: AIRequestLog[]; 
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >
-                {f}
+                {t("developer", `logs.filter${f.charAt(0).toUpperCase()}${f.slice(1)}`)}
               </button>
             ))}
             {logs.length > 0 && (
-              <button onClick={() => { if (confirm("Clear all logs?")) { clearLogs(); toast.success("Logs cleared"); } }} className="ml-1 rounded p-1 text-muted-foreground transition hover:text-rose-300" title="Clear logs">
+              <button onClick={() => { if (confirm(t("developer", "logs.clearConfirm"))) { clearLogs(); toast.success(t("developer", "logs.clearedToast")); } }} className="ml-1 rounded p-1 text-muted-foreground transition hover:text-rose-300" title={t("developer", "logs.clearTitle")}>
                 <X className="h-3 w-3" />
               </button>
             )}
@@ -723,7 +731,7 @@ function LogsTab({ logs, clearLogs, snapshot, search }: { logs: AIRequestLog[]; 
         </div>
 
         {filtered.length === 0 ? (
-          <EmptyState icon={ScrollText} title="No logs yet" description="Request history will appear here." />
+          <EmptyState icon={ScrollText} title={t("developer", "logs.emptyTitle")} description={t("developer", "logs.emptyDesc")} />
         ) : (
           <div className="space-y-1.5">
             {filtered.slice(0, 30).map((log, i) => {

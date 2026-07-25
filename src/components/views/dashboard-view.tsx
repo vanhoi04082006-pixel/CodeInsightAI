@@ -21,7 +21,7 @@ import {
   Terminal,
   Zap,
 } from "lucide-react";
-import { GlassCard, ScoreGauge, GradientText, StatPill } from "@/components/shared/ui";
+import { GlassCard, ScoreGauge, StatPill } from "@/components/shared/ui";
 import { Button } from "@/components/ui/button";
 import { ProFeaturesCard } from "@/components/shared/pro-features-card";
 import { UsageWidget } from "@/components/shared/usage-widget";
@@ -64,11 +64,11 @@ export function DashboardView() {
   // Score cards — delta from AI priorities if available, otherwise neutral
   const aiPriorities = (r as any).deepAnalysis?.priorities as any[] | undefined;
   const scoreCards = [
-    { label: "Security", value: r.scores.security, icon: ShieldCheck, color: "#f472b6", delta: aiPriorities?.some(p => p.issue?.toLowerCase().includes("security")) ? "!" : "—" },
-    { label: "Performance", value: r.scores.performance, icon: Gauge, color: "#34d399", delta: aiPriorities?.some(p => p.issue?.toLowerCase().includes("performance")) ? "!" : "—" },
-    { label: "Architecture", value: r.scores.architecture, icon: Network, color: "#a78bfa", delta: aiPriorities?.some(p => p.issue?.toLowerCase().includes("architecture")) ? "!" : "—" },
-    { label: "Maintainability", value: r.scores.maintainability, icon: Wrench, color: "#fbbf24", delta: aiPriorities?.some(p => p.issue?.toLowerCase().includes("maintain")) ? "!" : "—" },
-    { label: "Code Quality", value: r.scores.codeQuality, icon: Code2, color: "#60a5fa", delta: aiPriorities?.some(p => p.issue?.toLowerCase().includes("quality")) ? "!" : "—" },
+    { id: "security", label: t("dashboard", "scoreLabels.security"), value: r.scores.security, icon: ShieldCheck, color: "#f472b6", delta: aiPriorities?.some(p => p.issue?.toLowerCase().includes("security")) ? "!" : "—" },
+    { id: "performance", label: t("dashboard", "scoreLabels.performance"), value: r.scores.performance, icon: Gauge, color: "#34d399", delta: aiPriorities?.some(p => p.issue?.toLowerCase().includes("performance")) ? "!" : "—" },
+    { id: "architecture", label: t("dashboard", "scoreLabels.architecture"), value: r.scores.architecture, icon: Network, color: "#a78bfa", delta: aiPriorities?.some(p => p.issue?.toLowerCase().includes("architecture")) ? "!" : "—" },
+    { id: "maintainability", label: t("dashboard", "scoreLabels.maintainability"), value: r.scores.maintainability, icon: Wrench, color: "#fbbf24", delta: aiPriorities?.some(p => p.issue?.toLowerCase().includes("maintain")) ? "!" : "—" },
+    { id: "codeQuality", label: t("dashboard", "scoreLabels.codeQuality"), value: r.scores.codeQuality, icon: Code2, color: "#60a5fa", delta: aiPriorities?.some(p => p.issue?.toLowerCase().includes("quality")) ? "!" : "—" },
   ];
 
   const breakdownData = r.scoreBreakdown.map((b) => ({
@@ -97,7 +97,7 @@ export function DashboardView() {
             <span className="rounded-full bg-white/5 px-2 py-0.5 text-[10px]">{r.repoBranch}</span>
           </div>
           <h1 className="mt-1 text-2xl font-bold md:text-3xl">
-            Repository <GradientText>Intelligence</GradientText>
+            {t("dashboard", "title")}
           </h1>
           <p className="text-sm text-muted-foreground">{r.summary}</p>
         </div>
@@ -144,7 +144,7 @@ export function DashboardView() {
             const Icon = c.icon;
             return (
               <motion.div
-                key={c.label}
+                key={c.id}
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05 }}
@@ -430,49 +430,49 @@ export function DashboardView() {
 
 const SAMPLE_REPOS = [
   {
+    id: "react",
     name: "facebook/react",
     url: "https://github.com/facebook/react",
-    desc: "The library for web and native user interfaces.",
     lang: "JavaScript",
     icon: Code2,
     color: "#f7df1e",
   },
   {
+    id: "nextjs",
     name: "vercel/next.js",
     url: "https://github.com/vercel/next.js",
-    desc: "The React Framework for the Web.",
     lang: "TypeScript",
     icon: Boxes,
     color: "#3178c6",
   },
   {
+    id: "fastapi",
     name: "fastapi/fastapi",
     url: "https://github.com/fastapi/fastapi",
-    desc: "High performance, easy to learn Python web framework.",
     lang: "Python",
     icon: Terminal,
     color: "#3776ab",
   },
   {
+    id: "tailwind",
     name: "tailwindlabs/tailwindcss",
     url: "https://github.com/tailwindlabs/tailwindcss",
-    desc: "A utility-first CSS framework for rapid UI development.",
     lang: "TypeScript",
     icon: Zap,
     color: "#22d3ee",
   },
   {
+    id: "prisma",
     name: "prisma/prisma",
     url: "https://github.com/prisma/prisma",
-    desc: "Next-generation Node.js and TypeScript ORM.",
     lang: "TypeScript",
     icon: Network,
     color: "#5eead4",
   },
   {
+    id: "vite",
     name: "vitejs/vite",
     url: "https://github.com/vitejs/vite",
-    desc: "Next generation frontend tooling. It's fast!",
     lang: "TypeScript",
     icon: Github,
     color: "#a78bfa",
@@ -533,7 +533,7 @@ function EmptyDashboard() {
                 await new Promise(r => setTimeout(r, 500));
               }
               useAppStore.getState().setAiPending(false);
-              toast.success("AI deep analysis complete!");
+              toast.success(t("dashboard", "toast.aiDeepComplete"));
             };
             setTimeout(runRemaining, 2000);
           }
@@ -572,7 +572,7 @@ function EmptyDashboard() {
         <div className="mb-3 flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-cyan-300" />
           <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-            Try a sample repository
+            {t("dashboard", "trySampleRepo")}
           </h3>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -602,10 +602,10 @@ function EmptyDashboard() {
                 </div>
                 <div>
                   <p className="truncate text-sm font-semibold">{repo.name}</p>
-                  <p className="mt-0.5 line-clamp-2 text-[11px] text-muted-foreground">{repo.desc}</p>
+                  <p className="mt-0.5 line-clamp-2 text-[11px] text-muted-foreground">{t("dashboard", `sampleRepos.${repo.id}.desc`)}</p>
                 </div>
                 <div className="mt-auto flex items-center gap-1 text-[10px] text-cyan-300 opacity-0 transition group-hover:opacity-100">
-                  <span>Analyze</span>
+                  <span>{t("dashboard", "analyze")}</span>
                   <ArrowUpRight className="h-3 w-3" />
                 </div>
               </motion.button>
@@ -653,7 +653,7 @@ function EmptyDashboard() {
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{item.repoOwner}/{item.repoName}</p>
                   <p className="text-[11px] text-muted-foreground">
-                    {item.primaryLanguage ?? "Unknown"} · {new Date(item.createdAt).toLocaleDateString()}
+                    {item.primaryLanguage ?? t("common", "unknown")} · {new Date(item.createdAt).toLocaleDateString()}
                   </p>
                 </div>
                 <ArrowUpRight className="h-4 w-4 shrink-0 text-muted-foreground transition group-hover:text-cyan-300" />

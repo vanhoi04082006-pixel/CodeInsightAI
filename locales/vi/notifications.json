@@ -1,1 +1,87 @@
-{ "providerAdded": "Đã thêm nhà cung cấp {name}", "providerRemoved": "Đã xóa nhà cung cấp", "providerConnected": "{name} đã kết nối · {latency}ms", "providerKeyShort": "Khóa API quá ngắn", "connectionFailed": "Kiểm tra kết nối thất bại", "personalitySet": "Tính cách: {name}", "personalityDefault": "Đã đặt {name} làm mặc định", "personalityCreated": "Đã tạo tính cách", "personalityUpdated": "Đã cập nhật tính cách", "personalityDeleted": "Đã xóa tính cách", "personalityDuplicated": "Đã nhân đôi", "personalitiesExported": "Đã xuất tính cách", "profileSaved": "Đã lưu hồ sơ", "themeApplied": "Chủ đề: {name}", "accentApplied": "Màu nhấn: {name}", "densityApplied": "Mật độ: {name}", "animationApplied": "Hoạt ảnh: {name}", "languageApplied": "Ngôn ngữ: {name}", "fontSizeApplied": "Cỡ chữ: {name}", "reducedMotionOn": "Đã bật giảm chuyển động", "reducedMotionOff": "Đã tắt giảm chuyển động", "highContrastOn": "Đã bật tương phản cao", "highContrastOff": "Đã tắt tương phản cao", "colorBlindApplied": "Mù màu: {name}", "devModeOn": "Đã bật chế độ nhà phát triển", "devModeOff": "Đã tắt chế độ nhà phát triển", "logsCleared": "Đã xóa nhật ký", "snapshotsCleared": "Đã xóa ảnh chụp gỡ lỗi", "markdownCopied": "Đã sao chép Markdown", "shareLinkCopied": "Đã sao chép liên kết chia sẻ", "codeCopied": "Đã sao chép mã", "copiedToClipboard": "Đã sao chép vào clipboard", "analysisComplete": "Phân tích hoàn tất — {score}/100 điểm tổng thể", "analysisFailed": "Phân tích thất bại. Vui lòng thử lại." }
+{
+  "providerAdded": "Đã thêm nhà cung cấp {name}",
+  "providerRemoved": "Đã xóa nhà cung cấp",
+  "providerConnected": "{name} đã kết nối · {latency}ms",
+  "providerKeyShort": "Khóa API quá ngắn",
+  "connectionFailed": "Kiểm tra kết nối thất bại",
+  "personalitySet": "Tính cách: {name}",
+  "personalityDefault": "Đã đặt {name} làm mặc định",
+  "personalityCreated": "Đã tạo tính cách",
+  "personalityUpdated": "Đã cập nhật tính cách",
+  "personalityDeleted": "Đã xóa tính cách",
+  "personalityDuplicated": "Đã nhân đôi",
+  "personalitiesExported": "Đã xuất tính cách",
+  "profileSaved": "Đã lưu hồ sơ",
+  "themeApplied": "Chủ đề: {name}",
+  "accentApplied": "Màu nhấn: {name}",
+  "densityApplied": "Mật độ: {name}",
+  "animationApplied": "Hoạt ảnh: {name}",
+  "languageApplied": "Ngôn ngữ: {name}",
+  "fontSizeApplied": "Cỡ chữ: {name}",
+  "reducedMotionOn": "Đã bật giảm chuyển động",
+  "reducedMotionOff": "Đã tắt giảm chuyển động",
+  "highContrastOn": "Đã bật tương phản cao",
+  "highContrastOff": "Đã tắt tương phản cao",
+  "colorBlindApplied": "Mù màu: {name}",
+  "devModeOn": "Đã bật chế độ nhà phát triển",
+  "devModeOff": "Đã tắt chế độ nhà phát triển",
+  "logsCleared": "Đã xóa nhật ký",
+  "snapshotsCleared": "Đã xóa ảnh chụp gỡ lỗi",
+  "markdownCopied": "Đã sao chép Markdown",
+  "shareLinkCopied": "Đã sao chép liên kết chia sẻ",
+  "codeCopied": "Đã sao chép mã",
+  "copiedToClipboard": "Đã sao chép vào clipboard",
+  "analysisComplete": "Phân tích hoàn tất — {score}/100 điểm tổng thể",
+  "analysisFailed": "Phân tích thất bại. Vui lòng thử lại.",
+  "appShell": {
+    "toggleSidebar": "Bật/tắt thanh bên",
+    "titleMission": "Hệ điều hành AI",
+    "titleDefault": "Phân tích repository bằng AI",
+    "lockHint": {
+      "pro": "(Pro)",
+      "custom": "(chế độ Custom)"
+    }
+  },
+  "aiStatus": {
+    "emptyTitle": "Kết nối AI của bạn",
+    "providerReadySingular": "{count} provider sẵn sàng",
+    "providerReadyPlural": "{count} provider sẵn sàng",
+    "emptyDesc": "Dùng API AI của bạn. Không cần đăng ký.",
+    "connectedDesc": "Đã kết nối {count} · chuyển model tự do",
+    "personalityLabel": "Tính cách:",
+    "manageProviders": "Quản lý nhà cung cấp"
+  },
+  "tokenUsage": {
+    "unlimited": "Không giới hạn",
+    "compactLeft": "còn lại",
+    "title": "Lượt dùng token",
+    "usedSuffix": "đã dùng",
+    "totalSuffix": "tổng",
+    "remaining": "còn lại",
+    "tooltipCompact": "Đã dùng {used} / {limit} token trong tháng này",
+    "chatMessages": "Tin nhắn chat",
+    "analyses": "Lần phân tích",
+    "tokUnit": "tok",
+    "lowWarning": "⚠ Sắp hết — nâng cấp lên Pro cho 10M token/tháng"
+  },
+  "systemStatus": {
+    "status": {
+      "ok": "Hoạt động",
+      "degraded": "Giảm hiệu năng",
+      "down": "Sự cố",
+      "unknown": "Không xác định"
+    },
+    "service": {
+      "database": "Cơ sở dữ liệu",
+      "jobQueue": "Hàng đợi công việc",
+      "github": "GitHub API"
+    },
+    "ariaLabel": "Trạng thái hệ thống: {status}",
+    "dialogAriaLabel": "Chi tiết trạng thái hệ thống",
+    "checking": "Đang kiểm tra…",
+    "updatedJustNow": "Vừa cập nhật · {latency}ms",
+    "unreachable": "Không thể kết nối endpoint kiểm tra sức khỏe",
+    "refreshFooter": "Làm mới mỗi 60s. Kiểm tra lần cuối: {time}",
+    "neverChecked": "chưa có"
+  }
+}

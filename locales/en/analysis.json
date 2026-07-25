@@ -52,5 +52,48 @@
     "react": "UI library",
     "vue": "Progressive framework",
     "tailwind": "CSS engine"
+  },
+  "passes": {
+    "summary": "Executive Summary",
+    "priorities": "Priorities & Roadmap",
+    "security": "Security Review",
+    "architecture": "Architecture Review",
+    "quality": "Code Quality",
+    "performance": "Performance Review",
+    "bestPractices": "Best Practices Audit",
+    "duplicates": "Duplicate Code Analysis"
+  },
+  "toast": {
+    "aiDeepComplete": "AI deep analysis complete!",
+    "aiDeepCompleteDesc": "All 8 AI passes finished. Check AI Insights tab.",
+    "aiAnalysisComplete": "AI analysis complete!",
+    "aiAnalyzingDeep": "AI is performing deep analysis (7-pass)...",
+    "aiAnalyzingDeepDesc": "This process may take 2-5 minutes depending on repo size",
+    "staticComplete": "Static analysis complete — {score}/100",
+    "staticCompleteDesc": "AI deep analysis (7-pass) is running in background...",
+    "analysisComplete": "Analysis complete — {score}/100",
+    "analysisFailed": "Analysis failed",
+    "analysisFailedRetry": "Analysis failed. Please try again."
+  },
+  "aiToggle": {
+    "deep": "🧠 Deep AI Analysis (7-pass)",
+    "static": "⚡ Static Analysis Only",
+    "deepDesc": "Uses AI for executive summary, security review, architecture, performance + best practices audit",
+    "staticDesc": "Faster — 66 static rules only, no AI tokens used"
+  },
+  "repositoryFallback": "repository",
+  "logOk": "OK",
+  "aiPassLabel": "AI Pass {current}/{total}",
+  "completeTitlePrefix": "Analysis",
+  "completeTitleHighlight": "complete",
+  "filesLabel": "files",
+  "linesLabel": "lines",
+  "scoreLabels": {
+    "overall": "Overall",
+    "security": "Security",
+    "performance": "Performance",
+    "architecture": "Architecture",
+    "maintainability": "Maintainability",
+    "codeQuality": "Code Quality"
   }
 }

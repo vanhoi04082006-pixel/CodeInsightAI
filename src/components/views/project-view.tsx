@@ -69,9 +69,9 @@ export function ProjectView({ isShared = false }: { isShared?: boolean }) {
         <GlassCard className="p-10">
           <FileCode className="mx-auto h-10 w-10 text-cyan-300" />
           <h2 className="mt-4 text-xl font-bold">{t("reports", "noReport")}</h2>
-          <p className="mt-2 text-sm text-muted-foreground">Analyze a repository first to view its full report.</p>
+          <p className="mt-2 text-sm text-muted-foreground">{t("reports", "noReportDesc")}</p>
           <Button onClick={() => setView("analyze")} className="mt-4 bg-gradient-to-r from-cyan-500 to-violet-500 text-white">
-            Start analysis
+            {t("reports", "startAnalysis")}
           </Button>
         </GlassCard>
       </div>
@@ -84,7 +84,7 @@ export function ProjectView({ isShared = false }: { isShared?: boolean }) {
     try {
       const analysisId = activeAnalysisId || (report as any).id;
       if (!analysisId) {
-        toast.error("Cannot share — analysis not saved to DB yet.");
+        toast.error(t("reports", "project.cannotShareNotSaved"));
         return;
       }
       const res = await fetch("/api/share", {
@@ -95,14 +95,14 @@ export function ProjectView({ isShared = false }: { isShared?: boolean }) {
       const data = await res.json();
       if (data.url) {
         await navigator.clipboard.writeText(data.url);
-        toast.success("Share link copied to clipboard!", {
-          description: "Expires in 7 days. Anyone with the link can view (read-only).",
+        toast.success(t("reports", "project.shareLinkCopied"), {
+          description: t("reports", "project.shareLinkExpires"),
         });
       } else {
-        toast.error(data.error || "Failed to create share link");
+        toast.error(data.error || t("reports", "project.shareFailed"));
       }
     } catch (e) {
-      toast.error("Failed to share — please try again");
+      toast.error(t("reports", "project.shareError"));
     } finally {
       setSharing(false);
     }
@@ -123,7 +123,7 @@ export function ProjectView({ isShared = false }: { isShared?: boolean }) {
     a.download = `${report.repoOwner}-${report.repoName}-report.md`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success("Report downloaded as Markdown");
+    toast.success(t("reports", "project.downloadedMarkdown"));
   };
 
   const downloadJSON = () => {
@@ -134,7 +134,7 @@ export function ProjectView({ isShared = false }: { isShared?: boolean }) {
     a.download = `${report.repoOwner}-${report.repoName}-report.json`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success("Report downloaded as JSON");
+    toast.success(t("reports", "project.downloadedJson"));
   };
 
   return (
@@ -153,22 +153,22 @@ export function ProjectView({ isShared = false }: { isShared?: boolean }) {
             <span className="rounded-full bg-white/5 px-2 py-0.5 text-[10px]">{report.repoBranch}</span>
             {(report as any).aiEnhancement?.aiBadge === "ai-enhanced" ? (
               <span className="flex items-center gap-1 rounded-full bg-violet-500/15 px-2 py-0.5 text-[10px] font-medium text-violet-300">
-                <Sparkles className="h-3 w-3" /> AI-Enhanced
+                <Sparkles className="h-3 w-3" /> {t("reports", "project.aiEnhanced")}
               </span>
             ) : (
               <span className="flex items-center gap-1 rounded-full bg-cyan-500/10 px-2 py-0.5 text-[10px] font-medium text-cyan-300">
-                <Activity className="h-3 w-3" /> Static Analysis
+                <Activity className="h-3 w-3" /> {t("reports", "project.staticAnalysis")}
               </span>
             )}
             {/* AI status indicator */}
             {aiPending && (
               <span className="flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium text-amber-300">
-                <Loader2 className="h-3 w-3 animate-spin" /> AI analyzing...
+                <Loader2 className="h-3 w-3 animate-spin" /> {t("reports", "project.aiAnalyzing")}
               </span>
             )}
           </div>
           <h1 className="mt-1 text-2xl font-bold md:text-3xl">
-            Project <GradientText>Report</GradientText>
+            {t("reports", "project.titleProject")} <GradientText>{t("reports", "project.titleReport")}</GradientText>
           </h1>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
             {(report as any).aiEnhancement?.aiSummary || report.summary}
@@ -183,7 +183,7 @@ export function ProjectView({ isShared = false }: { isShared?: boolean }) {
         {!isShared && (
           <div className="flex flex-wrap gap-2">
             <Button onClick={exportMarkdown} variant="outline" size="sm">
-              <Copy className="mr-1.5 h-4 w-4" /> Copy MD
+              <Copy className="mr-1.5 h-4 w-4" /> {t("reports", "project.copyMd")}
             </Button>
             <Button onClick={downloadMarkdown} variant="outline" size="sm">
               <Download className="mr-1.5 h-4 w-4" /> .md
@@ -192,10 +192,10 @@ export function ProjectView({ isShared = false }: { isShared?: boolean }) {
               <Download className="mr-1.5 h-4 w-4" /> .json
             </Button>
             <Button onClick={shareReport} variant="outline" size="sm" disabled={sharing}>
-              {sharing ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Share2 className="mr-1.5 h-4 w-4" />} Share
+              {sharing ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Share2 className="mr-1.5 h-4 w-4" />} {t("reports", "share")}
             </Button>
             <Button onClick={() => setView("chat")} size="sm" className="bg-gradient-to-r from-cyan-500 to-violet-500 text-white">
-              <Sparkles className="mr-1.5 h-4 w-4" /> Ask AI
+              <Sparkles className="mr-1.5 h-4 w-4" /> {t("reports", "askAI")}
             </Button>
           </div>
         )}
@@ -233,13 +233,13 @@ export function ProjectView({ isShared = false }: { isShared?: boolean }) {
             <ArchitectureTab report={report} />
           </TabsContent>
           <TabsContent value="bugs" className="mt-4">
-            <IssuesTab issues={report.issues.bugs} title="Bug Detection" color="#fbbf24" report={report} />
+            <IssuesTab id="bugs" issues={report.issues.bugs} title={t("reports", "project.bugDetection")} color="#fbbf24" report={report} />
           </TabsContent>
           <TabsContent value="security" className="mt-4">
-            <IssuesTab issues={report.issues.security} title="Security Audit" color="#f472b6" report={report} />
+            <IssuesTab id="security" issues={report.issues.security} title={t("reports", "project.securityAudit")} color="#f472b6" report={report} />
           </TabsContent>
           <TabsContent value="performance" className="mt-4">
-            <IssuesTab issues={report.issues.performance} title="Performance Analysis" color="#34d399" report={report} />
+            <IssuesTab id="performance" issues={report.issues.performance} title={t("reports", "project.performanceAnalysis")} color="#34d399" report={report} />
           </TabsContent>
           <TabsContent value="dependencies" className="mt-4">
             <DependenciesTab report={report} />
@@ -273,7 +273,7 @@ function OverviewTab({ report }: { report: AnalysisReport }) {
       <GlassCard strong className="p-6 lg:col-span-1">
         <p className="text-xs uppercase tracking-wider text-muted-foreground">{t("reports", "healthScore")}</p>
         <div className="mt-3 flex justify-center">
-          <ScoreGauge value={report.scores.overall} size={150} stroke={11} label="Overall" color="#22d3ee" />
+          <ScoreGauge value={report.scores.overall} size={150} stroke={11} label={t("reports", "project.scoreOverall")} color="#22d3ee" />
         </div>
         <NeonDivider className="my-4" />
         <div className="space-y-2">
@@ -305,14 +305,14 @@ function OverviewTab({ report }: { report: AnalysisReport }) {
           <Stat label={t("reports", "totalFiles")} value={report.totalFiles} />
           <Stat label={t("reports", "totalLines")} value={report.totalLines.toLocaleString()} />
           <Stat label={t("reports", "frameworks")} value={report.frameworks.length} />
-          <Stat label="Languages" value={report.languages.length} />
+          <Stat label={t("reports", "languages")} value={report.languages.length} />
           <Stat label={t("reports", "bugsFound")} value={report.issues.bugs.length} accent="#fbbf24" />
           <Stat label={t("reports", "securityIssues")} value={report.issues.security.length} accent="#f472b6" />
           <Stat label={t("reports", "perfIssues")} value={report.issues.performance.length} accent="#34d399" />
         </div>
 
         <NeonDivider className="my-4" />
-        <h4 className="text-sm font-semibold">Key files</h4>
+        <h4 className="text-sm font-semibold">{t("reports", "keyFiles")}</h4>
         <div className="mt-2 max-h-64 space-y-1.5 overflow-y-auto scrollbar-thin pr-1">
           {report.files.slice(0, 8).map((f) => (
             <div key={f.path} className="flex items-center gap-2 rounded-lg border border-white/5 bg-white/[0.02] p-2.5">
@@ -343,7 +343,7 @@ function ArchitectureTab({ report }: { report: AnalysisReport }) {
       <GlassCard className="p-6">
         <div className="flex flex-wrap items-center gap-2">
           <Network className="h-5 w-5 text-cyan-300" />
-          <h3 className="text-lg font-semibold">Pattern: <GradientText>{a.pattern}</GradientText></h3>
+          <h3 className="text-lg font-semibold">{t("reports", "pattern")}: <GradientText>{a.pattern}</GradientText></h3>
         </div>
         <p className="mt-2 text-sm leading-relaxed text-foreground/85">{a.description}</p>
       </GlassCard>
@@ -421,17 +421,17 @@ function ArchitectureTab({ report }: { report: AnalysisReport }) {
           </div>
           <p className="mt-1 text-xs text-muted-foreground">{t("reports", "metricsDesc")}</p>
           <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-            <MetricCard label={t("reports", "metricAvgCoupling")} value={a.metrics.avgCoupling.toFixed(2)} hint="imports/file" tone={a.metrics.avgCoupling > 8 ? "bad" : a.metrics.avgCoupling < 3 ? "good" : "neutral"} />
-            <MetricCard label={t("reports", "metricAvgCohesion")} value={`${(a.metrics.avgCohesion * 100).toFixed(0)}%`} hint="intra-dir" tone={a.metrics.avgCohesion > 0.5 ? "good" : a.metrics.avgCohesion < 0.2 ? "bad" : "neutral"} />
-            <MetricCard label={t("reports", "metricInstability")} value={a.metrics.instability.toFixed(2)} hint="0=stable, 1=volatile" tone={a.metrics.instability > 0.7 ? "bad" : a.metrics.instability < 0.3 ? "good" : "neutral"} />
-            <MetricCard label={t("reports", "metricAbstractness")} value={a.metrics.abstractness.toFixed(2)} hint="0=concrete, 1=abstract" tone="neutral" />
-            <MetricCard label={t("reports", "metricDistanceMain")} value={a.metrics.distanceFromMain.toFixed(2)} hint="0=optimal, 1=worst" tone={a.metrics.distanceFromMain > 0.5 ? "bad" : a.metrics.distanceFromMain < 0.2 ? "good" : "neutral"} />
-            <MetricCard label={t("reports", "metricFanIn")} value={a.metrics.fanInAvg.toFixed(1)} hint="depend on me" tone="neutral" />
-            <MetricCard label={t("reports", "metricFanOut")} value={a.metrics.fanOutAvg.toFixed(1)} hint="I depend on" tone="neutral" />
-            <MetricCard label={t("reports", "metricFileCycles")} value={String(a.metrics.fileCircularDeps)} hint="A↔B pairs" tone={a.metrics.fileCircularDeps > 0 ? "bad" : "good"} />
-            <MetricCard label={t("reports", "metricDirCycles")} value={String(a.metrics.dirCircularDeps.length)} hint="dir→dir chains" tone={a.metrics.dirCircularDeps.length > 0 ? "bad" : "good"} />
-            <MetricCard label={t("reports", "metricLayerViolations")} value={String(a.metrics.layerViolations.length)} hint="comp→DB" tone={a.metrics.layerViolations.length > 0 ? "bad" : "good"} />
-            <MetricCard label={t("reports", "metricGodModules")} value={String(a.metrics.godModules.length)} hint=">20 funcs" tone={a.metrics.godModules.length > 0 ? "bad" : "good"} />
+            <MetricCard label={t("reports", "metricAvgCoupling")} value={a.metrics.avgCoupling.toFixed(2)} hint={t("reports", "project.metricHintAvgCoupling")} tone={a.metrics.avgCoupling > 8 ? "bad" : a.metrics.avgCoupling < 3 ? "good" : "neutral"} />
+            <MetricCard label={t("reports", "metricAvgCohesion")} value={`${(a.metrics.avgCohesion * 100).toFixed(0)}%`} hint={t("reports", "project.metricHintAvgCohesion")} tone={a.metrics.avgCohesion > 0.5 ? "good" : a.metrics.avgCohesion < 0.2 ? "bad" : "neutral"} />
+            <MetricCard label={t("reports", "metricInstability")} value={a.metrics.instability.toFixed(2)} hint={t("reports", "project.metricHintInstability")} tone={a.metrics.instability > 0.7 ? "bad" : a.metrics.instability < 0.3 ? "good" : "neutral"} />
+            <MetricCard label={t("reports", "metricAbstractness")} value={a.metrics.abstractness.toFixed(2)} hint={t("reports", "project.metricHintAbstractness")} tone="neutral" />
+            <MetricCard label={t("reports", "metricDistanceMain")} value={a.metrics.distanceFromMain.toFixed(2)} hint={t("reports", "project.metricHintDistanceMain")} tone={a.metrics.distanceFromMain > 0.5 ? "bad" : a.metrics.distanceFromMain < 0.2 ? "good" : "neutral"} />
+            <MetricCard label={t("reports", "metricFanIn")} value={a.metrics.fanInAvg.toFixed(1)} hint={t("reports", "project.metricHintFanIn")} tone="neutral" />
+            <MetricCard label={t("reports", "metricFanOut")} value={a.metrics.fanOutAvg.toFixed(1)} hint={t("reports", "project.metricHintFanOut")} tone="neutral" />
+            <MetricCard label={t("reports", "metricFileCycles")} value={String(a.metrics.fileCircularDeps)} hint={t("reports", "project.metricHintFileCycles")} tone={a.metrics.fileCircularDeps > 0 ? "bad" : "good"} />
+            <MetricCard label={t("reports", "metricDirCycles")} value={String(a.metrics.dirCircularDeps.length)} hint={t("reports", "project.metricHintDirCycles")} tone={a.metrics.dirCircularDeps.length > 0 ? "bad" : "good"} />
+            <MetricCard label={t("reports", "metricLayerViolations")} value={String(a.metrics.layerViolations.length)} hint={t("reports", "project.metricHintLayerViolations")} tone={a.metrics.layerViolations.length > 0 ? "bad" : "good"} />
+            <MetricCard label={t("reports", "metricGodModules")} value={String(a.metrics.godModules.length)} hint={t("reports", "project.metricHintGodModules")} tone={a.metrics.godModules.length > 0 ? "bad" : "good"} />
           </div>
         </GlassCard>
       )}
@@ -453,7 +453,7 @@ function MetricCard({ label, value, hint, tone }: { label: string; value: string
 }
 
 /* ---------- Issues (shared for bugs/security/performance) ---------- */
-function IssuesTab({ issues, title, color, report }: { issues: Issue[]; title: string; color: string; report: AnalysisReport }) {
+function IssuesTab({ issues, title, color, report, id }: { issues: Issue[]; title: string; color: string; report: AnalysisReport; id: "bugs" | "security" | "performance" }) {
   const { t } = useT();
   const [expanded, setExpanded] = useState<string | null>(issues[0]?.id ?? null);
   return (
@@ -462,7 +462,7 @@ function IssuesTab({ issues, title, color, report }: { issues: Issue[]; title: s
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ background: `${color}1a`, color }}>
-              {title.includes("Security") ? <ShieldCheck className="h-4 w-4" /> : title.includes("Performance") ? <Gauge className="h-4 w-4" /> : <Bug className="h-4 w-4" />}
+              {id === "security" ? <ShieldCheck className="h-4 w-4" /> : id === "performance" ? <Gauge className="h-4 w-4" /> : <Bug className="h-4 w-4" />}
             </div>
             <h3 className="text-lg font-semibold">{title}</h3>
           </div>
@@ -482,7 +482,7 @@ function IssuesTab({ issues, title, color, report }: { issues: Issue[]; title: s
       </GlassCard>
 
       {/* If no issues and this is Performance tab, show positive findings */}
-      {issues.length === 0 && title.includes("Performance") && report.perfPositiveFindings && report.perfPositiveFindings.length > 0 && (
+      {issues.length === 0 && id === "performance" && report.perfPositiveFindings && report.perfPositiveFindings.length > 0 && (
         <GlassCard className="p-5">
           <div className="flex items-center gap-2 mb-3">
             <Check className="h-4 w-4 text-emerald-400" />
@@ -498,7 +498,7 @@ function IssuesTab({ issues, title, color, report }: { issues: Issue[]; title: s
       )}
 
       {/* If no issues at all */}
-      {issues.length === 0 && !(title.includes("Performance") && report.perfPositiveFindings?.length) && (
+      {issues.length === 0 && !(id === "performance" && report.perfPositiveFindings?.length) && (
         <GlassCard className="p-8 text-center">
           <Check className="mx-auto h-8 w-8 text-emerald-400" />
           <p className="mt-2 text-sm font-medium">{t("reports", "noIssuesInCategory")}</p>
@@ -684,17 +684,17 @@ function DocsTab({ report }: { report: AnalysisReport }) {
     { id: "readme", label: "README.md", content: report.documentation.readme, color: "#22d3ee" },
     { id: "apiDocs", label: "API.md", content: report.documentation.apiDocs, color: "#a78bfa" },
     { id: "architectureMd", label: "Architecture.md", content: report.documentation.architectureMd || "", color: "#f472b6" },
-    { id: "folderGuide", label: "Folder Guide", content: report.documentation.folderGuide || "", color: "#34d399" },
-    { id: "componentGuide", label: "Component Guide", content: report.documentation.componentGuide || "", color: "#fbbf24" },
-    { id: "deploymentGuide", label: "Deployment Guide", content: report.documentation.deploymentGuide || "", color: "#60a5fa" },
+    { id: "folderGuide", label: t("reports", "project.docTabFolderGuide"), content: report.documentation.folderGuide || "", color: "#34d399" },
+    { id: "componentGuide", label: t("reports", "project.docTabComponentGuide"), content: report.documentation.componentGuide || "", color: "#fbbf24" },
+    { id: "deploymentGuide", label: t("reports", "project.docTabDeploymentGuide"), content: report.documentation.deploymentGuide || "", color: "#60a5fa" },
   ].filter(d => d.content);
 
   const diagrams = report.diagrams;
   // Build diagram tabs dynamically — hide empty ones
   const allDiagrams = [
-    { id: "uml" as const, label: "UML", svg: diagrams.uml, desc: diagrams.umlExplanation, show: diagrams.hasUml !== false && !!diagrams.uml },
-    { id: "sequence" as const, label: "Sequence", svg: diagrams.sequence, desc: diagrams.sequenceExplanation, show: diagrams.hasSequence !== false && !!diagrams.sequence },
-    { id: "erd" as const, label: "ERD", svg: diagrams.erd, desc: diagrams.erdExplanation, show: diagrams.hasErd !== false && !!diagrams.erd },
+    { id: "uml" as const, label: t("reports", "uml"), svg: diagrams.uml, desc: diagrams.umlExplanation, show: diagrams.hasUml !== false && !!diagrams.uml },
+    { id: "sequence" as const, label: t("reports", "sequence"), svg: diagrams.sequence, desc: diagrams.sequenceExplanation, show: diagrams.hasSequence !== false && !!diagrams.sequence },
+    { id: "erd" as const, label: t("reports", "erd"), svg: diagrams.erd, desc: diagrams.erdExplanation, show: diagrams.hasErd !== false && !!diagrams.erd },
   ].filter(d => d.show);
 
   // If current diagram tab is hidden, switch to first available

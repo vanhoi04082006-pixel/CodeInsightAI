@@ -52,5 +52,48 @@
     "react": "UI library",
     "vue": "Progressive framework",
     "tailwind": "CSS engine"
+  },
+  "passes": {
+    "summary": "Tóm tắt điều hành",
+    "priorities": "Ưu tiên & Lộ trình",
+    "security": "Đánh giá bảo mật",
+    "architecture": "Đánh giá kiến trúc",
+    "quality": "Chất lượng code",
+    "performance": "Đánh giá hiệu năng",
+    "bestPractices": "Kiểm toán best practices",
+    "duplicates": "Phân tích code trùng lặp"
+  },
+  "toast": {
+    "aiDeepComplete": "Phân tích AI chuyên sâu hoàn tất!",
+    "aiDeepCompleteDesc": "Tất cả 8 lượt AI đã hoàn thành. Xem tab AI Insights.",
+    "aiAnalysisComplete": "Phân tích AI hoàn tất!",
+    "aiAnalyzingDeep": "AI đang phân tích sâu (7-pass)...",
+    "aiAnalyzingDeepDesc": "Quá trình này có thể mất 2-5 phút tùy kích thước repo",
+    "staticComplete": "Phân tích tĩnh hoàn tất — {score}/100",
+    "staticCompleteDesc": "Phân tích AI chuyên sâu (7-pass) đang chạy ngầm...",
+    "analysisComplete": "Phân tích hoàn tất — {score}/100",
+    "analysisFailed": "Phân tích thất bại",
+    "analysisFailedRetry": "Phân tích thất bại. Vui lòng thử lại."
+  },
+  "aiToggle": {
+    "deep": "🧠 Phân tích AI chuyên sâu (7-pass)",
+    "static": "⚡ Chỉ phân tích tĩnh",
+    "deepDesc": "Dùng AI cho tóm tắt điều hành, đánh giá bảo mật, kiến trúc, hiệu năng + kiểm toán best practices",
+    "staticDesc": "Nhanh hơn — chỉ 66 quy tắc tĩnh, không tiêu tốn token AI"
+  },
+  "repositoryFallback": "repository",
+  "logOk": "OK",
+  "aiPassLabel": "Lượt AI {current}/{total}",
+  "completeTitlePrefix": "Phân tích",
+  "completeTitleHighlight": "hoàn tất",
+  "filesLabel": "file",
+  "linesLabel": "dòng",
+  "scoreLabels": {
+    "overall": "Tổng thể",
+    "security": "Bảo mật",
+    "performance": "Hiệu năng",
+    "architecture": "Kiến trúc",
+    "maintainability": "Khả năng bảo trì",
+    "codeQuality": "Chất lượng code"
   }
 }

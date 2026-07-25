@@ -276,7 +276,7 @@ export function ChatView() {
         // Fallback if streaming produced nothing
         if (!fullReply) {
           const updated = useAppStore.getState().chat.map((m) =>
-            m.id === assistantId ? { ...m, content: "⚠️ Empty response. Please try again." } : m
+            m.id === assistantId ? { ...m, content: t("chat", "emptyResponse") } : m
           );
           setChat(updated);
         }
@@ -370,11 +370,11 @@ export function ChatView() {
                     ? "border-cyan-400/40 bg-cyan-500/10 text-cyan-300"
                     : "border-white/10 bg-white/[0.03] text-muted-foreground hover:bg-white/5 hover:text-foreground"
                 )}
-                aria-label="Toggle Request Log"
-                title="Toggle Request Log sidebar"
+                aria-label={t("chat", "toggleRequestLog")}
+                title={t("chat", "toggleRequestLogSidebar")}
               >
                 <ScrollText className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">{t("chat", "requestLog")}</span>
+                <span className="hidden sm:inline">{t("chat", "requestLogToggle")}</span>
               </button>
               {/* Toggle: Developer Console (only if dev mode enabled) */}
               {devModeEnabled && (
@@ -386,11 +386,11 @@ export function ChatView() {
                       ? "border-violet-400/40 bg-violet-500/10 text-violet-300"
                       : "border-white/10 bg-white/[0.03] text-muted-foreground hover:bg-white/5 hover:text-foreground"
                   )}
-                  aria-label="Toggle Developer Console"
-                  title="Toggle Developer Console sidebar"
+                  aria-label={t("chat", "toggleDevConsole")}
+                  title={t("chat", "toggleDevConsoleSidebar")}
                 >
                   <Terminal className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Dev</span>
+                  <span className="hidden sm:inline">{t("chat", "devConsoleShort")}</span>
                 </button>
               )}
               <Button variant="ghost" size="sm" onClick={() => { clearChat(); toast.success(t("chat", "clearToast")); }}>
@@ -609,6 +609,7 @@ function parseCodeBlocks(content: string): { type: "text" | "code"; content: str
 
 // Code block with copy button + syntax highlighting
 function CodeBlock({ code, lang }: { code: string; lang: string }) {
+  const { t } = useT();
   const [copied, setCopied] = useState(false);
   const copy = () => {
     navigator.clipboard.writeText(code);
@@ -621,7 +622,7 @@ function CodeBlock({ code, lang }: { code: string; lang: string }) {
         <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">{lang}</span>
         <button onClick={copy} className="flex items-center gap-1 text-[10px] text-muted-foreground transition hover:text-cyan-300">
           {copied ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
-          {copied ? "Copied" : "Copy"}
+          {copied ? t("chat", "copied") : t("chat", "copy")}
         </button>
       </div>
       <pre className="overflow-x-auto p-3 text-[12px] leading-relaxed scrollbar-thin">

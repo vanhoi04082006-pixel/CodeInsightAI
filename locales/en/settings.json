@@ -140,5 +140,43 @@
   "showGridBgDesc": "Display the neural-network background.",
   "accentColorDesc": "Updates buttons, links, icons, charts, AI Core glow, and focus states instantly.",
   "uiDensityDesc": "Switch instantly without reload.",
-  "animationDesc": "Automatically recommend Performance mode on low-end devices."
+  "animationDesc": "Automatically recommend Performance mode on low-end devices.",
+  "saving": "Saving…",
+  "deleteConfirm": "⚠️ This will permanently delete ALL analyses, chat messages, and history. This cannot be undone. Are you sure?",
+  "switchToCustomFirst": "🔒 Switch to Custom mode first",
+  "manageSubscription": "Manage subscription →",
+  "aiConfigCardDesc": "AI personality, temperature and token settings for chat & analysis.",
+  "colorBlindHint": "Applies an SVG color-correction filter to the whole app.",
+  "defaultProfileName": "Z.ai Developer",
+  "defaultProfileCompany": "Independent",
+  "defaultProfileRole": "Staff Engineer",
+  "github": {
+    "connectedDesc": "Connected — can analyze public + private repos",
+    "connectDesc": "Connect to analyze repositories"
+  },
+  "aiMode": {
+    "title": "AI Mode",
+    "desc": "Choose how you want to power AI features (chat, analysis, agents)."
+  },
+  "customMode": {
+    "label": "🔑 Custom Mode (BYOK)",
+    "desc": "Set your own API key — unlimited tokens, you pay provider directly"
+  },
+  "defaultMode": {
+    "label": "🤖 Default (Platform AI)",
+    "freeDesc": "Free: 1M tokens/month · 1 default model",
+    "proDesc": "Pro: 10M tokens/month · 8 models to choose",
+    "freePlanBadge": "Free plan — 1M tokens included",
+    "proPlanBadge": "Pro plan active"
+  },
+  "toast": {
+    "authFailed": "Authentication failed: {error}",
+    "resetFailed": "Reset failed",
+    "networkError": "Network error — please try again",
+    "profileSaveFailed": "Failed to save profile",
+    "stripeNotConfigured": "Stripe not configured yet",
+    "checkoutFailed": "Failed to start checkout",
+    "billingPortalFailed": "Failed to open billing portal",
+    "deletedSummary": "Deleted {analyses} analyses and {chatMessages} chat messages. All data reset."
+  }
 }

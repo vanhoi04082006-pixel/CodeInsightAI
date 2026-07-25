@@ -49,5 +49,30 @@
     "overall": "Overall"
   },
   "recentAnalyses": "Recent Analyses",
-  "viewAll": "View All"
+  "viewAll": "View All",
+  "trySampleRepo": "Try a sample repository",
+  "analyze": "Analyze",
+  "toast": {
+    "aiDeepComplete": "AI deep analysis complete!"
+  },
+  "sampleRepos": {
+    "react": {
+      "desc": "The library for web and native user interfaces."
+    },
+    "nextjs": {
+      "desc": "The React Framework for the Web."
+    },
+    "fastapi": {
+      "desc": "High performance, easy to learn Python web framework."
+    },
+    "tailwind": {
+      "desc": "A utility-first CSS framework for rapid UI development."
+    },
+    "prisma": {
+      "desc": "Next-generation Node.js and TypeScript ORM."
+    },
+    "vite": {
+      "desc": "Next generation frontend tooling. It's fast!"
+    }
+  }
 }

@@ -9,7 +9,11 @@
   "trustPrivate": "Dùng API AI của riêng bạn",
   "trustData": "Dữ liệu nằm ở bạn",
   "trustFast": "Phân tích 60 giây",
-  "trustProviders": "14 nhà cung cấp",
+  "trustProviders": "14 nhà cung cấp AI",
+  "heroSignInHint": "Đăng nhập bằng GitHub để bắt đầu",
+  "trustFree": "Miễn phí với khóa của riêng bạn",
+  "trustPlatform": "Platform AI từ $9/tháng",
+  "trustGithub": "Đăng nhập GitHub",
   "statsProviders": "Nhà cung cấp AI",
   "statsLanguages": "Ngôn ngữ",
   "statsSubscriptions": "Đăng ký",
@@ -168,38 +172,123 @@
     "connect": "Kết nối",
     "viewAll": "Xem tất cả provider"
   },
+  "routing": {
+    "features": {
+      "bugDetection": "Phát hiện lỗi",
+      "repositoryChat": "Chat Repository",
+      "documentation": "Tài liệu",
+      "vision": "Vision / Ảnh",
+      "refactoring": "Refactoring",
+      "securityAudit": "Kiểm toán bảo mật"
+    }
+  },
+  "numbers": {
+    "eyebrow": "CON SỐ",
+    "title": "Xây cho quy mô lớn",
+    "desc": "Hạ tầng sẵn sàng production cho trí tuệ mã AI",
+    "staticRules": "Quy tắc phân tích tĩnh",
+    "aiPasses": "Lượt phân tích AI chuyên sâu",
+    "aiProviders": "AI Provider được hỗ trợ",
+    "openSource": "Open Source (MIT)"
+  },
+  "pipeline": {
+    "eyebrow": "CÁCH HOẠT ĐỘNG",
+    "title": "Từ URL đến báo cáo đầy đủ trong 60 giây",
+    "desc": "Xem pipeline 8 bước phân tích bất kỳ repository nào",
+    "stages": {
+      "clone": "Clone",
+      "scan": "Quét",
+      "ast": "AST",
+      "deps": "Deps",
+      "embed": "Embed",
+      "static": "Tĩnh",
+      "ai": "AI",
+      "report": "Báo cáo"
+    }
+  },
+  "statsGrid": {
+    "securityRules": "Quy tắc bảo mật",
+    "bugPatterns": "Mẫu lỗi",
+    "perfRules": "Quy tắc hiệu suất",
+    "aiAgents": "AI Agent"
+  },
   "pricing": {
-    "title": "Bảng giá cho mọi team",
-    "desc": "Không subscription, không billing — mang AI key của bạn. Bảng giá dưới đây là mức bạn sẽ trả nếu chúng tôi tính phí. Hôm nay: hoàn toàn miễn phí.",
-    "free": "Free",
+    "eyebrow": "Bảng giá",
+    "title": "Bắt đầu miễn phí. Mở rộng khi sẵn sàng.",
+    "desc": "Mang API key của riêng bạn miễn phí, hoặc nâng cấp lên Platform AI và chúng tôi lo mọi thứ — không cần thiết lập.",
+    "recommended": "Khuyên dùng",
+    "redirecting": "Đang chuyển hướng…",
+    "teamNote": "Plan Team do admin quản lý — liên hệ chúng tôi để thiết lập. Cần on-premise hoặc enterprise tùy chỉnh?",
+    "emailUs": "Email cho chúng tôi",
+    "free": {
+      "name": "Free",
+      "desc": "Mang khóa của riêng bạn",
+      "features": {
+        "f1": "66 quy tắc phân tích tĩnh",
+        "f2": "5 phân tích / tháng",
+        "f3": "50 tin nhắn chat / tháng",
+        "f4": "14 AI provider (BYOK)",
+        "f5": "Trực quan CodeGraph",
+        "f6": "Đăng nhập GitHub OAuth"
+      },
+      "cta": "Đăng nhập bằng GitHub"
+    },
+    "pro": {
+      "name": "Pro",
+      "desc": "Platform AI — không cần key",
+      "features": {
+        "f1": "Mọi thứ trong Free",
+        "f2": "Phân tích AI chuyên sâu 7 bước",
+        "f3": "Platform AI (key do admin cấp)",
+        "f4": "100 phân tích / tháng",
+        "f5": "2000 tin nhắn chat / tháng",
+        "f6": "Chat streaming + Mission Control"
+      },
+      "cta": "Nâng cấp lên Pro"
+    },
+    "team": {
+      "name": "Team",
+      "desc": "Cho team & doanh nghiệp",
+      "features": {
+        "f1": "Mọi thứ trong Pro",
+        "f2": "500 phân tích / tháng",
+        "f3": "10000 tin nhắn chat / tháng",
+        "f4": "Plan do admin quản lý",
+        "f5": "Hỗ trợ ưu tiên",
+        "f6": "Onboarding tùy chỉnh"
+      },
+      "cta": "Liên hệ Sales"
+    },
     "freePrice": "$0",
     "freeDesc": "Cho developer cá nhân",
-    "pro": "Pro",
-    "proPrice": "$0",
-    "proDesc": "Cho power user — hôm nay miễn phí",
-    "enterprise": "Enterprise",
-    "enterprisePrice": "$0",
-    "enterpriseDesc": "Cho team chạy local",
-    "popular": "PHỔ BIẾN",
-    "getStarted": "Bắt đầu",
     "freeF1": "Phân tích không giới hạn",
     "freeF2": "14 AI provider",
     "freeF3": "Lưu trữ local-first",
     "freeF4": "11 AI agent",
+    "proPrice": "$0",
+    "proDesc": "Cho power user — hôm nay miễn phí",
     "proF1": "Mọi thứ trong Free",
     "proF2": "Autonomous workflow runner",
     "proF3": "Mission control dashboard",
     "proF4": "Agent personality system",
     "proF5": "Priority model routing",
+    "enterprise": "Enterprise",
+    "enterprisePrice": "$0",
+    "enterpriseDesc": "Cho team chạy local",
     "enterpriseF1": "Mọi thứ trong Pro",
     "enterpriseF2": "Self-hosted, air-gapped",
     "enterpriseF3": "Custom agent pipeline",
-    "enterpriseF4": "Audit log & SSO ready"
+    "enterpriseF4": "Audit log & SSO ready",
+    "popular": "PHỔ BIẾN",
+    "getStarted": "Bắt đầu"
   },
   "finalCta": {
-    "title": "Sẵn sàng Ship Code với AI?",
-    "desc": "Khởi động CodeInsight AI, dán repo, và xem 11 agent làm việc của một team engineering cấp cao — trong 60 giây.",
-    "button": "Khởi động CodeInsight AI"
+    "title": "Bắt đầu phân tích ngay",
+    "desc": "Miễn phí với API key của riêng bạn. Hoặc nâng cấp lên Pro cho Platform AI — không cần thiết lập. Phân tích bất kỳ repo nào trong 60 giây.",
+    "button": "Khởi động CodeInsight AI",
+    "signIn": "Đăng nhập bằng GitHub",
+    "redirecting": "Đang chuyển hướng…",
+    "upgrade": "Nâng cấp lên Pro — $9/tháng"
   },
   "footer": {
     "tagline": "Nền tảng phát triển AI local-first.",

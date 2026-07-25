@@ -34,7 +34,9 @@
     "export": "Xuất",
     "import": "Nhập",
     "search": "Tìm kiếm",
-    "quickSearch": "Tìm nhanh"
+    "quickSearch": "Tìm nhanh",
+    "signIn": "Đăng nhập",
+    "shortcuts": "Phím tắt"
   },
   "status": {
     "connected": "Đã kết nối",
@@ -43,6 +45,33 @@
     "disabled": "Đã tắt",
     "testing": "Đang kiểm tra…",
     "ready": "Sẵn sàng",
-    "loading": "Đang tải…"
+    "loading": "Đang tải…",
+    "redirecting": "Đang chuyển hướng…",
+    "loadingDashboard": "Đang tải bảng điều khiển…",
+    "loadingShared": "Đang tải báo cáo chia sẻ…"
+  },
+  "shared": {
+    "banner": "📋 Báo cáo chia sẻ — chế độ chỉ xem",
+    "goToApp": "Đi tới CodeInsight AI →",
+    "loaded": "Đã tải báo cáo chia sẻ",
+    "loadedDesc": "Hết hạn {date}",
+    "notFound": "Không tìm thấy liên kết chia sẻ hoặc đã hết hạn",
+    "loadFailed": "Không thể tải báo cáo chia sẻ"
+  },
+  "footer": {
+    "builtWithPrefix": "Xây dựng bằng",
+    "builtWithSuffix": "dành cho lập trình viên",
+    "guide": "Hướng dẫn",
+    "terms": "Điều khoản",
+    "privacy": "Riêng tư",
+    "shortcutsAriaLabel": "Hiển thị phím tắt"
+  },
+  "unknown": "Không xác định",
+  "anonymous": "Ẩn danh",
+  "noRepo": "Không có repo",
+  "noData": "Không có dữ liệu",
+  "empty": {
+    "noMessages": "Không có tin nhắn",
+    "noActivity": "Không có hoạt động"
   }
 }

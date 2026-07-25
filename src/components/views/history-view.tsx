@@ -151,9 +151,9 @@ export function HistoryView() {
         </div>
         <div className="flex items-center gap-1 rounded-lg border border-white/10 bg-white/[0.02] p-0.5">
           {([
-            { id: "date", label: "Date" },
-            { id: "score", label: "Score" },
-            { id: "name", label: "Name" },
+            { id: "date" },
+            { id: "score" },
+            { id: "name" },
           ] as const).map((s) => (
             <button
               key={s.id}
@@ -163,7 +163,7 @@ export function HistoryView() {
                 sortBy === s.id ? "bg-white/5 text-cyan-300" : "text-muted-foreground hover:text-foreground"
               )}
             >
-              {s.label}
+              {t("history", `sort.${s.id}`)}
             </button>
           ))}
         </div>
@@ -219,7 +219,7 @@ export function HistoryView() {
                       <Clock className="h-3 w-3" />
                       {new Date(item.createdAt).toLocaleString()}
                       <span>·</span>
-                      <span>{item.primaryLanguage ?? "Unknown"}</span>
+                      <span>{item.primaryLanguage ?? t("common", "unknown")}</span>
                       <span>·</span>
                       <span>{item.totalFiles} {t("history", "files")}</span>
                       {item.messageCount > 0 && (<><span>·</span><span>{item.messageCount} {t("history", "chats")}</span></>)}
@@ -227,10 +227,10 @@ export function HistoryView() {
                   </div>
 
                   <div className="flex flex-wrap gap-2">
-                    <MiniScore icon={ShieldCheck} value={item.securityScore} color="#f472b6" label="Sec" />
-                    <MiniScore icon={Gauge} value={item.performanceScore} color="#34d399" label="Perf" />
-                    <MiniScore icon={Network} value={item.architectureScore} color="#a78bfa" label="Arch" />
-                    <MiniScore icon={Code2} value={item.codeQualityScore} color="#60a5fa" label="Qual" />
+                    <MiniScore icon={ShieldCheck} value={item.securityScore} color="#f472b6" label={t("history", "miniScores.sec")} />
+                    <MiniScore icon={Gauge} value={item.performanceScore} color="#34d399" label={t("history", "miniScores.perf")} />
+                    <MiniScore icon={Network} value={item.architectureScore} color="#a78bfa" label={t("history", "miniScores.arch")} />
+                    <MiniScore icon={Code2} value={item.codeQualityScore} color="#60a5fa" label={t("history", "miniScores.qual")} />
                   </div>
 
                   <div className="flex flex-col items-center rounded-xl border border-cyan-400/20 bg-cyan-400/[0.06] px-3 py-1.5">

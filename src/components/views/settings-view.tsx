@@ -77,13 +77,13 @@ export function SettingsView() {
     const params = new URLSearchParams(window.location.search);
     const error = params.get("error");
     if (error) {
-      toast.error(`Authentication failed: ${error}`);
+      toast.error(t("settings", "toast.authFailed", { error }));
       window.history.replaceState({}, document.title, window.location.pathname);
     }
 
     // Bắt sự kiện đăng nhập thành công (từ loading -> authenticated)
     if (prevStatus.current === "loading" && status === "authenticated") {
-      toast.success(t("common", "status.connected") || "Đăng nhập thành công!");
+      toast.success(t("common", "status.connected"));
     }
     
     prevStatus.current = status;
@@ -119,7 +119,7 @@ export function SettingsView() {
                 <ConnectRow
                   icon={Github}
                   name="GitHub"
-                  desc={isGithubConnected ? "Connected — can analyze public + private repos" : "Connect to analyze repositories"}
+                  desc={isGithubConnected ? t("settings", "github.connectedDesc") : t("settings", "github.connectDesc")}
                   connected={isGithubConnected}
                   loading={status === "loading"}
                   onToggle={() => {
@@ -141,7 +141,7 @@ export function SettingsView() {
                   variant="destructive"
                   size="sm"
                   onClick={async () => {
-                    if (!confirm("⚠️ This will permanently delete ALL analyses, chat messages, and history. This cannot be undone. Are you sure?")) return;
+                    if (!confirm(t("settings", "deleteConfirm"))) return;
                     try {
                       const res = await fetch("/api/reset", { method: "POST" });
                       const data = await res.json();
@@ -153,13 +153,13 @@ export function SettingsView() {
                         useProvidersStore.getState().providers.forEach((p) => useProvidersStore.getState().removeProvider(p.id));
                         useDeveloperModeStore.getState().clearLogs();
                         useDeveloperModeStore.getState().clearSnapshots();
-                        toast.success(`Deleted ${data.deleted.analyses} analyses and ${data.deleted.chatMessages} chat messages. All data reset.`);
+                        toast.success(t("settings", "toast.deletedSummary", { analyses: data.deleted.analyses, chatMessages: data.deleted.chatMessages }));
                         setTimeout(() => window.location.reload(), 1500);
                       } else {
-                        toast.error(data.error || "Reset failed");
+                        toast.error(data.error || t("settings", "toast.resetFailed"));
                       }
                     } catch (e) {
-                      toast.error("Network error — please try again");
+                      toast.error(t("settings", "toast.networkError"));
                     }
                   }}
                 >
@@ -193,7 +193,7 @@ export function SettingsView() {
                     {t("settings", "openProviders")} <ArrowRight className="ml-1.5 h-4 w-4" />
                   </Button>
                 ) : (
-                  <span className="text-xs text-muted-foreground/50">🔒 Switch to Custom mode first</span>
+                  <span className="text-xs text-muted-foreground/50">{t("settings", "switchToCustomFirst")}</span>
                 )}
               </div>
             </GlassCard>
@@ -303,26 +303,26 @@ function AccountTab({ session }: { session: any }) {
         const p = d.settings?.profile;
         if (p) {
           setProfile({
-            name: p.name || session?.user?.name || "Z.ai Developer",
+            name: p.name || session?.user?.name || t("settings", "defaultProfileName"),
             email: p.email || session?.user?.email || "dev@codeinsight.ai",
-            company: p.company || "Independent",
-            role: p.role || "Staff Engineer",
+            company: p.company || t("settings", "defaultProfileCompany"),
+            role: p.role || t("settings", "defaultProfileRole"),
           });
         } else {
           setProfile({
-            name: session?.user?.name || "Z.ai Developer",
+            name: session?.user?.name || t("settings", "defaultProfileName"),
             email: session?.user?.email || "dev@codeinsight.ai",
-            company: "Independent",
-            role: "Staff Engineer",
+            company: t("settings", "defaultProfileCompany"),
+            role: t("settings", "defaultProfileRole"),
           });
         }
       })
       .catch(() => {
         setProfile({
-          name: session?.user?.name || "Z.ai Developer",
+          name: session?.user?.name || t("settings", "defaultProfileName"),
           email: session?.user?.email || "dev@codeinsight.ai",
-          company: "Independent",
-          role: "Staff Engineer",
+          company: t("settings", "defaultProfileCompany"),
+          role: t("settings", "defaultProfileRole"),
         });
       })
       .finally(() => setLoading(false));
@@ -338,7 +338,7 @@ function AccountTab({ session }: { session: any }) {
       });
       toast.success(t("settings", "profileSaved"));
     } catch {
-      toast.error("Failed to save profile");
+      toast.error(t("settings", "toast.profileSaveFailed"));
     } finally {
       setSaving(false);
     }
@@ -350,24 +350,24 @@ function AccountTab({ session }: { session: any }) {
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
           <label className="text-xs uppercase tracking-wider text-muted-foreground">{t("settings", "displayName")}</label>
-          <Input value={loading ? "" : profile.name} onChange={e => setProfile(p => ({ ...p, name: e.target.value }))} className="bg-white/[0.03]" placeholder={loading ? "Loading…" : ""} />
+          <Input value={loading ? "" : profile.name} onChange={e => setProfile(p => ({ ...p, name: e.target.value }))} className="bg-white/[0.03]" placeholder={loading ? t("common", "status.loading") : ""} />
         </div>
         <div className="space-y-1.5">
           <label className="text-xs uppercase tracking-wider text-muted-foreground">{t("settings", "email")}</label>
-          <Input value={loading ? "" : profile.email} onChange={e => setProfile(p => ({ ...p, email: e.target.value }))} className="bg-white/[0.03]" placeholder={loading ? "Loading…" : ""} />
+          <Input value={loading ? "" : profile.email} onChange={e => setProfile(p => ({ ...p, email: e.target.value }))} className="bg-white/[0.03]" placeholder={loading ? t("common", "status.loading") : ""} />
         </div>
         <div className="space-y-1.5">
           <label className="text-xs uppercase tracking-wider text-muted-foreground">{t("settings", "company")}</label>
-          <Input value={loading ? "" : profile.company} onChange={e => setProfile(p => ({ ...p, company: e.target.value }))} className="bg-white/[0.03]" placeholder={loading ? "Loading…" : ""} />
+          <Input value={loading ? "" : profile.company} onChange={e => setProfile(p => ({ ...p, company: e.target.value }))} className="bg-white/[0.03]" placeholder={loading ? t("common", "status.loading") : ""} />
         </div>
         <div className="space-y-1.5">
           <label className="text-xs uppercase tracking-wider text-muted-foreground">{t("settings", "role")}</label>
-          <Input value={loading ? "" : profile.role} onChange={e => setProfile(p => ({ ...p, role: e.target.value }))} className="bg-white/[0.03]" placeholder={loading ? "Loading…" : ""} />
+          <Input value={loading ? "" : profile.role} onChange={e => setProfile(p => ({ ...p, role: e.target.value }))} className="bg-white/[0.03]" placeholder={loading ? t("common", "status.loading") : ""} />
         </div>
       </div>
       <Button onClick={save} disabled={saving || loading} className="mt-4 bg-gradient-to-r from-cyan-500 to-violet-500 text-white">
         {saving ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Sparkles className="mr-1.5 h-4 w-4" />}
-        {saving ? "Saving…" : t("settings", "saveChanges")}
+        {saving ? t("settings", "saving") : t("settings", "saveChanges")}
       </Button>
     </GlassCard>
   );
@@ -394,10 +394,10 @@ function AIModeToggle() {
       if (data.url) {
         window.location.href = data.url;
       } else {
-        toast.error(data.error || "Stripe not configured yet");
+        toast.error(data.error || t("settings", "toast.stripeNotConfigured"));
       }
     } catch {
-      toast.error("Failed to start checkout");
+      toast.error(t("settings", "toast.checkoutFailed"));
     } finally {
       setLoading(false);
     }
@@ -406,10 +406,10 @@ function AIModeToggle() {
   return (
     <GlassCard className="p-6">
       <h3 className="flex items-center gap-2 text-sm font-semibold">
-        <Zap className="h-4 w-4 text-amber-400" /> AI Mode
+        <Zap className="h-4 w-4 text-amber-400" /> {t("settings", "aiMode.title")}
       </h3>
       <p className="mt-1 text-xs text-muted-foreground">
-        Choose how you want to power AI features (chat, analysis, agents).
+        {t("settings", "aiMode.desc")}
       </p>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -423,11 +423,11 @@ function AIModeToggle() {
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className="text-sm font-semibold text-cyan-300">🔑 Custom Mode (BYOK)</span>
+            <span className="text-sm font-semibold text-cyan-300">{t("settings", "customMode.label")}</span>
             {aiMode === "byok" && <Check className="h-4 w-4 text-cyan-300" />}
           </div>
           <p className="mt-1 text-[11px] text-muted-foreground">
-            Set your own API key — unlimited tokens, you pay provider directly
+            {t("settings", "customMode.desc")}
           </p>
           <div className="mt-2 flex flex-wrap gap-1">
             {["ShopAIKey", "OpenRouter", "OpenAI", "Anthropic", "Ollama"].map(p => (
@@ -447,22 +447,22 @@ function AIModeToggle() {
         >
           <div className="flex items-center justify-between">
             <span className="text-sm font-semibold text-violet-300">
-              🤖 Default (Platform AI)
+              {t("settings", "defaultMode.label")}
             </span>
             {aiMode === "platform" && <Check className="h-4 w-4 text-violet-300" />}
           </div>
           <p className="mt-1 text-[11px] text-muted-foreground">
             {plan === "free"
-              ? "Free: 1M tokens/month · 1 default model"
-              : "Pro: 10M tokens/month · 8 models to choose"}
+              ? t("settings", "defaultMode.freeDesc")
+              : t("settings", "defaultMode.proDesc")}
           </p>
           {plan === "free" ? (
             <div className="mt-2">
-              <span className="rounded-full bg-cyan-500/10 px-2 py-0.5 text-[9px] text-cyan-300">Free plan — 1M tokens included</span>
+              <span className="rounded-full bg-cyan-500/10 px-2 py-0.5 text-[9px] text-cyan-300">{t("settings", "defaultMode.freePlanBadge")}</span>
             </div>
           ) : (
             <div className="mt-2">
-              <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[9px] text-emerald-300">Pro plan active</span>
+              <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[9px] text-emerald-300">{t("settings", "defaultMode.proPlanBadge")}</span>
             </div>
           )}
         </button>
@@ -477,12 +477,12 @@ function AIModeToggle() {
               const data = await res.json();
               if (data.url) window.location.href = data.url;
             } catch {
-              toast.error("Failed to open billing portal");
+              toast.error(t("settings", "toast.billingPortalFailed"));
             }
           }}
           className="mt-4 text-xs text-muted-foreground transition hover:text-foreground"
         >
-          Manage subscription →
+          {t("settings", "manageSubscription")}
         </button>
       )}
     </GlassCard>
@@ -542,7 +542,7 @@ function AISettingsCard() {
   return (
     <GlassCard className="p-6">
       <h3 className="flex items-center gap-2 text-sm font-semibold"><Cpu className="h-4 w-4 text-cyan-300" /> {t("settings", "aiConfig")}</h3>
-      <p className="mt-1 text-xs text-muted-foreground">AI personality, temperature and token settings for chat & analysis.</p>
+      <p className="mt-1 text-xs text-muted-foreground">{t("settings", "aiConfigCardDesc")}</p>
 
       <div className="mt-4 space-y-4">
         <div className="space-y-1.5">
@@ -804,7 +804,7 @@ function LanguageSettingsCard() {
             <span className="text-3xl">{l.flag}</span>
             <div className="flex-1">
               <p className="text-sm font-medium">{l.label}</p>
-              <p className="text-[11px] text-muted-foreground">{l.id === "en" ? "English" : "Tiếng Việt"}</p>
+              <p className="text-[11px] text-muted-foreground">{l.label}</p>
             </div>
             {locale === l.id && <Check className="h-4 w-4 text-emerald-400" />}
           </button>
@@ -894,7 +894,7 @@ function AccessibilitySettingsCard() {
               </button>
             ))}
           </div>
-          <p className="mt-2 text-[10px] text-muted-foreground">Applies an SVG color-correction filter to the whole app.</p>
+          <p className="mt-2 text-[10px] text-muted-foreground">{t("settings", "colorBlindHint")}</p>
         </div>
       </GlassCard>
     </>

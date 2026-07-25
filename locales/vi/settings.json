@@ -140,5 +140,43 @@
   "showGridBgDesc": "Hiện background neural-network.",
   "accentColorDesc": "Cập nhật button, link, icon, chart, AI Core glow và focus state ngay lập tức.",
   "uiDensityDesc": "Chuyển ngay lập tức không cần reload.",
-  "animationDesc": "Tự động gợi ý Performance mode trên thiết bị low-end."
+  "animationDesc": "Tự động gợi ý Performance mode trên thiết bị low-end.",
+  "saving": "Đang lưu…",
+  "deleteConfirm": "⚠️ Thao tác này sẽ xóa vĩnh viễn TẤT CẢ phân tích, tin nhắn trò chuyện và lịch sử. Không thể hoàn tác. Bạn có chắc không?",
+  "switchToCustomFirst": "🔒 Chuyển sang chế độ Custom trước",
+  "manageSubscription": "Quản lý gói đăng ký →",
+  "aiConfigCardDesc": "Tính cách AI, nhiệt độ và cài đặt token cho trò chuyện & phân tích.",
+  "colorBlindHint": "Áp dụng bộ lọc chỉnh sửa màu SVG cho toàn bộ ứng dụng.",
+  "defaultProfileName": "Lập trình viên Z.ai",
+  "defaultProfileCompany": "Độc lập",
+  "defaultProfileRole": "Staff Engineer",
+  "github": {
+    "connectedDesc": "Đã kết nối — có thể phân tích repo công khai + riêng tư",
+    "connectDesc": "Kết nối để phân tích repository"
+  },
+  "aiMode": {
+    "title": "Chế độ AI",
+    "desc": "Chọn cách bạn muốn cấp nguồn cho các tính năng AI (trò chuyện, phân tích, agent)."
+  },
+  "customMode": {
+    "label": "🔑 Chế độ Custom (BYOK)",
+    "desc": "Dùng API key của riêng bạn — token không giới hạn, bạn trả tiền cho nhà cung cấp trực tiếp"
+  },
+  "defaultMode": {
+    "label": "🤖 Mặc định (Platform AI)",
+    "freeDesc": "Free: 1M token/tháng · 1 mô hình mặc định",
+    "proDesc": "Pro: 10M token/tháng · 8 mô hình để chọn",
+    "freePlanBadge": "Gói Free — 1M token đi kèm",
+    "proPlanBadge": "Gói Pro đang hoạt động"
+  },
+  "toast": {
+    "authFailed": "Xác thực thất bại: {error}",
+    "resetFailed": "Đặt lại thất bại",
+    "networkError": "Lỗi mạng — vui lòng thử lại",
+    "profileSaveFailed": "Không thể lưu hồ sơ",
+    "stripeNotConfigured": "Stripe chưa được cấu hình",
+    "checkoutFailed": "Không thể bắt đầu thanh toán",
+    "billingPortalFailed": "Không thể mở cổng thanh toán",
+    "deletedSummary": "Đã xóa {analyses} phân tích và {chatMessages} tin nhắn trò chuyện. Toàn bộ dữ liệu đã được đặt lại."
+  }
 }

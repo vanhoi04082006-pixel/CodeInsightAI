@@ -24,5 +24,14 @@
   "chatFailedToast": "The AI couldn't respond. Please try again.",
   "personalityLabel": "Personality",
   "clearToast": "Chat cleared",
-  "requestLog": "Logs"
+  "requestLog": "Logs",
+  "requestLogToggle": "Request Log",
+  "toggleRequestLog": "Toggle Request Log",
+  "toggleRequestLogSidebar": "Toggle Request Log sidebar",
+  "toggleDevConsole": "Toggle Developer Console",
+  "toggleDevConsoleSidebar": "Toggle Developer Console sidebar",
+  "devConsoleShort": "Dev",
+  "emptyResponse": "⚠️ Empty response. Please try again.",
+  "copy": "Copy",
+  "copied": "Copied"
 }

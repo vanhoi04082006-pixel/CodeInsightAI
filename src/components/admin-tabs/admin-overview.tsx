@@ -41,6 +41,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Avatar } from "@/components/views/admin-view";
+import { useT, useI18nStore } from "@/lib/i18n";
 
 type Stats = {
   totals: {
@@ -96,6 +97,7 @@ const PLAN_COLORS: Record<string, string> = {
 };
 
 export function AdminOverview() {
+  const { t } = useT();
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -110,7 +112,7 @@ export function AdminOverview() {
       const data = (await res.json()) as Stats;
       setStats(data);
     } catch {
-      if (!silent) toast.error("Failed to load stats");
+      if (!silent) toast.error(useI18nStore.getState().t("admin", "overview.failedToLoadStats"));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -140,7 +142,7 @@ export function AdminOverview() {
       <GlassCard className="flex h-64 items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="h-6 w-6 animate-spin text-cyan-300" />
-          <p className="text-xs text-muted-foreground">Loading dashboard…</p>
+          <p className="text-xs text-muted-foreground">{t("common", "status.loadingDashboard")}</p>
         </div>
       </GlassCard>
     );
@@ -148,47 +150,47 @@ export function AdminOverview() {
 
   const metricCards = [
     {
-      label: "Total Users",
+      label: t("admin", "overview.totalUsers"),
       value: stats.totals.users,
       icon: Users,
       color: "#22d3ee",
-      sub: `${stats.totals.proUsers} Pro · ${stats.totals.teamUsers} Team`,
+      sub: t("admin", "overview.proTeamSub", { pro: stats.totals.proUsers, team: stats.totals.teamUsers }),
       delta: stats.deltas.users,
       spark: stats.trends.users,
     },
     {
-      label: "Total Analyses",
+      label: t("admin", "overview.totalAnalyses"),
       value: stats.totals.analyses,
       icon: Activity,
       color: "#a78bfa",
-      sub: `${stats.totals.chatMessages} chat messages`,
+      sub: t("admin", "overview.chatMessagesSub", { count: stats.totals.chatMessages }),
       delta: stats.deltas.analyses,
       spark: stats.trends.analyses,
     },
     {
-      label: "Chat Messages",
+      label: t("admin", "overview.chatMessages"),
       value: stats.totals.chatMessages,
       icon: MessageSquare,
       color: "#f472b6",
-      sub: "All-time conversations",
+      sub: t("admin", "overview.allTimeConversations"),
       delta: stats.deltas.chats,
       spark: stats.trends.chats,
     },
     {
-      label: "Active Subs",
+      label: t("admin", "overview.activeSubs"),
       value: stats.totals.activeSubs,
       icon: Crown,
       color: "#fbbf24",
-      sub: `$${stats.totals.mrr}/mo MRR`,
+      sub: t("admin", "overview.mrrSub", { mrr: stats.totals.mrr }),
       delta: null,
       spark: stats.trends.users,
     },
     {
-      label: "AI Providers",
+      label: t("admin", "overview.aiProviders"),
       value: stats.totals.providers,
       icon: Cpu,
       color: "#34d399",
-      sub: `${stats.totals.credentials} user keys`,
+      sub: t("admin", "overview.userKeysSub", { count: stats.totals.credentials }),
       delta: null,
       spark: stats.trends.analyses,
     },
@@ -214,16 +216,16 @@ export function AdminOverview() {
         <div>
           <h2 className="flex items-center gap-2 text-lg font-bold">
             <Sparkles className="h-5 w-5 text-cyan-300" />
-            <GradientText>Platform Overview</GradientText>
+            <GradientText>{t("admin", "overview.platformOverview")}</GradientText>
           </h2>
           <p className="text-xs text-muted-foreground">
-            Last 30 days · auto-refreshes every 30s
+            {t("admin", "overview.last30Days")}
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="gap-1.5 border-emerald-400/30 bg-emerald-500/10 text-emerald-300">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
-            Live
+            {t("admin", "overview.live")}
           </Badge>
           <Button
             variant="outline"
@@ -233,7 +235,7 @@ export function AdminOverview() {
             className="gap-1.5"
           >
             <RefreshCw className={cn("h-3.5 w-3.5", refreshing && "animate-spin")} />
-            <span className="hidden sm:inline">Refresh</span>
+            <span className="hidden sm:inline">{t("admin", "overview.refresh")}</span>
           </Button>
         </div>
       </motion.div>
@@ -241,7 +243,7 @@ export function AdminOverview() {
       {/* ── Metric cards row ── */}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-5">
         {metricCards.map((c, i) => (
-          <MetricCard key={c.label} card={c} index={i} />
+          <MetricCard key={i} card={c} index={i} />
         ))}
       </div>
 
@@ -259,14 +261,14 @@ export function AdminOverview() {
               <div>
                 <h3 className="flex items-center gap-2 text-sm font-semibold">
                   <TrendingUp className="h-4 w-4 text-cyan-300" />
-                  Activity Trends
+                  {t("admin", "overview.activityTrends")}
                 </h3>
-                <p className="text-[11px] text-muted-foreground">Analyses · Chats · New Users (30 days)</p>
+                <p className="text-[11px] text-muted-foreground">{t("admin", "overview.activityTrendsSub")}</p>
               </div>
               <div className="flex gap-3 text-[10px]">
-                <LegendDot color="#a78bfa" label="Analyses" />
-                <LegendDot color="#f472b6" label="Chats" />
-                <LegendDot color="#22d3ee" label="Users" />
+                <LegendDot color="#a78bfa" label={t("admin", "overview.legendAnalyses")} />
+                <LegendDot color="#f472b6" label={t("admin", "overview.legendChats")} />
+                <LegendDot color="#22d3ee" label={t("admin", "overview.legendUsers")} />
               </div>
             </div>
             <div className="h-64">
@@ -327,12 +329,12 @@ export function AdminOverview() {
           <GlassCard hover className="h-full p-5">
             <h3 className="flex items-center gap-2 text-sm font-semibold">
               <Cpu className="h-4 w-4 text-emerald-300" />
-              Provider Usage
+              {t("admin", "overview.providerUsage")}
             </h3>
-            <p className="text-[11px] text-muted-foreground">BYOK credentials by provider</p>
+            <p className="text-[11px] text-muted-foreground">{t("admin", "overview.providerUsageSub")}</p>
             {stats.providerUsage.length === 0 ? (
               <div className="flex h-48 items-center justify-center">
-                <p className="text-xs text-muted-foreground">No providers yet</p>
+                <p className="text-xs text-muted-foreground">{t("admin", "overview.noProvidersYet")}</p>
               </div>
             ) : (
               <>
@@ -371,7 +373,7 @@ export function AdminOverview() {
                     <span className="text-2xl font-bold tabular-nums text-foreground">
                       {stats.providerUsage.reduce((s, p) => s + p.count, 0)}
                     </span>
-                    <span className="text-[9px] uppercase tracking-wider text-muted-foreground">total keys</span>
+                    <span className="text-[9px] uppercase tracking-wider text-muted-foreground">{t("admin", "overview.totalKeys")}</span>
                   </div>
                 </div>
                 <div className="mt-3 space-y-1.5">
@@ -404,13 +406,13 @@ export function AdminOverview() {
             <div className="mb-3 flex items-center justify-between">
               <h3 className="flex items-center gap-2 text-sm font-semibold">
                 <Users className="h-4 w-4 text-violet-300" />
-                Recent Signups
+                {t("admin", "overview.recentSignups")}
               </h3>
-              <span className="text-[10px] text-muted-foreground">{stats.recentSignups.length} recent</span>
+              <span className="text-[10px] text-muted-foreground">{t("admin", "overview.recentCount", { count: stats.recentSignups.length })}</span>
             </div>
             <div className="space-y-2">
               {stats.recentSignups.length === 0 ? (
-                <p className="py-6 text-center text-xs text-muted-foreground">No signups yet</p>
+                <p className="py-6 text-center text-xs text-muted-foreground">{t("admin", "overview.noSignupsYet")}</p>
               ) : (
                 stats.recentSignups.map((u, i) => (
                   <motion.div
@@ -422,7 +424,7 @@ export function AdminOverview() {
                   >
                     <Avatar name={u.name ?? u.email ?? "?"} image={u.image} size={36} />
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{u.name ?? "Unknown"}</p>
+                      <p className="truncate text-sm font-medium">{u.name ?? t("common", "unknown")}</p>
                       <p className="truncate text-[11px] text-muted-foreground">{u.email}</p>
                     </div>
                     <span
@@ -455,13 +457,13 @@ export function AdminOverview() {
             <div className="mb-3 flex items-center justify-between">
               <h3 className="flex items-center gap-2 text-sm font-semibold">
                 <Crown className="h-4 w-4 text-amber-300" />
-                Top Users
+                {t("admin", "overview.topUsers")}
               </h3>
-              <span className="text-[10px] text-muted-foreground">by analysis count (30d)</span>
+              <span className="text-[10px] text-muted-foreground">{t("admin", "overview.topUsersSubtitle")}</span>
             </div>
             <div className="space-y-2">
               {stats.topUsers.length === 0 ? (
-                <p className="py-6 text-center text-xs text-muted-foreground">No activity yet</p>
+                <p className="py-6 text-center text-xs text-muted-foreground">{t("admin", "overview.noActivityYet")}</p>
               ) : (
                 stats.topUsers.map((u, i) => (
                   <motion.div
@@ -482,7 +484,7 @@ export function AdminOverview() {
                     </span>
                     <Avatar name={u.name ?? u.email ?? "?"} image={u.image} size={32} />
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{u.name ?? "Unknown"}</p>
+                      <p className="truncate text-sm font-medium">{u.name ?? t("common", "unknown")}</p>
                       <p className="truncate text-[11px] text-muted-foreground">{u.email}</p>
                     </div>
                     <div className="flex items-center gap-1.5 rounded-lg bg-cyan-500/10 px-2 py-1">
@@ -507,38 +509,38 @@ export function AdminOverview() {
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
             <div className="flex items-center gap-2">
               <Server className="h-4 w-4 text-cyan-300" />
-              <span className="text-xs font-semibold">System Health</span>
+              <span className="text-xs font-semibold">{t("admin", "system.title")}</span>
             </div>
             <HealthChip
               icon={Database}
-              label="Database"
+              label={t("admin", "system.database")}
               value={health?.services?.database ?? "—"}
               ok={health?.services?.database === "ok"}
             />
             <HealthChip
               icon={Zap}
-              label="Job Queue"
+              label={t("admin", "system.jobQueue")}
               value={health?.services?.jobQueue ?? "—"}
               ok={health?.services?.jobQueue === "ok"}
             />
             <HealthChip
               icon={Activity}
-              label="Active Jobs"
+              label={t("admin", "system.activeJobs")}
               value={health?.stats?.activeJobs ?? 0}
             />
             <HealthChip
               icon={Cpu}
-              label="Memory"
+              label={t("admin", "system.memory")}
               value={health?.stats?.memory?.used ?? "—"}
             />
             <HealthChip
               icon={Clock}
-              label="Latency"
+              label={t("admin", "system.latency")}
               value={health ? `${health.latencyMs}ms` : "—"}
             />
             <HealthChip
               icon={Clock}
-              label="Uptime"
+              label={t("admin", "system.uptime")}
               value={health ? `${Math.round((health.stats?.uptime ?? 0) / 60)}m` : "—"}
             />
           </div>
@@ -556,9 +558,9 @@ export function AdminOverview() {
             <div className="mb-3 flex items-center justify-between">
               <h3 className="flex items-center gap-2 text-sm font-semibold">
                 <Activity className="h-4 w-4 text-cyan-300" />
-                Recent Analyses
+                {t("admin", "overview.recentAnalyses")}
               </h3>
-              <span className="text-[10px] text-muted-foreground">{stats.recentAnalyses.length} recent</span>
+              <span className="text-[10px] text-muted-foreground">{t("admin", "overview.recentCount", { count: stats.recentAnalyses.length })}</span>
             </div>
             <div className="space-y-2">
               {stats.recentAnalyses.map((a, i) => (
@@ -582,7 +584,7 @@ export function AdminOverview() {
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">{a.repoOwner}/{a.repoName}</p>
                     <p className="truncate text-[11px] text-muted-foreground">
-                      {a.user?.name ?? a.user?.email ?? "Anonymous"}
+                      {a.user?.name ?? a.user?.email ?? t("common", "anonymous")}
                     </p>
                   </div>
                   <span className="text-[10px] tabular-nums text-muted-foreground">{timeAgo(a.createdAt)}</span>
@@ -677,12 +679,12 @@ function MetricCard({
         <div className="relative mt-3 h-10">
           <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="h-full w-full">
             <defs>
-              <linearGradient id={`spark-${card.label}`} x1="0" y1="0" x2="0" y2="1">
+              <linearGradient id={`spark-${index}`} x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor={card.color} stopOpacity={0.3} />
                 <stop offset="100%" stopColor={card.color} stopOpacity={0} />
               </linearGradient>
             </defs>
-            <path d={sparkArea} fill={`url(#spark-${card.label})`} />
+            <path d={sparkArea} fill={`url(#spark-${index})`} />
             <path d={sparkPath} fill="none" stroke={card.color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </div>

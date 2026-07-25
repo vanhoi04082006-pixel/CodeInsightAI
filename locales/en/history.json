@@ -14,5 +14,16 @@
     "deleteSuccess": "Analysis deleted successfully",
     "deleteError": "Failed to delete analysis",
     "deleteNetwork": "Network connection error",
-    "deleteTooltip": "Delete this analysis"
+    "deleteTooltip": "Delete this analysis",
+    "sort": {
+        "date": "Date",
+        "score": "Score",
+        "name": "Name"
+    },
+    "miniScores": {
+        "sec": "Sec",
+        "perf": "Perf",
+        "arch": "Arch",
+        "qual": "Qual"
+    }
 }

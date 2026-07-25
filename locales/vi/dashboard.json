@@ -49,5 +49,30 @@
     "overall": "Tổng thể"
   },
   "recentAnalyses": "Phân tích gần đây",
-  "viewAll": "Xem tất cả"
+  "viewAll": "Xem tất cả",
+  "trySampleRepo": "Thử một repository mẫu",
+  "analyze": "Phân tích",
+  "toast": {
+    "aiDeepComplete": "Phân tích sâu AI hoàn tất!"
+  },
+  "sampleRepos": {
+    "react": {
+      "desc": "Thư viện cho giao diện web và native."
+    },
+    "nextjs": {
+      "desc": "React Framework cho Web."
+    },
+    "fastapi": {
+      "desc": "Python web framework hiệu năng cao, dễ học."
+    },
+    "tailwind": {
+      "desc": "CSS framework utility-first để phát triển UI nhanh."
+    },
+    "prisma": {
+      "desc": "ORM thế hệ mới cho Node.js và TypeScript."
+    },
+    "vite": {
+      "desc": "Công cụ frontend thế hệ mới. Nhanh và nhẹ!"
+    }
+  }
 }

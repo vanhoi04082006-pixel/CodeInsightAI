@@ -109,7 +109,7 @@ export function AppSidebar() {
         <button
           onClick={toggle}
           className="ml-auto rounded-md p-1.5 text-muted-foreground hover:bg-white/5 hover:text-foreground"
-          aria-label="Toggle sidebar"
+          aria-label={t("notifications", "appShell.toggleSidebar")}
         >
           <ChevronLeft className={cn("h-4 w-4 transition-transform", collapsed && "rotate-180")} />
         </button>
@@ -142,7 +142,7 @@ export function AppSidebar() {
                 isMissionLocked && "text-amber-400/70 hover:text-amber-300",
                 isProvidersLocked && "text-muted-foreground/50"
               )}
-              title={collapsed ? (isMissionLocked ? `${label} (Pro)` : isProvidersLocked ? `${label} (Custom mode)` : label) : undefined}
+              title={collapsed ? (isMissionLocked ? `${label} ${t("notifications", "appShell.lockHint.pro")}` : isProvidersLocked ? `${label} ${t("notifications", "appShell.lockHint.custom")}` : label) : undefined}
             >
               {active && (
                 <motion.span
@@ -235,8 +235,8 @@ export function AppTopbar() {
           {activeReport && (view === "project" || view === "chat" || view === "mission")
             ? `${activeReport.repoOwner}/${activeReport.repoName}`
             : view === "mission"
-            ? "AI Operating System"
-            : "AI-powered repository intelligence"}
+            ? t("notifications", "appShell.titleMission")
+            : t("notifications", "appShell.titleDefault")}
         </p>
       </div>
 
@@ -320,6 +320,7 @@ export function MobileNav() {
 
 /* ---------- AI status card (sidebar footer) ---------- */
 function AIStatusCard({ onOpen }: { onOpen: () => void }) {
+  const { t } = useT();
   const providers = useProvidersStore((s) => s.providers);
   const enabled = providers.filter((p) => p.enabled).length;
   const connected = providers.filter((p) => p.status === "connected").length;
@@ -337,12 +338,14 @@ function AIStatusCard({ onOpen }: { onOpen: () => void }) {
           </span>
         </div>
         <p className="mt-2 text-sm font-semibold">
-          {enabled === 0 ? "Connect your AI" : `${enabled} provider${enabled === 1 ? "" : "s"} ready`}
+          {enabled === 0
+            ? t("notifications", "aiStatus.emptyTitle")
+            : t("notifications", enabled === 1 ? "aiStatus.providerReadySingular" : "aiStatus.providerReadyPlural", { count: enabled })}
         </p>
         <p className="mt-1 text-xs text-muted-foreground">
           {enabled === 0
-            ? "Use your own AI APIs. No subscriptions."
-            : `${connected} connected · switch models freely`}
+            ? t("notifications", "aiStatus.emptyDesc")
+            : t("notifications", "aiStatus.connectedDesc", { count: connected })}
         </p>
         {/* active personality */}
         <button
@@ -350,7 +353,7 @@ function AIStatusCard({ onOpen }: { onOpen: () => void }) {
           className="mt-2 flex w-full items-center gap-1.5 rounded-lg border border-white/5 bg-white/[0.02] px-2 py-1.5 text-[11px] transition hover:border-cyan-400/30"
         >
           <Bot className="h-3 w-3" style={{ color: personality.accent }} />
-          <span className="text-muted-foreground">Personality:</span>
+          <span className="text-muted-foreground">{t("notifications", "aiStatus.personalityLabel")}</span>
           <span className="ml-auto font-medium" style={{ color: personality.accent }}>{personality.name}</span>
         </button>
         <Button
@@ -358,7 +361,7 @@ function AIStatusCard({ onOpen }: { onOpen: () => void }) {
           onClick={onOpen}
           className="mt-3 w-full bg-gradient-to-r from-cyan-500 to-violet-500 text-white hover:opacity-90"
         >
-          {enabled === 0 ? "Add AI Provider" : "Manage providers"}
+          {enabled === 0 ? t("common", "actions.addAIProvider") : t("notifications", "aiStatus.manageProviders")}
         </Button>
       </div>
     </div>

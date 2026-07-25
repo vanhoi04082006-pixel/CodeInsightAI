@@ -24,5 +24,14 @@
   "chatFailedToast": "AI không thể phản hồi. Vui lòng thử lại.",
   "personalityLabel": "Tính cách",
   "clearToast": "Đã xóa trò chuyện",
-  "requestLog": "Nhật ký"
+  "requestLog": "Nhật ký",
+  "requestLogToggle": "Nhật ký",
+  "toggleRequestLog": "Bật/tắt Nhật ký yêu cầu",
+  "toggleRequestLogSidebar": "Bật/tắt thanh bên Nhật ký yêu cầu",
+  "toggleDevConsole": "Bật/tắt Console nhà phát triển",
+  "toggleDevConsoleSidebar": "Bật/tắt thanh bên Console nhà phát triển",
+  "devConsoleShort": "Dev",
+  "emptyResponse": "⚠️ Phản hồi trống. Vui lòng thử lại.",
+  "copy": "Sao chép",
+  "copied": "Đã sao chép"
 }

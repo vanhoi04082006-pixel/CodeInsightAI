@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Database, Activity, Cloud, ChevronDown, CheckCircle2, AlertCircle, XCircle } from "lucide-react";
+import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 type ServiceStatus = "ok" | "degraded" | "down" | "unknown";
@@ -16,11 +17,11 @@ type HealthResponse = {
   };
 };
 
-const STATUS_CONFIG: Record<ServiceStatus, { color: string; label: string; icon: typeof CheckCircle2 }> = {
-  ok: { color: "#34d399", label: "Operational", icon: CheckCircle2 },
-  degraded: { color: "#fbbf24", label: "Degraded", icon: AlertCircle },
-  down: { color: "#ff5470", label: "Down", icon: XCircle },
-  unknown: { color: "#64748b", label: "Unknown", icon: AlertCircle },
+const STATUS_CONFIG: Record<ServiceStatus, { color: string; icon: typeof CheckCircle2 }> = {
+  ok: { color: "#34d399", icon: CheckCircle2 },
+  degraded: { color: "#fbbf24", icon: AlertCircle },
+  down: { color: "#ff5470", icon: XCircle },
+  unknown: { color: "#64748b", icon: AlertCircle },
 };
 
 /**
@@ -34,6 +35,7 @@ const STATUS_CONFIG: Record<ServiceStatus, { color: string; label: string; icon:
  * — especially useful when diagnosing "why won't my analysis run".
  */
 export function SystemStatusIndicator() {
+  const { t } = useT();
   const [health, setHealth] = useState<HealthResponse | null>(null);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -89,12 +91,13 @@ export function SystemStatusIndicator() {
 
   const cfg = STATUS_CONFIG[overall];
   const OverallIcon = cfg.icon;
+  const overallLabel = t("notifications", `systemStatus.status.${overall}`);
 
   const serviceList = services
     ? [
-        { key: "database", label: "Database", icon: Database, status: services.database },
-        { key: "jobQueue", label: "Job Queue", icon: Activity, status: services.jobQueue },
-        { key: "github", label: "GitHub API", icon: Cloud, status: services.github },
+        { key: "database", icon: Database, status: services.database },
+        { key: "jobQueue", icon: Activity, status: services.jobQueue },
+        { key: "github", icon: Cloud, status: services.github },
       ]
     : [];
 
@@ -103,7 +106,7 @@ export function SystemStatusIndicator() {
       <button
         onClick={() => setOpen((v) => !v)}
         className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-1.5 text-xs transition hover:bg-white/5"
-        aria-label={`System status: ${cfg.label}`}
+        aria-label={t("notifications", "systemStatus.ariaLabel", { status: overallLabel })}
         aria-expanded={open}
       >
         <span className="relative flex h-2 w-2">
@@ -118,7 +121,7 @@ export function SystemStatusIndicator() {
             style={{ background: cfg.color, boxShadow: `0 0 6px ${cfg.color}` }}
           />
         </span>
-        <span className="hidden text-muted-foreground sm:inline">{cfg.label}</span>
+        <span className="hidden text-muted-foreground sm:inline">{overallLabel}</span>
         {health && (
           <span className="hidden text-[10px] tabular-nums text-muted-foreground/70 md:inline">
             {health.latencyMs}ms
@@ -136,22 +139,26 @@ export function SystemStatusIndicator() {
             transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
             className="glass-strong absolute right-0 top-full z-50 mt-2 w-72 overflow-hidden rounded-xl border border-white/10 p-3 shadow-2xl"
             role="dialog"
-            aria-label="System status details"
+            aria-label={t("notifications", "systemStatus.dialogAriaLabel")}
           >
             {/* Header */}
             <div className="flex items-center gap-2 border-b border-white/5 pb-2">
               <OverallIcon className="h-4 w-4" style={{ color: cfg.color }} />
               <div className="flex-1">
-                <p className="text-xs font-semibold">{cfg.label}</p>
+                <p className="text-xs font-semibold">{overallLabel}</p>
                 <p className="text-[10px] text-muted-foreground">
-                  {loading ? "Checking…" : health ? `Updated just now · ${health.latencyMs}ms` : "No data"}
+                  {loading
+                    ? t("notifications", "systemStatus.checking")
+                    : health
+                    ? t("notifications", "systemStatus.updatedJustNow", { latency: health.latencyMs })
+                    : t("common", "noData")}
                 </p>
               </div>
               <span
                 className="rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide"
                 style={{ background: `${cfg.color}1a`, color: cfg.color, border: `1px solid ${cfg.color}33` }}
               >
-                {overall}
+                {overallLabel}
               </span>
             </div>
 
@@ -159,23 +166,25 @@ export function SystemStatusIndicator() {
             <div className="mt-2 space-y-1.5">
               {serviceList.length === 0 && (
                 <p className="py-2 text-center text-[11px] text-muted-foreground">
-                  Unable to reach health endpoint
+                  {t("notifications", "systemStatus.unreachable")}
                 </p>
               )}
               {serviceList.map((svc) => {
                 const sc = STATUS_CONFIG[svc.status];
                 const SvcIcon = svc.icon;
                 const ScStatusIcon = sc.icon;
+                const svcLabel = t("notifications", `systemStatus.service.${svc.key}`);
+                const svcStatusLabel = t("notifications", `systemStatus.status.${svc.status}`);
                 return (
                   <div
                     key={svc.key}
                     className="flex items-center gap-2 rounded-lg border border-white/5 bg-white/[0.02] px-2.5 py-1.5"
                   >
                     <SvcIcon className="h-3.5 w-3.5 text-muted-foreground" />
-                    <span className="flex-1 text-xs font-medium">{svc.label}</span>
+                    <span className="flex-1 text-xs font-medium">{svcLabel}</span>
                     <ScStatusIcon className="h-3 w-3" style={{ color: sc.color }} />
                     <span className="text-[10px] uppercase tracking-wide" style={{ color: sc.color }}>
-                      {svc.status}
+                      {svcStatusLabel}
                     </span>
                   </div>
                 );
@@ -184,7 +193,9 @@ export function SystemStatusIndicator() {
 
             {/* Footer */}
             <p className="mt-2 border-t border-white/5 pt-2 text-[10px] text-muted-foreground">
-              Refreshes every 60s. Last check: {health ? new Date().toLocaleTimeString() : "never"}
+              {t("notifications", "systemStatus.refreshFooter", {
+                time: health ? new Date().toLocaleTimeString() : t("notifications", "systemStatus.neverChecked"),
+              })}
             </p>
           </motion.div>
         )}

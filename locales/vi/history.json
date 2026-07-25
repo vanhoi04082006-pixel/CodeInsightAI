@@ -14,5 +14,16 @@
     "deleteSuccess": "Đã xóa bản phân tích thành công",
     "deleteError": "Có lỗi xảy ra khi xóa",
     "deleteNetwork": "Lỗi kết nối mạng",
-    "deleteTooltip": "Xóa phân tích này"
+    "deleteTooltip": "Xóa phân tích này",
+    "sort": {
+        "date": "Ngày",
+        "score": "Điểm",
+        "name": "Tên"
+    },
+    "miniScores": {
+        "sec": "Bảo mật",
+        "perf": "Hiệu năng",
+        "arch": "Kiến trúc",
+        "qual": "Chất lượng"
+    }
 }

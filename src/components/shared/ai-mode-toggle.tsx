@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import { useT } from "@/lib/i18n";
 
 interface PlatformProvider {
   providerId: string;
@@ -39,6 +40,7 @@ interface PlatformProvider {
  * analyze/chat requests so the server uses the admin's key for that provider.
  */
 export function AIModeToggle({ compact = false }: { compact?: boolean }) {
+  const { t } = useT();
   const aiMode = useProvidersStore((s) => s.aiMode);
   const setAiMode = useProvidersStore((s) => s.setAiMode);
   const { data: session, status } = useSession();
@@ -94,14 +96,14 @@ export function AIModeToggle({ compact = false }: { compact?: boolean }) {
       setAiMode("byok");
       setJustSwitched(true);
       setTimeout(() => setJustSwitched(false), 1000);
-      toast.success("Switched to Custom Mode", { description: "Using your own API keys." });
+      toast.success(t("providers", "toast.switchedToCustom"), { description: t("providers", "toast.switchedToCustomDesc") });
     } else {
       // Switch from Custom → Default (available for ALL users, including free)
       // Default = admin's Platform AI key (free: 1M tokens, Pro: 10M tokens)
 
       // If providers not loaded yet, try loading now
       if (platformProviders.length === 0) {
-        toast.loading("Loading providers…", { id: "load-providers" });
+        toast.loading(t("providers", "toast.loadingProviders"), { id: "load-providers" });
         try {
           const res = await fetch("/api/platform-ai/options");
           const data = await res.json();
@@ -115,23 +117,23 @@ export function AIModeToggle({ compact = false }: { compact?: boolean }) {
             setAiMode("platform");
             setJustSwitched(true);
             setTimeout(() => setJustSwitched(false), 1000);
-            toast.success("Switched to Default", {
-              description: `Using admin's key (${first.name}) — ${isPro ? "10M" : "1M"} tokens/month`,
+            toast.success(t("providers", "toast.switchedToDefault"), {
+              description: t("providers", "toast.switchedToDefaultDesc", { name: first.name, tokens: isPro ? "10M" : "1M" }),
             });
             return;
           }
         } catch {}
         toast.dismiss("load-providers");
-        toast.error("No default provider configured", {
-          description: "Admin needs to configure at least one AI provider in Admin Dashboard.",
+        toast.error(t("providers", "toast.noDefaultProvider"), {
+          description: t("providers", "toast.noDefaultProviderDesc"),
         });
         return;
       }
       setAiMode("platform");
       setJustSwitched(true);
       setTimeout(() => setJustSwitched(false), 1000);
-      toast.success("Switched to Default", {
-        description: `Using admin's key — ${isPro ? "10M" : "1M"} tokens/month`,
+      toast.success(t("providers", "toast.switchedToDefault"), {
+        description: t("providers", "toast.switchedToDefaultShortDesc", { tokens: isPro ? "10M" : "1M" }),
       });
     }
   };
@@ -176,7 +178,7 @@ export function AIModeToggle({ compact = false }: { compact?: boolean }) {
               onClick={handleToggle}
               disabled={loading}
               className="group relative flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-1.5 text-xs font-medium transition hover:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-60"
-              aria-label={`AI Mode: ${isPlatform ? "Default" : "Custom"} — click to switch`}
+              aria-label={t("providers", "aria.label", { mode: isPlatform ? t("providers", "labels.default") : t("providers", "labels.custom") })}
             >
               {loading ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin text-violet-300" />
@@ -194,12 +196,12 @@ export function AIModeToggle({ compact = false }: { compact?: boolean }) {
               )}
               {!compact && (
                 <span className="hidden sm:inline" style={{ color }}>
-                  {isPlatform ? "Default" : "Custom"}
+                  {isPlatform ? t("providers", "labels.default") : t("providers", "labels.custom")}
                 </span>
               )}
               {!isPro && !isPlatform && (
                 <span className="ml-0.5 rounded bg-violet-500/20 px-1 text-[8px] font-bold uppercase text-violet-300">
-                  Pro
+                  {t("providers", "labels.pro")}
                 </span>
               )}
             </button>
@@ -207,20 +209,20 @@ export function AIModeToggle({ compact = false }: { compact?: boolean }) {
           <TooltipContent side="bottom" className="max-w-xs">
             <div className="space-y-1 text-xs">
               <p className="font-semibold">
-                AI Mode: {isPlatform ? "🤖 Default" : "🔑 Custom (BYOK)"}
+                {isPlatform ? t("providers", "tooltip.titleDefault") : t("providers", "tooltip.titleCustom")}
               </p>
               <p className="text-muted-foreground">
                 {isPlatform
-                  ? `Using admin's key${selectedProvider ? ` (${selectedProvider})` : ""} — no setup needed.`
-                  : "Using your own API keys from OpenRouter, OpenAI, etc. (free)"}
+                  ? t("providers", "tooltip.platformDesc", { provider: selectedProvider ? ` (${selectedProvider})` : "" })
+                  : t("providers", "tooltip.byokDesc")}
               </p>
               {!isPro && !isPlatform && (
-                <p className="text-cyan-300">Click to use Default (1M tokens/month free)</p>
+                <p className="text-cyan-300">{t("providers", "tooltip.clickDefault")}</p>
               )}
               {isPro && platformProviders.length === 0 && (
-                <p className="text-amber-300">No default provider configured. Ask admin to add one.</p>
+                <p className="text-amber-300">{t("providers", "tooltip.noProvider")}</p>
               )}
-              <p className="text-muted-foreground/70">Click to switch mode</p>
+              <p className="text-muted-foreground/70">{t("providers", "tooltip.clickSwitch")}</p>
             </div>
           </TooltipContent>
         </Tooltip>

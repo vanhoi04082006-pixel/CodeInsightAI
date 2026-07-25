@@ -1,0 +1,47 @@
+{
+  "pageTitle": "User Guide",
+  "backLink": "← Back to CodeInsight AI",
+  "subtitle": "Everything you need to know about CodeInsight AI",
+  "sections": {
+    "gettingStarted": {
+      "title": "Getting Started",
+      "icon": "🚀",
+      "content": "## Getting Started\n\nCodeInsight AI is an AI-powered code intelligence platform. Paste a GitHub URL, and AI analyzes the entire repository — security, performance, architecture, code quality, and more.\n\n### Quick Start\n1. **Sign in** with GitHub (required for analysis)\n2. **Paste a repo URL** (e.g., `https://github.com/facebook/react`)\n3. **Wait 15-30s** for static analysis\n4. **AI deep analysis** runs automatically (2-5 min, 8 passes)\n5. **Explore** the dashboard, AI insights, CodeGraph, and chat\n\n### Two Modes\n| Mode | Who | Cost |\n|------|-----|------|\n| **Default** | Everyone | Free: 1M tokens/mo, Pro: 10M tokens/mo |\n| **Custom (BYOK)** | Power users | Unlimited (your own API key) |\n\nNew users default to **Default mode** — no setup needed.\n"
+    },
+    "analyze": {
+      "title": "Analyze Repository",
+      "icon": "🔍",
+      "content": "## Analyze Repository\n\n### How to Analyze\n1. Go to **Analyze** tab (⌘A)\n2. Paste a GitHub URL (public or private)\n3. Toggle **AI Analysis** on/off\n4. Click **Analyze**\n\n### What Happens\n1. **Static Analysis** (15-30s): 66 rules scan for security, bugs, performance, architecture issues\n2. **AI Deep Analysis** (2-5 min): 8 AI passes examine the code:\n   - Executive Summary\n   - Security Review\n   - Architecture Review\n   - Code Quality\n   - Performance Review\n   - Best Practices Audit\n   - Priorities & Roadmap\n   - Duplicate Code Detection\n\n### Results\n- **Dashboard**: Scores, charts, trends\n- **Project Report**: Full analysis with tabs (Overview, Architecture, Bugs, Security, etc.)\n- **AI Insights**: 7-pass deep analysis results\n- **CodeGraph**: Visual dependency graph\n- **AI Ask**: Chat with AI about the repository\n\n### Tips\n- Use `force: true` to re-analyze (bypasses 1-hour cache)\n- Private repos require GitHub login\n- Large repos (>200 files) are truncated\n"
+    },
+    "dashboard": {
+      "title": "Dashboard",
+      "icon": "📊",
+      "content": "## Dashboard\n\nThe dashboard shows a summary of your latest analysis:\n\n- **Score cards**: Security, Performance, Architecture, Maintainability, Code Quality\n- **Score breakdown**: Radial chart of weighted scores\n- **Languages**: Pie chart of language distribution\n- **Activity trends**: 30-day analysis trends (if data available)\n- **Token usage**: How many tokens used this month\n- **Recent signups**: Latest users (admin only)\n- **Top users**: Most active users (admin only)\n- **System health**: DB, jobs, memory, latency\n\n### Keyboard Shortcuts\n- `⌘D` — Go to Dashboard\n- `⌘A` — New analysis\n- `⌘K` — Command palette\n- `?` — Show all shortcuts\n"
+    },
+    "aiFeatures": {
+      "title": "AI Features",
+      "icon": "🤖",
+      "content": "## AI Features\n\n### AI Insights (7-pass Deep Analysis)\nAvailable in the **AI Insights** tab of Project Report. Requires AI provider configured.\n\n8 AI passes:\n1. **Executive Summary** — Business impact overview\n2. **Security Review** — Root cause + fix code for each vulnerability\n3. **Architecture Review** — Strengths, weaknesses, suggestions\n4. **Code Quality** — Bug analysis with fixes\n5. **Performance Review** — Bottleneck analysis with expected improvements\n6. **Best Practices Audit** — Framework-specific scoring (0-100)\n7. **Priorities & Roadmap** — Ranked action items + phased plan\n8. **Duplicate Code** — AI-powered logic/structural duplication detection\n\n### AI Ask (Repository Chat)\nChat with AI about the analyzed repository. AI has full context:\n- Repository structure, files, languages\n- Static analysis results\n- CodeGraph (semantic dependency graph)\n- Conversation history\n\n### Model Selection (Pro users)\nPro users can choose from 8 models:\n| Model | Best for | Price |\n|-------|---------|-------|\n| gpt-5-nano | Budget (free default) | $0.05/$0.40 |\n| gpt-4.1-nano | Fast analysis | $0.10/$0.40 |\n| gpt-4o-mini | Vision + multimodal | $0.15/$0.60 |\n| gpt-5-mini | Chat | $0.25/$2.00 |\n| **gpt-4.1-mini** | **Analyze (Pro default)** | **$0.40/$1.60** |\n| grok-4-fast-reasoning | Fast reasoning | $0.20/$0.50 |\n| deepseek-chat | Code specialist | $2.00/$3.00 |\n| qwen3-coder-flash | Code specialist | $1.00/$4.00 |\n"
+    },
+    "settings": {
+      "title": "Settings",
+      "icon": "⚙️",
+      "content": "## Settings\n\n### AI Mode\n- **Default (Platform AI)**: Use admin's API key. No setup needed.\n  - Free: 1M tokens/month, 1 model\n  - Pro: 10M tokens/month, 8 models\n- **Custom (BYOK)**: Use your own API key. Unlimited tokens.\n  - Configure in Providers view (unlocked when Custom mode is active)\n\n### Theme\n- **Dark** (default): Cyber aesthetic with neon accents\n- **Light**: Clean white background\n- **System**: Follow OS preference\n\n### Language\n- **English**: Full support\n- **Tiếng Việt**: Full support (including AI insights)\n\n### Personalization\n- Accent color (8 options)\n- Font size (3 levels)\n- UI density (3 levels)\n- Animation level (3 levels)\n- High contrast mode\n- Color blind mode\n- Reduced motion\n\n### Developer Mode\nEnables:\n- Developer Console (6 tabs: Overview, Prompt, Context, Runtime, Capabilities, Logs)\n- Request/response logging\n- Debug snapshots\n"
+    },
+    "troubleshooting": {
+      "title": "Troubleshooting",
+      "icon": "🔧",
+      "content": "## Troubleshooting\n\n### Analysis fails with \"Repository not found\"\n- Check if the repo URL is correct\n- Private repos require GitHub login\n- Anonymous rate limit: 60 requests/hour (sign in for 5000/hour)\n\n### AI Insights show \"Static Analysis Only\"\n- No AI provider configured\n- Check: Admin → AI Config has at least one enabled provider\n- Or: Switch to Custom mode and add your own API key\n\n### AI passes fail with \"402 credits\"\n- OpenRouter free tier exhausted\n- Add credits at openrouter.ai/settings/credits\n- Or: Use ShopAIKey (cheaper) or BYOK with your own key\n\n### Progress stuck at 85-95%\n- AI analysis is running (2-5 minutes for 8 passes)\n- Each pass shows progress: \"AI Pass 3/8 — Security Review\"\n- If stuck >6 minutes: check Vercel function logs\n\n### Cursor invisible on shared report pages\n- Fixed: CustomCursor now mounts on all pages\n- If issue persists: clear localStorage and refresh\n\n### \"Job not found\" error\n- Fixed: DB fallback checks for completed analysis\n- If persists: check Vercel function logs for background AI errors\n\n### Chat returns empty response\n- Check AI provider configuration\n- Try switching model\n- Check token usage (may be exceeded)\n"
+    },
+    "keyboardShortcuts": {
+      "title": "Keyboard Shortcuts",
+      "icon": "⌨️",
+      "content": "## Keyboard Shortcuts\n\n### Navigation\n| Shortcut | Action |\n|----------|--------|\n| `⌘K` | Command palette |\n| `⌘D` | Dashboard |\n| `⌘A` | New analysis |\n| `⌘P` | Providers |\n| `⌘H` | History |\n| `⌘M` | Mission Control (Pro) |\n| `⌘C` | Chat (when no text selected) |\n| `⌘,` | Settings |\n| `Esc` | Back to landing |\n\n### Vim-style (no modifier)\n| Keys | Action |\n|------|--------|\n| `g` then `d` | Dashboard |\n| `g` then `a` | Analyze |\n| `g` then `p` | Project |\n| `g` then `c` | Chat |\n| `g` then `h` | History |\n| `g` then `s` | Settings |\n| `g` then `m` | Mission |\n| `g` then `l` | Landing |\n\n### Other\n| Key | Action |\n|-----|--------|\n| `?` | Show keyboard shortcuts help |\n| `Esc` | Blur input / close dialog |\n"
+    },
+    "faq": {
+      "title": "FAQ",
+      "icon": "❓",
+      "content": "## FAQ\n\n### Is CodeInsight AI free?\nYes! Free tier includes 5 analyses/month, 50 chat messages, and 1M AI tokens. Upgrade to Pro ($9/mo) for 100 analyses, 2000 chats, and 10M tokens.\n\n### Do I need an API key?\nNo! Default mode uses admin's API key (ShopAIKey). You only need your own key if you switch to Custom mode (BYOK).\n\n### Can I analyze private repos?\nYes, sign in with GitHub. Your GitHub token is used to fetch private repos you have access to.\n\n### How accurate is the AI analysis?\nThe 7-pass AI analysis uses real LLM calls (not templates). Each pass examines actual code issues, architecture, and patterns. Accuracy depends on the model selected.\n\n### Is my code sent to AI?\nYes — file paths, issue titles, and repository metadata are sent to the AI provider for deep analysis. File content is NOT sent (only metadata). BYOK users control their own data.\n\n### Can I share analysis results?\nYes! Use the Share button in Project Report to generate a read-only share link. Links expire after 7 days.\n\n### What languages are supported?\nCodeInsight AI analyzes 25+ programming languages including TypeScript, JavaScript, Python, Go, Rust, Java, C#, C++, PHP, Ruby, Swift, Kotlin, and more.\n\n### Can I use my own AI model?\nYes! Custom mode (BYOK) supports 15 providers including OpenAI, Anthropic, Gemini, DeepSeek, Groq, Ollama, and more. You can also set per-feature routing (e.g., security→Claude, chat→GPT).\n"
+    }
+  }
+}

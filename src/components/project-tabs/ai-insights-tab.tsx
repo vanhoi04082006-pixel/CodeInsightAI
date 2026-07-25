@@ -115,7 +115,7 @@ export function AIInsightsTab({ report }: { report: AnalysisReport }) {
                 <div className="text-3xl font-bold" style={{ color: deep.bestPracticesAudit.score >= 70 ? "#34d399" : deep.bestPracticesAudit.score >= 40 ? "#fbbf24" : "#fb7185" }}>
                   {deep.bestPracticesAudit.score}
                 </div>
-                <span className="text-xs text-muted-foreground">/ 100</span>
+                <span className="text-xs text-muted-foreground">{t("reports", "aiInsights.scoreMax")}</span>
               </div>
               {deep.bestPracticesAudit.passed?.length > 0 && (
                 <div className="mt-3">

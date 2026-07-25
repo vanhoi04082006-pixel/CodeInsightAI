@@ -66,14 +66,14 @@ export default function Home() {
           setActiveReport(data.analysis.report);
           setActiveAnalysisId(data.analysis.id);
           setView("project");
-          toast.success("Shared report loaded", {
-            description: `Expires ${new Date(data.expiresAt).toLocaleDateString()}`,
+          toast.success(t("common", "shared.loaded"), {
+            description: t("common", "shared.loadedDesc", { date: new Date(data.expiresAt).toLocaleDateString() }),
           });
         } else {
-          toast.error(data.error || "Share link not found or expired");
+          toast.error(data.error || t("common", "shared.notFound"));
         }
       })
-      .catch(() => toast.error("Failed to load shared report"))
+      .catch(() => toast.error(t("common", "shared.loadFailed")))
       .finally(() => {
         setSharedLoading(false);
         window.history.replaceState({}, document.title, window.location.pathname);
@@ -176,7 +176,7 @@ export default function Home() {
         <div className="flex flex-1 items-center justify-center">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="h-5 w-5 animate-spin text-cyan-400" />
-            <span>Loading shared report…</span>
+            <span>{t("common", "status.loadingShared")}</span>
           </div>
         </div>
         <CustomCursor />
@@ -191,9 +191,9 @@ export default function Home() {
       <div className="relative flex min-h-screen flex-col">
         <AnimatedBackground />
         <div className="sticky top-0 z-50 flex items-center justify-between border-b border-cyan-500/20 bg-cyan-500/[0.04] px-4 py-2 text-xs text-cyan-300 backdrop-blur-md">
-          <span>📋 Shared report — read-only view</span>
+          <span>{t("common", "shared.banner")}</span>
           <button onClick={() => { setSharedReport(null); setView("landing"); }} className="rounded-lg bg-cyan-500/20 px-3 py-1 font-medium hover:bg-cyan-500/30">
-            Go to CodeInsight AI →
+            {t("common", "shared.goToApp")}
           </button>
         </div>
         <main id="main-content" className="flex-1">
@@ -226,7 +226,7 @@ export default function Home() {
             <span className="h-2 w-2 animate-pulse rounded-full bg-cyan-400" />
             <span className="h-2 w-2 animate-pulse rounded-full bg-cyan-400" style={{ animationDelay: "0.2s" }} />
             <span className="h-2 w-2 animate-pulse rounded-full bg-cyan-400" style={{ animationDelay: "0.4s" }} />
-            <span className="ml-2">Loading…</span>
+            <span className="ml-2">{t("common", "status.loading")}</span>
           </div>
         </div>
       </div>
@@ -240,7 +240,7 @@ export default function Home() {
           <span className="h-2 w-2 animate-pulse rounded-full bg-cyan-400" />
           <span className="h-2 w-2 animate-pulse rounded-full bg-cyan-400" style={{ animationDelay: "0.2s" }} />
           <span className="h-2 w-2 animate-pulse rounded-full bg-cyan-400" style={{ animationDelay: "0.4s" }} />
-          <span className="ml-2">Loading…</span>
+          <span className="ml-2">{t("common", "status.loading")}</span>
         </div>
       </div>
     }>
@@ -268,7 +268,7 @@ export default function Home() {
               )}
               <button onClick={() => setView("history")} className="hover:text-foreground">{t("common", "nav.history")}</button>
               <button onClick={() => setView("settings")} className="hover:text-foreground">{t("common", "nav.settings")}</button>
-              <a href="/guide" className="hover:text-foreground">Guide</a>
+              <a href="/guide" className="hover:text-foreground">{t("common", "footer.guide")}</a>
               <a href="https://github.com/vanhoi04082006-pixel/CodeInsightAI" target="_blank" rel="noreferrer" className="hover:text-foreground">GitHub</a>
             </nav>
             <div className="flex items-center gap-2">
@@ -280,7 +280,7 @@ export default function Home() {
                     onClick={() => setView("dashboard")}
                     className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-cyan-500 to-violet-500 px-3 py-1.5 text-xs font-medium text-white transition hover:opacity-90"
                   >
-                    <Sparkles className="h-3.5 w-3.5" /> Dashboard
+                    <Sparkles className="h-3.5 w-3.5" /> {t("common", "nav.dashboard")}
                   </button>
                   <UserMenu />
                 </>
@@ -289,7 +289,7 @@ export default function Home() {
                   onClick={() => setView("dashboard")}
                   className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-cyan-500 to-violet-500 px-3 py-1.5 text-xs font-medium text-white transition hover:opacity-90"
                 >
-                  <Github className="h-3.5 w-3.5" /> Sign in
+                  <Github className="h-3.5 w-3.5" /> {t("common", "actions.signIn")}
                 </button>
               )}
             </div>
@@ -363,20 +363,20 @@ function Footer() {
             <span className="text-muted-foreground/50">·</span>
             <span className="text-xs">v1.0</span>
             <span className="text-muted-foreground/50">·</span>
-            <span className="flex items-center gap-1">Built with <Heart className="h-3 w-3 fill-rose-400 text-rose-400" /> for developers</span>
+            <span className="flex items-center gap-1">{t("common", "footer.builtWithPrefix")} <Heart className="h-3 w-3 fill-rose-400 text-rose-400" /> {t("common", "footer.builtWithSuffix")}</span>
           </div>
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
-            <a href="/guide" className="hover:text-foreground">Guide</a>
-            <a href="/terms" className="hover:text-foreground">Terms</a>
-            <a href="/privacy" className="hover:text-foreground">Privacy</a>
+            <a href="/guide" className="hover:text-foreground">{t("common", "footer.guide")}</a>
+            <a href="/terms" className="hover:text-foreground">{t("common", "footer.terms")}</a>
+            <a href="/privacy" className="hover:text-foreground">{t("common", "footer.privacy")}</a>
             <span className="text-muted-foreground/50">·</span>
             <button
               onClick={() => window.dispatchEvent(new KeyboardEvent("keydown", { key: "?" }))}
               className="flex items-center gap-1 transition hover:text-foreground"
-              aria-label="Show keyboard shortcuts"
+              aria-label={t("common", "footer.shortcutsAriaLabel")}
             >
               <kbd className="rounded border border-white/10 bg-white/[0.04] px-1.5 py-0.5 text-[10px]">?</kbd>
-              <span>Shortcuts</span>
+              <span>{t("common", "actions.shortcuts")}</span>
             </button>
           </div>
         </div>

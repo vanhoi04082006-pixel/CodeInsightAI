@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Coins, TrendingUp, TrendingDown, Infinity as InfinityIcon } from "lucide-react";
 import { GlassCard } from "@/components/shared/ui";
+import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 type TokenUsage = {
@@ -25,6 +26,7 @@ type TokenUsage = {
  * Displays: used / limit, remaining, progress bar, breakdown.
  */
 export function TokenUsageWidget({ compact = false }: { compact?: boolean }) {
+  const { t } = useT();
   const [usage, setUsage] = useState<TokenUsage | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -55,7 +57,7 @@ export function TokenUsageWidget({ compact = false }: { compact?: boolean }) {
     return (
       <div className={cn("flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-1.5 text-xs text-muted-foreground")}>
         <Coins className="h-3.5 w-3.5 animate-pulse" />
-        <span>Loading…</span>
+        <span>{t("common", "status.loading")}</span>
       </div>
     );
   }
@@ -67,7 +69,7 @@ export function TokenUsageWidget({ compact = false }: { compact?: boolean }) {
     return (
       <div className={cn("flex items-center gap-1.5 rounded-lg border border-emerald-400/30 bg-emerald-500/10 px-2.5 py-1.5 text-xs text-emerald-300")}>
         <InfinityIcon className="h-3.5 w-3.5" />
-        <span className="font-medium">Unlimited</span>
+        <span className="font-medium">{t("notifications", "tokenUsage.unlimited")}</span>
         <span className="text-[9px] text-emerald-300/70">{usage.plan}</span>
       </div>
     );
@@ -93,11 +95,11 @@ export function TokenUsageWidget({ compact = false }: { compact?: boolean }) {
           background: `${color}10`,
           color,
         }}
-        title={`${formatNum(usage.used)} / ${formatNum(usage.limit)} tokens used this month`}
+        title={t("notifications", "tokenUsage.tooltipCompact", { used: formatNum(usage.used), limit: formatNum(usage.limit) })}
       >
         <Coins className="h-3.5 w-3.5" />
         <span className="font-medium tabular-nums">{formatNum(usage.remaining)}</span>
-        <span className="text-[9px] opacity-70">left</span>
+        <span className="text-[9px] opacity-70">{t("notifications", "tokenUsage.compactLeft")}</span>
       </div>
     );
   }
@@ -107,7 +109,7 @@ export function TokenUsageWidget({ compact = false }: { compact?: boolean }) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           <Coins className="h-4 w-4" style={{ color }} />
-          <span className="text-xs font-semibold">Token Usage</span>
+          <span className="text-xs font-semibold">{t("notifications", "tokenUsage.title")}</span>
         </div>
         <span className="rounded-full bg-white/5 px-2 py-0.5 text-[9px] font-bold uppercase text-muted-foreground">
           {usage.plan}
@@ -117,8 +119,8 @@ export function TokenUsageWidget({ compact = false }: { compact?: boolean }) {
       {/* Progress bar */}
       <div className="mt-2">
         <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-          <span className="tabular-nums">{formatNum(usage.used)} used</span>
-          <span className="tabular-nums">{formatNum(usage.limit)} total</span>
+          <span className="tabular-nums">{formatNum(usage.used)} {t("notifications", "tokenUsage.usedSuffix")}</span>
+          <span className="tabular-nums">{formatNum(usage.limit)} {t("notifications", "tokenUsage.totalSuffix")}</span>
         </div>
         <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-white/5">
           <motion.div
@@ -131,7 +133,7 @@ export function TokenUsageWidget({ compact = false }: { compact?: boolean }) {
         </div>
         <div className="mt-1 flex items-center justify-between text-[10px]">
           <span className="tabular-nums font-semibold" style={{ color }}>
-            {formatNum(usage.remaining)} remaining
+            {formatNum(usage.remaining)} {t("notifications", "tokenUsage.remaining")}
           </span>
           <span className="text-muted-foreground">{percent.toFixed(0)}%</span>
         </div>
@@ -141,21 +143,21 @@ export function TokenUsageWidget({ compact = false }: { compact?: boolean }) {
       {usage.breakdown && (
         <div className="mt-2 grid grid-cols-2 gap-2 text-[9px] text-muted-foreground">
           <div className="rounded border border-white/5 bg-white/[0.02] px-2 py-1">
-            <span className="block">Chat messages</span>
+            <span className="block">{t("notifications", "tokenUsage.chatMessages")}</span>
             <span className="font-semibold text-foreground">{usage.breakdown.chatMessages}</span>
-            <span className="ml-1">× ~{usage.breakdown.estimatedPerChat} tok</span>
+            <span className="ml-1">× ~{usage.breakdown.estimatedPerChat} {t("notifications", "tokenUsage.tokUnit")}</span>
           </div>
           <div className="rounded border border-white/5 bg-white/[0.02] px-2 py-1">
-            <span className="block">Analyses</span>
+            <span className="block">{t("notifications", "tokenUsage.analyses")}</span>
             <span className="font-semibold text-foreground">{usage.breakdown.analyses}</span>
-            <span className="ml-1">× ~{usage.breakdown.estimatedPerAnalysis} tok</span>
+            <span className="ml-1">× ~{usage.breakdown.estimatedPerAnalysis} {t("notifications", "tokenUsage.tokUnit")}</span>
           </div>
         </div>
       )}
 
       {isLow && (
         <p className="mt-2 text-[9px] text-rose-400">
-          ⚠ Running low — upgrade to Pro for 10M tokens/month
+          {t("notifications", "tokenUsage.lowWarning")}
         </p>
       )}
     </GlassCard>

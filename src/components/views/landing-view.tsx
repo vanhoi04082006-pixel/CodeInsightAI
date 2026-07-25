@@ -81,13 +81,24 @@ const LOCAL_PRINCIPLES = [
 ];
 
 const FEATURE_ROUTING = [
-  { feature: "Bug Detection", model: "Claude 3.5 Sonnet", color: "#d97706" },
-  { feature: "Repository Chat", model: "GPT-4o", color: "#10a37f" },
-  { feature: "Documentation", model: "DeepSeek Coder", color: "#4d6bfe" },
-  { feature: "Vision / Images", model: "Gemini 1.5 Pro", color: "#4285f4" },
-  { feature: "Refactoring", model: "Qwen 2.5 72B", color: "#8b5cf6" },
-  { feature: "Security Audit", model: "Claude 3.5 Sonnet", color: "#d97706" },
+  { featureKey: "bugDetection", initials: "BU", model: "Claude 3.5 Sonnet", color: "#d97706" },
+  { featureKey: "repositoryChat", initials: "RE", model: "GPT-4o", color: "#10a37f" },
+  { featureKey: "documentation", initials: "DO", model: "DeepSeek Coder", color: "#4d6bfe" },
+  { featureKey: "vision", initials: "VI", model: "Gemini 1.5 Pro", color: "#4285f4" },
+  { featureKey: "refactoring", initials: "RE", model: "Qwen 2.5 72B", color: "#8b5cf6" },
+  { featureKey: "securityAudit", initials: "SE", model: "Claude 3.5 Sonnet", color: "#d97706" },
 ];
+
+/**
+ * Pricing plan metadata (colors / prices / flags only).
+ * All user-visible strings are resolved via `t("landing", "pricing.<id>.<field>")`
+ * so the same structure works for both en + vi.
+ */
+const PLANS = [
+  { id: "free", price: "$0", color: "#22d3ee", highlight: false, contact: false },
+  { id: "pro", price: "$9", period: "/month", color: "#a78bfa", highlight: true, contact: false },
+  { id: "team", price: "$29", period: "/month", color: "#34d399", highlight: false, contact: true },
+] as const;
 
 export function LandingView() {
   const setView = useAppStore((s) => s.setView);
@@ -177,13 +188,13 @@ export function LandingView() {
                 className="group bg-gradient-to-r from-cyan-500 to-violet-500 text-white hover:opacity-90"
               >
                 <Sparkles className="mr-1.5 h-4 w-4" />
-                Analyze Repo
+                {t("landing", "ctaAnalyze")}
                 <ArrowRight className="ml-1.5 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
               </Button>
             </div>
             {error && <p className="mt-2 text-sm text-rose-400">{error}</p>}
             <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-xs text-muted-foreground">
-              <span className="flex items-center gap-1"><Github className="h-3 w-3" /> Sign in with GitHub to start</span>
+              <span className="flex items-center gap-1"><Github className="h-3 w-3" /> {t("landing", "heroSignInHint")}</span>
               <span>·</span>
               <span>{t("landing", "tryLabel")}</span>
               {["vercel/next.js", "facebook/react", "vuejs/core"].map((r) => (
@@ -208,10 +219,10 @@ export function LandingView() {
             transition={{ duration: 0.7, delay: 0.4 }}
             className="mt-12 flex flex-wrap items-center justify-center gap-x-8 gap-y-2 text-xs text-muted-foreground"
           >
-            <span className="flex items-center gap-1.5"><KeyRound className="h-3.5 w-3.5" /> Free with your own keys</span>
-            <span className="flex items-center gap-1.5"><Zap className="h-3.5 w-3.5" /> Platform AI from $9/mo</span>
-            <span className="flex items-center gap-1.5"><Github className="h-3.5 w-3.5" /> GitHub login</span>
-            <span className="flex items-center gap-1.5"><Plug className="h-3.5 w-3.5" /> 14 AI providers</span>
+            <span className="flex items-center gap-1.5"><KeyRound className="h-3.5 w-3.5" /> {t("landing", "trustFree")}</span>
+            <span className="flex items-center gap-1.5"><Zap className="h-3.5 w-3.5" /> {t("landing", "trustPlatform")}</span>
+            <span className="flex items-center gap-1.5"><Github className="h-3.5 w-3.5" /> {t("landing", "trustGithub")}</span>
+            <span className="flex items-center gap-1.5"><Plug className="h-3.5 w-3.5" /> {t("landing", "trustProviders")}</span>
           </motion.div>
         </motion.div>
 
@@ -286,7 +297,7 @@ export function LandingView() {
           <SectionTitle
             center
             eyebrow={t("landing", "principlesEyebrow")}
-            title={<>Your keys. Your data. <GradientText>Your AI.</GradientText></>}
+            title={t("landing", "principlesTitle")}
             description={t("landing", "principlesDesc")}
           />
           <div className="mt-14 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
@@ -323,7 +334,7 @@ export function LandingView() {
           <SectionTitle
             center
             eyebrow={t("landing", "featuresEyebrow")}
-            title={<>Everything a <GradientText>Staff Engineer</GradientText> would tell you</>}
+            title={t("landing", "featuresTitle")}
             description={t("landing", "featuresDesc")}
           />
           <div className="mt-14 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
@@ -364,7 +375,7 @@ export function LandingView() {
           <SectionTitle
             center
             eyebrow={t("landing", "workflowEyebrow")}
-            title={<>From keys to <GradientText>AI CTO</GradientText> in 60 seconds</>}
+            title={t("landing", "workflowTitle")}
             description={t("landing", "workflowDesc")}
           />
           <div className="mt-14 grid gap-6 md:grid-cols-3">
@@ -421,13 +432,13 @@ export function LandingView() {
           <SectionTitle
             center
             eyebrow={t("landing", "routingEyebrow")}
-            title={<>Different models for <GradientText>different jobs</GradientText></>}
+            title={t("landing", "routingTitle")}
             description={t("landing", "routingDesc")}
           />
           <div className="mt-12 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {FEATURE_ROUTING.map((r, i) => (
               <motion.div
-                key={r.feature}
+                key={r.featureKey}
                 initial={{ opacity: 0, y: 16 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
@@ -438,10 +449,10 @@ export function LandingView() {
                     className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg font-mono text-xs font-bold"
                     style={{ background: `${r.color}1a`, color: r.color, border: `1px solid ${r.color}33` }}
                   >
-                    {r.feature.slice(0, 2).toUpperCase()}
+                    {r.initials}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium">{r.feature}</p>
+                    <p className="text-sm font-medium">{t("landing", `routing.features.${r.featureKey}`)}</p>
                     <p className="truncate text-[11px] text-muted-foreground">{r.model}</p>
                   </div>
                   <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -463,7 +474,7 @@ export function LandingView() {
           <SectionTitle
             center
             eyebrow={t("landing", "providersEyebrow")}
-            title={<>Connect <GradientText>any AI</GradientText> you already use</>}
+            title={t("landing", "providersTitle")}
             description={t("landing", "providersDesc")}
           />
           <div className="mt-12 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
@@ -501,66 +512,21 @@ export function LandingView() {
         <div className="mx-auto max-w-5xl">
           <SectionTitle
             center
-            eyebrow="PRICING"
-            title={<>Start free. <GradientText>Scale when ready.</GradientText></>}
-            description="Bring your own API key for free, or upgrade to Platform AI and we handle everything — no setup needed."
+            eyebrow={t("landing", "pricing.eyebrow")}
+            title={t("landing", "pricing.title")}
+            description={t("landing", "pricing.desc")}
           />
           <div className="mt-14 grid gap-5 md:grid-cols-3">
-            {[
-              {
-                name: "Free",
-                price: "$0",
-                desc: "Bring your own key",
-                features: [
-                  "66 static analysis rules",
-                  "5 analyses / month",
-                  "50 chat messages / month",
-                  "14 AI providers (BYOK)",
-                  "CodeGraph visualization",
-                  "GitHub OAuth login",
-                ],
-                color: "#22d3ee",
-                highlight: false,
-                cta: "Sign in with GitHub",
-              },
-              {
-                name: "Pro",
-                price: "$9",
-                period: "/month",
-                desc: "Platform AI — no key needed",
-                features: [
-                  "Everything in Free",
-                  "7-pass Deep AI Analysis",
-                  "Platform AI (admin-provided keys)",
-                  "100 analyses / month",
-                  "2000 chat messages / month",
-                  "Streaming chat + Mission Control",
-                ],
-                color: "#a78bfa",
-                highlight: true,
-                cta: "Upgrade to Pro",
-              },
-              {
-                name: "Team",
-                price: "$29",
-                period: "/month",
-                desc: "For teams & enterprises",
-                features: [
-                  "Everything in Pro",
-                  "500 analyses / month",
-                  "10000 chat messages / month",
-                  "Admin-managed plan",
-                  "Priority support",
-                  "Custom onboarding",
-                ],
-                color: "#34d399",
-                highlight: false,
-                cta: "Contact Sales",
-                contact: true, // custom flag → mailto instead of checkout
-              },
-            ].map((plan, i) => (
+            {PLANS.map((plan, i) => {
+              const planName = t("landing", `pricing.${plan.id}.name`);
+              const planDesc = t("landing", `pricing.${plan.id}.desc`);
+              const planCta = t("landing", `pricing.${plan.id}.cta`);
+              const planFeatures = [1, 2, 3, 4, 5, 6].map((n) =>
+                t("landing", `pricing.${plan.id}.features.f${n}`)
+              );
+              return (
               <motion.div
-                key={plan.name}
+                key={plan.id}
                 initial={{ opacity: 0, y: 24 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-80px" }}
@@ -575,17 +541,17 @@ export function LandingView() {
                       className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full px-3 py-0.5 text-[10px] font-bold uppercase tracking-wider"
                       style={{ background: plan.color, color: "#050507" }}
                     >
-                      Recommended
+                      {t("landing", "pricing.recommended")}
                     </span>
                   )}
-                  <h3 className="text-lg font-bold" style={{ color: plan.color }}>{plan.name}</h3>
+                  <h3 className="text-lg font-bold" style={{ color: plan.color }}>{planName}</h3>
                   <div className="mt-1 flex items-baseline gap-1">
                     <span className="text-3xl font-bold">{plan.price}</span>
-                    {plan.period && <span className="text-sm text-muted-foreground">{plan.period}</span>}
+                    {"period" in plan && plan.period && <span className="text-sm text-muted-foreground">{plan.period}</span>}
                   </div>
-                  <p className="mt-1 text-xs text-muted-foreground">{plan.desc}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{planDesc}</p>
                   <div className="mt-4 space-y-2">
-                    {plan.features.map((f) => (
+                    {planFeatures.map((f) => (
                       <div key={f} className="flex items-center gap-2 text-sm">
                         <Check className="h-3.5 w-3.5 shrink-0" style={{ color: plan.color }} />
                         <span className="text-muted-foreground">{f}</span>
@@ -597,7 +563,7 @@ export function LandingView() {
                       if (plan.highlight) {
                         // Pro plan → direct Stripe checkout
                         upgrade("pro");
-                      } else if ((plan as any).contact) {
+                      } else if (plan.contact) {
                         // Team/Enterprise → email contact (admin-managed plan)
                         window.location.href = "mailto:vanhoi04082006@gmail.com?subject=CodeInsight%20AI%20Team%20Plan&body=Hi,%20I'm%20interested%20in%20the%20Team%20plan%20for%20CodeInsight%20AI.";
                       } else {
@@ -607,23 +573,24 @@ export function LandingView() {
                     }}
                     disabled={plan.highlight && upgrading}
                     variant="outline"
-                    className={`mt-6 w-full ${plan.highlight ? "border-violet-400/40 text-violet-300 hover:bg-violet-400/10" : (plan as any).contact ? "border-emerald-400/40 text-emerald-300 hover:bg-emerald-400/10" : ""}`}
+                    className={`mt-6 w-full ${plan.highlight ? "border-violet-400/40 text-violet-300 hover:bg-violet-400/10" : plan.contact ? "border-emerald-400/40 text-emerald-300 hover:bg-emerald-400/10" : ""}`}
                   >
                     {plan.highlight && upgrading ? (
                       <>
-                        <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> Redirecting…
+                        <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> {t("landing", "pricing.redirecting")}
                       </>
                     ) : (
-                      plan.cta
+                      planCta
                     )}
                   </Button>
                 </GlassCard>
               </motion.div>
-            ))}
+              );
+            })}
           </div>
           <p className="mt-6 text-center text-xs text-muted-foreground">
-            Team plan is admin-managed — contact us for setup. Need on-premise or custom enterprise?{" "}
-            <a href="mailto:vanhoi04082006@gmail.com?subject=CodeInsight%20AI%20Enterprise" className="text-cyan-300 hover:underline">Email us</a>
+            {t("landing", "pricing.teamNote")}{" "}
+            <a href="mailto:vanhoi04082006@gmail.com?subject=CodeInsight%20AI%20Enterprise" className="text-cyan-300 hover:underline">{t("landing", "pricing.emailUs")}</a>
           </p>
         </div>
       </section>
@@ -646,7 +613,7 @@ export function LandingView() {
             <div className="absolute -bottom-10 -right-10 h-40 w-40 rounded-full bg-violet-500/20 blur-3xl" />
             <Plug className="relative mx-auto h-10 w-10 text-cyan-300" />
             <h2 className="relative mt-4 text-3xl font-bold md:text-4xl">
-              Ready to <GradientText>connect your AI?</GradientText>
+              {t("landing", "ctaTitle")}
             </h2>
             <p className="relative mx-auto mt-3 max-w-xl text-muted-foreground">
               {t("landing", "ctaDesc")}
@@ -673,16 +640,16 @@ export function LandingView() {
         <div className="mx-auto max-w-5xl">
           <SectionTitle
             center
-            eyebrow="BY THE NUMBERS"
-            title={<>Built for <GradientText>scale</GradientText></>}
-            description="Production-ready infrastructure for AI-powered code intelligence"
+            eyebrow={t("landing", "numbers.eyebrow")}
+            title={t("landing", "numbers.title")}
+            description={t("landing", "numbers.desc")}
           />
           <div className="mt-14 grid gap-5 md:grid-cols-4">
             {[
-              { value: "66", label: "Static Analysis Rules", color: "#22d3ee" },
-              { value: "8", label: "AI Deep Analysis Passes", color: "#a78bfa" },
-              { value: "15", label: "AI Providers Supported", color: "#34d399" },
-              { value: "100", label: "Open Source (MIT)", color: "#fbbf24" },
+              { value: "66", label: t("landing", "numbers.staticRules"), color: "#22d3ee" },
+              { value: "8", label: t("landing", "numbers.aiPasses"), color: "#a78bfa" },
+              { value: "15", label: t("landing", "numbers.aiProviders"), color: "#34d399" },
+              { value: "100", label: t("landing", "numbers.openSource"), color: "#fbbf24" },
             ].map((stat, i) => (
               <motion.div
                 key={stat.label}
@@ -708,21 +675,21 @@ export function LandingView() {
         <div className="mx-auto max-w-5xl">
           <SectionTitle
             center
-            eyebrow="HOW IT WORKS"
-            title={<>From URL to <GradientText>full report</GradientText> in 60 seconds</>}
-            description="Watch the 8-stage pipeline analyze any repository"
+            eyebrow={t("landing", "pipeline.eyebrow")}
+            title={t("landing", "pipeline.title")}
+            description={t("landing", "pipeline.desc")}
           />
           <div className="mt-14">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               {[
-                { n: "01", label: "Clone", icon: Github, color: "#22d3ee" },
-                { n: "02", label: "Scan", icon: ScanSearch, color: "#a78bfa" },
-                { n: "03", label: "AST", icon: Code2, color: "#f472b6" },
-                { n: "04", label: "Deps", icon: Network, color: "#34d399" },
-                { n: "05", label: "Embed", icon: Brain, color: "#fbbf24" },
-                { n: "06", label: "Static", icon: ShieldCheck, color: "#22d3ee" },
-                { n: "07", label: "AI", icon: Sparkles, color: "#a78bfa" },
-                { n: "08", label: "Report", icon: FileText, color: "#34d399" },
+                { n: "01", labelKey: "clone", icon: Github, color: "#22d3ee" },
+                { n: "02", labelKey: "scan", icon: ScanSearch, color: "#a78bfa" },
+                { n: "03", labelKey: "ast", icon: Code2, color: "#f472b6" },
+                { n: "04", labelKey: "deps", icon: Network, color: "#34d399" },
+                { n: "05", labelKey: "embed", icon: Brain, color: "#fbbf24" },
+                { n: "06", labelKey: "static", icon: ShieldCheck, color: "#22d3ee" },
+                { n: "07", labelKey: "ai", icon: Sparkles, color: "#a78bfa" },
+                { n: "08", labelKey: "report", icon: FileText, color: "#34d399" },
               ].map((s, i) => {
                 const Icon = s.icon;
                 return (
@@ -741,7 +708,7 @@ export function LandingView() {
                       <Icon className="h-5 w-5" style={{ color: s.color }} />
                     </div>
                     <span className="font-mono text-[10px] text-muted-foreground">{s.n}</span>
-                    <span className="text-xs font-medium">{s.label}</span>
+                    <span className="text-xs font-medium">{t("landing", `pipeline.stages.${s.labelKey}`)}</span>
                     {i < 7 && (
                       <div className="hidden h-px w-full bg-gradient-to-r from-white/10 to-transparent md:block" />
                     )}
@@ -758,10 +725,10 @@ export function LandingView() {
         <div className="mx-auto max-w-4xl">
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
             {[
-              { icon: ShieldCheck, label: "Security Rules", value: "13", color: "#f472b6" },
-              { icon: Bug, label: "Bug Patterns", value: "11", color: "#fbbf24" },
-              { icon: Gauge, label: "Perf Rules", value: "42", color: "#34d399" },
-              { icon: Bot, label: "AI Agents", value: "12", color: "#22d3ee" },
+              { icon: ShieldCheck, label: t("landing", "statsGrid.securityRules"), value: "13", color: "#f472b6" },
+              { icon: Bug, label: t("landing", "statsGrid.bugPatterns"), value: "11", color: "#fbbf24" },
+              { icon: Gauge, label: t("landing", "statsGrid.perfRules"), value: "42", color: "#34d399" },
+              { icon: Bot, label: t("landing", "statsGrid.aiAgents"), value: "12", color: "#22d3ee" },
             ].map((stat, i) => {
               const Icon = stat.icon;
               return (
@@ -795,10 +762,10 @@ export function LandingView() {
             transition={{ duration: 0.6 }}
           >
             <h2 className="text-4xl font-bold md:text-5xl">
-              Start <GradientText>analyzing</GradientText> now
+              {t("landing", "finalCta.title")}
             </h2>
             <p className="mx-auto mt-4 max-w-lg text-muted-foreground">
-              Free with your own API key. Or upgrade to Pro for Platform AI — no setup needed. Analyze any repo in 60 seconds.
+              {t("landing", "finalCta.desc")}
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-2 sm:flex-row">
               <Button
@@ -806,7 +773,7 @@ export function LandingView() {
                 size="lg"
                 className="glow-pulse bg-gradient-to-r from-cyan-500 to-violet-500 text-white hover:opacity-90"
               >
-                <Github className="mr-1.5 h-4 w-4" /> Sign in with GitHub
+                <Github className="mr-1.5 h-4 w-4" /> {t("landing", "finalCta.signIn")}
                 <ArrowRight className="ml-1.5 h-4 w-4" />
               </Button>
               <Button
@@ -817,7 +784,7 @@ export function LandingView() {
                 className="border-violet-400/40 text-violet-300 hover:bg-violet-400/10"
               >
                 {upgrading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Sparkles className="mr-1.5 h-4 w-4" />}
-                {upgrading ? "Redirecting…" : "Upgrade to Pro — $9/mo"}
+                {upgrading ? t("landing", "finalCta.redirecting") : t("landing", "finalCta.upgrade")}
               </Button>
             </div>
           </motion.div>

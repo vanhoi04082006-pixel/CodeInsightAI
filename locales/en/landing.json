@@ -9,7 +9,11 @@
   "trustPrivate": "Use your own AI APIs",
   "trustData": "Data stays with you",
   "trustFast": "60-second analysis",
-  "trustProviders": "14 providers supported",
+  "trustProviders": "14 AI providers",
+  "heroSignInHint": "Sign in with GitHub to start",
+  "trustFree": "Free with your own keys",
+  "trustPlatform": "Platform AI from $9/mo",
+  "trustGithub": "GitHub login",
   "statsProviders": "AI providers",
   "statsLanguages": "Languages",
   "statsSubscriptions": "Subscriptions",
@@ -168,38 +172,123 @@
     "connect": "Connect",
     "viewAll": "View all providers"
   },
+  "routing": {
+    "features": {
+      "bugDetection": "Bug Detection",
+      "repositoryChat": "Repository Chat",
+      "documentation": "Documentation",
+      "vision": "Vision / Images",
+      "refactoring": "Refactoring",
+      "securityAudit": "Security Audit"
+    }
+  },
+  "numbers": {
+    "eyebrow": "BY THE NUMBERS",
+    "title": "Built for scale",
+    "desc": "Production-ready infrastructure for AI-powered code intelligence",
+    "staticRules": "Static Analysis Rules",
+    "aiPasses": "AI Deep Analysis Passes",
+    "aiProviders": "AI Providers Supported",
+    "openSource": "Open Source (MIT)"
+  },
+  "pipeline": {
+    "eyebrow": "HOW IT WORKS",
+    "title": "From URL to full report in 60 seconds",
+    "desc": "Watch the 8-stage pipeline analyze any repository",
+    "stages": {
+      "clone": "Clone",
+      "scan": "Scan",
+      "ast": "AST",
+      "deps": "Deps",
+      "embed": "Embed",
+      "static": "Static",
+      "ai": "AI",
+      "report": "Report"
+    }
+  },
+  "statsGrid": {
+    "securityRules": "Security Rules",
+    "bugPatterns": "Bug Patterns",
+    "perfRules": "Perf Rules",
+    "aiAgents": "AI Agents"
+  },
   "pricing": {
-    "title": "Pricing for every team",
-    "desc": "No subscriptions, no billing — bring your own AI keys. Pricing below is what you'd pay if we ever charged. Today: it's free.",
-    "free": "Free",
+    "eyebrow": "Pricing",
+    "title": "Start free. Scale when ready.",
+    "desc": "Bring your own API key for free, or upgrade to Platform AI and we handle everything — no setup needed.",
+    "recommended": "Recommended",
+    "redirecting": "Redirecting…",
+    "teamNote": "Team plan is admin-managed — contact us for setup. Need on-premise or custom enterprise?",
+    "emailUs": "Email us",
+    "free": {
+      "name": "Free",
+      "desc": "Bring your own key",
+      "features": {
+        "f1": "66 static analysis rules",
+        "f2": "5 analyses / month",
+        "f3": "50 chat messages / month",
+        "f4": "14 AI providers (BYOK)",
+        "f5": "CodeGraph visualization",
+        "f6": "GitHub OAuth login"
+      },
+      "cta": "Sign in with GitHub"
+    },
+    "pro": {
+      "name": "Pro",
+      "desc": "Platform AI — no key needed",
+      "features": {
+        "f1": "Everything in Free",
+        "f2": "7-pass Deep AI Analysis",
+        "f3": "Platform AI (admin-provided keys)",
+        "f4": "100 analyses / month",
+        "f5": "2000 chat messages / month",
+        "f6": "Streaming chat + Mission Control"
+      },
+      "cta": "Upgrade to Pro"
+    },
+    "team": {
+      "name": "Team",
+      "desc": "For teams & enterprises",
+      "features": {
+        "f1": "Everything in Pro",
+        "f2": "500 analyses / month",
+        "f3": "10000 chat messages / month",
+        "f4": "Admin-managed plan",
+        "f5": "Priority support",
+        "f6": "Custom onboarding"
+      },
+      "cta": "Contact Sales"
+    },
     "freePrice": "$0",
     "freeDesc": "For individual developers",
-    "pro": "Pro",
-    "proPrice": "$0",
-    "proDesc": "For power users — today it's free",
-    "enterprise": "Enterprise",
-    "enterprisePrice": "$0",
-    "enterpriseDesc": "For teams running locally",
-    "popular": "POPULAR",
-    "getStarted": "Get Started",
     "freeF1": "Unlimited analyses",
     "freeF2": "14 AI providers",
     "freeF3": "Local-first storage",
     "freeF4": "11 AI agents",
+    "proPrice": "$0",
+    "proDesc": "For power users — today it's free",
     "proF1": "Everything in Free",
     "proF2": "Autonomous workflow runner",
     "proF3": "Mission control dashboard",
     "proF4": "Agent personality system",
     "proF5": "Priority model routing",
+    "enterprise": "Enterprise",
+    "enterprisePrice": "$0",
+    "enterpriseDesc": "For teams running locally",
     "enterpriseF1": "Everything in Pro",
     "enterpriseF2": "Self-hosted, air-gapped",
     "enterpriseF3": "Custom agent pipelines",
-    "enterpriseF4": "Audit logs & SSO ready"
+    "enterpriseF4": "Audit logs & SSO ready",
+    "popular": "POPULAR",
+    "getStarted": "Get Started"
   },
   "finalCta": {
-    "title": "Ready to Ship Code with AI?",
-    "desc": "Launch CodeInsight AI, paste a repo, and watch eleven agents do the work of a senior engineering team — in 60 seconds.",
-    "button": "Launch CodeInsight AI"
+    "title": "Start analyzing now",
+    "desc": "Free with your own API key. Or upgrade to Pro for Platform AI — no setup needed. Analyze any repo in 60 seconds.",
+    "button": "Launch CodeInsight AI",
+    "signIn": "Sign in with GitHub",
+    "redirecting": "Redirecting…",
+    "upgrade": "Upgrade to Pro — $9/mo"
   },
   "footer": {
     "tagline": "Local-first AI development platform.",

@@ -1,1 +1,79 @@
-{ "title": "Nhà cung cấp AI", "subtitle": "Kết nối không giới hạn nhà cung cấp AI. Chuyển mô hình tự do. Không đăng ký, không thanh toán — khóa của bạn, dữ liệu của bạn.", "addProvider": "Thêm nhà cung cấp AI", "statEnabled": "Đã bật", "statConnected": "Đã kết nối", "statLocalModels": "Mô hình cục bộ", "statAvgLatency": "Độ trễ TB", "featureRouting": "Định tuyến Tính năng → Mô hình", "featureRoutingDesc": "Chuyển các tác vụ khác nhau cho các mô hình khác nhau.", "useDefault": "Dùng mặc định", "connectedProviders": "Nhà cung cấp đã kết nối", "noProviders": "Chưa có nhà cung cấp nào", "connectYourAI": "Kết nối AI", "connectYourAIDesc": "Chưa có nhà cung cấp nào. Thêm OpenRouter, OpenAI, Anthropic, Ollama cục bộ, hoặc bất kỳ API tương thích OpenAI nào.", "addFirst": "Thêm nhà cung cấp đầu tiên", "test": "Kiểm tra", "displayLabel": "Tên hiển thị", "model": "Mô hình", "apiKey": "Khóa API", "apiKeyHint": "chỉ lưu cục bộ", "baseUrl": "URL cơ sở", "temperature": "Nhiệt độ", "maxTokens": "Token tối đa", "timeout": "Thời gian chờ", "streaming": "Phát trực tiếp", "streamingEnabled": "Đã bật", "streamingDisabled": "Đã tắt", "getApiKey": "Lấy khóa API", "remove": "Xóa", "removeProvider": "Xóa nhà cung cấp", "addProviderTitle": "Thêm nhà cung cấp AI", "addProviderDesc": "Chọn nhà cung cấp. Cấu hình khóa API, URL cơ sở và mô hình sau khi thêm.", "groups": { "aggregator": "Tổng hợp", "cloud": "Đám mây", "local": "Cục bộ", "enterprise": "Doanh nghiệp", "custom": "Tùy chỉnh" }, "status": { "unknown": "Chưa kiểm tra", "testing": "Đang kiểm tra…", "connected": "Đã kết nối", "error": "Lỗi" }, "empty": { "connected": "Chưa có nhà cung cấp nào được kết nối.", "manageProviders": "Quản lý nhà cung cấp" }, "localFirst": "Cục bộ · Mang AI của riêng bạn" }
+{
+  "title": "Nhà cung cấp AI",
+  "subtitle": "Kết nối không giới hạn nhà cung cấp AI. Chuyển mô hình tự do. Không đăng ký, không thanh toán — khóa của bạn, dữ liệu của bạn.",
+  "addProvider": "Thêm nhà cung cấp AI",
+  "statEnabled": "Đã bật",
+  "statConnected": "Đã kết nối",
+  "statLocalModels": "Mô hình cục bộ",
+  "statAvgLatency": "Độ trễ TB",
+  "featureRouting": "Định tuyến Tính năng → Mô hình",
+  "featureRoutingDesc": "Chuyển các tác vụ khác nhau cho các mô hình khác nhau.",
+  "useDefault": "Dùng mặc định",
+  "connectedProviders": "Nhà cung cấp đã kết nối",
+  "noProviders": "Chưa có nhà cung cấp nào",
+  "connectYourAI": "Kết nối AI",
+  "connectYourAIDesc": "Chưa có nhà cung cấp nào. Thêm OpenRouter, OpenAI, Anthropic, Ollama cục bộ, hoặc bất kỳ API tương thích OpenAI nào.",
+  "addFirst": "Thêm nhà cung cấp đầu tiên",
+  "test": "Kiểm tra",
+  "displayLabel": "Tên hiển thị",
+  "model": "Mô hình",
+  "apiKey": "Khóa API",
+  "apiKeyHint": "chỉ lưu cục bộ",
+  "baseUrl": "URL cơ sở",
+  "temperature": "Nhiệt độ",
+  "maxTokens": "Token tối đa",
+  "timeout": "Thời gian chờ",
+  "streaming": "Phát trực tiếp",
+  "streamingEnabled": "Đã bật",
+  "streamingDisabled": "Đã tắt",
+  "getApiKey": "Lấy khóa API",
+  "remove": "Xóa",
+  "removeProvider": "Xóa nhà cung cấp",
+  "addProviderTitle": "Thêm nhà cung cấp AI",
+  "addProviderDesc": "Chọn nhà cung cấp. Cấu hình khóa API, URL cơ sở và mô hình sau khi thêm.",
+  "groups": {
+    "aggregator": "Tổng hợp",
+    "cloud": "Đám mây",
+    "local": "Cục bộ",
+    "enterprise": "Doanh nghiệp",
+    "custom": "Tùy chỉnh"
+  },
+  "status": {
+    "unknown": "Chưa kiểm tra",
+    "testing": "Đang kiểm tra…",
+    "connected": "Đã kết nối",
+    "error": "Lỗi"
+  },
+  "empty": {
+    "connected": "Chưa có nhà cung cấp nào được kết nối.",
+    "manageProviders": "Quản lý nhà cung cấp"
+  },
+  "localFirst": "Cục bộ · Mang AI của riêng bạn",
+  "labels": {
+    "default": "Mặc định",
+    "custom": "Tùy chỉnh",
+    "pro": "Pro"
+  },
+  "aria": {
+    "label": "Chế độ AI: {mode} — nhấp để chuyển"
+  },
+  "tooltip": {
+    "titleDefault": "Chế độ AI: 🤖 Mặc định",
+    "titleCustom": "Chế độ AI: 🔑 Custom (BYOK)",
+    "platformDesc": "Đang dùng khóa admin{provider} — không cần thiết lập.",
+    "byokDesc": "Đang dùng API key của riêng bạn từ OpenRouter, OpenAI, v.v. (miễn phí)",
+    "clickDefault": "Nhấp để dùng Mặc định (1M token/tháng miễn phí)",
+    "noProvider": "Chưa cấu hình nhà cung cấp mặc định. Yêu cầu admin thêm một nhà cung cấp.",
+    "clickSwitch": "Nhấp để chuyển chế độ"
+  },
+  "toast": {
+    "switchedToCustom": "Đã chuyển sang chế độ Custom",
+    "switchedToCustomDesc": "Đang dùng API key của riêng bạn.",
+    "loadingProviders": "Đang tải nhà cung cấp…",
+    "switchedToDefault": "Đã chuyển sang Mặc định",
+    "switchedToDefaultDesc": "Đang dùng khóa admin ({name}) — {tokens} token/tháng",
+    "switchedToDefaultShortDesc": "Đang dùng khóa admin — {tokens} token/tháng",
+    "noDefaultProvider": "Chưa cấu hình nhà cung cấp mặc định",
+    "noDefaultProviderDesc": "Admin cần cấu hình ít nhất một nhà cung cấp AI trong Bảng điều khiển Admin."
+  }
+}

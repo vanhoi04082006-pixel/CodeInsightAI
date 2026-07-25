@@ -1,0 +1,47 @@
+{
+  "pageTitle": "Hướng dẫn người dùng",
+  "backLink": "← Quay lại CodeInsight AI",
+  "subtitle": "Tất cả những gì bạn cần biết về CodeInsight AI",
+  "sections": {
+    "gettingStarted": {
+      "title": "Bắt đầu",
+      "icon": "🚀",
+      "content": "## Bắt đầu\n\nCodeInsight AI là nền tảng phân tích code thông minh bằng AI. Dán một URL GitHub, AI sẽ phân tích toàn bộ repository — bảo mật, hiệu năng, kiến trúc, chất lượng code và nhiều hơn nữa.\n\n### Bắt đầu nhanh\n1. **Đăng nhập** bằng GitHub (bắt buộc để phân tích)\n2. **Dán URL repository** (ví dụ: `https://github.com/facebook/react`)\n3. **Chờ 15-30 giây** để phân tích tĩnh\n4. **Phân tích sâu bằng AI** chạy tự động (2-5 phút, 8 lượt)\n5. **Khám phá** dashboard, AI insights, CodeGraph và chat\n\n### Hai chế độ\n| Chế độ | Ai dùng | Chi phí |\n|------|-----|------|\n| **Mặc định** | Tất cả mọi người | Free: 1M tokens/tháng, Pro: 10M tokens/tháng |\n| **Tùy chỉnh (BYOK)** | Người dùng nâng cao | Không giới hạn (dùng API key của bạn) |\n\nNgười dùng mới mặc định dùng **Chế độ mặc định** — không cần thiết lập.\n"
+    },
+    "analyze": {
+      "title": "Phân tích Repository",
+      "icon": "🔍",
+      "content": "## Phân tích Repository\n\n### Cách phân tích\n1. Vào tab **Analyze** (⌘A)\n2. Dán URL GitHub (public hoặc private)\n3. Bật/tắt **AI Analysis**\n4. Nhấn **Analyze**\n\n### Điều gì xảy ra\n1. **Phân tích tĩnh** (15-30 giây): 66 quy tắc quét bảo mật, bug, hiệu năng, vấn đề kiến trúc\n2. **Phân tích sâu bằng AI** (2-5 phút): 8 lượt AI kiểm tra code:\n   - Executive Summary\n   - Security Review\n   - Architecture Review\n   - Code Quality\n   - Performance Review\n   - Best Practices Audit\n   - Priorities & Roadmap\n   - Duplicate Code Detection\n\n### Kết quả\n- **Dashboard**: Điểm số, biểu đồ, xu hướng\n- **Project Report**: Phân tích đầy đủ với các tab (Overview, Architecture, Bugs, Security, v.v.)\n- **AI Insights**: Kết quả phân tích sâu 7 lượt\n- **CodeGraph**: Biểu đồ phụ thuộc trực quan\n- **AI Ask**: Trò chuyện với AI về repository\n\n### Mẹo\n- Dùng `force: true` để phân tích lại (bỏ qua cache 1 giờ)\n- Repository private cần đăng nhập GitHub\n- Repository lớn (>200 file) sẽ bị cắt bớt\n"
+    },
+    "dashboard": {
+      "title": "Dashboard",
+      "icon": "📊",
+      "content": "## Dashboard\n\nDashboard hiển thị tóm tắt phân tích gần nhất của bạn:\n\n- **Thẻ điểm số**: Security, Performance, Architecture, Maintainability, Code Quality\n- **Phân tích điểm số**: Biểu đồ tròn của điểm có trọng số\n- **Ngôn ngữ**: Biểu đồ tròn phân bố ngôn ngữ\n- **Xu hướng hoạt động**: Xu hướng phân tích 30 ngày (nếu có dữ liệu)\n- **Sử dụng token**: Số token đã dùng trong tháng\n- **Đăng ký gần đây**: Người dùng mới nhất (chỉ admin)\n- **Top người dùng**: Người dùng tích cực nhất (chỉ admin)\n- **Tình trạng hệ thống**: DB, jobs, memory, latency\n\n### Phím tắt\n- `⌘D` — Vào Dashboard\n- `⌘A` — Phân tích mới\n- `⌘K` — Bảng lệnh\n- `?` — Hiện tất cả phím tắt\n"
+    },
+    "aiFeatures": {
+      "title": "Tính năng AI",
+      "icon": "🤖",
+      "content": "## Tính năng AI\n\n### AI Insights (phân tích sâu 7 lượt)\nCó trong tab **AI Insights** của Project Report. Yêu cầu AI provider đã được cấu hình.\n\n8 lượt AI:\n1. **Executive Summary** — Tổng quan tác động kinh doanh\n2. **Security Review** — Nguyên nhân gốc + code sửa cho từng lỗ hổng\n3. **Architecture Review** — Điểm mạnh, điểm yếu, gợi ý\n4. **Code Quality** — Phân tích bug kèm cách sửa\n5. **Performance Review** — Phân tích điểm nghẽn với cải thiện dự kiến\n6. **Best Practices Audit** — Chấm điểm theo framework (0-100)\n7. **Priorities & Roadmap** — Hành động được xếp hạng + kế hoạch theo giai đoạn\n8. **Duplicate Code** — Phát hiện trùng lặp logic/cấu trúc bằng AI\n\n### AI Ask (Chat về repository)\nTrò chuyện với AI về repository đã phân tích. AI có đầy đủ ngữ cảnh:\n- Cấu trúc repository, file, ngôn ngữ\n- Kết quả phân tích tĩnh\n- CodeGraph (biểu đồ phụ thuộc ngữ nghĩa)\n- Lịch sử hội thoại\n\n### Chọn model (người dùng Pro)\nNgười dùng Pro có thể chọn từ 8 model:\n| Model | Phù hợp cho | Giá |\n|-------|---------|-------|\n| gpt-5-nano | Tiết kiệm (mặc định Free) | $0.05/$0.40 |\n| gpt-4.1-nano | Phân tích nhanh | $0.10/$0.40 |\n| gpt-4o-mini | Vision + multimodal | $0.15/$0.60 |\n| gpt-5-mini | Chat | $0.25/$2.00 |\n| **gpt-4.1-mini** | **Analyze (mặc định Pro)** | **$0.40/$1.60** |\n| grok-4-fast-reasoning | Suy luận nhanh | $0.20/$0.50 |\n| deepseek-chat | Chuyên gia code | $2.00/$3.00 |\n| qwen3-coder-flash | Chuyên gia code | $1.00/$4.00 |\n"
+    },
+    "settings": {
+      "title": "Cài đặt",
+      "icon": "⚙️",
+      "content": "## Cài đặt\n\n### Chế độ AI\n- **Mặc định (Platform AI)**: Dùng API key của admin. Không cần thiết lập.\n  - Free: 1M tokens/tháng, 1 model\n  - Pro: 10M tokens/tháng, 8 model\n- **Tùy chỉnh (BYOK)**: Dùng API key của bạn. Token không giới hạn.\n  - Cấu hình ở view Providers (mở khóa khi chế độ Custom đang bật)\n\n### Theme\n- **Dark** (mặc định): Phong cách cyber với điểm nhấn neon\n- **Light**: Nền trắng sạch\n- **System**: Theo tùy chọn hệ điều hành\n\n### Ngôn ngữ\n- **English**: Hỗ trợ đầy đủ\n- **Tiếng Việt**: Hỗ trợ đầy đủ (bao gồm AI insights)\n\n### Cá nhân hóa\n- Màu nhấn (8 tùy chọn)\n- Cỡ chữ (3 mức)\n- Mật độ UI (3 mức)\n- Mức animation (3 mức)\n- Chế độ tương phản cao\n- Chế độ cho người mù màu\n- Giảm chuyển động\n\n### Developer Mode\nBật:\n- Developer Console (6 tab: Overview, Prompt, Context, Runtime, Capabilities, Logs)\n- Ghi log request/response\n- Snapshot debug\n"
+    },
+    "troubleshooting": {
+      "title": "Khắc phục sự cố",
+      "icon": "🔧",
+      "content": "## Khắc phục sự cố\n\n### Phân tích thất bại với \"Repository not found\"\n- Kiểm tra URL repository có đúng không\n- Repository private cần đăng nhập GitHub\n- Giới hạn ẩn danh: 60 request/giờ (đăng nhập để được 5000/giờ)\n\n### AI Insights hiển thị \"Static Analysis Only\"\n- Chưa cấu hình AI provider\n- Kiểm tra: Admin → AI Config có ít nhất một provider đang bật\n- Hoặc: Chuyển sang chế độ Custom và thêm API key của bạn\n\n### AI pass thất bại với \"402 credits\"\n- Đã hết hạn mức free của OpenRouter\n- Nạp credit tại openrouter.ai/settings/credits\n- Hoặc: Dùng ShopAIKey (rẻ hơn) hoặc BYOK với key của bạn\n\n### Tiến độ kẹt ở 85-95%\n- AI analysis đang chạy (2-5 phút cho 8 lượt)\n- Mỗi lượt hiển thị tiến độ: \"AI Pass 3/8 — Security Review\"\n- Nếu kẹt >6 phút: kiểm tra Vercel function logs\n\n### Con trỏ vô hình trên trang share report\n- Đã sửa: CustomCursor giờ mount trên mọi trang\n- Nếu vẫn gặp: xóa localStorage và tải lại\n\n### Lỗi \"Job not found\"\n- Đã sửa: DB fallback kiểm tra phân tích đã hoàn thành\n- Nếu vẫn gặp: kiểm tra Vercel function logs cho lỗi AI nền\n"
+    },
+    "keyboardShortcuts": {
+      "title": "Phím tắt",
+      "icon": "⌨️",
+      "content": "## Phím tắt\n\n### Điều hướng\n| Phím tắt | Hành động |\n|----------|--------|\n| `⌘K` | Bảng lệnh |\n| `⌘D` | Dashboard |\n| `⌘A` | Phân tích mới |\n| `⌘P` | Providers |\n| `⌘H` | History |\n| `⌘M` | Mission Control (Pro) |\n| `⌘C` | Chat (khi không có text được chọn) |\n| `⌘,` | Cài đặt |\n| `Esc` | Về landing |\n\n### Kiểu Vim (không modifier)\n| Phím | Hành động |\n|------|--------|\n| `g` rồi `d` | Dashboard |\n| `g` rồi `a` | Analyze |\n| `g` rồi `p` | Project |\n| `g` rồi `c` | Chat |\n| `g` rồi `h` | History |\n| `g` rồi `s` | Settings |\n| `g` rồi `m` | Mission |\n| `g` rồi `l` | Landing |\n\n### Khác\n| Phím | Hành động |\n|-----|--------|\n| `?` | Hiện trợ giúp phím tắt |\n| `Esc` | Bỏ focus input / đóng dialog |\n"
+    },
+    "faq": {
+      "title": "FAQ",
+      "icon": "❓",
+      "content": "## FAQ\n\n### CodeInsight AI có miễn phí không?\nCó! Gói Free bao gồm 5 lần phân tích/tháng, 50 tin nhắn chat và 1M AI token. Nâng cấp lên Pro ($9/tháng) để có 100 lần phân tích, 2000 chat và 10M token.\n\n### Tôi có cần API key không?\nKhông! Chế độ mặc định dùng API key của admin (ShopAIKey). Bạn chỉ cần key riêng nếu chuyển sang chế độ Custom (BYOK).\n\n### Tôi có thể phân tích repository private không?\nCó, hãy đăng nhập bằng GitHub. GitHub token của bạn được dùng để lấy repository private mà bạn có quyền truy cập.\n\n### Phân tích AI chính xác đến đâu?\nPhân tích AI 7 lượt dùng lệnh LLM thật (không phải template). Mỗi lượt kiểm tra vấn đề code, kiến trúc và pattern thực tế. Độ chính xác phụ thuộc vào model được chọn.\n\n### Code của tôi có được gửi cho AI không?\nCó — đường dẫn file, tiêu đề vấn đề và metadata repository được gửi đến AI provider để phân tích sâu. Nội dung file KHÔNG được gửi (chỉ metadata). Người dùng BYOK tự kiểm soát dữ liệu của mình.\n\n### Tôi có thể chia sẻ kết quả phân tích không?\nCó! Dùng nút Share trong Project Report để tạo link chia sẻ chỉ đọc. Link hết hạn sau 7 ngày.\n\n### Hỗ trợ những ngôn ngữ lập trình nào?\nCodeInsight AI phân tích hơn 25 ngôn ngữ lập trình bao gồm TypeScript, JavaScript, Python, Go, Rust, Java, C#, C++, PHP, Ruby, Swift, Kotlin và nhiều hơn nữa.\n\n### Tôi có thể dùng AI model của riêng mình không?\nCó! Chế độ Custom (BYOK) hỗ trợ 15 provider bao gồm OpenAI, Anthropic, Gemini, DeepSeek, Groq, Ollama và nhiều hơn nữa. Bạn cũng có thể thiết lập routing theo tính năng (ví dụ: security→Claude, chat→GPT).\n"
+    }
+  }
+}

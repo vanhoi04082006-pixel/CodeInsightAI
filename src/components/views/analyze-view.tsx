@@ -145,15 +145,16 @@ export function AnalyzeView() {
       duplicates: "refactor",
     };
 
+    const tAnalysis = useI18nStore.getState().t;
     const passes = [
-      { type: "summary", name: "Executive Summary" },
-      { type: "priorities", name: "Priorities & Roadmap" },
-      { type: "security", name: "Security Review" },
-      { type: "architecture", name: "Architecture Review" },
-      { type: "quality", name: "Code Quality" },
-      { type: "performance", name: "Performance Review" },
-      { type: "bestPractices", name: "Best Practices Audit" },
-      { type: "duplicates", name: "Duplicate Code Analysis" },
+      { type: "summary", name: tAnalysis("analysis", "passes.summary") },
+      { type: "priorities", name: tAnalysis("analysis", "passes.priorities") },
+      { type: "security", name: tAnalysis("analysis", "passes.security") },
+      { type: "architecture", name: tAnalysis("analysis", "passes.architecture") },
+      { type: "quality", name: tAnalysis("analysis", "passes.quality") },
+      { type: "performance", name: tAnalysis("analysis", "passes.performance") },
+      { type: "bestPractices", name: tAnalysis("analysis", "passes.bestPractices") },
+      { type: "duplicates", name: tAnalysis("analysis", "passes.duplicates") },
     ];
 
     let completedCount = 0;
@@ -191,8 +192,8 @@ export function AnalyzeView() {
             setAiStatus("done");
             setAiPassProgress(null);
             useAppStore.getState().setAiPending(false);
-            toast.success("AI deep analysis complete!", {
-              description: "All 8 AI passes finished. Check AI Insights tab.",
+            toast.success(tAnalysis("analysis", "toast.aiDeepComplete"), {
+              description: tAnalysis("analysis", "toast.aiDeepCompleteDesc"),
               duration: 6000,
             });
             return;
@@ -225,7 +226,7 @@ export function AnalyzeView() {
       }
     } catch {}
 
-    toast.success("AI analysis complete!", { duration: 5000 });
+    toast.success(tAnalysis("analysis", "toast.aiAnalysisComplete"), { duration: 5000 });
   }, []);
 
   const start = async () => {
@@ -316,11 +317,11 @@ export function AnalyzeView() {
         }, ps.delay));
       });
 
-      // Show "AI đang phân tích..." toast after 15s to reassure user
+      // Show "AI is performing deep analysis..." toast after 15s to reassure user
       timers.current.push(setTimeout(() => {
         if (phase === "running") {
-          toast.info("AI đang phân tích sâu (7-pass)...", {
-            description: "Quá trình này có thể mất 2-5 phút tùy kích thước repo",
+          toast.info(t("analysis", "toast.aiAnalyzingDeep"), {
+            description: t("analysis", "toast.aiAnalyzingDeepDesc"),
             duration: 5000,
           });
         }
@@ -345,7 +346,7 @@ export function AnalyzeView() {
       if (!startRes.ok || startData.error) {
         stopProgressAnimation();
         setPhase("error");
-        toast.error(startData.error || "Analysis failed");
+        toast.error(startData.error || t("analysis", "toast.analysisFailed"));
         return;
       }
 
@@ -362,12 +363,12 @@ export function AnalyzeView() {
           stopProgressAnimation();
           const score = startData.report.scores?.overall ?? 0;
           if (startData.aiStatus === "pending") {
-            toast.success(`Static analysis complete — ${score}/100`, {
-              description: "AI deep analysis (7-pass) is running in background...",
+            toast.success(t("analysis", "toast.staticComplete", { score }), {
+              description: t("analysis", "toast.staticCompleteDesc"),
               duration: 6000,
             });
           } else {
-            toast.success(`Analysis complete — ${score}/100`);
+            toast.success(t("analysis", "toast.analysisComplete", { score }));
           }
         }, 600);
 
@@ -383,7 +384,7 @@ export function AnalyzeView() {
       clearTimers();
       stopProgressAnimation();
       setPhase("error");
-      toast.error("Analysis failed. Please try again.");
+      toast.error(t("analysis", "toast.analysisFailedRetry"));
     }
   };
 
@@ -458,13 +459,13 @@ export function AnalyzeView() {
                 />
                 <Brain className="h-4 w-4 text-violet-300" />
                 <span className="text-sm font-medium">
-                  {useAI ? "🧠 Deep AI Analysis (7-pass)" : "⚡ Static Analysis Only"}
+                  {useAI ? t("analysis", "aiToggle.deep") : t("analysis", "aiToggle.static")}
                 </span>
               </label>
               <span className="text-xs text-muted-foreground">
                 {useAI
-                  ? "Uses AI for executive summary, security review, architecture, performance + best practices audit"
-                  : "Faster — 66 static rules only, no AI tokens used"}
+                  ? t("analysis", "aiToggle.deepDesc")
+                  : t("analysis", "aiToggle.staticDesc")}
               </span>
             </div>
           </div>
@@ -474,10 +475,10 @@ export function AnalyzeView() {
             <p className="mb-2 text-xs uppercase tracking-wider text-muted-foreground">{t("analysis", "popularRepos")}</p>
             <div className="flex flex-wrap justify-center gap-2">
               {[
-                { label: "vercel/next.js", desc: "React framework" },
-                { label: "facebook/react", desc: "UI library" },
-                { label: "vuejs/core", desc: "Progressive framework" },
-                { label: "tailwindlabs/tailwindcss", desc: "CSS engine" },
+                { label: "vercel/next.js", desc: t("analysis", "popularRepoDemos.next") },
+                { label: "facebook/react", desc: t("analysis", "popularRepoDemos.react") },
+                { label: "vuejs/core", desc: t("analysis", "popularRepoDemos.vue") },
+                { label: "tailwindlabs/tailwindcss", desc: t("analysis", "popularRepoDemos.tailwind") },
               ].map((r) => (
                 <button
                   key={r.label}
@@ -518,7 +519,7 @@ export function AnalyzeView() {
           className="relative z-10 text-center"
         >
           <h2 className="text-2xl font-bold md:text-3xl">
-            Analyzing <GradientText>{parseRepoUrl(url).name || "repository"}</GradientText>
+            {t("analysis", "analyzing")} <GradientText>{parseRepoUrl(url).name || t("analysis", "repositoryFallback")}</GradientText>
           </h2>
           <p className="mt-2 text-sm text-muted-foreground">
             {t("analysis", "analyzingDesc")}
@@ -530,7 +531,7 @@ export function AnalyzeView() {
           <div className="flex items-center justify-between text-sm">
             <span className="flex items-center gap-2 font-medium">
               <Loader2 className="h-4 w-4 animate-spin text-cyan-300" />
-              {current.label}
+              {t("analysis", `stages.${current.id}`)}
             </span>
             <span className="tabular-nums text-muted-foreground">{Math.round(overallProgress)}%</span>
           </div>
@@ -541,7 +542,7 @@ export function AnalyzeView() {
               transition={{ ease: "linear" }}
             />
           </div>
-          <p className="mt-2 text-xs text-muted-foreground">{current.description}</p>
+          <p className="mt-2 text-xs text-muted-foreground">{t("analysis", `${current.id}Desc`)}</p>
         </GlassCard>
 
         {/* Stage list */}
@@ -579,8 +580,8 @@ export function AnalyzeView() {
                   )}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium">{stage.label}</p>
-                  <p className="truncate text-[11px] text-muted-foreground">{stage.description}</p>
+                  <p className="text-sm font-medium">{t("analysis", `stages.${stage.id}`)}</p>
+                  <p className="truncate text-[11px] text-muted-foreground">{t("analysis", `${stage.id}Desc`)}</p>
                 </div>
                 {status === "active" && (
                   <div className="h-1.5 w-16 overflow-hidden rounded-full bg-white/10">
@@ -612,8 +613,8 @@ export function AnalyzeView() {
                 className="flex gap-2"
               >
                 <span className="text-cyan-400">[{String(i + 1).padStart(2, "0")}]</span>
-                <span className="text-emerald-300">OK</span>
-                <span className="truncate">{s.description}…</span>
+                <span className="text-emerald-300">{t("analysis", "logOk")}</span>
+                <span className="truncate">{t("analysis", `${s.id}Desc`)}…</span>
               </motion.div>
             ))}
             <motion.div
@@ -637,7 +638,7 @@ export function AnalyzeView() {
               <div className="flex items-center gap-2">
                 <Loader2 className="h-4 w-4 animate-spin text-violet-300" />
                 <span className="text-sm font-semibold text-violet-300">
-                  AI Pass {aiPassProgress.current}/{aiPassProgress.total}
+                  {t("analysis", "aiPassLabel", { current: aiPassProgress.current, total: aiPassProgress.total })}
                 </span>
                 <span className="text-xs text-muted-foreground">— {aiPassProgress.passName}</span>
               </div>
@@ -663,7 +664,7 @@ export function AnalyzeView() {
           <AlertCircle className="mx-auto h-12 w-12 text-rose-400" />
           <h2 className="mt-4 text-2xl font-bold">{t("analysis", "failed")}</h2>
           <p className="mt-2 text-muted-foreground">
-            Something went wrong. The repository may be private or unreachable.
+            {t("analysis", "failedDesc")}
           </p>
           <div className="mt-6 flex gap-2">
             <Button onClick={reset} variant="outline">{t("analysis", "tryAgain")}</Button>
@@ -691,22 +692,22 @@ export function AnalyzeView() {
           <Check className="h-8 w-8" />
         </motion.div>
         <h2 className="mt-4 text-3xl font-bold md:text-4xl">
-          Analysis <GradientText>complete</GradientText>
+          {t("analysis", "completeTitlePrefix")} <GradientText>{t("analysis", "completeTitleHighlight")}</GradientText>
         </h2>
         <p className="mt-2 text-muted-foreground">
-          {report?.repoOwner}/{report?.repoName} · {report?.totalFiles} files · {report?.totalLines.toLocaleString()} lines
+          {report?.repoOwner}/{report?.repoName} · {report?.totalFiles} {t("analysis", "filesLabel")} · {report?.totalLines.toLocaleString()} {t("analysis", "linesLabel")}
         </p>
       </motion.div>
 
       {report && (
         <GlassCard strong className="mt-8 p-6">
           <div className="grid gap-4 sm:grid-cols-3">
-            <ScoreMini label="Overall" value={report.scores.overall} color="#22d3ee" />
-            <ScoreMini label="Security" value={report.scores.security} color="#f472b6" />
-            <ScoreMini label="Performance" value={report.scores.performance} color="#34d399" />
-            <ScoreMini label="Architecture" value={report.scores.architecture} color="#a78bfa" />
-            <ScoreMini label="Maintainability" value={report.scores.maintainability} color="#fbbf24" />
-            <ScoreMini label="Code Quality" value={report.scores.codeQuality} color="#60a5fa" />
+            <ScoreMini label={t("analysis", "scoreLabels.overall")} value={report.scores.overall} color="#22d3ee" />
+            <ScoreMini label={t("analysis", "scoreLabels.security")} value={report.scores.security} color="#f472b6" />
+            <ScoreMini label={t("analysis", "scoreLabels.performance")} value={report.scores.performance} color="#34d399" />
+            <ScoreMini label={t("analysis", "scoreLabels.architecture")} value={report.scores.architecture} color="#a78bfa" />
+            <ScoreMini label={t("analysis", "scoreLabels.maintainability")} value={report.scores.maintainability} color="#fbbf24" />
+            <ScoreMini label={t("analysis", "scoreLabels.codeQuality")} value={report.scores.codeQuality} color="#60a5fa" />
           </div>
 
           <div className="mt-6 flex flex-col gap-2 sm:flex-row">
@@ -718,7 +719,7 @@ export function AnalyzeView() {
               className="flex-1 bg-gradient-to-r from-cyan-500 to-violet-500 text-white hover:opacity-90"
             >
               <FileText className="mr-1.5 h-4 w-4" />
-              View full report
+              {t("analysis", "viewFullReport")}
             </Button>
             <Button
               onClick={() => {
@@ -729,10 +730,10 @@ export function AnalyzeView() {
               className="flex-1"
             >
               <Sparkles className="mr-1.5 h-4 w-4" />
-              Chat with AI CTO
+              {t("analysis", "chatWithAI")}
             </Button>
             <Button onClick={reset} variant="ghost">
-              Analyze another
+              {t("analysis", "analyzeAnother")}
             </Button>
           </div>
         </GlassCard>
