@@ -4,7 +4,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireUserId } from "@/lib/auth";
-import { parseRepoUrl } from "@/lib/analysis-engine";
+import { parseRepoUrl } from "@/lib/repo-utils";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

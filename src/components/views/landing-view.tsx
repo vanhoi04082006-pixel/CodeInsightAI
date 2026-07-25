@@ -36,7 +36,7 @@ import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { useAppStore } from "@/lib/store";
 import { useT } from "@/lib/i18n";
-import { parseRepoUrl } from "@/lib/analysis-engine";
+import { parseRepoUrl } from "@/lib/repo-utils";
 import { PROVIDER_PRESETS } from "@/lib/providers";
 import { LandingFAQ } from "@/components/shared/landing-faq";
 import { useUpgrade } from "@/hooks/use-upgrade";

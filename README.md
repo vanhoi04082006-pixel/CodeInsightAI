@@ -6,7 +6,7 @@
 
 **Paste a GitHub Repository. AI Understands Everything. Analyze, Chat, Plan, Fix, and Ship Code Autonomously.**
 
-12 collaborating AI agents · 66 static analysis rules · 14 AI providers · BYOK (free) + Platform AI ($9/mo)
+12 collaborating AI agents · 66 static analysis rules · 15 AI providers · BYOK (free) + Platform AI (ShopAIKey default)
 
 ![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)
 ![React](https://img.shields.io/badge/React-19-blue?logo=react)
@@ -479,7 +479,7 @@ db.analysis.findUnique({ where: { id } })
 | **Database** | Prisma ORM — SQLite (local) + PostgreSQL/Neon (prod) |
 | **Auth** | NextAuth.js v4 (GitHub OAuth, JWT strategy) |
 | **Billing** | Stripe (subscriptions + checkout + portal + webhooks) |
-| **AI** | 14 providers (OpenRouter, OpenAI, Anthropic, Gemini, DeepSeek, Groq, Together, Fireworks, Mistral, xAI, Azure, Ollama, LM Studio, Custom) |
+| **AI** | 15 providers (ShopAIKey, OpenRouter, OpenAI, Anthropic, Gemini, DeepSeek, Groq, Together, Fireworks, Mistral, xAI, Azure, Ollama, LM Studio, Custom) |
 | **Encryption** | AES-256-GCM (via Node `crypto`) |
 | **Animation** | Framer Motion |
 | **Charts** | Recharts + d3-force |

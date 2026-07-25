@@ -40,7 +40,7 @@ describe("Billing / Usage limits", () => {
 
 describe("Repo URL Parser", () => {
   it("should parse valid GitHub URLs", async () => {
-    const { parseRepoUrl } = await import("@/lib/analysis-engine");
+    const { parseRepoUrl } = await import("@/lib/repo-utils");
     const result = parseRepoUrl("https://github.com/vercel/next.js");
     expect(result.valid).toBe(true);
     expect(result.owner).toBe("vercel");
@@ -48,7 +48,7 @@ describe("Repo URL Parser", () => {
   });
 
   it("should reject invalid URLs", async () => {
-    const { parseRepoUrl } = await import("@/lib/analysis-engine");
+    const { parseRepoUrl } = await import("@/lib/repo-utils");
     expect(parseRepoUrl("not-a-url").valid).toBe(false);
     expect(parseRepoUrl("https://example.com/test").valid).toBe(false);
   });

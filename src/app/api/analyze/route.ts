@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions, requireUserId } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { parseRepoUrl } from "@/lib/analysis-engine";
+import { parseRepoUrl } from "@/lib/repo-utils";
 import type { AnalysisReport } from "@/lib/types";
 import { checkQuota, incrementUsage } from "@/lib/billing/usage";
 

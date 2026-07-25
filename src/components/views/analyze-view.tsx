@@ -22,7 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAppStore } from "@/lib/store";
 import { useProvidersStore } from "@/lib/providers-store";
-import { ANALYSIS_STAGES, parseRepoUrl } from "@/lib/analysis-engine";
+import { ANALYSIS_STAGES, parseRepoUrl } from "@/lib/repo-utils";
 import type { AnalysisReport } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";

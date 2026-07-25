@@ -250,9 +250,8 @@ class RepositoryAnalystAgent extends BaseAgent {
         `Live analysis failed (${msg}); using mock engine`,
         "warn",
       );
-      onProgress(85, "Using mock analysis engine (live fetch failed)");
-      const { generateReport } = await import("@/lib/analysis-engine");
-      report = generateReport(`https://github.com/${parsed.owner}/${parsed.repo}`);
+      onProgress(85, "Live analysis failed — no fallback available");
+      throw new Error(`Live analysis failed: ${msg}. No fallback engine available.`);
       usedFallback = true;
     }
 

@@ -62,5 +62,6 @@
   "noProviders": "Chưa có provider nào",
   "connectYourAI": "Kết nối AI",
   "connectYourAIDesc": "Chưa có provider nào. Thêm OpenRouter, OpenAI, Anthropic, Ollama local, hoặc bất kỳ API tương thích OpenAI nào.",
-  "addFirst": "Thêm provider đầu tiên"
+  "addFirst": "Thêm provider đầu tiên",
+  "imported_plural": "Imported {n} custom personalities"
 }
