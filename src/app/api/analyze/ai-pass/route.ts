@@ -24,9 +24,10 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { analysisId, passType, language, platformProvider, platformModel } = body as {
+    const { analysisId, passType, language, platformProvider, platformModel, provider } = body as {
       analysisId: string; passType: PassType; language?: string;
       platformProvider?: string; platformModel?: string;
+      provider?: { providerId: string; apiKey: string; baseUrl: string; model: string };
     };
 
     if (!analysisId || !passType) {
@@ -46,15 +47,30 @@ export async function POST(req: NextRequest) {
     const parsedRepo = analysis.parsedData ? JSON.parse(analysis.parsedData) : null;
     const lang = language || "en";
 
-    // Resolve AI provider
+    // Resolve AI provider — priority: BYOK (client) → Platform → DB credential
     const { getPlatformAIProvider, getPlatformAIConfig } = await import("@/lib/platform-ai");
     const { decrypt } = await import("@/lib/crypto");
 
     let aiConfig = null;
-    if (platformProvider) {
+
+    // 1. BYOK — client-provided API key (Custom mode)
+    if (provider?.apiKey) {
+      aiConfig = {
+        providerId: provider.providerId,
+        apiKey: provider.apiKey,
+        baseUrl: provider.baseUrl || "",
+        model: provider.model || "",
+        temperature: 0.7, maxTokens: 4096, timeout: 50,
+      };
+    }
+
+    // 2. Platform AI — admin's default
+    if (!aiConfig && platformProvider) {
       aiConfig = await getPlatformAIProvider(platformProvider, platformModel);
     }
     if (!aiConfig) aiConfig = await getPlatformAIConfig();
+
+    // 3. BYOK — from DB (encrypted credential)
     if (!aiConfig) {
       const cred = await db.providerCredential.findFirst({
         where: { userId, enabled: true },
