@@ -161,6 +161,15 @@ export function CustomCursor() {
   useEffect(() => { aiLoadingRef.current = aiLoading; }, [aiLoading]);
   useEffect(() => { clickingRef.current = clicking; }, [clicking]);
 
+  // Add has-custom-cursor class to <html> — gates the `cursor: none` CSS rule
+  // This ensures native cursor is only hidden when CustomCursor is actually mounted
+  useEffect(() => {
+    document.documentElement.classList.add("has-custom-cursor");
+    return () => {
+      document.documentElement.classList.remove("has-custom-cursor");
+    };
+  }, []);
+
   // Check AI loading state
   useEffect(() => {
     const checkLoading = () => {

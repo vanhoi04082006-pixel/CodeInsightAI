@@ -165,6 +165,7 @@ export default function Home() {
             <span>Loading shared report…</span>
           </div>
         </div>
+        <CustomCursor />
       </div>
     );
   }
@@ -185,6 +186,7 @@ export default function Home() {
           {/* Pass isShared prop to ProjectView so it hides action buttons */}
           <ProjectView isShared />
         </main>
+        <CustomCursor />
       </div>
     );
   }

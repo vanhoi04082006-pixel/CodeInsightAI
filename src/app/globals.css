@@ -543,9 +543,9 @@ button:active:not(:disabled) {
   animation: glow-pulse 2s ease-in-out infinite;
 }
 
-/* ═══ Custom Cursor — hide default cursor on desktop ═══ */
+/* ═══ Custom Cursor — hide default cursor only when CustomCursor is mounted ═══ */
 @media (hover: hover) and (pointer: fine) {
-  * {
+  html.has-custom-cursor * {
     cursor: none !important;
   }
 }

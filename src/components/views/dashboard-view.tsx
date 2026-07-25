@@ -29,6 +29,7 @@ import { TokenUsageWidget } from "@/components/shared/token-usage-widget";
 import { TrendsCard } from "@/components/shared/trends-card";
 import { useAppStore } from "@/lib/store";
 import { useT } from "@/lib/i18n";
+import { toast } from "sonner";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -60,12 +61,14 @@ export function DashboardView() {
 
   const r = activeReport;
 
+  // Score cards — delta from AI priorities if available, otherwise neutral
+  const aiPriorities = (r as any).deepAnalysis?.priorities as any[] | undefined;
   const scoreCards = [
-    { label: "Security", value: r.scores.security, icon: ShieldCheck, color: "#f472b6", delta: "+4" },
-    { label: "Performance", value: r.scores.performance, icon: Gauge, color: "#34d399", delta: "+2" },
-    { label: "Architecture", value: r.scores.architecture, icon: Network, color: "#a78bfa", delta: "+6" },
-    { label: "Maintainability", value: r.scores.maintainability, icon: Wrench, color: "#fbbf24", delta: "-1" },
-    { label: "Code Quality", value: r.scores.codeQuality, icon: Code2, color: "#60a5fa", delta: "+3" },
+    { label: "Security", value: r.scores.security, icon: ShieldCheck, color: "#f472b6", delta: aiPriorities?.some(p => p.issue?.toLowerCase().includes("security")) ? "!" : "—" },
+    { label: "Performance", value: r.scores.performance, icon: Gauge, color: "#34d399", delta: aiPriorities?.some(p => p.issue?.toLowerCase().includes("performance")) ? "!" : "—" },
+    { label: "Architecture", value: r.scores.architecture, icon: Network, color: "#a78bfa", delta: aiPriorities?.some(p => p.issue?.toLowerCase().includes("architecture")) ? "!" : "—" },
+    { label: "Maintainability", value: r.scores.maintainability, icon: Wrench, color: "#fbbf24", delta: aiPriorities?.some(p => p.issue?.toLowerCase().includes("maintain")) ? "!" : "—" },
+    { label: "Code Quality", value: r.scores.codeQuality, icon: Code2, color: "#60a5fa", delta: aiPriorities?.some(p => p.issue?.toLowerCase().includes("quality")) ? "!" : "—" },
   ];
 
   const breakdownData = r.scoreBreakdown.map((b) => ({
@@ -500,6 +503,34 @@ function EmptyDashboard() {
         setActiveReport(d.report);
         setActiveAnalysisId(id);
         useAppStore.getState().clearChat();
+
+        // Resume AI polling if AI is still pending (e.g. after refresh)
+        if (d.aiStatus === "pending") {
+          useAppStore.getState().setAiPending(true);
+          // Start polling for AI results
+          const pollAI = async (attempts = 0) => {
+            if (attempts > 120) {
+              useAppStore.getState().setAiPending(false);
+              return;
+            }
+            try {
+              const r = await fetch(`/api/report?id=${id}`, { cache: "no-store" });
+              const data = await r.json();
+              if (data.aiStatus === "done" && data.report) {
+                setActiveReport(data.report);
+                useAppStore.getState().setAiPending(false);
+                toast.success("AI deep analysis complete!");
+              } else if (data.aiStatus === "failed" || data.aiStatus === "none") {
+                useAppStore.getState().setAiPending(false);
+              } else {
+                setTimeout(() => pollAI(attempts + 1), 3000);
+              }
+            } catch {
+              setTimeout(() => pollAI(attempts + 1), 5000);
+            }
+          };
+          setTimeout(() => pollAI(0), 3000);
+        }
       }
     } catch { /* ignore */ }
   };

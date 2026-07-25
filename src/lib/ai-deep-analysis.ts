@@ -76,11 +76,14 @@ export async function runDeepAnalysis(
       runPass(provider, "quality", parsed, report, language),
     ]);
 
-    // Pass 5 + 6: Performance Deep Dive + Best Practices Audit (parallel)  ← NEW
+    // Pass 5 + 6: Performance Deep Dive + Best Practices Audit (parallel)
     const [perfResult, bestPracticesResult] = await Promise.all([
       runPass(provider, "performance", parsed, report, language),
       runPass(provider, "bestPractices", parsed, report, language),
     ]);
+
+    // Pass 8: Duplicate Code Analysis (AI-powered — replaces static function-name match)
+    const duplicateResult = await runPass(provider, "duplicates", parsed, report, language);
 
     const result: DeepAnalysisResult = {
       badge: "deep-ai",
@@ -88,8 +91,8 @@ export async function runDeepAnalysis(
       securityReview: securityResult?.reviews || [],
       architectureReview: archResult || { strengths: [], weaknesses: [], suggestions: [] },
       codeQualityReview: qualityResult?.reviews || [],
-      performanceReview: perfResult?.reviews || [],                          // ← NEW
-      bestPracticesAudit: bestPracticesResult || {                           // ← NEW
+      performanceReview: perfResult?.reviews || [],
+      bestPracticesAudit: bestPracticesResult || {
         framework: parsed.frameworks[0]?.name || "Unknown",
         passed: [],
         failed: [],
@@ -97,6 +100,7 @@ export async function runDeepAnalysis(
       },
       priorities: prioritiesResult?.priorities || [],
       roadmap: prioritiesResult?.roadmap || [],
+      duplicateAnalysis: duplicateResult?.duplicates || [],
     };
 
     return result;
@@ -124,7 +128,7 @@ function getMaxTokensForModel(model: string): number {
 
 async function runPass(
   provider: AIProviderConfig,
-  passType: "summary" | "security" | "architecture" | "quality" | "priorities" | "performance" | "bestPractices",
+  passType: "summary" | "security" | "architecture" | "quality" | "priorities" | "performance" | "bestPractices" | "duplicates",
   parsed: ParsedRepository,
   report: AnalysisReport,
   language: string = "en"
@@ -357,6 +361,33 @@ Audit this codebase against framework-specific best practices. For each framewor
 
 Respond as JSON:
 {"framework": "string (primary framework)", "passed": ["string (practices that pass)"], "failed": [{"practice": "string", "recommendation": "string"}], "score": number (0-100)}`;
+
+    case "duplicates":
+      // Pass 8: AI-powered duplicate code detection
+      // Send actual function signatures + file paths for AI to analyze
+      const allFunctions = parsed.files
+        .flatMap(f => f.functions.map(fn => ({ file: f.path, fn })))
+        .slice(0, 100); // cap to avoid token overflow
+      const functionList = allFunctions
+        .map(f => `- ${f.file}::${f.fn}`)
+        .join("\n");
+
+      return `${repoInfo}
+
+Functions found in codebase (${allFunctions.length} total, showing first 100):
+${functionList}
+
+Static duplicate detection found these potential duplicates:
+${report.duplicates.map(d => `- Group ${d.group}: ${d.files.join(", ")} (~${d.lines} lines)`).join("\n") || "None found by static analysis"}
+
+Analyze for REAL code duplication — not just function name matching. Look for:
+1. Duplicate business logic (same algorithm, different function names)
+2. Structural duplication (similar code patterns across files)
+3. Copy-paste code with minor variations
+4. Redundant utility functions that could be consolidated
+
+For each real duplicate found, provide the files involved, the type of duplication, and a consolidation recommendation. Respond as JSON:
+{"duplicates": [{"files": ["string"], "type": "logic|structural|copy-paste|redundant", "description": "string", "recommendation": "string", "estimatedLinesSaved": number}]}`;
 
     default:
       return "";
