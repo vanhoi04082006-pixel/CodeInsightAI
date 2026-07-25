@@ -71,34 +71,32 @@ export function AnalyzeView() {
   };
 
   // requestAnimationFrame loop — interpolates displayed progress toward target.
-  // Speed: covers ~1.5% per frame at 60fps ≈ 90%/s, but slows near target
-  // (easeOut) so it never overshoots.
-  const animateProgress = useCallback((timestamp: number) => {
-    if (lastFrameTime.current === 0) lastFrameTime.current = timestamp;
-    const deltaMs = timestamp - lastFrameTime.current;
-    lastFrameTime.current = timestamp;
+  const animateProgress = useRef<(timestamp: number) => void>(() => {});
 
-    setDisplayProgress((current) => {
-      const target = targetProgress.current;
-      if (Math.abs(target - current) < 0.1) {
-        return target;  // snapped to target
-      }
-      // Ease toward target. Scale by delta time so it's frame-rate independent.
-      // At 60fps, deltaMs ≈ 16ms. We want ~1.2%/frame when far, slowing near target.
-      const distance = target - current;
-      const speed = Math.max(0.4, Math.abs(distance) * 0.12) * (deltaMs / 16.67);
-      const next = current + Math.sign(distance) * Math.min(Math.abs(distance), speed);
-      return Math.round(next * 10) / 10;  // 1 decimal place
-    });
+  useEffect(() => {
+    animateProgress.current = (timestamp: number) => {
+      if (lastFrameTime.current === 0) lastFrameTime.current = timestamp;
+      const deltaMs = timestamp - lastFrameTime.current;
+      lastFrameTime.current = timestamp;
 
-    rafId.current = requestAnimationFrame(animateProgress);
+      setDisplayProgress((current) => {
+        const target = targetProgress.current;
+        if (Math.abs(target - current) < 0.1) return target;
+        const distance = target - current;
+        const speed = Math.max(0.4, Math.abs(distance) * 0.12) * (deltaMs / 16.67);
+        const next = current + Math.sign(distance) * Math.min(Math.abs(distance), speed);
+        return Math.round(next * 10) / 10;
+      });
+
+      rafId.current = requestAnimationFrame(animateProgress.current);
+    };
   }, []);
 
   const startProgressAnimation = useCallback(() => {
-    if (rafId.current !== null) return;  // already running
+    if (rafId.current !== null) return;
     lastFrameTime.current = 0;
-    rafId.current = requestAnimationFrame(animateProgress);
-  }, [animateProgress]);
+    rafId.current = requestAnimationFrame(animateProgress.current);
+  }, []);
 
   const stopProgressAnimation = useCallback(() => {
     if (rafId.current !== null) {
@@ -122,7 +120,7 @@ export function AnalyzeView() {
   useEffect(() => {
     const pending = useAppStore.getState().consumePendingRepoUrl?.();
     if (pending) {
-      setUrl(pending);
+      Promise.resolve().then(() => setUrl(pending));
     }
   }, []);
 
@@ -134,6 +132,18 @@ export function AnalyzeView() {
   const runAIPasses = useCallback(async (analysisId: string, language: string, aiBody: Record<string, any>) => {
     setAiStatus("pending");
     useAppStore.getState().setAiPending(true);
+
+    // Map AI pass types to feature routing keys
+    const PASS_TO_FEATURE: Record<string, string> = {
+      summary: "summary",
+      priorities: "summary",
+      security: "security",
+      architecture: "architecture",
+      quality: "bugs",
+      performance: "performance",
+      bestPractices: "refactor",
+      duplicates: "refactor",
+    };
 
     const passes = [
       { type: "summary", name: "Executive Summary" },
@@ -151,6 +161,10 @@ export function AnalyzeView() {
     for (const pass of passes) {
       setAiPassProgress({ current: completedCount + 1, total: passes.length, passName: pass.name });
 
+      // Check if this pass has a specific feature routing (Custom mode)
+      const featureKey = PASS_TO_FEATURE[pass.type];
+      const routedProvider = aiBody.featureRouting?.[featureKey];
+
       try {
         const res = await fetch("/api/analyze/ai-pass", {
           method: "POST",
@@ -159,7 +173,9 @@ export function AnalyzeView() {
             analysisId,
             passType: pass.type,
             language,
-            ...aiBody,
+            // If feature routing exists for this pass, use that provider
+            // Otherwise fall back to default provider
+            ...(routedProvider ? { provider: routedProvider } : aiBody),
           }),
         });
         const data = await res.json();
@@ -230,23 +246,38 @@ export function AnalyzeView() {
     // Start real async analysis with job polling
     // Send platform provider + model if Pro user, or BYOK key if available
     try {
-      const { useEffectiveAIConfig, buildAIRequestBody } = await import("@/hooks/use-effective-ai-config");
-      // Read config from localStorage (sync — hook is for component state, but we
-      // need it in the event handler, so we read directly)
+      // Read config from Zustand store (sync)
       const aiMode = useProvidersStore.getState().aiMode;
       const providers = useProvidersStore.getState().providers;
+      const routing = useProvidersStore.getState().routing;
       const byokProvider = providers.find((p) => p.enabled && p.apiKey);
       const platformSelection = JSON.parse(localStorage.getItem("codeinsight-platform-selection") || "null");
-      const session = await import("next-auth/react").then(m => m.getSession ? null : null);
+
       // Build request body
       const aiBody: Record<string, any> = {};
-      // Pro user with platform selection: use admin key
+
+      // Build feature routing map (BYOK Custom mode only)
+      // Maps feature → { providerId, apiKey, baseUrl, model }
+      const featureRouting: Record<string, any> = {};
+      if (aiMode === "byok" && Object.keys(routing).length > 0) {
+        for (const [feature, providerId] of Object.entries(routing)) {
+          const p = providers.find(pr => pr.id === providerId && pr.enabled);
+          if (p) {
+            featureRouting[feature] = {
+              providerId: p.providerId,
+              apiKey: p.apiKey,
+              baseUrl: p.baseUrl,
+              model: p.model,
+            };
+          }
+        }
+      }
+
       if (platformSelection && (!byokProvider || aiMode === "platform")) {
         aiBody.platformProvider = platformSelection.providerId;
         aiBody.platformModel = platformSelection.model;
         aiBody.aiMode = "platform";
       } else if (byokProvider) {
-        // BYOK with saved key
         aiBody.provider = {
           providerId: byokProvider.providerId,
           apiKey: byokProvider.apiKey,
@@ -255,6 +286,10 @@ export function AnalyzeView() {
           label: byokProvider.label,
         };
         aiBody.aiMode = "byok";
+        // Send feature routing if user has set it
+        if (Object.keys(featureRouting).length > 0) {
+          aiBody.featureRouting = featureRouting;
+        }
       }
 
       // Simulate progress while waiting for sync API response
