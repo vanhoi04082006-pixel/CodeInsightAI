@@ -11,7 +11,7 @@ import { checkQuota, incrementUsage } from "@/lib/billing/usage";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 60; // 60s — sync phase only (static analysis)
+export const maxDuration = 120; // 120s — sync phase (static analysis + GitHub fetch)
 
 // ── GitHub helpers ──
 async function getGithubAccessToken(): Promise<string | null> {
@@ -163,7 +163,18 @@ export async function POST(req: NextRequest) {
 
     // ── PHASE 1: Sync static analysis (~15-30s) ──
     const ghToken = await getGithubAccessToken();
-    const { report, parsedRepo } = await fetchAndAnalyzeFromGitHub(parsed.owner, parsed.name, ghToken);
+    let report: AnalysisReport;
+    let parsedRepo: any;
+    try {
+      const result = await fetchAndAnalyzeFromGitHub(parsed.owner, parsed.name, ghToken);
+      report = result.report;
+      parsedRepo = result.parsedRepo;
+    } catch (fetchErr: any) {
+      console.error("[/api/analyze] GitHub fetch/parse failed:", fetchErr);
+      return NextResponse.json({
+        error: fetchErr?.message || "Failed to fetch repository from GitHub. Check if the repo exists and is public (or sign in with GitHub for private repos).",
+      }, { status: 500 });
+    }
 
     // Persist to DB immediately (aiStatus = "pending" if AI enabled)
     const enableAi = body.aiEnhance !== false;
@@ -220,10 +231,11 @@ export async function POST(req: NextRequest) {
     });
   } catch (e: any) {
     console.error("[/api/analyze] Error:", e);
+    // Return actual error message so user knows what went wrong
+    const errMsg = e?.message || "Failed to analyze repository";
     return NextResponse.json({
-      error: e?.message?.includes("Repository not found") || e?.message?.includes("PRIVATE")
-        ? e.message
-        : "Failed to analyze repository. Please try again.",
+      error: errMsg,
+      errorType: e?.code || "unknown",
     }, { status: 500 });
   }
 }
