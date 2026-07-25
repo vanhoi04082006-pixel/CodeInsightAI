@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAppStore } from "@/lib/store";
+import { useProvidersStore } from "@/lib/providers-store";
 import { useT } from "@/lib/i18n";
 import { AnimatedBackground } from "@/components/shared/animated-background";
 import { CustomCursor } from "@/components/shared/custom-cursor";
@@ -121,8 +122,12 @@ export default function Home() {
         if (e.key.toLowerCase() === "h") { e.preventDefault(); setView("history"); return; }
         // ⌘, — Settings
         if (e.key === ",") { e.preventDefault(); setView("settings"); return; }
-        // ⌘P — Providers
-        if (e.key.toLowerCase() === "p") { e.preventDefault(); setView("providers"); return; }
+        // ⌘P — Providers (only if Custom mode)
+        if (e.key.toLowerCase() === "p") {
+          if (useProvidersStore.getState().aiMode === "byok") {
+            e.preventDefault(); setView("providers"); return;
+          }
+        }
         // ⌘M — Mission Control (Pro-gated in production — ProGate will show lock screen for free users)
         if (e.key.toLowerCase() === "m") { e.preventDefault(); setView("mission"); return; }
         // ⌘C — Chat (only if not selecting text)
@@ -248,7 +253,9 @@ export default function Home() {
               </div>
             </button>
             <nav className="hidden items-center gap-6 text-sm text-muted-foreground md:flex">
-              <button onClick={() => setView("providers")} className="hover:text-foreground">{t("common", "nav.providers")}</button>
+              {useProvidersStore.getState().aiMode === "byok" && (
+                <button onClick={() => setView("providers")} className="hover:text-foreground">{t("common", "nav.providers")}</button>
+              )}
               <button onClick={() => setView("history")} className="hover:text-foreground">{t("common", "nav.history")}</button>
               <button onClick={() => setView("settings")} className="hover:text-foreground">{t("common", "nav.settings")}</button>
             </nav>
@@ -347,7 +354,9 @@ function Footer() {
           <nav className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1 text-xs text-muted-foreground">
             <button onClick={() => setView("landing")} className="hover:text-foreground">{t("common", "nav.home")}</button>
             <button onClick={() => setView("dashboard")} className="hover:text-foreground">{t("common", "nav.dashboard")}</button>
-            <button onClick={() => setView("providers")} className="hover:text-foreground">{t("common", "nav.providers")}</button>
+            {useProvidersStore.getState().aiMode === "byok" && (
+              <button onClick={() => setView("providers")} className="hover:text-foreground">{t("common", "nav.providers")}</button>
+            )}
             <button onClick={() => setView("history")} className="hover:text-foreground">{t("common", "nav.history")}</button>
             <button onClick={() => setView("settings")} className="hover:text-foreground">{t("common", "nav.settings")}</button>
             <a href="https://github.com/vanhoi04082006-pixel/CodeInsightAI" target="_blank" rel="noreferrer" className="hover:text-foreground">GitHub</a>

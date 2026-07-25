@@ -191,7 +191,7 @@ export function AppSidebar() {
       </nav>
 
       {/* AI status card (replaces former upgrade card) */}
-      {!collapsed && <AIStatusCard onOpen={() => setView("providers")} />}
+      {!collapsed && <AIStatusCard onOpen={() => { if (!providersLocked) setView("providers"); }} />}
     </motion.aside>
   );
 }

@@ -187,9 +187,13 @@ export function SettingsView() {
                   <p className="text-sm font-medium">{t("settings", "manageProviders")}</p>
                   <p className="text-[11px] text-muted-foreground">{t("settings", "manageProvidersDesc")}</p>
                 </div>
-                <Button onClick={() => useAppStore.getState().setView("providers")} className="bg-gradient-to-r from-cyan-500 to-violet-500 text-white">
-                  {t("settings", "openProviders")} <ArrowRight className="ml-1.5 h-4 w-4" />
-                </Button>
+                {aiMode === "byok" ? (
+                  <Button onClick={() => useAppStore.getState().setView("providers")} className="bg-gradient-to-r from-cyan-500 to-violet-500 text-white">
+                    {t("settings", "openProviders")} <ArrowRight className="ml-1.5 h-4 w-4" />
+                  </Button>
+                ) : (
+                  <span className="text-xs text-muted-foreground/50">🔒 Switch to Custom mode first</span>
+                )}
               </div>
             </GlassCard>
 
