@@ -59,9 +59,14 @@ export function AppSidebar() {
   const plan = (session as any)?.plan ?? "free";
   const isAdmin = role === "admin";
   const isPro = plan !== "free" || isAdmin;
+  const aiMode = useProvidersStore((s) => s.aiMode);
 
   // In production, Mission Control is Pro-only — free users see a lock icon
   const missionLocked = isProduction && !isPro;
+
+  // Providers (Nhà cung cấp AI) chỉ mở khi ở Custom mode (BYOK)
+  // Default mode → khóa (dùng admin key, không cần config)
+  const providersLocked = aiMode !== "byok";
 
   // Mission badge: green pulse when a mission is running
   const missionActive = useAppStore((s) => s.view === "mission" && !!s.activeReport);
@@ -119,7 +124,8 @@ export function AppSidebar() {
         {visibleNav.map((item) => {
         const active = view === item.id;
         const isMissionLocked = item.id === "mission" && missionLocked;
-        const disabled = item.disabled === true || ((item.id === "project" || item.id === "chat" || item.id === "mission") && !activeReport && !isMissionLocked);
+        const isProvidersLocked = item.id === "providers" && providersLocked;
+        const disabled = item.disabled === true || ((item.id === "project" || item.id === "chat" || item.id === "mission") && !activeReport && !isMissionLocked) || isProvidersLocked;
           const Icon = item.icon;
           const label = t("common", item.labelKey);
           return (
@@ -133,9 +139,10 @@ export function AppSidebar() {
                   ? "text-foreground"
                   : "text-muted-foreground hover:bg-white/5 hover:text-foreground",
                 disabled && "cursor-not-allowed opacity-40 hover:bg-transparent",
-                isMissionLocked && "text-amber-400/70 hover:text-amber-300"
+                isMissionLocked && "text-amber-400/70 hover:text-amber-300",
+                isProvidersLocked && "text-muted-foreground/50"
               )}
-              title={collapsed ? (isMissionLocked ? `${label} (Pro)` : label) : undefined}
+              title={collapsed ? (isMissionLocked ? `${label} (Pro)` : isProvidersLocked ? `${label} (Custom mode)` : label) : undefined}
             >
               {active && (
                 <motion.span
@@ -155,6 +162,13 @@ export function AppSidebar() {
                 <span className="ml-auto flex items-center gap-1">
                   <Lock className="h-3 w-3 text-amber-400" />
                   {!collapsed && <span className="rounded-full bg-amber-500/15 px-1.5 text-[8px] font-bold uppercase text-amber-300">Pro</span>}
+                </span>
+              )}
+              {/* Lock badge for Providers (Custom mode only) */}
+              {isProvidersLocked && (
+                <span className="ml-auto flex items-center gap-1">
+                  <Lock className="h-3 w-3 text-muted-foreground/50" />
+                  {!collapsed && <span className="rounded-full bg-white/5 px-1.5 text-[8px] font-bold uppercase text-muted-foreground/50">Custom</span>}
                 </span>
               )}
               {/* Badge for active mission */}
@@ -263,12 +277,15 @@ export function MobileNav() {
   const { data: session } = useSession();
   const role = (session as any)?.role ?? "user";
   const isAdmin = role === "admin";
+  const aiMode = useProvidersStore((s) => s.aiMode);
+  const providersLocked = aiMode !== "byok";
   const items = NAV.filter((n) => n.id !== "landing" && (!n.adminOnly || isAdmin));
   return (
     <nav className="glass-strong fixed bottom-0 left-0 right-0 z-30 flex items-center justify-around border-t border-white/10 px-1 py-1.5 md:hidden">
       {items.map((item) => {
         const active = view === item.id;
-        const disabled = item.disabled === true || ((item.id === "project" || item.id === "chat" || item.id === "mission") && !activeReport);
+        const isProvidersLocked = item.id === "providers" && providersLocked;
+        const disabled = item.disabled === true || ((item.id === "project" || item.id === "chat" || item.id === "mission") && !activeReport) || isProvidersLocked;
         const Icon = item.icon;
         const label = t("common", item.labelKey);
         return (
