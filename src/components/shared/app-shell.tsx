@@ -276,16 +276,20 @@ export function MobileNav() {
   const { t } = useT();
   const { data: session } = useSession();
   const role = (session as any)?.role ?? "user";
+  const plan = (session as any)?.plan ?? "free";
   const isAdmin = role === "admin";
+  const isPro = plan !== "free" || isAdmin;
   const aiMode = useProvidersStore((s) => s.aiMode);
   const providersLocked = aiMode !== "byok";
+  const missionLocked = isProduction && !isPro;
   const items = NAV.filter((n) => n.id !== "landing" && (!n.adminOnly || isAdmin));
   return (
     <nav className="glass-strong fixed bottom-0 left-0 right-0 z-30 flex items-center justify-around border-t border-white/10 px-1 py-1.5 md:hidden">
       {items.map((item) => {
         const active = view === item.id;
         const isProvidersLocked = item.id === "providers" && providersLocked;
-        const disabled = item.disabled === true || ((item.id === "project" || item.id === "chat" || item.id === "mission") && !activeReport) || isProvidersLocked;
+        const isMissionLocked = item.id === "mission" && missionLocked;
+        const disabled = item.disabled === true || ((item.id === "project" || item.id === "chat" || item.id === "mission") && !activeReport && !isMissionLocked) || isProvidersLocked || isMissionLocked;
         const Icon = item.icon;
         const label = t("common", item.labelKey);
         return (

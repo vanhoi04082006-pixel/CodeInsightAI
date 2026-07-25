@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAppStore } from "@/lib/store";
 import { useProvidersStore } from "@/lib/providers-store";
+import { isProduction } from "@/lib/env";
 import { useT } from "@/lib/i18n";
 import { AnimatedBackground } from "@/components/shared/animated-background";
 import { CustomCursor } from "@/components/shared/custom-cursor";
@@ -128,8 +129,12 @@ export default function Home() {
             e.preventDefault(); setView("providers"); return;
           }
         }
-        // ⌘M — Mission Control (Pro-gated in production — ProGate will show lock screen for free users)
-        if (e.key.toLowerCase() === "m") { e.preventDefault(); setView("mission"); return; }
+        // ⌘M — Mission Control (Pro-only in production)
+        if (e.key.toLowerCase() === "m") {
+          if (!isProduction || (session as any)?.plan !== "free") {
+            e.preventDefault(); setView("mission"); return;
+          }
+        }
         // ⌘C — Chat (only if not selecting text)
         if (e.key.toLowerCase() === "c" && !window.getSelection()?.toString()) {
           e.preventDefault(); setView("chat"); return;
@@ -141,8 +146,12 @@ export default function Home() {
           const handler = (e2: KeyboardEvent) => {
             const map: Record<string, string> = {
               d: "dashboard", a: "analyze", p: "project", c: "chat",
-              h: "history", s: "settings", m: "mission", l: "landing",
+              h: "history", s: "settings", l: "landing",
             };
+            // Only add mission if not locked
+            if (!isProduction || (session as any)?.plan !== "free") {
+              map.m = "mission";
+            }
             const target = map[e2.key.toLowerCase()];
             if (target) {
               e2.preventDefault();
