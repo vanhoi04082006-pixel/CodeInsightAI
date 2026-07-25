@@ -528,10 +528,6 @@ function ToggleRow({ label, desc, defaultChecked, checked, onCheckedChange }: { 
 /* ---------- AI Settings Card ---------- */
 function AISettingsCard() {
   const { t } = useT();
-  const providers = useProvidersStore((s) => s.providers);
-  const routing = useProvidersStore((s) => s.routing);
-  const setRouting = useProvidersStore((s) => s.setRouting);
-  const updateProvider = useProvidersStore((s) => s.updateProvider);
 
   const customPersonalities = usePersonalityStore((s) => s.custom);
   const activePersonalityId = usePersonalityStore((s) => s.activeId);
@@ -543,46 +539,12 @@ function AISettingsCard() {
     [activePersonalityId, customPersonalities]
   );
 
-  const enabledProviders = providers.filter((p) => p.enabled);
-  const chatProviderId = routing.chat;
-  const chatProvider = enabledProviders.find((p) => p.id === chatProviderId);
-
   return (
     <GlassCard className="p-6">
       <h3 className="flex items-center gap-2 text-sm font-semibold"><Cpu className="h-4 w-4 text-cyan-300" /> {t("settings", "aiConfig")}</h3>
-      <p className="mt-1 text-xs text-muted-foreground">{t("settings", "aiConfigDesc")}</p>
+      <p className="mt-1 text-xs text-muted-foreground">AI personality, temperature and token settings for chat & analysis.</p>
 
       <div className="mt-4 space-y-4">
-        <div className="space-y-1.5">
-          <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground"><Cpu className="h-3 w-3" /> {t("settings", "providerChat")}</label>
-          <Select value={chatProviderId ?? "__default__"} onValueChange={(v) => setRouting("chat", v === "__default__" ? undefined : v)}>
-            <SelectTrigger className="bg-white/[0.03]"><SelectValue placeholder={t("settings", "builtInAI")} /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__default__">{t("settings", "builtInAI")}</SelectItem>
-              {enabledProviders.map((p) => (
-                <SelectItem key={p.id} value={p.id}>{p.label} — {p.model}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {enabledProviders.length === 0 && (
-            <p className="text-[10px] text-amber-400">{t("settings", "noEnabledProviders")}</p>
-          )}
-        </div>
-
-        {chatProvider && (
-          <div className="space-y-1.5">
-            <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground"><Cpu className="h-3 w-3" /> {t("settings", "ai.model")}</label>
-            <Select value={chatProvider.model} onValueChange={(v) => updateProvider(chatProvider.id, { model: v })}>
-              <SelectTrigger className="bg-white/[0.03]"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {(PRESET_BY_ID[chatProvider.providerId]?.models ?? [chatProvider.model]).map((m) => (
-                  <SelectItem key={m} value={m}>{m}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-
         <div className="space-y-1.5">
           <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground"><Bot className="h-3 w-3" /> {t("settings", "personality")}</label>
           <Select value={activePersonality.id} onValueChange={(v) => { setActivePersonality(v); }}>
