@@ -175,7 +175,7 @@ export function ProjectView({ isShared = false }: { isShared?: boolean }) {
           </p>
           <div className="mt-2 flex flex-wrap gap-1.5">
             {Array.from(new Set(report.tags)).map((t, i) => (
-              <span key={`${t}-${i}`} className="rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-0.5 text-[10px] text-muted-foreground">{t}</span>
+              <span key={`${t}-${i}`} className="rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-0.5 text-[10px] text-muted-foreground">{String(t)}</span>
             ))}
           </div>
         </div>

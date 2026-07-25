@@ -1,3 +1,4 @@
+import { requireUserId } from "@/lib/auth";
 // POST /api/git/operation — Execute a git operation
 import { NextRequest, NextResponse } from "next/server";
 import { gitOps, generateCommitMessage, generateChangelog, diffReviewer } from "@/lib/git-intelligence";

@@ -515,8 +515,8 @@ export function CodeGraphView({ analysisId }: { analysisId: string | null }) {
                   <p className="font-medium tabular-nums">{degreeMap.get(inspector.node.id) || 0}</p>
                 </div>
               </div>
-              {inspector.node.metadata.description && (
-                <p className="text-[11px] leading-relaxed text-muted-foreground">{inspector.node.metadata.description}</p>
+              {(inspector.node.metadata as any).description && (
+                <p className="text-[11px] leading-relaxed text-muted-foreground">{(inspector.node.metadata as any).description}</p>
               )}
               <div className="space-y-1">
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Incoming ({inspector.neighbors.incoming.length})</p>

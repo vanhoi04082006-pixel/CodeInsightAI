@@ -1,3 +1,4 @@
+import { requireUserId } from "@/lib/auth";
 // GET /api/agents/status — Get agent system status (registered agents, queue stats, recent events)
 import { NextResponse } from "next/server";
 import { registerAllAgents, agentRegistry, taskQueue, eventBus } from "@/lib/agents";

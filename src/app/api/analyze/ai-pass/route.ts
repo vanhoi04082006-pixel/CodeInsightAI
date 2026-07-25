@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
     const { getPlatformAIProvider, getPlatformAIConfig } = await import("@/lib/platform-ai");
     const { decrypt } = await import("@/lib/crypto");
 
-    let aiConfig = null;
+    let aiConfig: any = null;
 
     // 1. BYOK — client-provided API key (Custom mode)
     if (provider?.apiKey) {
@@ -104,7 +104,7 @@ export async function POST(req: NextRequest) {
       })),
     }, report);
 
-    const maxTokens = MODEL_MAX_TOKENS[aiConfig.model] ?? 2000;
+    const maxTokens = (MODEL_MAX_TOKENS as any)[aiConfig?.model] ?? 2000;
     const langInstruction = lang === "vi"
       ? "\n\nQUAN TRỌNG: Trả lời bằng tiếng Việt. Giữ nguyên code, file paths, thuật ngữ kỹ thuật bằng tiếng Anh."
       : "";

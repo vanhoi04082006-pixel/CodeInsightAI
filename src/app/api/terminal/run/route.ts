@@ -1,3 +1,4 @@
+import { requireUserId } from "@/lib/auth";
 // POST /api/terminal/run — Run a sandboxed shell command
 import { NextRequest, NextResponse } from "next/server";
 import { commandRunner, permissionSystem, commandHistory } from "@/lib/terminal";

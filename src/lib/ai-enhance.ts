@@ -47,7 +47,7 @@ Scores (0-100):
 - Overall: ${report.scores.overall}
 - Security: ${report.scores.security}
 - Performance: ${report.scores.performance}
-- Architecture: ${report.architecture.architecture}
+- Architecture: ${report.architecture.pattern}
 - Maintainability: ${report.scores.maintainability}
 
 Top issues found by static analysis:

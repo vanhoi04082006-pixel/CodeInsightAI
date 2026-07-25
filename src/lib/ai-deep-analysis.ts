@@ -50,6 +50,7 @@ export interface DeepAnalysisResult {
   };
   priorities: Array<{ issue: string; businessImpact: string; recommendation: string }>;
   roadmap: Array<{ phase: string; tasks: string[] }>;
+  duplicateAnalysis?: Array<{ files: string[]; type: string; description: string; recommendation: string; estimatedLinesSaved: number }>;
 }
 
 /**

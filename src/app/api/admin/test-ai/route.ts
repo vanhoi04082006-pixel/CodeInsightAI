@@ -18,7 +18,7 @@ export async function GET(req: Request) {
   const model = url.searchParams.get("model");
 
   try {
-    let aiConfig = null;
+    let aiConfig: any = null;
     if (providerId) {
       console.log(`[test-ai] Testing specific provider: ${providerId}/${model}`);
       aiConfig = await getPlatformAIProvider(providerId, model || undefined);

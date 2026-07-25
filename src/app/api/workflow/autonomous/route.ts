@@ -1,3 +1,4 @@
+import { requireUserId } from "@/lib/auth";
 // POST /api/workflow/autonomous — Run a full autonomous workflow
 // GET  /api/workflow/autonomous?eventId=xxx — (not implemented; workflows are async via this POST)
 import { NextRequest, NextResponse } from "next/server";

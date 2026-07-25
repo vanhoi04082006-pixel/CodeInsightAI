@@ -238,7 +238,7 @@ Use this graph knowledge to answer questions about function callers, callees, de
     // 5. Call the LLM — use user's provider (BYOK), Platform AI, or built-in
     const queueMs = Date.now() - requestStart;
     const genStart = Date.now();
-    let reply: string;
+    let reply: string = "";
     let llmError: string | undefined;
     let retryCount = 0;
 

@@ -1,3 +1,4 @@
+import { requireUserId } from "@/lib/auth";
 // POST /api/mission/start — Start an autonomous mission
 // Phase A: Executive Agent + ReAct loop.
 //

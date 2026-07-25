@@ -5,7 +5,8 @@
 // is emitted every 15s to keep proxies / browsers from closing the connection.
 // The subscriber is removed on client disconnect to avoid memory leaks.
 
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { requireUserId } from "@/lib/auth";
 import { missionEmitter } from "@/lib/agents/executive/event-emitter";
 import type { MissionEvent } from "@/lib/agents/executive/types";
 

@@ -1,3 +1,4 @@
+import { requireUserId } from "@/lib/auth";
 // POST /api/agents/execute — Execute a single task with an agent
 // GET  /api/agents/execute?taskId=xxx — Poll task status
 import { NextRequest, NextResponse } from "next/server";
