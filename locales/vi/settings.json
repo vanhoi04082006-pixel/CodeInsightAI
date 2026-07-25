@@ -43,7 +43,8 @@
     "cbNone": "Không",
     "cbProtanopia": "Protanopia",
     "cbDeuteranopia": "Deuteranopia",
-    "cbTritanopia": "Tritanopia"
+    "cbTritanopia": "Tritanopia",
+    "highContrastDesc": "Cải thiện độ tương phản đường viền và chữ."
   },
   "developer": {
     "title": "Chế độ nhà phát triển",

@@ -100,5 +100,27 @@
   "metricDirCycles": "Chu trình cấp thư mục",
   "metricLayerViolations": "Vi phạm layer",
   "metricGodModules": "God module",
-  "metricsDesc": "Chỉ số sâu được tính từ import graph thực tế (nguyên lý component của Robert C. Martin)."
+  "metricsDesc": "Chỉ số sâu được tính từ import graph thực tế (nguyên lý component của Robert C. Martin).",
+  "aiInsights": {
+    "deepAI": "Phân tích AI sâu (7-pass)",
+    "aiEnhanced": "AI-Enhanced",
+    "execSummary": "Tóm tắt điều hành",
+    "securityReview": "Đánh giá bảo mật AI",
+    "rootCause": "Nguyên nhân gốc",
+    "impact": "Tác động",
+    "archReview": "Đánh giá kiến trúc AI",
+    "strengths": "Điểm mạnh",
+    "weaknesses": "Điểm yếu",
+    "suggestions": "Đề xuất",
+    "perfReview": "Đánh giá hiệu năng AI",
+    "expected": "Kỳ vọng",
+    "bestPractices": "Kiểm tra best practices AI",
+    "passed": "Đạt",
+    "needsImprovement": "Cần cải thiện",
+    "priorities": "Ưu tiên AI",
+    "recommendation": "Khuyến nghị",
+    "roadmap": "Lộ trình AI",
+    "staticOnly": "Chỉ phân tích tĩnh",
+    "staticOnlyDesc": "Chưa có AI insights. Thêm AI provider hoặc bật Platform AI để phân tích sâu bằng AI."
+  }
 }

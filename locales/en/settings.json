@@ -43,7 +43,8 @@
     "cbNone": "None",
     "cbProtanopia": "Protanopia",
     "cbDeuteranopia": "Deuteranopia",
-    "cbTritanopia": "Tritanopia"
+    "cbTritanopia": "Tritanopia",
+    "highContrastDesc": "Improve border and text contrast for better visibility."
   },
   "developer": {
     "title": "Developer Mode",

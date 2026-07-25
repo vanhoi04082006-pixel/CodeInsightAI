@@ -869,7 +869,7 @@ function AccessibilitySettingsCard() {
           />
           <ToggleRow
             label={t("settings", "accessibility.highContrast")}
-            desc="Cải thiện độ tương phản đường viền và chữ." 
+            desc={t("settings", "accessibility.highContrastDesc")}
             checked={highContrast}
             onCheckedChange={(v) => { setHighContrast(v); toast.success(v ? t("notifications", "highContrastOn") : t("notifications", "highContrastOff")); }}
           />

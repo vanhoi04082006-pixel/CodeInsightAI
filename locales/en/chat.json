@@ -23,5 +23,6 @@
   "analyzeFirstToast": "Analyze a repository first",
   "chatFailedToast": "The AI couldn't respond. Please try again.",
   "personalityLabel": "Personality",
-  "clearToast": "Chat cleared"
+  "clearToast": "Chat cleared",
+  "requestLog": "Logs"
 }

@@ -374,7 +374,7 @@ export function ChatView() {
                 title="Toggle Request Log sidebar"
               >
                 <ScrollText className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Nhật ký</span>
+                <span className="hidden sm:inline">{t("chat", "requestLog")}</span>
               </button>
               {/* Toggle: Developer Console (only if dev mode enabled) */}
               {devModeEnabled && (

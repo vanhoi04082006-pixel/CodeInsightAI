@@ -100,5 +100,27 @@
   "metricDirCycles": "Directory cycles",
   "metricLayerViolations": "Layer violations",
   "metricGodModules": "God modules",
-  "metricsDesc": "Deep metrics computed from the real import graph (Robert C. Martin's component principles)."
+  "metricsDesc": "Deep metrics computed from the real import graph (Robert C. Martin's component principles).",
+  "aiInsights": {
+    "deepAI": "Deep AI Analysis (7-pass)",
+    "aiEnhanced": "AI-Enhanced",
+    "execSummary": "Executive Summary",
+    "securityReview": "AI Security Review",
+    "rootCause": "Root cause",
+    "impact": "Impact",
+    "archReview": "AI Architecture Review",
+    "strengths": "Strengths",
+    "weaknesses": "Weaknesses",
+    "suggestions": "Suggestions",
+    "perfReview": "AI Performance Review",
+    "expected": "Expected",
+    "bestPractices": "AI Best Practices Audit",
+    "passed": "Passed",
+    "needsImprovement": "Needs Improvement",
+    "priorities": "AI Priorities",
+    "recommendation": "Recommendation",
+    "roadmap": "AI Roadmap",
+    "staticOnly": "Static Analysis Only",
+    "staticOnlyDesc": "No AI insights available. Add an AI provider or enable Platform AI for deep AI-powered insights."
+  }
 }

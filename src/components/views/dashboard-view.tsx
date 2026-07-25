@@ -625,10 +625,10 @@ function EmptyDashboard() {
         <div>
           <div className="mb-3 flex items-center justify-between">
             <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-              {t("dashboard", "recentAnalyses") || "Recent Analyses"}
+              {t("dashboard", "recentAnalyses")}
             </h3>
             <Button variant="ghost" size="sm" onClick={() => setView("history")} className="text-xs">
-              {t("dashboard", "viewAll") || "View All"} →
+              {t("dashboard", "viewAll")} →
             </Button>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">

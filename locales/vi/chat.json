@@ -23,5 +23,6 @@
   "analyzeFirstToast": "Phân tích repository trước",
   "chatFailedToast": "AI không thể phản hồi. Vui lòng thử lại.",
   "personalityLabel": "Tính cách",
-  "clearToast": "Đã xóa trò chuyện"
+  "clearToast": "Đã xóa trò chuyện",
+  "requestLog": "Nhật ký"
 }
