@@ -36,6 +36,10 @@ interface AppState {
   pendingRepoUrl: string | null;
   setPendingRepoUrl: (url: string | null) => void;
   consumePendingRepoUrl: () => string | null;
+
+  // AI analysis status (for hybrid mode — shows banner in ProjectView)
+  aiPending: boolean;
+  setAiPending: (v: boolean) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -69,4 +73,7 @@ export const useAppStore = create<AppState>((set) => ({
     if (url) set({ pendingRepoUrl: null });
     return url;
   },
+
+  aiPending: false,
+  setAiPending: (v) => set({ aiPending: v }),
 }));

@@ -126,6 +126,59 @@ export function AnalyzeView() {
     }
   }, []);
 
+  // AI status: "idle" | "pending" | "done" | "failed"
+  const [aiStatus, setAiStatus] = useState<"idle" | "pending" | "done" | "failed">("idle");
+
+  // Poll for AI results (background AI analysis)
+  const pollForAIResults = useCallback(async (analysisId: string) => {
+    setAiStatus("pending");
+    useAppStore.getState().setAiPending(true);
+    let attempts = 0;
+    const maxAttempts = 120; // 120 × 3s = 6 minutes
+
+    const poll = async () => {
+      attempts++;
+      if (attempts > maxAttempts) {
+        setAiStatus("failed");
+        useAppStore.getState().setAiPending(false);
+        toast.warning("AI analysis timed out. Static results are still available.");
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/report?id=${analysisId}`, { cache: "no-store" });
+        if (!res.ok) { setTimeout(poll, 3000); return; }
+        const data = await res.json();
+
+        if (data.aiStatus === "done" && data.report) {
+          // AI complete — update report with AI insights
+          setReport(data.report);
+          setAiStatus("done");
+          useAppStore.getState().setAiPending(false);
+          toast.success("AI deep analysis complete!", {
+            description: "7-pass insights are now available in AI Insights tab",
+            duration: 5000,
+          });
+          return;
+        }
+
+        if (data.aiStatus === "failed") {
+          setAiStatus("failed");
+          useAppStore.getState().setAiPending(false);
+          toast.warning("AI analysis failed. Static results are still available.");
+          return;
+        }
+
+        // Still pending — poll again
+        setTimeout(poll, 3000);
+      } catch {
+        setTimeout(poll, 5000);
+      }
+    };
+
+    setTimeout(poll, 3000); // Start polling after 3s
+  }, []);
+
   const start = async () => {
     const parsed = parseRepoUrl(url);
     if (!parsed.valid) {
@@ -228,7 +281,7 @@ export function AnalyzeView() {
         return;
       }
 
-      // Success — sync mode returns report directly
+      // Success — hybrid mode returns static report immediately
       if (startData.report) {
         setTargetProgress(100);
         setStageIdx(ANALYSIS_STAGES.length - 1);
@@ -239,8 +292,21 @@ export function AnalyzeView() {
         setTimeout(() => {
           setPhase("done");
           stopProgressAnimation();
-          toast.success(`Analysis complete — ${startData.report.scores.overall}/100`);
+          const score = startData.report.scores?.overall ?? 0;
+          if (startData.aiStatus === "pending") {
+            toast.success(`Static analysis complete — ${score}/100`, {
+              description: "AI deep analysis (7-pass) is running in background...",
+              duration: 6000,
+            });
+          } else {
+            toast.success(`Analysis complete — ${score}/100`);
+          }
         }, 600);
+
+        // If AI is pending, poll for AI results
+        if (startData.aiStatus === "pending" && startData.id) {
+          pollForAIResults(startData.id);
+        }
         return;
       }
 

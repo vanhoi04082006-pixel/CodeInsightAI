@@ -115,6 +115,7 @@ model Analysis {
   frameworks         String   @default("[]")
   report             String   @default("{}")
   parsedData         String?
+  aiStatus           String   @default("none") // none | pending | done | failed
 
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt

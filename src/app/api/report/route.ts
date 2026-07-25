@@ -35,6 +35,7 @@ export async function GET(req: NextRequest) {
     repoName: row.repoName,
     repoBranch: row.repoBranch,
     status: row.status,
+    aiStatus: row.aiStatus, // "none" | "pending" | "done" | "failed"
     scores: {
       overall: row.overallScore,
       security: row.securityScore,

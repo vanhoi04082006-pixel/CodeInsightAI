@@ -59,6 +59,7 @@ export function ProjectView({ isShared = false }: { isShared?: boolean }) {
   const report = useAppStore((s) => s.activeReport);
   const activeAnalysisId = useAppStore((s) => s.activeAnalysisId);
   const setView = useAppStore((s) => s.setView);
+  const aiPending = useAppStore((s) => s.aiPending);
   const [tab, setTab] = useState<Tab>("overview");
   const [sharing, setSharing] = useState(false);
 
@@ -157,6 +158,12 @@ export function ProjectView({ isShared = false }: { isShared?: boolean }) {
             ) : (
               <span className="flex items-center gap-1 rounded-full bg-cyan-500/10 px-2 py-0.5 text-[10px] font-medium text-cyan-300">
                 <Activity className="h-3 w-3" /> Static Analysis
+              </span>
+            )}
+            {/* AI status indicator */}
+            {aiPending && (
+              <span className="flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium text-amber-300">
+                <Loader2 className="h-3 w-3 animate-spin" /> AI analyzing...
               </span>
             )}
           </div>
