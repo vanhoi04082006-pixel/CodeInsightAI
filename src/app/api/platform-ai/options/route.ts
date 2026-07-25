@@ -27,19 +27,22 @@ export async function GET() {
     const isPro = (user?.plan !== "free") || (user?.role === "admin");
 
     // ALL users (free + pro) can use Default (Platform AI)
-    // Free users: limited to first model + 1M tokens/month
-    // Pro users: all models + 10M tokens/month
+    // Only return the DEFAULT provider (first in list) — not all providers
+    // Admin sets default in AI Config → that's what users see
 
-    // Pro/Admin — return all enabled admin-configured providers
     const configs = await db.platformAIConfig.findMany({
       where: { enabled: true },
       orderBy: { createdAt: "asc" },
     });
 
-    let providers = configs.map((c) => {
+    let providers: any[] = [];
+
+    if (configs.length > 0) {
+      // Only return the FIRST (default) provider — not all
+      const c = configs[0];
       const preset = PRESET_BY_ID[c.providerId];
       const allModels = JSON.parse(c.models || "[]");
-      return {
+      providers = [{
         providerId: c.providerId,
         name: preset?.name || c.providerId,
         category: preset?.category || "Unknown",
@@ -47,10 +50,10 @@ export async function GET() {
         // Free users: only first model (default cheapest)
         // Pro users: all models
         models: isPro ? allModels : allModels.slice(0, 1),
-      };
-    });
+      }];
+    }
 
-    // FALLBACK: If no DB configs, check env vars (PLATFORM_AI_API_KEY etc.)
+    // FALLBACK: If no DB configs, check env vars
     if (providers.length === 0 && process.env.PLATFORM_AI_API_KEY) {
       const envProviderId = process.env.PLATFORM_AI_PROVIDER || "shopaikey";
       const preset = PRESET_BY_ID[envProviderId];
@@ -60,8 +63,6 @@ export async function GET() {
         name: preset?.name || envProviderId,
         category: preset?.category || "Cloud",
         baseUrl: process.env.PLATFORM_AI_BASE_URL || preset?.defaultBaseUrl || "",
-        // Free users: only first model (cheapest default)
-        // Pro users: all 8 models
         models: isPro ? allModels : allModels.slice(0, 1),
       }];
     }
