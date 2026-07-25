@@ -353,6 +353,7 @@ function Footer() {
             <a href="https://github.com/vanhoi04082006-pixel/CodeInsightAI" target="_blank" rel="noreferrer" className="hover:text-foreground">GitHub</a>
           </nav>
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
+            <a href="/guide" className="hover:text-foreground">Guide</a>
             <a href="/terms" className="hover:text-foreground">Terms</a>
             <a href="/privacy" className="hover:text-foreground">Privacy</a>
             <span className="text-muted-foreground/50">·</span>

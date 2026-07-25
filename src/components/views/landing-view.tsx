@@ -668,47 +668,34 @@ export function LandingView() {
         </div>
       </section>
 
-      {/* ============ TESTIMONIALS ============ */}
+      {/* ============ STATS (replaces fake testimonials) ============ */}
       <section className="relative px-4 py-24">
         <div className="mx-auto max-w-5xl">
           <SectionTitle
             center
-            eyebrow="TESTIMONIALS"
-            title={<>Loved by <GradientText>developers</GradientText></>}
-            description="What developers say about CodeInsight AI"
+            eyebrow="BY THE NUMBERS"
+            title={<>Built for <GradientText>scale</GradientText></>}
+            description="Production-ready infrastructure for AI-powered code intelligence"
           />
-          <div className="mt-14 grid gap-5 md:grid-cols-3">
+          <div className="mt-14 grid gap-5 md:grid-cols-4">
             {[
-              { name: "Alex Chen", role: "Staff Engineer @ Vercel", text: "The 7-pass AI analysis caught 3 security issues our team missed for months. CodeGraph is a game-changer for onboarding.", color: "#22d3ee" },
-              { name: "Sarah Kim", role: "CTO @ StartupOS", text: "Platform AI saved us hours of setup. No API keys to manage — our team just signs in and starts analyzing.", color: "#a78bfa" },
-              { name: "Marcus Lee", role: "Open Source Maintainer", text: "BYOK mode is perfect for our open-source workflow. Free, private, and the deep analysis quality is outstanding.", color: "#34d399" },
-            ].map((tst, i) => (
+              { value: "66", label: "Static Analysis Rules", color: "#22d3ee" },
+              { value: "8", label: "AI Deep Analysis Passes", color: "#a78bfa" },
+              { value: "15", label: "AI Providers Supported", color: "#34d399" },
+              { value: "100", label: "Open Source (MIT)", color: "#fbbf24" },
+            ].map((stat, i) => (
               <motion.div
-                key={tst.name}
+                key={stat.label}
                 initial={{ opacity: 0, y: 24 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-80px" }}
                 transition={{ duration: 0.5, delay: i * 0.08 }}
               >
-                <GlassCard hover className="h-full p-6">
-                  <div className="mb-4 flex gap-1">
-                    {[0,1,2,3,4].map(s => (
-                      <span key={s} className="text-amber-400 text-sm">★</span>
-                    ))}
-                  </div>
-                  <p className="text-sm leading-relaxed text-foreground/90">"{tst.text}"</p>
-                  <div className="mt-4 flex items-center gap-3">
-                    <div
-                      className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold"
-                      style={{ background: `${tst.color}1a`, color: tst.color }}
-                    >
-                      {tst.name[0]}
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold">{tst.name}</p>
-                      <p className="text-[11px] text-muted-foreground">{tst.role}</p>
-                    </div>
-                  </div>
+                <GlassCard hover className="h-full p-6 text-center">
+                  <p className="text-4xl font-bold tabular-nums" style={{ color: stat.color, textShadow: `0 0 16px ${stat.color}40` }}>
+                    {stat.value}
+                  </p>
+                  <p className="mt-2 text-xs text-muted-foreground">{stat.label}</p>
                 </GlassCard>
               </motion.div>
             ))}

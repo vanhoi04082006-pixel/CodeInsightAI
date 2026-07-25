@@ -76,7 +76,7 @@ export function SettingsView() {
     const params = new URLSearchParams(window.location.search);
     const error = params.get("error");
     if (error) {
-      toast.error(`Xác thực thất bại: ${error}`);
+      toast.error(`Authentication failed: ${error}`);
       window.history.replaceState({}, document.title, window.location.pathname);
     }
 
@@ -484,16 +484,7 @@ function AIModeToggle() {
   );
 }
 
-function Field({ label, defaultValue }: { label: string; defaultValue: string }) {
-  return (
-    <div className="space-y-1.5">
-      <label className="text-xs uppercase tracking-wider text-muted-foreground">{label}</label>
-      <Input defaultValue={defaultValue} className="bg-white/[0.03]" />
-    </div>
-  );
-}
-
-// Cập nhật Component ConnectRow
+// ConnectRow component
 function ConnectRow({ icon: Icon, name, desc, connected, loading, onToggle }: { icon: typeof Github; name: string; desc: string; connected: boolean; loading?: boolean; onToggle: () => void }) {
   const { t } = useT();
   return (
