@@ -26,7 +26,7 @@ import { ANALYSIS_STAGES, parseRepoUrl } from "@/lib/analysis-engine";
 import type { AnalysisReport } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { useT } from "@/lib/i18n";
+import { useT, useI18nStore } from "@/lib/i18n";
 
 const ICONS: Record<string, typeof GitBranch> = {
   "git-branch": GitBranch,
@@ -172,7 +172,7 @@ export function AnalyzeView() {
       }
 
       // Simulate progress while waiting for sync API response
-      // Stages: 0=Fetch(0-20%), 1=Parse(20-40%), 2=Analyze(40-60%), 3=AI(60-85%), 4=Save(85-100%)
+      // Stages: 0=Fetch(0-20%), 1=Parse(20-40%), 2=Analyze(40-60%), 3=AI(60-90%), 4=Save(90-100%)
       const progressStages = [
         { target: 15, delay: 500, stage: 0 },
         { target: 30, delay: 1500, stage: 1 },
@@ -180,6 +180,12 @@ export function AnalyzeView() {
         { target: 60, delay: 5000, stage: 3 },
         { target: 75, delay: 8000, stage: 3 },
         { target: 85, delay: 12000, stage: 3 },
+        { target: 88, delay: 20000, stage: 3 },
+        { target: 90, delay: 30000, stage: 3 },
+        { target: 92, delay: 45000, stage: 3 },
+        { target: 93, delay: 60000, stage: 3 },
+        { target: 94, delay: 75000, stage: 3 },
+        { target: 95, delay: 90000, stage: 3 },
       ];
       progressStages.forEach((ps) => {
         timers.current.push(setTimeout(() => {
@@ -189,12 +195,23 @@ export function AnalyzeView() {
         }, ps.delay));
       });
 
+      // Show "AI đang phân tích..." toast after 15s to reassure user
+      timers.current.push(setTimeout(() => {
+        if (phase === "running") {
+          toast.info("AI đang phân tích sâu (7-pass)...", {
+            description: "Quá trình này có thể mất 2-5 phút tùy kích thước repo",
+            duration: 5000,
+          });
+        }
+      }, 15000));
+
       const startRes = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           repoUrl: parsed.url, async: false, force: true,
           aiEnhance: useAI,
+          language: useI18nStore.getState().locale,
           ...aiBody,
         }),
       });

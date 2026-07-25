@@ -59,26 +59,27 @@ export interface DeepAnalysisResult {
 export async function runDeepAnalysis(
   parsed: ParsedRepository,
   report: AnalysisReport,
-  provider: AIProviderConfig
+  provider: AIProviderConfig,
+  language: string = "en"
 ): Promise<DeepAnalysisResult | null> {
   try {
     // Pass 1 + 7: Executive Summary + Priorities (parallel — independent)
     const [summaryResult, prioritiesResult] = await Promise.all([
-      runPass(provider, "summary", parsed, report),
-      runPass(provider, "priorities", parsed, report),
+      runPass(provider, "summary", parsed, report, language),
+      runPass(provider, "priorities", parsed, report, language),
     ]);
 
     // Pass 2 + 3 + 4: Security + Architecture + Code Quality (parallel)
     const [securityResult, archResult, qualityResult] = await Promise.all([
-      runPass(provider, "security", parsed, report),
-      runPass(provider, "architecture", parsed, report),
-      runPass(provider, "quality", parsed, report),
+      runPass(provider, "security", parsed, report, language),
+      runPass(provider, "architecture", parsed, report, language),
+      runPass(provider, "quality", parsed, report, language),
     ]);
 
     // Pass 5 + 6: Performance Deep Dive + Best Practices Audit (parallel)  ← NEW
     const [perfResult, bestPracticesResult] = await Promise.all([
-      runPass(provider, "performance", parsed, report),
-      runPass(provider, "bestPractices", parsed, report),
+      runPass(provider, "performance", parsed, report, language),
+      runPass(provider, "bestPractices", parsed, report, language),
     ]);
 
     const result: DeepAnalysisResult = {
@@ -125,12 +126,16 @@ async function runPass(
   provider: AIProviderConfig,
   passType: "summary" | "security" | "architecture" | "quality" | "priorities" | "performance" | "bestPractices",
   parsed: ParsedRepository,
-  report: AnalysisReport
+  report: AnalysisReport,
+  language: string = "en"
 ): Promise<any> {
   const maxTokens = getMaxTokensForModel(provider.model);
   const prompt = buildPrompt(passType, parsed, report);
+  const langInstruction = language === "vi"
+    ? "\n\nQUAN TRỌNG: Trả lời bằng tiếng Việt (Tiếng Việt). Giữ nguyên code, file paths, tên hàm, tên class, và thuật ngữ kỹ thuật bằng tiếng Anh. Viết tất cả giải thích và mô tả bằng tiếng Việt."
+    : "";
   const messages: AIMessage[] = [
-    { role: "system", content: "You are a Senior Staff Engineer. Respond in valid JSON only, no markdown fences, no explanation. Start your response with { and end with }." },
+    { role: "system", content: "You are a Senior Staff Engineer. Respond in valid JSON only, no markdown fences, no explanation. Start your response with { and end with }." + langInstruction },
     { role: "user", content: prompt },
   ];
 

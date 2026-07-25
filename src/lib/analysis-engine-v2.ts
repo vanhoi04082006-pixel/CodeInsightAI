@@ -50,11 +50,35 @@ export function analyzeParsedRepository(parsed: ParsedRepository, rawFiles?: { p
 
   const inboundImports = new Set<string>();
   parsed.files.forEach(f => f.imports.forEach(imp => {
-    const resolved = parsed.files.find(o => o.path === imp || o.path.endsWith(imp));
+    // Match by exact path, endsWith, or basename match (for C# using, Python import, etc.)
+    const resolved = parsed.files.find(o =>
+      o.path === imp ||
+      o.path.endsWith(imp) ||
+      imp.endsWith(o.path.split('/').pop() || '') ||
+      imp.endsWith(o.path.split('\\').pop() || '')
+    );
     if (resolved) inboundImports.add(resolved.path);
   }));
+
+  // Entry points — never mark as dead code
+  const entryPointPatterns = [
+    "program.cs", "Program.cs", "Main.cs", "main.ts", "main.tsx",
+    "index.ts", "index.tsx", "index.js", "index.jsx",
+    "app.ts", "app.tsx", "app.js", "App.tsx", "App.cs",
+    "server.ts", "server.js", "server.py",
+    "package.json", "tsconfig.json", "Cargo.toml", "go.mod",
+    "requirements.txt", "pyproject.toml",
+  ];
+
   const deadCode = parsed.files
-    .filter(f => !inboundImports.has(f.path) && !f.path.endsWith("package.json") && !f.path.endsWith("tsconfig.json"))
+    .filter(f => {
+      // Never flag entry points
+      if (entryPointPatterns.some(ep => f.path.endsWith(ep) || f.path === ep)) return false;
+      // Never flag config files
+      if (f.path.endsWith(".json") || f.path.endsWith(".toml") || f.path.endsWith(".mod")) return false;
+      // Flag only if NOT in inbound imports
+      return !inboundImports.has(f.path);
+    })
     .map(f => ({ path: f.path, lines: f.lines, reason: "Tệp này không được import ở bất kỳ đâu trong dự án." }));
 
   const funcMap = new Map<string, string[]>();

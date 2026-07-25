@@ -89,9 +89,10 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json().catch(() => ({}));
-    const { repoUrl, force, async: asyncMode, platformProvider, platformModel } = body as {
+    const { repoUrl, force, async: asyncMode, platformProvider, platformModel, language } = body as {
       repoUrl?: string; force?: boolean; async?: boolean;
       platformProvider?: string; platformModel?: string;
+      language?: string;
     };
 
     if (!repoUrl || typeof repoUrl !== "string") {
@@ -254,7 +255,7 @@ export async function POST(req: NextRequest) {
               imports: [], exports: [], functions: [], classes: [], components: [], routes: [],
             })),
           };
-          const deepResult = await runDeepAnalysis(analysisContext as any, report, aiConfig);
+          const deepResult = await runDeepAnalysis(analysisContext as any, report, aiConfig, language || "en");
           if (deepResult) {
             (report as any).deepAnalysis = deepResult;
             (report as any).aiEnhancement = {
@@ -560,7 +561,7 @@ async function runAnalysisInBackground(
               imports: [], exports: [], functions: [], classes: [], components: [], routes: [],
             })),
           };
-          const deepResult = await runDeepAnalysis(analysisContext as any, report, aiConfig);
+          const deepResult = await runDeepAnalysis(analysisContext as any, report, aiConfig, language || "en");
           if (deepResult) {
             (report as any).deepAnalysis = deepResult;
             (report as any).aiEnhancement = {
