@@ -62,11 +62,12 @@ import { cn } from "@/lib/utils";
 export function SettingsView() {
   const { t } = useT();
   const [notifications, setNotifications] = useState({ email: true, push: false, weekly: true });
-  
+
   const { data: session, status } = useSession();
-  
+
   // Đọc danh sách mảng (array) các tài khoản đã liên kết từ backend
   const connectedProviders = (session as any)?.providers || [];
+  const aiMode = useProvidersStore((s) => s.aiMode);
   const isGithubConnected = connectedProviders.includes("github");
 
   const prevStatus = useRef(status);
