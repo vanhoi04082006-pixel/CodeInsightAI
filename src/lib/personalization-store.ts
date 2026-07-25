@@ -71,7 +71,7 @@ export const ACCENT_PALETTES: Record<AccentColor, { primary: string; accent: str
 export const usePersonalizationStore = create<PersonalizationState>()(
   persist(
     (set, get) => ({
-      theme: "system",
+      theme: "dark",
       accent: "blue",
       density: "comfortable",
       animation: detectLowEnd() ? "performance" : "ultra",

@@ -602,7 +602,7 @@ export function LandingView() {
                         window.location.href = "mailto:vanhoi04082006@gmail.com?subject=CodeInsight%20AI%20Team%20Plan&body=Hi,%20I'm%20interested%20in%20the%20Team%20plan%20for%20CodeInsight%20AI.";
                       } else {
                         // Free plan → GitHub sign-in
-                        setView("dashboard");
+                        signIn("github");
                       }
                     }}
                     disabled={plan.highlight && upgrading}
@@ -815,7 +815,7 @@ export function LandingView() {
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-2 sm:flex-row">
               <Button
-                onClick={() => setView("dashboard")}
+                onClick={() => signIn("github")}
                 size="lg"
                 className="glow-pulse bg-gradient-to-r from-cyan-500 to-violet-500 text-white hover:opacity-90"
               >

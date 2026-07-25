@@ -1,11 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-  reactStrictMode: false,
-  serverExternalPackages: ["@prisma/client", "bcryptjs"],
+  reactStrictMode: true,
+  serverExternalPackages: ["@prisma/client"],
   experimental: {
     serverActions: {
       bodySizeLimit: "2mb",
@@ -35,7 +32,7 @@ const nextConfig: NextConfig = {
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: https: blob:",
               "font-src 'self' data:",
-              "connect-src 'self' https://api.github.com https://openrouter.ai https://api.openai.com https://api.anthropic.com https://generativelanguage.googleapis.com https://api.deepseek.com https://api.groq.com https://api.together.xyz https://api.fireworks.ai https://api.mistral.ai https://api.x.ai https://api.stripe.com",
+              "connect-src 'self' https://api.github.com https://raw.githubusercontent.com https://openrouter.ai https://api.openai.com https://api.anthropic.com https://generativelanguage.googleapis.com https://api.deepseek.com https://api.groq.com https://api.together.xyz https://api.fireworks.ai https://api.mistral.ai https://api.x.ai https://api.shopaikey.com https://*.openai.azure.com https://api.stripe.com wss: ws:",
               "frame-ancestors 'none'",
               "base-uri 'self'",
               "form-action 'self'",

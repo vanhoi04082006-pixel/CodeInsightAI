@@ -125,9 +125,10 @@ export default async function RootLayout({
               document.documentElement.lang = lang;
 
               // --- Theme (from personalization localStorage) ---
+              // Default: dark mode (matches CodeInsight AI cyber aesthetic)
               var pRaw = localStorage.getItem('codeinsight-ai-personalization');
               var p = pRaw ? JSON.parse(pRaw) : null;
-              var theme = p && p.state ? p.state.theme : 'system';
+              var theme = p && p.state ? p.state.theme : 'dark';
               var resolved = theme;
               if (theme === 'system') {
                 resolved = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
