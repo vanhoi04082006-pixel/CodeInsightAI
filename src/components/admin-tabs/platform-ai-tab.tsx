@@ -13,8 +13,10 @@ import {
 } from "@/components/ui/select";
 import { LoadingCard } from "@/components/views/admin-view";
 import { toast } from "sonner";
+import { useT } from "@/lib/i18n";
 
 export function PlatformAITab() {
+  const { t } = useT();
   const [configured, setConfigured] = useState<any[]>([]);
   const [available, setAvailable] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,7 +41,7 @@ export function PlatformAITab() {
       setConfigured(data.configured || []);
       setAvailable(data.available || []);
     } catch {
-      toast.error("Failed to load Platform AI config");
+      toast.error(t("admin", "platformAi.toast.loadFailed"));
     } finally {
       setLoading(false);
     }
@@ -68,13 +70,13 @@ export function PlatformAITab() {
         body: JSON.stringify({ action: "set-default", providerId }),
       });
       if (res.ok) {
-        toast.success(`${providerId} set as default`);
+        toast.success(t("admin", "platformAi.toast.setDefaultSuccess", { providerId }));
         load();
       } else {
-        toast.error("Failed to set default");
+        toast.error(t("admin", "platformAi.toast.setDefaultFailed"));
       }
     } catch {
-      toast.error("Failed to set default");
+      toast.error(t("admin", "platformAi.toast.setDefaultFailed"));
     }
   };
 
@@ -103,28 +105,28 @@ export function PlatformAITab() {
       });
       const data = await res.json();
       if (data.success) {
-        toast.success(`${editProviderId} saved`);
+        toast.success(t("admin", "platformAi.toast.saved", { providerId: editProviderId }));
         setShowAddForm(false);
         setEditApiKey("");
         load();
       } else {
-        toast.error(data.error || "Failed to save");
+        toast.error(data.error || t("admin", "platformAi.toast.saveFailed"));
       }
     } catch {
-      toast.error("Failed to save");
+      toast.error(t("admin", "platformAi.toast.saveFailed"));
     } finally {
       setSaving(false);
     }
   };
 
   const handleDelete = async (providerId: string) => {
-    if (!confirm(`Remove ${providerId} from Platform AI?`)) return;
+    if (!confirm(t("admin", "platformAi.confirmRemove", { providerId }))) return;
     try {
       await fetch(`/api/admin/platform-ai?providerId=${providerId}`, { method: "DELETE" });
-      toast.success(`${providerId} removed`);
+      toast.success(t("admin", "platformAi.toast.removed", { providerId }));
       load();
     } catch {
-      toast.error("Failed to remove");
+      toast.error(t("admin", "platformAi.toast.removeFailed"));
     }
   };
 
@@ -150,7 +152,7 @@ export function PlatformAITab() {
     } catch (e) {
       setTestResults((prev) => ({
         ...prev,
-        [providerId]: { status: "error", error: "Network error" },
+        [providerId]: { status: "error", error: t("admin", "platformAi.networkError") },
       }));
     } finally {
       setTesting(null);
@@ -165,20 +167,19 @@ export function PlatformAITab() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Cpu className="h-4 w-4 text-cyan-300" />
-            <h3 className="text-sm font-semibold"><GradientText>Platform AI Providers</GradientText></h3>
+            <h3 className="text-sm font-semibold"><GradientText>{t("admin", "platformAi.providersTitle")}</GradientText></h3>
           </div>
-          <Badge variant="outline" className="text-[10px]">{configured.length} configured</Badge>
+          <Badge variant="outline" className="text-[10px]">{t("admin", "platformAi.configuredCount", { count: configured.length })}</Badge>
         </div>
         <p className="mt-1 text-xs text-muted-foreground">
-          Configure MULTIPLE AI providers with API keys. Pro users can then choose which provider + model to use.
-          Free users use their own BYOK keys.
+          {t("admin", "platformAi.description")}
         </p>
 
         {/* Configured providers list */}
         {configured.length === 0 ? (
           <div className="mt-4 rounded-lg border border-rose-500/20 bg-rose-500/[0.04] p-4 text-center">
-            <p className="text-sm text-rose-300">No Platform AI providers configured yet.</p>
-            <p className="mt-1 text-xs text-muted-foreground">Add at least one provider below so Pro users can use Platform AI.</p>
+            <p className="text-sm text-rose-300">{t("admin", "platformAi.noProviders")}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{t("admin", "platformAi.noProvidersDesc")}</p>
           </div>
         ) : (
           <div className="mt-4 space-y-2">
@@ -193,7 +194,7 @@ export function PlatformAITab() {
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-medium">{c.name}</p>
                       <Badge className={c.enabled ? "bg-emerald-500/15 text-emerald-300" : "bg-rose-500/15 text-rose-300"}>
-                        {c.enabled ? "Enabled" : "Disabled"}
+                        {c.enabled ? t("admin", "platformAi.enabled") : t("admin", "platformAi.disabled")}
                       </Badge>
                       {/* Test status badge */}
                       {testResult?.status === "ok" && (
@@ -203,17 +204,17 @@ export function PlatformAITab() {
                       )}
                       {testResult?.status === "error" && (
                         <Badge className="bg-rose-500/15 text-rose-300">
-                          <AlertCircle className="mr-1 h-2.5 w-2.5" /> Error
+                          <AlertCircle className="mr-1 h-2.5 w-2.5" /> {t("admin", "platformAi.errorBadge")}
                         </Badge>
                       )}
                       {testResult?.status === "testing" && (
                         <Badge className="bg-amber-500/15 text-amber-300">
-                          <Loader2 className="mr-1 h-2.5 w-2.5 animate-spin" /> Testing…
+                          <Loader2 className="mr-1 h-2.5 w-2.5 animate-spin" /> {t("admin", "platformAi.testing")}
                         </Badge>
                       )}
                     </div>
                     <p className="text-[10px] text-muted-foreground">
-                      {c.models.length} models · Key: <span className="font-mono">{c.maskedKey}</span>
+                      {c.models.length} {t("admin", "platformAi.models")} · {t("admin", "platformAi.keyLabel")} <span className="font-mono">{c.maskedKey}</span>
                       {testResult?.error && <span className="text-rose-400"> · {testResult.error.slice(0, 60)}</span>}
                     </p>
                   </div>
@@ -222,7 +223,7 @@ export function PlatformAITab() {
                     {/* Set as Default badge/button */}
                     {c.isDefault ? (
                       <Badge className="bg-violet-500/15 text-violet-300">
-                        ★ Default
+                        {t("admin", "platformAi.defaultBadge")}
                       </Badge>
                     ) : (
                       <Button
@@ -230,9 +231,9 @@ export function PlatformAITab() {
                         variant="ghost"
                         onClick={() => handleSetDefault(c.providerId)}
                         className="text-[10px] text-muted-foreground hover:text-violet-300"
-                        title="Set as default provider"
+                        title={t("admin", "platformAi.titleSetDefault")}
                       >
-                        ★ Set Default
+                        {t("admin", "platformAi.setDefault")}
                       </Button>
                     )}
                     <Select
@@ -240,7 +241,7 @@ export function PlatformAITab() {
                       onValueChange={(v) => setTestModelSelection((prev) => ({ ...prev, [c.providerId]: v }))}
                     >
                       <SelectTrigger className="h-7 w-36 border-white/10 bg-white/[0.03] text-[10px]">
-                        <SelectValue placeholder="Select model" />
+                        <SelectValue placeholder={t("admin", "platformAi.placeholderSelectModel")} />
                       </SelectTrigger>
                       <SelectContent>
                         {c.models.map((m: string) => (
@@ -256,13 +257,13 @@ export function PlatformAITab() {
                       className="border-cyan-400/30 text-cyan-300 hover:bg-cyan-400/10"
                     >
                       {testing === c.providerId ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <Zap className="mr-1 h-3.5 w-3.5" />}
-                      Test
+                      {t("admin", "platformAi.test")}
                     </Button>
                   </div>
-                  <Button size="sm" variant="ghost" onClick={() => handleEdit(c)} title="Edit">
+                  <Button size="sm" variant="ghost" onClick={() => handleEdit(c)} title={t("admin", "platformAi.titleEdit")}>
                     <Settings2 className="h-3.5 w-3.5" />
                   </Button>
-                  <Button size="sm" variant="ghost" className="text-rose-300" onClick={() => handleDelete(c.providerId)} title="Remove">
+                  <Button size="sm" variant="ghost" className="text-rose-300" onClick={() => handleDelete(c.providerId)} title={t("admin", "platformAi.titleRemove")}>
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
                 </div>
@@ -275,11 +276,11 @@ export function PlatformAITab() {
         {available.length > 0 && !showAddForm && (
           <div className="mt-4">
             <Select value="" onValueChange={handleAdd}>
-              <SelectTrigger className="bg-white/[0.03]"><SelectValue placeholder="+ Add provider…" /></SelectTrigger>
+              <SelectTrigger className="bg-white/[0.03]"><SelectValue placeholder={t("admin", "platformAi.placeholderAddProvider")} /></SelectTrigger>
               <SelectContent>
                 {available.map((p) => (
                   <SelectItem key={p.providerId} value={p.providerId}>
-                    {p.name} ({p.category}) — {p.models.length} models
+                    {p.name} ({p.category}) — {t("admin", "platformAi.modelsCount", { count: p.models.length })}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -292,28 +293,28 @@ export function PlatformAITab() {
           <div className="mt-4 rounded-lg border border-cyan-500/20 bg-cyan-500/[0.04] p-4">
             <div className="mb-3 flex items-center justify-between">
               <p className="text-sm font-semibold text-cyan-200">
-                {configured.find((c) => c.providerId === editProviderId) ? "Edit" : "Add"} {editProviderId}
+                {configured.find((c) => c.providerId === editProviderId) ? t("admin", "platformAi.edit") : t("admin", "platformAi.add")} {editProviderId}
               </p>
-              <button onClick={() => setShowAddForm(false)} className="text-xs text-muted-foreground hover:text-foreground">✕ Cancel</button>
+              <button onClick={() => setShowAddForm(false)} className="text-xs text-muted-foreground hover:text-foreground">✕ {t("common", "actions.cancel")}</button>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1">
-                <label className="text-[10px] uppercase text-muted-foreground">API Key</label>
+                <label className="text-[10px] uppercase text-muted-foreground">{t("admin", "platformAi.apiKey")}</label>
                 <Input
                   type="password"
                   value={editApiKey}
                   onChange={(e) => setEditApiKey(e.target.value)}
-                  placeholder={configured.find((c) => c.providerId === editProviderId) ? "•••• (saved — type new to replace)" : "sk-..."}
+                  placeholder={configured.find((c) => c.providerId === editProviderId) ? `•••• ${t("admin", "platformAi.apiKeySaved")}` : t("admin", "platformAi.apiKeyPlaceholder")}
                   className="bg-white/[0.03] font-mono text-xs"
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] uppercase text-muted-foreground">Base URL</label>
+                <label className="text-[10px] uppercase text-muted-foreground">{t("admin", "platformAi.baseUrl")}</label>
                 <Input value={editBaseUrl} onChange={(e) => setEditBaseUrl(e.target.value)} className="bg-white/[0.03] font-mono text-xs" />
               </div>
             </div>
             <div className="mt-3 space-y-1">
-              <label className="text-[10px] uppercase text-muted-foreground">Available Models ({editModels.length})</label>
+              <label className="text-[10px] uppercase text-muted-foreground">{t("admin", "platformAi.availableModels", { count: editModels.length })}</label>
               <div className="flex flex-wrap gap-1">
                 {editModels.map((m) => (
                   <span key={m} className="rounded-full border border-white/10 bg-white/[0.03] px-2 py-0.5 text-[10px] font-mono">{m}</span>
@@ -323,11 +324,11 @@ export function PlatformAITab() {
             <div className="mt-3 flex items-center gap-2">
               <Button onClick={handleSave} disabled={saving} size="sm" className="bg-gradient-to-r from-cyan-500 to-violet-500 text-white">
                 {saving ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Check className="mr-1.5 h-3.5 w-3.5" />}
-                {saving ? "Saving…" : "Save Provider"}
+                {saving ? t("admin", "platformAi.saving") : t("admin", "platformAi.saveProvider")}
               </Button>
               <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <input type="checkbox" checked={editEnabled} onChange={(e) => setEditEnabled(e.target.checked)} className="rounded" />
-                Enabled
+                {t("admin", "platformAi.enabled")}
               </label>
             </div>
           </div>

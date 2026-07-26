@@ -5,14 +5,22 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Sun, Moon, Monitor, ChevronDown, Check } from "lucide-react";
 import { usePersonalizationStore, type ThemeMode } from "@/lib/personalization-store";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 
-const OPTIONS: { id: ThemeMode; label: string; icon: typeof Sun }[] = [
-  { id: "light", label: "Light", icon: Sun },
-  { id: "dark", label: "Dark", icon: Moon },
-  { id: "system", label: "System", icon: Monitor },
+const OPTIONS: { id: ThemeMode; icon: typeof Sun }[] = [
+  { id: "light", icon: Sun },
+  { id: "dark", icon: Moon },
+  { id: "system", icon: Monitor },
 ];
 
+const THEME_LABEL_KEYS: Record<ThemeMode, string> = {
+  light: "appearance.themeLight",
+  dark: "appearance.themeDark",
+  system: "appearance.themeSystem",
+};
+
 export function ThemeSwitcher({ compact = false }: { compact?: boolean }) {
+  const { t } = useT();
   const theme = usePersonalizationStore((s) => s.theme);
   const setTheme = usePersonalizationStore((s) => s.setTheme);
   const [open, setOpen] = useState(false);
@@ -29,6 +37,7 @@ export function ThemeSwitcher({ compact = false }: { compact?: boolean }) {
 
   const activeOption = OPTIONS.find((o) => o.id === theme) ?? OPTIONS[1];
   const ActiveIcon = activeOption.icon;
+  const activeLabel = t("settings", THEME_LABEL_KEYS[activeOption.id]);
 
   // Compact = dropdown, Full = inline toggle (original behavior)
   if (compact) {
@@ -37,10 +46,10 @@ export function ThemeSwitcher({ compact = false }: { compact?: boolean }) {
         <button
           onClick={() => setOpen((v) => !v)}
           className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-1.5 text-xs transition hover:bg-white/5"
-          aria-label="Theme"
+          aria-label={t("settings", "appearance.theme")}
         >
           <ActiveIcon className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">{activeOption.label}</span>
+          <span className="hidden sm:inline">{activeLabel}</span>
           <ChevronDown className={cn("h-3 w-3 text-muted-foreground transition-transform", open && "rotate-180")} />
         </button>
         <AnimatePresence>
@@ -65,7 +74,7 @@ export function ThemeSwitcher({ compact = false }: { compact?: boolean }) {
                     )}
                   >
                     <Icon className="h-3.5 w-3.5" />
-                    <span className="flex-1 text-left">{o.label}</span>
+                    <span className="flex-1 text-left">{t("settings", THEME_LABEL_KEYS[o.id])}</span>
                     {active && <Check className="h-3 w-3 text-cyan-300" />}
                   </button>
                 );
@@ -100,7 +109,7 @@ export function ThemeSwitcher({ compact = false }: { compact?: boolean }) {
               />
             )}
             <Icon className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">{o.label}</span>
+            <span className="hidden sm:inline">{t("settings", THEME_LABEL_KEYS[o.id])}</span>
           </button>
         );
       })}
