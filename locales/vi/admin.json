@@ -149,7 +149,12 @@
       "fallbackSaveFailed": "Lưu chuỗi dự phòng thất bại",
       "fallbackInvalidJson": "JSON không hợp lệ — phải là mảng của {providerId, model}",
       "fallbackAlreadyAdded": "Đã có trong chuỗi dự phòng"
-    }
+    },
+    "addProviderBelow": "Thêm nhà cung cấp bên dưới để bắt đầu",
+    "addProviderTitle": "Thêm nhà cung cấp mới",
+    "addProviderDesc": "Chọn nhà cung cấp AI để cấu hình. Bạn có thể thêm nhiều nhà cung cấp và người dùng Pro sẽ chọn nhà cung cấp nào để sử dụng.",
+    "availableEmpty": "Không có nhà cung cấp nào để thêm",
+    "availableEmptyDesc": "Tất cả nhà cung cấp đã được cấu hình, hoặc có lỗi khi tải danh sách. Tải lại trang để thử lại."
   },
   "subscriptions": {
     "totalSubscribers": "Tổng người đăng ký",

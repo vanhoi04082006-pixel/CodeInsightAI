@@ -257,8 +257,10 @@ export function PlatformAITab() {
         {/* Configured providers list */}
         {configured.length === 0 ? (
           <div className="mt-4 rounded-lg border border-rose-500/20 bg-rose-500/[0.04] p-4 text-center">
-            <p className="text-sm text-rose-300">{t("admin", "platformAi.noProviders")}</p>
+            <AlertCircle className="mx-auto h-6 w-6 text-rose-400" />
+            <p className="mt-2 text-sm font-medium text-rose-300">{t("admin", "platformAi.noProviders")}</p>
             <p className="mt-1 text-xs text-muted-foreground">{t("admin", "platformAi.noProvidersDesc")}</p>
+            <p className="mt-2 text-xs text-cyan-300">↓ {t("admin", "platformAi.addProviderBelow")}</p>
           </div>
         ) : (
           <div className="mt-4 space-y-2">
@@ -361,11 +363,16 @@ export function PlatformAITab() {
           </div>
         )}
 
-        {/* Add provider dropdown */}
+        {/* Add provider section */}
         {available.length > 0 && !showAddForm && (
-          <div className="mt-4">
+          <div className="mt-4 rounded-lg border border-cyan-500/20 bg-cyan-500/[0.03] p-4">
+            <div className="mb-2 flex items-center gap-2">
+              <Zap className="h-4 w-4 text-cyan-300" />
+              <p className="text-sm font-semibold text-cyan-200">{t("admin", "platformAi.addProviderTitle")}</p>
+            </div>
+            <p className="mb-3 text-xs text-muted-foreground">{t("admin", "platformAi.addProviderDesc")}</p>
             <Select value="" onValueChange={handleAdd}>
-              <SelectTrigger className="bg-white/[0.03]"><SelectValue placeholder={t("admin", "platformAi.placeholderAddProvider")} /></SelectTrigger>
+              <SelectTrigger className="bg-white/[0.03] h-10"><SelectValue placeholder={t("admin", "platformAi.placeholderAddProvider")} /></SelectTrigger>
               <SelectContent>
                 {available.map((p) => (
                   <SelectItem key={p.providerId} value={p.providerId}>
@@ -374,6 +381,15 @@ export function PlatformAITab() {
                 ))}
               </SelectContent>
             </Select>
+          </div>
+        )}
+
+        {/* Available empty state — when all presets are configured OR fetch failed */}
+        {available.length === 0 && configured.length === 0 && !loading && (
+          <div className="mt-4 rounded-lg border border-amber-500/20 bg-amber-500/[0.04] p-4 text-center">
+            <AlertCircle className="mx-auto h-6 w-6 text-amber-400" />
+            <p className="mt-2 text-sm text-amber-300">{t("admin", "platformAi.availableEmpty")}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{t("admin", "platformAi.availableEmptyDesc")}</p>
           </div>
         )}
 

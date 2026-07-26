@@ -149,7 +149,12 @@
       "fallbackSaveFailed": "Failed to save fallback chain",
       "fallbackInvalidJson": "Invalid JSON — must be an array of {providerId, model}",
       "fallbackAlreadyAdded": "Already in fallback chain"
-    }
+    },
+    "addProviderBelow": "Add a provider below to get started",
+    "addProviderTitle": "Add New Provider",
+    "addProviderDesc": "Select an AI provider to configure. You can add multiple providers and Pro users will choose which one to use.",
+    "availableEmpty": "No providers available to add",
+    "availableEmptyDesc": "All providers are already configured, or there was an issue loading the provider list. Refresh the page to retry."
   },
   "subscriptions": {
     "totalSubscribers": "Total Subscribers",
