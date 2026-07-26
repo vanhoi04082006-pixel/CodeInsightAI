@@ -137,5 +137,10 @@
     "copied": "Đã sao chép",
     "aiExplanation": "Giải thích AI",
     "codeCopiedToast": "Đã sao chép code"
+  },
+  "rateLimit": {
+    "exceeded": "Vượt giới hạn tốc độ. Thử lại sau {minutes} phút.",
+    "remaining": "{count}/{limit} yêu cầu còn lại trong giờ này",
+    "upgradePrompt": "Nâng cấp gói để có giới hạn tốc độ cao hơn."
   }
 }

@@ -10,7 +10,8 @@
     "platformAi": "AI Config",
     "subs": "Subs",
     "audit": "Audit",
-    "system": "System"
+    "system": "System",
+    "policies": "Policies"
   },
   "overview": {
     "totalUsers": "Total Users",
@@ -125,6 +126,17 @@
     "networkError": "Network error",
     "keyLabel": "Key:",
     "confirmRemove": "Remove {providerId} from Platform AI?",
+    "fallbackChain": "Fallback Chain",
+    "fallbackChainDesc": "Providers to try if the primary fails (402 credits, 429 rate limit, 5xx, timeout). JSON array of {providerId, model}. Used only for Platform AI mode (admin's key) — BYOK users skip the chain.",
+    "fallbackChainLabel": "Chain (JSON array)",
+    "fallbackChainCount": "{count} in chain",
+    "fallbackQuickAdd": "Quick-add configured providers",
+    "fallbackNoProviders": "Configure at least one Platform AI provider above before setting a fallback chain.",
+    "saveFallback": "Save Fallback Chain",
+    "savingFallback": "Saving…",
+    "clearFallback": "Clear",
+    "addToFallback": "Fallback",
+    "titleAddToFallback": "Add this provider+model to the fallback chain",
     "toast": {
       "loadFailed": "Failed to load Platform AI config",
       "setDefaultSuccess": "{providerId} set as default",
@@ -132,7 +144,11 @@
       "saved": "{providerId} saved",
       "saveFailed": "Failed to save",
       "removed": "{providerId} removed",
-      "removeFailed": "Failed to remove"
+      "removeFailed": "Failed to remove",
+      "fallbackSaved": "Fallback chain saved",
+      "fallbackSaveFailed": "Failed to save fallback chain",
+      "fallbackInvalidJson": "Invalid JSON — must be an array of {providerId, model}",
+      "fallbackAlreadyAdded": "Already in fallback chain"
     }
   },
   "subscriptions": {
@@ -172,5 +188,33 @@
     "loading": "Loading…",
     "set": "set",
     "missing": "missing"
+  },
+  "policies": {
+    "title": "Policies",
+    "description": "Configure rules that govern AI usage and analysis. Fixed catalog — no arbitrary eval.",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "configured": "Configured",
+    "notConfigured": "Not configured",
+    "save": "Save Policy",
+    "saving": "Saving…",
+    "saved": "Policy saved",
+    "saveFailed": "Failed to save policy",
+    "loadFailed": "Failed to load policies",
+    "violation": "Policy Violation",
+    "noPolicies": "No policies configured",
+    "configure": "Configure",
+    "cancel": "Cancel",
+    "delete": "Reset",
+    "deleteConfirm": "Reset this policy to unconfigured? The catalog entry remains — you can re-configure later.",
+    "deleteFailed": "Failed to reset policy",
+    "deleted": "Policy reset",
+    "blockSeverity": "Block",
+    "warnSeverity": "Warn",
+    "configLabel": "Configuration",
+    "checkpointAnalyze": "Checked at: analyze",
+    "checkpointAiPass": "Checked at: AI pass",
+    "checkpointBoth": "Checked at: analyze + AI pass",
+    "noConfig": "No configuration needed — toggle enable to enforce."
   }
 }

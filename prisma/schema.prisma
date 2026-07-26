@@ -49,6 +49,7 @@ model User {
   credentials     ProviderCredential[]
   usageRecords    UsageRecord[]
   tokenUsageRecords TokenUsageRecord[]
+  rateLimitBuckets  RateLimitBucket[]
   settings        UserSettings[]
   auditLogs       AuditLog[]
   aiCallLogs      AICallLog[]
@@ -280,6 +281,37 @@ model TokenUsageRecord {
 }
 
 // ==========================================
+// RATE LIMIT BUCKET (P3.3 — per-user, per-endpoint hourly rate limits)
+// ==========================================
+// One row per (user, endpoint, hour) holding the count of requests made
+// against that endpoint within the given hour. Incremented atomically on
+// each protected request via Prisma's `increment` operator — no read-then-
+// write race, survives Vercel serverless cold-starts (in-memory limiters
+// do NOT work on serverless — each invocation may be a fresh instance).
+//
+// `hour` is a string bucket key formatted "YYYY-MM-DD-HH" (local time, see
+// getHourBucket() in src/lib/rate-limiter.ts). The bucket naturally rolls
+// over at the top of each hour — first request of the new hour creates a
+// fresh row with count=1. Old rows accumulate; a cleanup helper purges
+// rows older than 24h opportunistically (no cron needed on Vercel).
+
+model RateLimitBucket {
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String   // "analysis" | "chat" | "agent"
+  hour      String   // "2024-01-15-14" (hour-precision bucket key)
+  count     Int      @default(0)
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, endpoint, hour])
+  @@index([userId, endpoint])
+  @@index([hour])
+}
+
+// ==========================================
 // AGENT MEMORY & EVENTS
 // ==========================================
 
@@ -393,6 +425,11 @@ model PlatformAIConfig {
   baseUrl         String
   models          String   @default("[]") // JSON array of available models
   enabled         Boolean  @default(true)
+  // P3.2: Admin-configured fallback chain. JSON array of
+  //   [{ "providerId": "openai", "model": "gpt-4o-mini" }, ...]
+  // Loaded by getFallbackChain() and iterated by callAIWithFallback()
+  // when the primary provider returns 402/429/5xx/timeout. Optional.
+  fallbackChain   String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -434,4 +471,25 @@ model AICallLog {
   @@index([provider, model])
   @@index([createdAt])
   @@index([status])
+}
+
+// ==========================================
+// POLICY (P3.5 — admin-configured rules governing AI usage + analysis)
+// ==========================================
+// Admin-configured rules evaluated at API checkpoints (pre-analyze,
+// pre-ai-call). Fixed catalog of 8 policy types — NO arbitrary eval
+// (security: prevents code injection from admin-configured strings).
+// `config` is a JSON blob whose schema depends on `type`; the evaluator
+// in src/lib/policies/evaluator.ts dispatches on `type` and reads the
+// expected keys. KEEP IN SYNC with prisma/schema.prod.prisma.
+
+model Policy {
+  id        String   @id @default(cuid())
+  type      String   // PolicyType enum — see POLICY_CATALOG in src/lib/policies/types.ts
+  enabled   Boolean  @default(true)
+  config    String   @default("{}")  // JSON, schema depends on `type`
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([type, enabled])
 }

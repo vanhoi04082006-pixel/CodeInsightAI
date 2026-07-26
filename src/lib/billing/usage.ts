@@ -9,6 +9,16 @@ export interface PlanLimits {
   streaming: boolean;
   exportFormats: string[];
   tokensPerMonth: number; // -1 = unlimited (custom/BYOK), 0 = N/A
+  // P3.3 — per-user, per-endpoint HOURLY rate limits.
+  // -1 = unlimited. Enforced by src/lib/rate-limiter.ts (DB-backed
+  // RateLimitBucket table). Mirrors the per-month caps above but at hourly
+  // granularity to prevent burst abuse on the 5 expensive endpoints
+  // (/api/analyze, /api/analyze/ai-pass, /api/chat, /api/chat/stream,
+  // /api/agents/execute). Reset is automatic at the top of each hour
+  // (the `hour` bucket key rolls over).
+  analysesPerHour: number;
+  chatPerHour: number;
+  agentPerHour: number;
 }
 
 export const PLAN_LIMITS: Record<string, PlanLimits> = {
@@ -20,6 +30,9 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     streaming: false,
     exportFormats: ["markdown"],
     tokensPerMonth: 1_000_000, // 1M tokens/tháng (free default)
+    analysesPerHour: 10,
+    chatPerHour: 20,
+    agentPerHour: 5,
   },
   pro: {
     analysesPerMonth: 100,
@@ -29,6 +42,9 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     streaming: true,
     exportFormats: ["markdown", "json", "pdf"],
     tokensPerMonth: 10_000_000, // 10M tokens/tháng
+    analysesPerHour: 100,
+    chatPerHour: 200,
+    agentPerHour: 50,
   },
   team: {
     analysesPerMonth: 500,
@@ -38,6 +54,9 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     streaming: true,
     exportFormats: ["markdown", "json", "pdf"],
     tokensPerMonth: 50_000_000, // 50M tokens/tháng
+    analysesPerHour: 500,
+    chatPerHour: 1000,
+    agentPerHour: 200,
   },
   enterprise: {
     analysesPerMonth: -1, // unlimited
@@ -47,6 +66,9 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     streaming: true,
     exportFormats: ["markdown", "json", "pdf", "csv"],
     tokensPerMonth: -1, // unlimited
+    analysesPerHour: -1, // unlimited
+    chatPerHour: -1,
+    agentPerHour: -1,
   },
 };
 

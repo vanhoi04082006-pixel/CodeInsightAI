@@ -22,6 +22,7 @@ import {
   Settings2,
   Check,
   Zap,
+  ShieldCheck,
 } from "lucide-react";
 import { GlassCard, GradientText } from "@/components/shared/ui";
 import { Button } from "@/components/ui/button";
@@ -140,11 +141,12 @@ export function AdminView() {
       </motion.div>
 
       <Tabs defaultValue="overview">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-6">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-7">
           <TabsTrigger value="overview" className="gap-1.5"><Activity className="h-3.5 w-3.5" /> <span className="hidden sm:inline">{t("admin", "tabs.overview")}</span></TabsTrigger>
           <TabsTrigger value="users" className="gap-1.5"><Users className="h-3.5 w-3.5" /> <span className="hidden sm:inline">{t("admin", "tabs.users")}</span></TabsTrigger>
           <TabsTrigger value="platform-ai" className="gap-1.5"><Cpu className="h-3.5 w-3.5" /> <span className="hidden sm:inline">{t("admin", "tabs.platformAi")}</span></TabsTrigger>
           <TabsTrigger value="subscriptions" className="gap-1.5"><Crown className="h-3.5 w-3.5" /> <span className="hidden sm:inline">{t("admin", "tabs.subs")}</span></TabsTrigger>
+          <TabsTrigger value="policies" className="gap-1.5"><ShieldCheck className="h-3.5 w-3.5" /> <span className="hidden sm:inline">{t("admin", "tabs.policies")}</span></TabsTrigger>
           <TabsTrigger value="audit" className="gap-1.5"><ScrollText className="h-3.5 w-3.5" /> <span className="hidden sm:inline">{t("admin", "tabs.audit")}</span></TabsTrigger>
           <TabsTrigger value="system" className="gap-1.5"><Server className="h-3.5 w-3.5" /> <span className="hidden sm:inline">{t("admin", "tabs.system")}</span></TabsTrigger>
         </TabsList>
@@ -153,6 +155,7 @@ export function AdminView() {
         <TabsContent value="users" className="mt-4"><UsersTab /></TabsContent>
         <TabsContent value="platform-ai" className="mt-4"><PlatformAITab /></TabsContent>
         <TabsContent value="subscriptions" className="mt-4"><SubscriptionsTab /></TabsContent>
+        <TabsContent value="policies" className="mt-4"><PoliciesTab /></TabsContent>
         <TabsContent value="audit" className="mt-4"><AuditTab /></TabsContent>
         <TabsContent value="system" className="mt-4"><SystemTab /></TabsContent>
       </Tabs>
@@ -430,3 +433,4 @@ function formatAction(action: string): string {
 import { UsersTab } from "@/components/admin-tabs/users-tab";
 import { PlatformAITab } from "@/components/admin-tabs/platform-ai-tab";
 import { AdminOverview } from "@/components/admin-tabs/admin-overview";
+import { PoliciesTab } from "@/components/admin-tabs/policies-tab";

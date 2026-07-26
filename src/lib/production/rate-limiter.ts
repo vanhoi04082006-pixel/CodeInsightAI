@@ -1,3 +1,25 @@
+// ⚠️ DEPRECATED (P3.3) — DO NOT USE FOR NEW CODE.
+//
+// This in-memory token-bucket limiter does NOT work on Vercel serverless —
+// each request may hit a fresh instance, so the bucket resets constantly.
+// It was never wired to any API route and is effectively dead code in prod.
+//
+// The replacement is `src/lib/rate-limiter.ts` — DB-backed, per-user,
+// per-endpoint hourly rate limiting via the `RateLimitBucket` Prisma model.
+// Atomic `upsert + increment` survives concurrent requests and Vercel
+// cold-starts. Wired into the 5 expensive endpoints:
+//   - /api/analyze           → enforceRateLimit(userId, plan, "analysis")
+//   - /api/analyze/ai-pass   → enforceRateLimit(userId, plan, "analysis")
+//   - /api/chat              → enforceRateLimit(userId, plan, "chat")
+//   - /api/chat/stream       → enforceRateLimit(userId, plan, "chat")
+//   - /api/agents/execute    → enforceRateLimit(userId, plan, "agent")
+//
+// This file is retained for backward compat with the `production/index.ts`
+// barrel re-export. If/when the barrel is refactored, this file can be
+// deleted entirely. Until then, treat any new use of `rateLimiter` /
+// `RateLimiter` / `initDefaultLimiters` from this module as a bug.
+//
+// =============================================================================
 // CodeInsight AI — Production: Rate Limiter (Prompt 15)
 // Token-bucket rate limiter with a registry of named limiters.
 //

@@ -40,6 +40,11 @@ export async function GET() {
       };
     });
 
+    // P3.2: expose the admin's configured fallback chain (stored as JSON on
+    // the first/default PlatformAIConfig row). Null if not set.
+    const defaultConfig = configs[0] ?? null;
+    const fallbackChain = defaultConfig?.fallbackChain ?? null;
+
     // Available providers NOT yet configured
     const configuredIds = new Set(configs.map((c) => c.providerId));
     const available = PROVIDER_PRESETS
@@ -53,7 +58,7 @@ export async function GET() {
         defaultBaseUrl: p.defaultBaseUrl,
       }));
 
-    return NextResponse.json({ configured, available });
+    return NextResponse.json({ configured, available, fallbackChain });
   } catch (e) {
     console.error("[/api/admin/platform-ai GET]", e);
     return NextResponse.json({ error: "Failed to load" }, { status: 500 });
@@ -168,10 +173,74 @@ export async function PATCH(req: NextRequest) {
 
       return NextResponse.json({ success: true, defaultProvider: providerId });
     }
+
+    // P3.2: Save the admin's fallback chain. The chain is a JSON array of
+    //   [{ "providerId": "openai", "model": "gpt-4o-mini" }, ...]
+    // stored on the first (default) PlatformAIConfig row. Loaded by
+    // getFallbackChain() at request time and iterated by callAIWithFallback()
+    // when the primary provider returns 402/429/5xx/timeout.
+    if (body.action === "save-fallback" && body.fallbackChain !== undefined) {
+      const raw = body.fallbackChain as string;
+
+      // Allow empty / null → clears the chain.
+      if (!raw || raw.trim() === "" || raw.trim() === "null") {
+        const target = await db.platformAIConfig.findFirst({
+          where: { enabled: true },
+          orderBy: { createdAt: "asc" },
+        });
+        if (!target) {
+          return NextResponse.json({ error: "No enabled Platform AI provider — configure one first" }, { status: 400 });
+        }
+        await db.platformAIConfig.update({
+          where: { id: target.id },
+          data: { fallbackChain: null },
+        });
+        await logAdminAction(adminId, "update_fallback_chain", null, { fallbackChain: null });
+        return NextResponse.json({ success: true, fallbackChain: null });
+      }
+
+      // Validate JSON: must be an array of {providerId, model} objects.
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(raw);
+      } catch {
+        return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+      }
+      if (!Array.isArray(parsed)) {
+        return NextResponse.json({ error: "Fallback chain must be a JSON array" }, { status: 400 });
+      }
+      for (const entry of parsed) {
+        if (
+          typeof entry !== "object" || entry === null ||
+          typeof (entry as any).providerId !== "string" ||
+          typeof (entry as any).model !== "string"
+        ) {
+          return NextResponse.json({
+            error: "Each fallback entry must be { providerId: string, model: string }",
+          }, { status: 400 });
+        }
+      }
+
+      const target = await db.platformAIConfig.findFirst({
+        where: { enabled: true },
+        orderBy: { createdAt: "asc" },
+      });
+      if (!target) {
+        return NextResponse.json({ error: "No enabled Platform AI provider — configure one first" }, { status: 400 });
+      }
+      await db.platformAIConfig.update({
+        where: { id: target.id },
+        data: { fallbackChain: raw },
+      });
+      await logAdminAction(adminId, "update_fallback_chain", null, { count: parsed.length });
+
+      return NextResponse.json({ success: true, fallbackChain: raw });
+    }
+
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   } catch (e) {
     console.error("[/api/admin/platform-ai PATCH]", e);
-    return NextResponse.json({ error: "Failed to set default" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to apply action" }, { status: 500 });
   }
 }
 

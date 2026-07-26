@@ -137,5 +137,10 @@
     "copied": "Copied",
     "aiExplanation": "AI Explanation",
     "codeCopiedToast": "Code copied"
+  },
+  "rateLimit": {
+    "exceeded": "Rate limit exceeded. Try again in {minutes} minute(s).",
+    "remaining": "{count}/{limit} requests remaining this hour",
+    "upgradePrompt": "Upgrade your plan for a higher rate limit."
   }
 }

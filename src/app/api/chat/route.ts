@@ -5,7 +5,15 @@ import { decrypt } from "@/lib/crypto";
 import { isProduction } from "@/lib/env";
 import { checkQuota, incrementUsage } from "@/lib/billing/usage";
 import { callAI, type AIMessage, TokenBudgetExceededError } from "@/lib/ai-client";
+import { callAIWithFallback, getFallbackChain } from "@/lib/ai-fallback";
 import { getUserPlanInfo } from "@/lib/billing/token-budget";
+import {
+  enforceRateLimit,
+  rateLimit429Body,
+  rateLimitHeaders,
+  retryAfterSeconds,
+  maybeCleanupOldBuckets,
+} from "@/lib/rate-limiter";
 import { resolveEffectiveProvider } from "@/lib/platform-ai";
 import type { AnalysisReport, ChatMessage } from "@/lib/types";
 
@@ -132,6 +140,24 @@ export async function POST(req: NextRequest) {
     // Quota enforcement — chat messages are limited per plan (admin bypasses)
     const userId = await requireUserId();
     if (userId) {
+      // P3.3: per-user hourly rate limit (DB-backed). Check happens BEFORE
+      // the monthly quota check — fails fast on burst abuse. Shares the
+      // "chat" bucket with /api/chat/stream (same user action). Free: 20/h,
+      // Pro: 200/h, Team: 1000/h, Enterprise: unlimited.
+      const planInfo = await getUserPlanInfo(userId);
+      const rl = await enforceRateLimit(userId, planInfo.plan, "chat");
+      if (rl.blocked) {
+        return NextResponse.json(rateLimit429Body(rl.status!, "chat"), {
+          status: 429,
+          headers: {
+            "Retry-After": String(retryAfterSeconds(rl.status)),
+            ...rateLimitHeaders(rl.status),
+          },
+        });
+      }
+      maybeCleanupOldBuckets();
+
+      // Monthly quota check (existing — kept for backward compat).
       const quota = await checkQuota(userId, "chat");
       if (!quota.allowed) {
         return NextResponse.json({
@@ -365,14 +391,23 @@ Use this graph knowledge to answer questions about function callers, callees, de
     // checkTokenBudget call inside callAI() will see "enterprise" and bypass.)
     const planInfo = userId ? await getUserPlanInfo(userId) : { plan: "free", role: "user" };
 
+    // P3.2: load admin's fallback chain ONLY when the resolved provider came
+    // from Platform AI (admin's key). BYOK users (their own key) skip the
+    // chain — different providers would require different keys the user
+    // doesn't have. Heuristic: aiMode="platform" OR explicit platformProvider
+    // selection → Platform AI; otherwise BYOK.
+    const usedPlatformAI = body.aiMode === "platform" || (!!body.platformProvider && !effectiveProvider?.apiKey);
+    const fallbacks = usedPlatformAI ? await getFallbackChain() : [];
+
     try {
       if (finalProvider) {
         // Use unified ai-client (supports all 14 providers)
         // RETRY: If first call returns empty, retry once (timing issue with cold start)
         for (let attempt = 0; attempt < 2; attempt++) {
           try {
-            const result = await callAI(
+            const result = await callAIWithFallback(
               finalProvider,
+              fallbacks,
               llmMessages as AIMessage[],
               {
                 temperature: personality?.temperature ?? 0.7,

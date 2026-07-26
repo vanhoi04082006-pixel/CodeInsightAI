@@ -5,8 +5,22 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireUserId } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { callAI, type AIMessage, TokenBudgetExceededError } from "@/lib/ai-client";
+import { callAIWithFallback, getFallbackChain } from "@/lib/ai-fallback";
 import { getUserPlanInfo } from "@/lib/billing/token-budget";
+import {
+  enforceRateLimit,
+  rateLimit429Body,
+  rateLimitHeaders,
+  retryAfterSeconds,
+  maybeCleanupOldBuckets,
+} from "@/lib/rate-limiter";
 import { sequenceRoadmap } from "@/lib/roadmap-sequencer";
+import { loadPolicies } from "@/lib/policies/policy-loader";
+import {
+  evaluatePolicies,
+  hasBlockingViolation,
+  blockingViolations,
+} from "@/lib/policies/evaluator";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,6 +38,30 @@ const MODEL_MAX_TOKENS: Record<string, number> = {
 export async function POST(req: NextRequest) {
   const userId = await requireUserId();
   if (!userId) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+
+  // P3.1 + P3.3: hoist the plan/role lookup to the top of the handler so
+  // both the hourly rate-limit check (P3.3) and the monthly token-budget
+  // enforcement inside callAIWithFallback (P3.1) share the same lookup.
+  // Single indexed findUnique — ~3ms.
+  const planInfo = await getUserPlanInfo(userId);
+
+  // P3.3: per-user hourly rate limit (DB-backed — survives Vercel serverless
+  // cold-starts). Shares the "analysis" bucket with /api/analyze — a single
+  // repo analysis runs 9 AI passes, so we don't want to double-count by
+  // giving ai-pass its own bucket. Check happens BEFORE the expensive AI
+  // call (before tokens are spent).
+  const rl = await enforceRateLimit(userId, planInfo.plan, "analysis");
+  if (rl.blocked) {
+    return NextResponse.json(rateLimit429Body(rl.status!, "analysis"), {
+      status: 429,
+      headers: {
+        "Retry-After": String(retryAfterSeconds(rl.status)),
+        ...rateLimitHeaders(rl.status),
+      },
+    });
+  }
+  // Opportunistic cleanup of stale buckets (~1% of requests, fire-and-forget).
+  maybeCleanupOldBuckets();
 
   // P3.1: hoist passType out of the try block so the outer catch handler can
   // include it in the 429 budget-exceeded response.
@@ -61,6 +99,11 @@ export async function POST(req: NextRequest) {
     const { decrypt } = await import("@/lib/crypto");
 
     let aiConfig: any = null;
+    // P3.2: track whether the resolved config came from Platform AI (admin's
+    // key). If so, the admin's fallback chain applies. BYOK users (their own
+    // key) do NOT use the admin's fallback chain — different providers would
+    // require different keys the user doesn't have.
+    let usedPlatformAI = false;
 
     // 1. BYOK — client-provided API key (Custom mode)
     if (provider?.apiKey) {
@@ -71,13 +114,18 @@ export async function POST(req: NextRequest) {
         model: provider.model || "",
         temperature: 0.7, maxTokens: 4096, timeout: 50,
       };
+      usedPlatformAI = false;
     }
 
     // 2. Platform AI — admin's default
     if (!aiConfig && platformProvider) {
       aiConfig = await getPlatformAIProvider(platformProvider, platformModel);
+      usedPlatformAI = !!aiConfig;
     }
-    if (!aiConfig) aiConfig = await getPlatformAIConfig();
+    if (!aiConfig) {
+      aiConfig = await getPlatformAIConfig();
+      usedPlatformAI = !!aiConfig;
+    }
 
     // 3. BYOK — from DB (encrypted credential)
     if (!aiConfig) {
@@ -92,6 +140,7 @@ export async function POST(req: NextRequest) {
             baseUrl: cred.baseUrl, model: cred.model,
             temperature: cred.temperature ?? 0.7, maxTokens: cred.maxTokens ?? 4096, timeout: 50,
           };
+          usedPlatformAI = false;
         } catch {}
       }
     }
@@ -99,6 +148,10 @@ export async function POST(req: NextRequest) {
     if (!aiConfig) {
       return NextResponse.json({ error: "No AI provider available", passType, status: "skipped" });
     }
+
+    // P3.2: load admin's fallback chain ONLY if we resolved a Platform AI
+    // config (admin's key). Empty array for BYOK → degrades to legacy behavior.
+    const fallbacks = usedPlatformAI ? await getFallbackChain() : [];
 
     // Build prompt for this pass
     const { buildPromptForPass } = await import("@/lib/ai-deep-analysis-helpers");
@@ -114,6 +167,51 @@ export async function POST(req: NextRequest) {
     }, report);
 
     const maxTokens = (MODEL_MAX_TOKENS as any)[aiConfig?.model] ?? 2000;
+
+    // P3.5: Policy engine — evaluate enabled policies against this AI call.
+    // Runs AFTER provider resolution (so we know providerId/model) and AFTER
+    // maxTokens is computed (so the `max-tokens-per-call` warn-and-cap rule
+    // can clamp it). BLOCK-severity → 403 with violation details. WARN-
+    // severity (only `max-tokens-per-call` today) → cap maxTokens to the
+    // policy's configured max and continue.
+    //
+    // Fail-open: if loadPolicies() throws (DB error), `policies` is `[]`
+    // and evaluatePolicies returns no violations — the call proceeds.
+    let effectiveMaxTokens = maxTokens;
+    const policies = await loadPolicies();
+    if (policies.length > 0) {
+      const violations = evaluatePolicies(policies, {
+        providerId: aiConfig.providerId,
+        model: aiConfig.model,
+        maxTokens,
+        userId,
+        plan: planInfo.plan,
+      });
+      if (hasBlockingViolation(violations)) {
+        return NextResponse.json(
+          {
+            error: "Policy violation",
+            passType: passType ?? null,
+            status: "blocked",
+            violations: blockingViolations(violations),
+          },
+          { status: 403 },
+        );
+      }
+      // Apply WARN-severity caps (currently only `max-tokens-per-call`).
+      const tokenWarn = violations.find(
+        (v) => v.policyType === "max-tokens-per-call" && v.severity === "warn",
+      );
+      if (tokenWarn) {
+        const policy = policies.find((p) => p.id === tokenWarn.policyId);
+        const cap = policy?.config?.maxTokens ?? 4000;
+        effectiveMaxTokens = Math.min(maxTokens, cap);
+        console.warn(
+          `[policies] ${passType} maxTokens capped ${maxTokens} → ${effectiveMaxTokens}`,
+        );
+      }
+    }
+
     const langInstruction = lang === "vi"
       ? "\n\nQUAN TRỌNG: Trả lời bằng tiếng Việt. Giữ nguyên code, file paths, thuật ngữ kỹ thuật bằng tiếng Anh."
       : "\n\nIMPORTANT: Respond in English. Keep code, file paths, and technical terms as-is.";
@@ -123,50 +221,77 @@ export async function POST(req: NextRequest) {
       { role: "user", content: prompt },
     ];
 
-    // P3.1: look up the user's plan + role for token-budget enforcement.
-    // callAI() will throw TokenBudgetExceededError synchronously before the
-    // fetch() if the user is over their monthly limit. Caught below → 429.
-    const planInfo = await getUserPlanInfo(userId);
+    // P3.1: planInfo is hoisted to the top of the handler — callAIWithFallback
+    // (and the underlying callAI) will throw TokenBudgetExceededError
+    // synchronously before fetch() if the user is over their monthly limit.
+    // Caught below → 429.
 
-    // Run AI pass (2 attempts: json_object → plain text)
+    // P3.2: Run AI pass via callAIWithFallback (handles 402/429/5xx by
+    // switching providers in the admin's fallback chain).
+    //
+    // Strategy:
+    //   Attempt 1: callAIWithFallback with responseFormat=json_object.
+    //     - For Platform AI: tries primary + each fallback provider in order.
+    //     - For BYOK: empty fallbacks → degrades to single callAI() attempt.
+    //     - The legacy 402-half-token retry is preserved ONLY when no
+    //       fallback chain is configured (BYOK users whose own key 402s).
+    //   Attempt 2 (if attempt 1 produced no parseable JSON): same chain
+    //     without responseFormat — some providers reject json_object mode.
     let result: any = null;
+    let providerUsed: string | undefined;
+    let attemptedProviders: any[] | undefined;
+
+    // ── Attempt 1: json_object response format ──
     try {
-      const aiResult = await callAI(aiConfig, messages, {
-        temperature: 0.3, maxTokens, timeout: 45,
+      const aiResult = await callAIWithFallback(aiConfig, fallbacks, messages, {
+        temperature: 0.3, maxTokens: effectiveMaxTokens, timeout: 45,
         responseFormat: "json_object",
         userId,
         plan: planInfo.plan,
+        audit: { userId, analysisId, passType },
       });
       if (aiResult.content) result = safeJsonParse(aiResult.content);
+      providerUsed = aiResult.providerUsed;
+      attemptedProviders = aiResult.attemptedProviders;
     } catch (e: any) {
       // P3.1: budget-exceeded propagates immediately — don't retry with half tokens.
       if (e instanceof TokenBudgetExceededError) throw e;
-      const errMsg = e?.message || "";
-      if (errMsg.includes("402") || errMsg.includes("credits")) {
-        // Retry with half tokens
-        try {
-          const aiResult = await callAI(aiConfig, messages, {
-            temperature: 0.3, maxTokens: Math.min(1500, Math.floor(maxTokens / 2)), timeout: 45,
-            responseFormat: "json_object",
-            userId,
-            plan: planInfo.plan,
-          });
-          if (aiResult.content) result = safeJsonParse(aiResult.content);
-        } catch (e2: any) {
-          if (e2 instanceof TokenBudgetExceededError) throw e2;
+      // P3.2: legacy 402-half-token retry — only when no fallback chain is
+      // configured. With a chain, callAIWithFallback already exhausted the
+      // available providers, so retrying with half tokens on the SAME
+      // provider won't help (the provider is genuinely out of credits).
+      if (fallbacks.length === 0) {
+        const errMsg = e?.message || "";
+        if (errMsg.includes("402") || errMsg.includes("credits")) {
+          try {
+            const aiResult = await callAI(aiConfig, messages, {
+              temperature: 0.3, maxTokens: Math.min(1500, Math.floor(effectiveMaxTokens / 2)), timeout: 45,
+              responseFormat: "json_object",
+              userId,
+              plan: planInfo.plan,
+              audit: { userId, analysisId, passType },
+            });
+            if (aiResult.content) result = safeJsonParse(aiResult.content);
+            providerUsed = aiResult.providerId;
+          } catch (e2: any) {
+            if (e2 instanceof TokenBudgetExceededError) throw e2;
+          }
         }
       }
     }
 
+    // ── Attempt 2: without response_format (some providers reject json_object) ──
     if (!result) {
-      // Attempt 2: without response_format
       try {
-        const aiResult = await callAI(aiConfig, messages, {
-          temperature: 0.3, maxTokens, timeout: 45,
+        const aiResult = await callAIWithFallback(aiConfig, fallbacks, messages, {
+          temperature: 0.3, maxTokens: effectiveMaxTokens, timeout: 45,
           userId,
           plan: planInfo.plan,
+          audit: { userId, analysisId, passType },
         });
         if (aiResult.content) result = safeJsonParse(aiResult.content);
+        providerUsed = aiResult.providerUsed;
+        attemptedProviders = aiResult.attemptedProviders;
       } catch (e: any) {
         if (e instanceof TokenBudgetExceededError) throw e;
         console.warn(`[ai-pass] ${passType} failed:`, e?.message?.slice(0, 200));
@@ -198,6 +323,10 @@ export async function POST(req: NextRequest) {
         passType, status: "done", result,
         completedPasses, totalPasses: allPasses.length,
         allDone: aiStatus === "done",
+        // P3.2: surface which provider ultimately handled the call (may be a
+        // fallback if the primary 402'd / 5xx'd). Useful for debugging.
+        providerUsed: providerUsed ?? null,
+        attemptedProviders: attemptedProviders ?? [],
         report, // return updated report so frontend can update
       });
     } else {

@@ -6,6 +6,13 @@ import { registerAllAgents, taskQueue, eventBus } from "@/lib/agents";
 import type { TaskKind } from "@/lib/agents/types";
 import type { AIProviderConfig } from "@/lib/agents/ai-client";
 import { checkTokenBudget, getUserPlanInfo } from "@/lib/billing/token-budget";
+import {
+  enforceRateLimit,
+  rateLimit429Body,
+  rateLimitHeaders,
+  retryAfterSeconds,
+  maybeCleanupOldBuckets,
+} from "@/lib/rate-limiter";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -25,6 +32,24 @@ export async function POST(req: NextRequest) {
     // over their monthly limit. (Per-call enforcement inside the agent loop
     // is deferred — the agent wrapper would need to forward userId+plan.)
     const planInfo = await getUserPlanInfo(userId);
+
+    // P3.3: per-user hourly rate limit on agent task enqueues (DB-backed).
+    // Agent tasks are the most expensive endpoint (fan-out into multiple AI
+    // calls), so the limits are the tightest: Free 5/h, Pro 50/h, Team 200/h,
+    // Enterprise unlimited. Check happens BEFORE the token-budget check
+    // (cheaper — single indexed findUnique) and BEFORE the task is enqueued.
+    const rl = await enforceRateLimit(userId, planInfo.plan, "agent");
+    if (rl.blocked) {
+      return NextResponse.json(rateLimit429Body(rl.status!, "agent"), {
+        status: 429,
+        headers: {
+          "Retry-After": String(retryAfterSeconds(rl.status)),
+          ...rateLimitHeaders(rl.status),
+        },
+      });
+    }
+    maybeCleanupOldBuckets();
+
     const budget = await checkTokenBudget(userId, planInfo.plan);
     if (!budget.allowed && budget.status) {
       return NextResponse.json({

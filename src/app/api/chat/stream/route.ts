@@ -7,8 +7,17 @@ import { requireUserId, verifyAnalysisOwnership } from "@/lib/auth";
 import { decrypt } from "@/lib/crypto";
 import { isProduction } from "@/lib/env";
 import { streamAI, type AIMessage, TokenBudgetExceededError } from "@/lib/ai-client";
+import { shouldFallback, getFallbackChain, type FallbackProvider } from "@/lib/ai-fallback";
 import { getUserPlanInfo } from "@/lib/billing/token-budget";
+import {
+  enforceRateLimit,
+  rateLimit429Body,
+  rateLimitHeaders,
+  retryAfterSeconds,
+  maybeCleanupOldBuckets,
+} from "@/lib/rate-limiter";
 import { resolveEffectiveProvider } from "@/lib/platform-ai";
+import type { AIProviderConfig } from "@/lib/ai-client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -63,6 +72,36 @@ export async function POST(req: NextRequest) {
   }
 
   const userId = await requireUserId();
+
+  // P3.1 + P3.3: hoist the plan/role lookup to the top of the handler so
+  // both the hourly rate-limit check (P3.3) and the monthly token-budget
+  // enforcement inside streamAI() (P3.1) share the same lookup. Anonymous
+  // users (no userId) default to free — they're handled below.
+  const planInfo = userId ? await getUserPlanInfo(userId) : { plan: "free", role: "user" };
+
+  // P3.3: per-user hourly rate limit (DB-backed — survives Vercel serverless
+  // cold-starts). For streaming, fail-fast with a clean HTTP 429 + SSE event
+  // BEFORE opening the connection — once chunks start flowing we can't surface
+  // a clean error to the client. Shares the "chat" bucket with /api/chat
+  // (same user action). Free: 20/h, Pro: 200/h, Team: 1000/h, Enterprise: unlimited.
+  if (userId) {
+    const rl = await enforceRateLimit(userId, planInfo.plan, "chat");
+    if (rl.blocked) {
+      return new Response(
+        "data: " + JSON.stringify(rateLimit429Body(rl.status!, "chat")) + "\n\n",
+        {
+          status: 429,
+          headers: {
+            "Content-Type": "text/event-stream",
+            "Retry-After": String(retryAfterSeconds(rl.status)),
+            ...rateLimitHeaders(rl.status),
+          },
+        },
+      );
+    }
+    // Opportunistic cleanup of stale buckets (~1% of requests, fire-and-forget).
+    maybeCleanupOldBuckets();
+  }
 
   // P3.7 (multi-tenant isolation): when an analysisId is supplied, verify
   // ownership (or valid share token) BEFORE streaming. Without this check,
@@ -210,26 +249,59 @@ export async function POST(req: NextRequest) {
   const temperature = personality?.temperature ?? 0.7;
   const maxTokens = personality?.maxTokens && personality.maxTokens > 0 ? personality.maxTokens : 4096;
 
-  // P3.1: look up the user's plan for token-budget enforcement.
-  // streamAI() will throw TokenBudgetExceededError synchronously before
-  // opening the connection if the user is over their monthly limit.
-  const planInfo = userId ? await getUserPlanInfo(userId) : { plan: "free", role: "user" };
+  // P3.1: planInfo is hoisted to the top of the handler — streamAI() will
+  // throw TokenBudgetExceededError synchronously before opening the
+  // connection if the user is over their monthly limit.
+
+  // P3.2: load admin's fallback chain ONLY when the resolved provider came
+  // from Platform AI (admin's key). BYOK users skip the chain — different
+  // providers would require different keys the user doesn't have.
+  // Heuristic: aiMode="platform" OR explicit platformProvider selection
+  // (and no BYOK client apiKey in `effectiveProvider`) → Platform AI.
+  const usedPlatformAI = body.aiMode === "platform" || (!!body.platformProvider && !effectiveProvider?.apiKey);
+  const fallbacks = usedPlatformAI ? await getFallbackChain() : [];
+
+  // Build the ordered list of provider configs to try: primary first, then
+  // each fallback (with admin's stored key resolved by getFallbackChain).
+  // Each fallback uses a tighter per-attempt timeout so 3 attempts fit in
+  // the 60s Vercel Hobby budget.
+  const FALLBACK_TIMEOUT_SEC = 20;
+  const providersToTry: AIProviderConfig[] = finalProvider ? [finalProvider] : [];
+  for (const fb of fallbacks) {
+    providersToTry.push({
+      providerId: fb.providerId,
+      apiKey: fb.apiKey || finalProvider?.apiKey || "",
+      baseUrl: fb.baseUrl || "",
+      model: fb.model,
+      temperature: finalProvider?.temperature,
+      maxTokens: finalProvider?.maxTokens,
+      timeout: FALLBACK_TIMEOUT_SEC,
+    });
+  }
 
   // Create SSE stream using the unified streamAI() generator
-  // FIXED: Retry logic — if stream returns empty, retry once before giving up
+  // P3.2: iterates [primary, ...fallbacks]. On a retryable error (402/429/
+  // 5xx/timeout) BEFORE any chunks have been yielded, switches to the next
+  // provider. If chunks were already sent, surfaces the error to the client
+  // (we can't take back chunks already delivered).
   const stream = new ReadableStream({
     async start(controller) {
       const encoder = new TextEncoder();
       let fullReply = "";
       let lastError: string | undefined;
+      let lastProviderUsed: AIProviderConfig | undefined = providersToTry[0];
+      let attemptsRemaining = providersToTry.length;
 
-      // Retry loop: attempt 1 + attempt 2 (if empty)
-      for (let attempt = 0; attempt < 2; attempt++) {
+      for (const provider of providersToTry) {
+        attemptsRemaining -= 1;
+        lastProviderUsed = provider;
         fullReply = "";
         try {
-          for await (const chunk of streamAI(finalProvider!, llmMessages, {
+          for await (const chunk of streamAI(provider, llmMessages, {
             temperature,
             maxTokens,
+            // P3.2: tighter timeout for fallback providers (not the primary).
+            timeout: provider === finalProvider ? undefined : FALLBACK_TIMEOUT_SEC,
             // P3.1: budget enforcement. streamAI() runs the pre-flight check
             // before fetch() and throws TokenBudgetExceededError if blocked.
             userId: userId ?? undefined,
@@ -244,10 +316,9 @@ export async function POST(req: NextRequest) {
             break;
           }
 
-          // Empty response — retry if first attempt
-          if (attempt === 0) {
-            console.warn(`[/api/chat/stream] Empty stream on attempt 1 — retrying...`);
-            await new Promise(r => setTimeout(r, 500));
+          // Empty response — try next provider if any remain.
+          if (attemptsRemaining > 0) {
+            console.warn(`[/api/chat/stream] Empty stream from ${provider.providerId}/${provider.model}; trying next fallback.`);
           }
         } catch (err: any) {
           // P3.1: budget-exceeded — send a structured error event so the
@@ -270,15 +341,27 @@ export async function POST(req: NextRequest) {
             return;
           }
           lastError = err?.message || "Stream failed";
-          console.warn(`[/api/chat/stream] Attempt ${attempt + 1} error:`, lastError);
-          if (attempt === 0) {
-            await new Promise(r => setTimeout(r, 500));
-          } else {
-            // Both attempts failed — send error to client
+          console.warn(`[/api/chat/stream] Provider ${provider.providerId}/${provider.model} error:`, lastError);
+
+          // If we've already streamed chunks to the client, we can't safely
+          // retry on another provider — the user would see concatenated /
+          // duplicated output. Surface the error and stop.
+          if (fullReply.length > 0) {
             controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: lastError })}\n\n`));
             controller.close();
             return;
           }
+
+          // No chunks sent yet. Decide whether to retry on the next provider.
+          if (attemptsRemaining > 0 && shouldFallback(lastError ?? "")) {
+            // Continue to next provider in the chain.
+            continue;
+          }
+
+          // Non-retryable error or no more providers — send error and stop.
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: lastError })}\n\n`));
+          controller.close();
+          return;
         }
       }
 
@@ -295,10 +378,12 @@ export async function POST(req: NextRequest) {
 
         doneData.debug = {
           // Full snapshot (for DeveloperConsole tabs)
+          // P3.2: reflect the actual provider that handled the call (may be
+          // a fallback if the primary 402'd / 5xx'd).
           requestId,
           timestamp: requestStart,
-          provider: finalProvider?.providerId ?? "unknown",
-          model: finalProvider?.model ?? "unknown",
+          provider: lastProviderUsed?.providerId ?? finalProvider?.providerId ?? "unknown",
+          model: lastProviderUsed?.model ?? finalProvider?.model ?? "unknown",
           personality: personality?.name ?? "Default (CTO)",
           temperature,
           maxTokens,
@@ -316,10 +401,10 @@ export async function POST(req: NextRequest) {
           generationMs: totalMs,
           totalMs,
           capabilities: {
-            vision: finalProvider?.providerId === "gemini" || finalProvider?.providerId === "openai",
+            vision: (lastProviderUsed?.providerId ?? finalProvider?.providerId) === "gemini" || (lastProviderUsed?.providerId ?? finalProvider?.providerId) === "openai",
             toolCalling: true,
             functionCalling: true,
-            reasoning: finalProvider?.providerId === "openai",
+            reasoning: (lastProviderUsed?.providerId ?? finalProvider?.providerId) === "openai",
           },
           rawResponse: fullReply,
           formattedResponse: fullReply,
@@ -328,8 +413,8 @@ export async function POST(req: NextRequest) {
             id: requestId,
             timestamp: requestStart,
             requestId,
-            provider: finalProvider?.providerId ?? "unknown",
-            model: finalProvider?.model ?? "unknown",
+            provider: lastProviderUsed?.providerId ?? finalProvider?.providerId ?? "unknown",
+            model: lastProviderUsed?.model ?? finalProvider?.model ?? "unknown",
             personality: personality?.name ?? "Default (CTO)",
             durationMs: totalMs,
             queueMs: 0,
@@ -337,7 +422,8 @@ export async function POST(req: NextRequest) {
             status: lastError ? "error" : "success",
             statusCode: lastError ? 500 : 200,
             error: lastError,
-            retryCount: 0,
+            // P3.2: total attempts = primary + fallbacks tried.
+            retryCount: Math.max(0, providersToTry.length - attemptsRemaining - 1),
             inputTokens,
             outputTokens,
             totalTokens: inputTokens + outputTokens,

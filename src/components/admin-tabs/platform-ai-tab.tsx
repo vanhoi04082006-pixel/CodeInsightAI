@@ -3,11 +3,13 @@
 import { useEffect, useState } from "react";
 import {
   Cpu, Settings2, Check, Zap, Loader2, AlertCircle, CheckCircle2, Trash2,
+  ShieldCheck,
 } from "lucide-react";
 import { GlassCard, GradientText } from "@/components/shared/ui";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -33,6 +35,11 @@ export function PlatformAITab() {
   const [testResults, setTestResults] = useState<Record<string, { status: "ok" | "error" | "testing"; latency?: number; error?: string }>>({});
   const [testModelSelection, setTestModelSelection] = useState<Record<string, string>>({});
 
+  // P3.2: fallback chain state. Stored as raw JSON string in the textarea
+  // (admin-friendly format: array of {providerId, model}).
+  const [fallbackChainText, setFallbackChainText] = useState<string>("");
+  const [savingFallback, setSavingFallback] = useState(false);
+
   const load = async () => {
     setLoading(true);
     try {
@@ -40,6 +47,18 @@ export function PlatformAITab() {
       const data = await res.json();
       setConfigured(data.configured || []);
       setAvailable(data.available || []);
+      // P3.2: hydrate the fallback chain textarea. The backend returns the
+      // raw JSON string (or null). Pretty-print for readability.
+      if (data.fallbackChain) {
+        try {
+          const parsed = JSON.parse(data.fallbackChain);
+          setFallbackChainText(JSON.stringify(parsed, null, 2));
+        } catch {
+          setFallbackChainText(data.fallbackChain);
+        }
+      } else {
+        setFallbackChainText("");
+      }
     } catch {
       toast.error(t("admin", "platformAi.toast.loadFailed"));
     } finally {
@@ -128,6 +147,66 @@ export function PlatformAITab() {
     } catch {
       toast.error(t("admin", "platformAi.toast.removeFailed"));
     }
+  };
+
+  // P3.2: Save the fallback chain (JSON textarea) via PATCH action=save-fallback.
+  // The backend validates the JSON shape and returns the persisted value.
+  const handleSaveFallback = async () => {
+    setSavingFallback(true);
+    try {
+      const trimmed = fallbackChainText.trim();
+      // Validate locally first so we can show a friendly error before the round-trip.
+      if (trimmed) {
+        try {
+          const parsed = JSON.parse(trimmed);
+          if (!Array.isArray(parsed)) throw new Error("not array");
+        } catch (e: any) {
+          toast.error(t("admin", "platformAi.toast.fallbackInvalidJson"));
+          return;
+        }
+      }
+      const res = await fetch("/api/admin/platform-ai", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "save-fallback",
+          fallbackChain: trimmed || null,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(t("admin", "platformAi.toast.fallbackSaved"));
+        // Refresh to get the canonical pretty-printed form back.
+        load();
+      } else {
+        toast.error(data.error || t("admin", "platformAi.toast.fallbackSaveFailed"));
+      }
+    } catch {
+      toast.error(t("admin", "platformAi.toast.fallbackSaveFailed"));
+    } finally {
+      setSavingFallback(false);
+    }
+  };
+
+  // P3.2: Helper to append a configured provider to the fallback chain.
+  // Uses the provider's first model as a sensible default; admin can edit
+  // the JSON textarea to change the model afterward.
+  const handleQuickAddToFallback = (providerId: string, model: string) => {
+    let current: Array<{ providerId: string; model: string }> = [];
+    try {
+      const parsed = JSON.parse(fallbackChainText || "[]");
+      if (Array.isArray(parsed)) current = parsed;
+    } catch {
+      // textarea has invalid JSON — start fresh
+      current = [];
+    }
+    // Avoid duplicates (same providerId + model).
+    if (current.some((e) => e.providerId === providerId && e.model === model)) {
+      toast.info(t("admin", "platformAi.toast.fallbackAlreadyAdded"));
+      return;
+    }
+    current.push({ providerId, model });
+    setFallbackChainText(JSON.stringify(current, null, 2));
   };
 
   // Test API key connectivity — admin endpoint decrypts key server-side
@@ -259,6 +338,16 @@ export function PlatformAITab() {
                       {testing === c.providerId ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <Zap className="mr-1 h-3.5 w-3.5" />}
                       {t("admin", "platformAi.test")}
                     </Button>
+                    {/* P3.2: quick-add this provider+model to the fallback chain */}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleQuickAddToFallback(c.providerId, testModelSelection[c.providerId] || c.models[0] || "")}
+                      className="text-[10px] text-muted-foreground hover:text-amber-300"
+                      title={t("admin", "platformAi.titleAddToFallback")}
+                    >
+                      + {t("admin", "platformAi.addToFallback")}
+                    </Button>
                   </div>
                   <Button size="sm" variant="ghost" onClick={() => handleEdit(c)} title={t("admin", "platformAi.titleEdit")}>
                     <Settings2 className="h-3.5 w-3.5" />
@@ -332,6 +421,82 @@ export function PlatformAITab() {
               </label>
             </div>
           </div>
+        )}
+      </GlassCard>
+
+      {/* P3.2: Fallback Chain Configuration */}
+      <GlassCard className="p-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="h-4 w-4 text-amber-300" />
+            <h3 className="text-sm font-semibold"><GradientText>{t("admin", "platformAi.fallbackChain")}</GradientText></h3>
+          </div>
+          <Badge variant="outline" className="text-[10px]">
+            {t("admin", "platformAi.fallbackChainCount", {
+              count: (() => {
+                try {
+                  const p = JSON.parse(fallbackChainText || "[]");
+                  return Array.isArray(p) ? p.length : 0;
+                } catch { return 0; }
+              })(),
+            })}
+          </Badge>
+        </div>
+        <p className="mt-1 text-xs text-muted-foreground">
+          {t("admin", "platformAi.fallbackChainDesc")}
+        </p>
+
+        {configured.length === 0 ? (
+          <div className="mt-4 rounded-lg border border-amber-500/20 bg-amber-500/[0.04] p-3 text-center">
+            <p className="text-xs text-amber-300">{t("admin", "platformAi.fallbackNoProviders")}</p>
+          </div>
+        ) : (
+          <>
+            {/* JSON editor */}
+            <div className="mt-3 space-y-1">
+              <label className="text-[10px] uppercase text-muted-foreground">{t("admin", "platformAi.fallbackChainLabel")}</label>
+              <Textarea
+                value={fallbackChainText}
+                onChange={(e) => setFallbackChainText(e.target.value)}
+                placeholder='[{"providerId":"openai","model":"gpt-4o-mini"}]'
+                className="bg-white/[0.03] font-mono text-xs min-h-[120px]"
+                spellCheck={false}
+              />
+            </div>
+
+            {/* Quick-add buttons: each configured provider's first model */}
+            <div className="mt-3 space-y-1">
+              <label className="text-[10px] uppercase text-muted-foreground">{t("admin", "platformAi.fallbackQuickAdd")}</label>
+              <div className="flex flex-wrap gap-1">
+                {configured.map((c) => (
+                  <button
+                    key={c.providerId}
+                    onClick={() => handleQuickAddToFallback(c.providerId, c.models[0] || "")}
+                    className="rounded-full border border-white/10 bg-white/[0.03] px-2 py-1 text-[10px] font-mono hover:bg-amber-500/10 hover:border-amber-400/30 hover:text-amber-300 transition-colors"
+                    title={t("admin", "platformAi.titleAddToFallback")}
+                  >
+                    + {c.providerId} / {c.models[0] || "?"}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-3 flex items-center gap-2">
+              <Button onClick={handleSaveFallback} disabled={savingFallback} size="sm" className="bg-gradient-to-r from-amber-500 to-orange-500 text-white">
+                {savingFallback ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Check className="mr-1.5 h-3.5 w-3.5" />}
+                {savingFallback ? t("admin", "platformAi.savingFallback") : t("admin", "platformAi.saveFallback")}
+              </Button>
+              <Button
+                onClick={() => setFallbackChainText("")}
+                disabled={savingFallback || !fallbackChainText}
+                size="sm"
+                variant="ghost"
+                className="text-muted-foreground hover:text-rose-300"
+              >
+                {t("admin", "platformAi.clearFallback")}
+              </Button>
+            </div>
+          </>
         )}
       </GlassCard>
     </div>
