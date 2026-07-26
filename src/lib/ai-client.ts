@@ -2,7 +2,7 @@
 //
 // A single module for calling ANY of the 14 supported AI providers.
 // Used by: /api/chat, /api/chat/stream, /lib/ai-enhance, /lib/ai-deep-analysis,
-// /api/agents/execute, /api/mission/*.
+// /api/agents/execute.
 //
 // Supports:
 // - OpenAI-compatible (OpenRouter, OpenAI, DeepSeek, Groq, Together, Fireworks,

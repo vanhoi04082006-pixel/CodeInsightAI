@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Sparkles, ScanSearch, MessagesSquare, Plug, Rocket, Shield,
+  Sparkles, ScanSearch, MessagesSquare, Plug, Shield,
   Check, ArrowRight, X,
 } from "lucide-react";
 import { GlassCard, GradientText } from "@/components/shared/ui";
@@ -33,12 +33,6 @@ const STEPS = [
     color: "#f472b6",
   },
   {
-    icon: Rocket,
-    title: "Mission Control (Pro)",
-    desc: "Autonomous AI agents that plan, code, test, and ship. Upgrade to Pro to unlock.",
-    color: "#34d399",
-  },
-  {
     icon: Shield,
     title: "You're Ready!",
     desc: "Start by analyzing a repository or configuring your AI provider.",
@@ -47,7 +41,7 @@ const STEPS = [
 ];
 
 /**
- * OnboardingOverlay — shows a 5-step welcome guide for first-time users.
+ * OnboardingOverlay — shows a 4-step welcome guide for first-time users.
  * Dismissed permanently via localStorage. Only shows after GitHub sign-in.
  */
 export function OnboardingOverlay() {

@@ -5,7 +5,6 @@
 import type { AgentId, AgentInfo, Task, TaskResult } from "./types";
 import { BaseAgent } from "./base-agent";
 import { callAI, callAIForJSON, type AIProviderConfig, type AIMessage } from "./ai-client";
-import { repositoryMemory } from "./repository-memory";
 import type { Issue } from "@/lib/types";
 import { commandRunner } from "@/lib/terminal";
 import { writeFile } from "@/lib/repo-editor";
@@ -195,18 +194,9 @@ export class BugFixerAgent extends BaseAgent {
       proposal.fixDescription,
     );
 
-    if (repoUrl) {
-      try {
-        await repositoryMemory.remember(
-          repoUrl,
-          `bugfix:${task.id}:${buggyFile.path}`,
-          { rootCause: proposal.rootCause, fixDescription: proposal.fixDescription, confidence: proposal.confidence },
-          "fix",
-        );
-      } catch {
-        // best-effort
-      }
-    }
+    // repoUrl is accepted for backward compat with the existing API contract,
+    // but no longer persisted — legacy memory was removed.
+    void repoUrl;
 
     this.log(
       "info",

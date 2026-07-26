@@ -35,10 +35,8 @@
   "analysisFailed": "Analysis failed. Please try again.",
   "appShell": {
     "toggleSidebar": "Toggle sidebar",
-    "titleMission": "AI Operating System",
     "titleDefault": "AI-powered repository intelligence",
     "lockHint": {
-      "pro": "(Pro)",
       "custom": "(Custom mode)"
     }
   },

@@ -856,8 +856,10 @@ function IssuesTab({ issues, title, color, report, id }: { issues: Issue[]; titl
         }),
       });
       const data = await res.json();
-      if (data.taskId || data.status) {
-        toast.success(t("reports", "action.agentStarted"));
+      if (data.success) {
+        toast.success(t("reports", "action.agentStarted"), {
+          description: data.summary?.slice(0, 100),
+        });
       } else {
         toast.error(data.error || t("reports", "action.agentFailed"));
       }

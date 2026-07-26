@@ -302,65 +302,6 @@ model RateLimitBucket {
 }
 
 // ==========================================
-// AGENT MEMORY & EVENTS
-// ==========================================
-
-model MemoryEntry {
-  id          String   @id @default(cuid())
-  category    String
-  key         String
-  value       String   @default("{}")
-  tags        String   @default("[]")
-  repoUrl     String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  accessCount Int      @default(0)
-
-  @@index([category])
-  @@index([repoUrl])
-  @@index([key])
-  @@unique([category, key, repoUrl])
-}
-
-model AgentTask {
-  id          String   @id @default(cuid())
-  taskId      String   @unique
-  kind        String
-  title       String
-  status      String
-  assignedAgent String?
-  priority    String   @default("medium")
-  input       String   @default("{}")
-  output      String?
-  error       String?
-  progress    Int      @default(0)
-  attempts    Int      @default(0)
-  parentTaskId String?
-  createdAt   DateTime @default(now())
-  startedAt   DateTime?
-  completedAt DateTime?
-
-  @@index([status])
-  @@index([kind])
-  @@index([createdAt])
-}
-
-model AgentEvent {
-  id          String   @id @default(cuid())
-  taskId      String?
-  agentId     String?
-  type        String
-  message     String
-  level       String   @default("info")
-  data        String?
-  createdAt   DateTime @default(now())
-
-  @@index([taskId])
-  @@index([agentId])
-  @@index([createdAt])
-}
-
-// ==========================================
 // SHARE TOKENS (public read-only analysis links)
 // ==========================================
 

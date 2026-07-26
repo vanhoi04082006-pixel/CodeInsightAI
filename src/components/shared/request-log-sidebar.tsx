@@ -122,7 +122,7 @@ export function RequestLogSidebar({
   const handleCopy = (log: AIRequestLog) => {
     const text = `[${log.requestId}] ${log.provider}/${log.model} — ${log.statusCode} (${log.durationMs}ms)\nTokens: ${log.totalTokens} (in: ${log.inputTokens}, out: ${log.outputTokens})${log.error ? `\nError: ${log.error}` : ""}`;
     navigator.clipboard.writeText(text);
-    toast.success(t("mission", "requestLog.logCopiedToast"));
+    toast.success(t("chat", "requestLog.logCopiedToast"));
   };
 
   const handlePin = (id: string) => {
@@ -143,7 +143,7 @@ export function RequestLogSidebar({
     a.download = `codeinsight-logs-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success(t("mission", "requestLog.exportedToast", { count: logs.length }));
+    toast.success(t("chat", "requestLog.exportedToast", { count: logs.length }));
   };
 
   // Desktop sidebar content
@@ -155,8 +155,8 @@ export function RequestLogSidebar({
           <ScrollText className="h-4 w-4 text-cyan-300" />
         </div>
         <div className="flex-1 min-w-0">
-          <h3 className="truncate text-sm font-semibold">{t("mission", "requestLog.title")}</h3>
-          <p className="text-[10px] text-muted-foreground">{t("mission", "requestLog.subtitle")}</p>
+          <h3 className="truncate text-sm font-semibold">{t("chat", "requestLog.title")}</h3>
+          <p className="text-[10px] text-muted-foreground">{t("chat", "requestLog.subtitle")}</p>
         </div>
         <span className="rounded-full bg-cyan-500/15 px-2 py-0.5 text-[10px] font-bold text-cyan-300">
           {filteredLogs.length}
@@ -164,14 +164,14 @@ export function RequestLogSidebar({
         <button
           onClick={onToggleCollapse}
           className="hidden rounded-md p-1.5 text-muted-foreground transition hover:bg-white/5 hover:text-foreground md:block"
-          aria-label={t("mission", "requestLog.aria.collapseSidebar")}
+          aria-label={t("chat", "requestLog.aria.collapseSidebar")}
         >
           <ChevronRight className="h-4 w-4" />
         </button>
         <button
           onClick={onClose}
           className="rounded-md p-1.5 text-muted-foreground transition hover:bg-white/5 hover:text-foreground"
-          aria-label={t("mission", "requestLog.aria.closePanel")}
+          aria-label={t("chat", "requestLog.aria.closePanel")}
         >
           <X className="h-4 w-4" />
         </button>
@@ -185,7 +185,7 @@ export function RequestLogSidebar({
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder={t("mission", "requestLog.searchPlaceholder")}
+            placeholder={t("chat", "requestLog.searchPlaceholder")}
             className="w-full rounded-lg border border-white/10 bg-white/[0.03] py-1.5 pl-8 pr-8 text-xs text-foreground placeholder:text-muted-foreground/60 focus:border-cyan-400/40 focus:outline-none focus:ring-1 focus:ring-cyan-400/20"
           />
           {search && (
@@ -218,7 +218,7 @@ export function RequestLogSidebar({
                 : { border: "1px solid rgba(255,255,255,0.08)" }
             }
           >
-            {t("mission", `requestLog.filters.${f.id}`)}
+            {t("chat", `requestLog.filters.${f.id}`)}
           </button>
         ))}
       </div>
@@ -231,7 +231,7 @@ export function RequestLogSidebar({
               <ScrollText className="h-5 w-5 text-muted-foreground/50" />
             </div>
             <p className="mt-3 text-xs text-muted-foreground">
-              {search || filter !== "all" ? t("mission", "requestLog.emptyFiltered") : t("mission", "requestLog.empty")}
+              {search || filter !== "all" ? t("chat", "requestLog.emptyFiltered") : t("chat", "requestLog.empty")}
             </p>
             {(search || filter !== "all") && (
               <button
@@ -241,7 +241,7 @@ export function RequestLogSidebar({
                 }}
                 className="mt-2 text-[10px] text-cyan-300 hover:underline"
               >
-                {t("mission", "requestLog.clearFilters")}
+                {t("chat", "requestLog.clearFilters")}
               </button>
             )}
           </div>
@@ -267,21 +267,21 @@ export function RequestLogSidebar({
             className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.03] py-2 text-[11px] font-medium transition hover:border-cyan-400/30 hover:bg-white/[0.05] disabled:cursor-not-allowed disabled:opacity-40"
           >
             <Download className="h-3.5 w-3.5" />
-            <span>{t("mission", "requestLog.export")}</span>
+            <span>{t("chat", "requestLog.export")}</span>
           </button>
           <button
             onClick={() => {
-              if (confirm(t("mission", "requestLog.clearConfirm"))) {
+              if (confirm(t("chat", "requestLog.clearConfirm"))) {
                 clearLogs();
                 setPinnedIds(new Set());
-                toast.success(t("mission", "requestLog.clearedToast"));
+                toast.success(t("chat", "requestLog.clearedToast"));
               }
             }}
             disabled={logs.length === 0}
             className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-rose-500/20 bg-rose-500/10 py-2 text-[11px] font-medium text-rose-300 transition hover:bg-rose-500/20 disabled:cursor-not-allowed disabled:opacity-40"
           >
             <Trash2 className="h-3.5 w-3.5" />
-            <span>{t("mission", "requestLog.clearAll")}</span>
+            <span>{t("chat", "requestLog.clearAll")}</span>
           </button>
         </div>
       </div>
@@ -311,7 +311,7 @@ export function RequestLogSidebar({
         <button
           onClick={onToggleCollapse}
           className="glass-strong absolute right-0 top-1/2 z-30 hidden -translate-y-1/2 items-center gap-1 rounded-l-xl border border-r-0 border-white/10 px-2 py-4 text-muted-foreground transition hover:bg-white/5 hover:text-foreground md:flex"
-          aria-label={t("mission", "requestLog.aria.expandSidebar")}
+          aria-label={t("chat", "requestLog.aria.expandSidebar")}
         >
           <ChevronLeft className="h-4 w-4" />
           <ScrollText className="h-4 w-4" />
@@ -373,7 +373,7 @@ function LogCard({
     hour12: false,
   });
 
-  const displayName = isUser ? t("mission", "requestLog.userDisplayName") : t("mission", "requestLog.aiDisplayName");
+  const displayName = isUser ? t("chat", "requestLog.userDisplayName") : t("chat", "requestLog.aiDisplayName");
   const contentPreview = log.error
     ? log.error.slice(0, 80)
     : `${log.provider}/${log.model} · ${log.personality} · ${log.totalTokens} tokens`;
@@ -446,8 +446,8 @@ function LogCard({
         <button
           onClick={onCopy}
           className="flex h-6 w-6 items-center justify-center rounded-md border border-white/10 bg-background/80 backdrop-blur-sm transition hover:border-cyan-400/30 hover:text-cyan-300"
-          aria-label={t("mission", "requestLog.aria.copyLog")}
-          title={t("mission", "requestLog.actions.copy")}
+          aria-label={t("chat", "requestLog.aria.copyLog")}
+          title={t("chat", "requestLog.actions.copy")}
         >
           <Copy className="h-3 w-3" />
         </button>
@@ -457,8 +457,8 @@ function LogCard({
             "flex h-6 w-6 items-center justify-center rounded-md border border-white/10 bg-background/80 backdrop-blur-sm transition hover:border-cyan-400/30 hover:text-cyan-300",
             pinned && "text-cyan-300"
           )}
-          aria-label={pinned ? t("mission", "requestLog.aria.unpinLog") : t("mission", "requestLog.aria.pinLog")}
-          title={pinned ? t("mission", "requestLog.actions.unpin") : t("mission", "requestLog.actions.pin")}
+          aria-label={pinned ? t("chat", "requestLog.aria.unpinLog") : t("chat", "requestLog.aria.pinLog")}
+          title={pinned ? t("chat", "requestLog.actions.unpin") : t("chat", "requestLog.actions.pin")}
         >
           <Pin className={cn("h-3 w-3", pinned && "fill-cyan-300")} />
         </button>

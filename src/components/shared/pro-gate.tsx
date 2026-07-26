@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Crown, Lock, Rocket, Loader2, Check } from "lucide-react";
+import { Crown, Lock, Loader2, Check } from "lucide-react";
 import { GlassCard, GradientText } from "@/components/shared/ui";
 import { Button } from "@/components/ui/button";
 import { useSession } from "next-auth/react";
@@ -16,8 +16,8 @@ import { isProduction } from "@/lib/env";
  * Pro + Admin users: full access.
  *
  * Usage:
- *   <ProGate feature="Mission Control" icon={Rocket}>
- *     <MissionControlView />
+ *   <ProGate feature="My Feature" icon={MyIcon}>
+ *     <MyFeatureView />
  *   </ProGate>
  */
 export function ProGate({

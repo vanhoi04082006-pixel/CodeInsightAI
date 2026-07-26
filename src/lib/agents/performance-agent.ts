@@ -5,7 +5,6 @@
 import type { AgentId, AgentInfo, Task, TaskResult } from "./types";
 import { BaseAgent } from "./base-agent";
 import { callAIForJSON, type AIProviderConfig, type AIMessage } from "./ai-client";
-import { repositoryMemory } from "./repository-memory";
 import { analyzePerformance, getPositiveFindings } from "@/lib/analyzers/performance";
 import type { Issue } from "@/lib/types";
 
@@ -96,13 +95,9 @@ export class PerformanceAgent extends BaseAgent {
       report.summary,
     );
 
-    if (repoUrl) {
-      try {
-        await repositoryMemory.remember(repoUrl, `perf:${task.id}`, report, "decision");
-      } catch {
-        // best-effort
-      }
-    }
+    // repoUrl is accepted for backward compat with the existing API contract,
+    // but no longer persisted — direct-call memory was removed.
+    void repoUrl;
 
     this.log("info", `Perf audit — score ${report.score}/100, ${report.topIssues.length} top issues.`);
 

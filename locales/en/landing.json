@@ -242,7 +242,7 @@
         "f3": "Platform AI (admin-provided keys)",
         "f4": "100 analyses / month",
         "f5": "2000 chat messages / month",
-        "f6": "Streaming chat + Mission Control"
+        "f6": "Streaming chat + priority support"
       },
       "cta": "Upgrade to Pro"
     },
@@ -269,7 +269,7 @@
     "proDesc": "For power users — today it's free",
     "proF1": "Everything in Free",
     "proF2": "Autonomous workflow runner",
-    "proF3": "Mission control dashboard",
+    "proF3": "Priority support",
     "proF4": "Agent personality system",
     "proF5": "Priority model routing",
     "enterprise": "Enterprise",

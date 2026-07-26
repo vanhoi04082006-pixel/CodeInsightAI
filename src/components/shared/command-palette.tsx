@@ -14,14 +14,11 @@ import {
   Bot,
   Home,
   Search,
-  Rocket,
 } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { useProvidersStore } from "@/lib/providers-store";
 import { useT } from "@/lib/i18n";
 import type { View } from "@/lib/types";
-import { isProduction } from "@/lib/env";
-import { useSession } from "next-auth/react";
 import {
   Dialog,
   DialogContent,
@@ -37,7 +34,6 @@ const COMMANDS: { id: View; labelKey: string; icon: typeof Home; group: string }
   { id: "history", labelKey: "nav.history", icon: History, group: "groupNavigation" },
   { id: "providers", labelKey: "nav.providers", icon: Plug, group: "groupActions" },
   { id: "personalities", labelKey: "nav.personalities", icon: Bot, group: "groupActions" },
-  { id: "mission", labelKey: "nav.mission", icon: Rocket, group: "groupActions" },
   { id: "settings", labelKey: "nav.settings", icon: Settings, group: "groupNavigation" },
 ];
 
@@ -47,21 +43,14 @@ export function CommandPalette() {
   const setView = useAppStore((s) => s.setView);
   const activeReport = useAppStore((s) => s.activeReport);
   const aiMode = useProvidersStore((s) => s.aiMode);
-  const { data: session } = useSession();
-  const role = (session?.user as any)?.role;
-  const plan = (session?.user as any)?.plan;
-  const isAdmin = role === "admin";
-  const isPro = plan !== "free" || isAdmin;
   const { t } = useT();
 
   // Lock logic — must match app-shell.tsx
-  const missionLocked = isProduction && !isPro;
   const providersLocked = aiMode !== "byok";
 
   // Filter out locked commands (same logic as sidebar)
   const visibleCommands = COMMANDS.filter((c) => {
     if (c.id === "providers" && providersLocked) return false;
-    if (c.id === "mission" && missionLocked) return false;
     return true;
   });
 

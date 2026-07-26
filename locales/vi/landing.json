@@ -242,7 +242,7 @@
         "f3": "Platform AI (key do admin cấp)",
         "f4": "100 phân tích / tháng",
         "f5": "2000 tin nhắn chat / tháng",
-        "f6": "Chat streaming + Mission Control"
+        "f6": "Chat streaming + ưu tiên hỗ trợ"
       },
       "cta": "Nâng cấp lên Pro"
     },
@@ -269,7 +269,7 @@
     "proDesc": "Cho power user — hôm nay miễn phí",
     "proF1": "Mọi thứ trong Free",
     "proF2": "Autonomous workflow runner",
-    "proF3": "Mission control dashboard",
+    "proF3": "Ưu tiên hỗ trợ",
     "proF4": "Agent personality system",
     "proF5": "Priority model routing",
     "enterprise": "Enterprise",

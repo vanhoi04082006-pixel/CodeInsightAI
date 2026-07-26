@@ -3,7 +3,7 @@
   "subtitle": "Manage users, monitor usage, and oversee the platform.",
   "dashboardLabel": "Admin Dashboard",
   "adminAccessRequired": "Admin Access Required",
-  "adminAccessDesc": "You don't have permission to view this page. Only admin accounts can access the admin dashboard.",
+  "adminAccessDesc": "You don't have authorization to view this page. Only admin accounts can access the admin dashboard.",
   "tabs": {
     "overview": "Overview",
     "users": "Users",

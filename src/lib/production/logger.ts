@@ -1,15 +1,12 @@
 // CodeInsight AI — Production: Structured Logger (Prompt 15)
-// A structured logger with leveled logging, colorized console output, an
-// in-memory ring buffer (last 1000 entries), JSON/JSONL export, and event-bus
-// integration (emits each log as a `{ type: "log", ... }` event so other
-// modules — e.g. event-persister — can durably store them).
+// A structured logger with leveled logging, colorized console output, and an
+// in-memory ring buffer (last 1000 entries), plus JSON/JSONL export.
 //
-// The `agent` field on emitted events is optional; module-scoped loggers
-// created via `createLogger(module)` will populate `agent` with the module
-// name when it matches a known AgentId.
-
-import { eventBus } from "@/lib/agents/event-bus";
-import type { AgentId } from "@/lib/agents/types";
+// Logs go to the in-memory buffer + console only.
+//
+// The `agent` field on log entries is optional; module-scoped loggers created
+// via `createLogger(module)` will populate `agent` with the module name when
+// it matches a known agent ID.
 
 // ────────────────────────────────────────────────────────────────────────────
 // Types
@@ -51,10 +48,10 @@ const LEVEL_COLOR: Record<LogLevel, string> = {
 const RESET_COLOR = "\x1b[0m";
 const BOLD = "\x1b[1m";
 
-// Map of known agent IDs — used to populate the `agent` field on emitted
-// log events when the module name matches.
-const KNOWN_AGENTS = new Set<AgentId>([
-  "orchestrator", "planner", "repository-analyst", "code-reviewer",
+// Map of known agent IDs — used to populate the `agent` field on log entries
+// when the module name matches. Kept in sync with src/lib/agents/types.ts.
+const KNOWN_AGENT_IDS = new Set<string>([
+  "repository-analyst", "code-reviewer",
   "bug-fixer", "refactoring-agent", "documentation-agent", "test-agent",
   "security-agent", "performance-agent", "devops-agent",
 ]);
@@ -105,7 +102,7 @@ export class Logger {
     this.log("fatal", message, meta);
   }
 
-  /** Core log method — emits, buffers, prints, and publishes to event bus. */
+  /** Core log method — buffers + prints to console. */
   log(level: LogLevel, message: string, meta?: Record<string, unknown>): void {
     if (LEVEL_PRIORITY[level] < LEVEL_PRIORITY[this.minLevel]) return;
 
@@ -127,20 +124,6 @@ export class Logger {
 
     // Console output (colorized)
     this.writeToConsole(entry);
-
-    // Emit on the event bus (so event-persister can persist to AgentEvent).
-    // Note: EventBusEvent.log.level doesn't include "fatal" — map to "error".
-    try {
-      eventBus.emit({
-        type: "log",
-        level: level === "fatal" ? "error" : level,
-        message: this.moduleName ? `[${this.moduleName}] ${message}` : message,
-        agent: this.resolveAgent(),
-      });
-    } catch {
-      // Event bus should never throw, but if it does we silently swallow —
-      // logging must not crash the application.
-    }
   }
 
   /** Retrieve buffered logs (newest first by default). */
@@ -205,10 +188,10 @@ export class Logger {
 
   // ── Internals ──────────────────────────────────────────────────────────
 
-  private resolveAgent(): AgentId | undefined {
+  private resolveAgent(): string | undefined {
     if (!this.moduleName) return undefined;
-    if (KNOWN_AGENTS.has(this.moduleName as AgentId)) {
-      return this.moduleName as AgentId;
+    if (KNOWN_AGENT_IDS.has(this.moduleName)) {
+      return this.moduleName;
     }
     return undefined;
   }
@@ -219,8 +202,9 @@ export class Logger {
     const color = LEVEL_COLOR[entry.level];
     const moduleTag = entry.module ? ` ${BOLD}[${entry.module}]${RESET_COLOR}` : "";
     const traceTag = entry.traceId ? ` ${LEVEL_COLOR.debug}<${entry.traceId.slice(0, 8)}>${RESET_COLOR}` : "";
+    const agentTag = this.resolveAgent() ? ` ${LEVEL_COLOR.debug}{agent:${this.resolveAgent()}}${RESET_COLOR}` : "";
 
-    let line = `${LEVEL_COLOR.debug}${ts}${RESET_COLOR}${traceTag} ${color}${levelLabel}${RESET_COLOR}${moduleTag} ${entry.message}`;
+    let line = `${LEVEL_COLOR.debug}${ts}${RESET_COLOR}${traceTag} ${color}${levelLabel}${RESET_COLOR}${moduleTag}${agentTag} ${entry.message}`;
     if (entry.meta && Object.keys(entry.meta).length > 0) {
       // Strip traceId from meta since it's already in the traceTag.
       const metaCopy: Record<string, unknown> = { ...entry.meta };

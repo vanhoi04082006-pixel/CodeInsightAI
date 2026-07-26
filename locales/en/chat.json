@@ -24,7 +24,7 @@
   "chatFailedToast": "The AI couldn't respond. Please try again.",
   "personalityLabel": "Personality",
   "clearToast": "Chat cleared",
-  "requestLog": "Logs",
+  "requestLogLabel": "Logs",
   "requestLogToggle": "Request Log",
   "toggleRequestLog": "Toggle Request Log",
   "toggleRequestLogSidebar": "Toggle Request Log sidebar",
@@ -33,5 +33,42 @@
   "devConsoleShort": "Dev",
   "emptyResponse": "⚠️ Empty response. Please try again.",
   "copy": "Copy",
-  "copied": "Copied"
+  "copied": "Copied",
+  "requestLog": {
+    "title": "Request Log",
+    "subtitle": "Request / Response log",
+    "searchPlaceholder": "Search logs…",
+    "filters": {
+      "all": "All",
+      "user": "User",
+      "ai": "AI",
+      "error": "Error",
+      "warning": "Warning",
+      "success": "Success"
+    },
+    "empty": "No requests logged yet",
+    "emptyFiltered": "No logs match your filters",
+    "clearFilters": "Clear filters",
+    "export": "Export JSON",
+    "clearAll": "Clear all",
+    "clearConfirm": "Delete all logs? This action cannot be undone.",
+    "logCopiedToast": "Log copied to clipboard",
+    "exportedToast": "Exported {count} logs",
+    "clearedToast": "All logs cleared",
+    "aria": {
+      "collapseSidebar": "Collapse sidebar",
+      "closePanel": "Close log panel",
+      "expandSidebar": "Expand log sidebar",
+      "copyLog": "Copy log",
+      "pinLog": "Pin log",
+      "unpinLog": "Unpin log"
+    },
+    "actions": {
+      "copy": "Copy",
+      "pin": "Pin",
+      "unpin": "Unpin"
+    },
+    "userDisplayName": "You",
+    "aiDisplayName": "AI CTO"
+  }
 }

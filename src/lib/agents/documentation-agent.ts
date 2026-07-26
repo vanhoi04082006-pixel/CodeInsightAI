@@ -5,7 +5,6 @@
 import type { AgentId, AgentInfo, Task, TaskResult } from "./types";
 import { BaseAgent } from "./base-agent";
 import { callAI, type AIProviderConfig, type AIMessage } from "./ai-client";
-import { repositoryMemory } from "./repository-memory";
 
 /* ────────────── Input shapes ────────────── */
 
@@ -98,13 +97,9 @@ export class DocumentationAgent extends BaseAgent {
       `Output ${markdown.split("\n").length} lines of markdown.`,
     );
 
-    if (repoUrl) {
-      try {
-        await repositoryMemory.remember(repoUrl, `docs:${docType}:${task.id}`, markdown, "decision");
-      } catch {
-        // best-effort
-      }
-    }
+    // repoUrl is accepted for backward compat with the existing API contract,
+    // but no longer persisted — legacy memory was removed.
+    void repoUrl;
 
     this.log("info", `Generated ${docType} docs — ${markdown.split("\n").length} lines.`);
 

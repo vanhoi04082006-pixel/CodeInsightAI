@@ -24,7 +24,7 @@
   "chatFailedToast": "AI không thể phản hồi. Vui lòng thử lại.",
   "personalityLabel": "Tính cách",
   "clearToast": "Đã xóa trò chuyện",
-  "requestLog": "Nhật ký",
+  "requestLogLabel": "Nhật ký",
   "requestLogToggle": "Nhật ký",
   "toggleRequestLog": "Bật/tắt Nhật ký yêu cầu",
   "toggleRequestLogSidebar": "Bật/tắt thanh bên Nhật ký yêu cầu",
@@ -33,5 +33,42 @@
   "devConsoleShort": "Dev",
   "emptyResponse": "⚠️ Phản hồi trống. Vui lòng thử lại.",
   "copy": "Sao chép",
-  "copied": "Đã sao chép"
+  "copied": "Đã sao chép",
+  "requestLog": {
+    "title": "Nhật ký yêu cầu",
+    "subtitle": "Nhật ký Yêu cầu / Phản hồi",
+    "searchPlaceholder": "Tìm nhật ký…",
+    "filters": {
+      "all": "Tất cả",
+      "user": "Người dùng",
+      "ai": "AI",
+      "error": "Lỗi",
+      "warning": "Cảnh báo",
+      "success": "Thành công"
+    },
+    "empty": "Chưa có yêu cầu nào được ghi",
+    "emptyFiltered": "Không có nhật ký phù hợp",
+    "clearFilters": "Xóa bộ lọc",
+    "export": "Xuất JSON",
+    "clearAll": "Xóa tất cả",
+    "clearConfirm": "Xóa tất cả nhật ký? Hành động này không thể hoàn tác.",
+    "logCopiedToast": "Đã sao chép nhật ký vào clipboard",
+    "exportedToast": "Đã xuất {count} nhật ký",
+    "clearedToast": "Đã xóa tất cả nhật ký",
+    "aria": {
+      "collapseSidebar": "Thu gọn thanh bên",
+      "closePanel": "Đóng bảng nhật ký",
+      "expandSidebar": "Mở rộng thanh bên nhật ký",
+      "copyLog": "Sao chép nhật ký",
+      "pinLog": "Ghim nhật ký",
+      "unpinLog": "Bỏ ghim nhật ký"
+    },
+    "actions": {
+      "copy": "Sao chép",
+      "pin": "Ghim",
+      "unpin": "Bỏ ghim"
+    },
+    "userDisplayName": "Bạn",
+    "aiDisplayName": "AI CTO"
+  }
 }

@@ -5,7 +5,6 @@
 import type { AgentId, AgentInfo, Task, TaskResult } from "./types";
 import { BaseAgent } from "./base-agent";
 import { callAIForJSON, type AIProviderConfig, type AIMessage } from "./ai-client";
-import { repositoryMemory } from "./repository-memory";
 
 /* ────────────── Input shapes ────────────── */
 
@@ -146,18 +145,9 @@ export class RefactoringAgent extends BaseAgent {
       result.rationale,
     );
 
-    if (repoUrl) {
-      try {
-        await repositoryMemory.remember(
-          repoUrl,
-          `refactor:${task.id}:${filePath}`,
-          { goal, changes: result.changes, rationale: result.rationale },
-          "decision",
-        );
-      } catch {
-        // best-effort
-      }
-    }
+    // repoUrl is accepted for backward compat with the existing API contract,
+    // but no longer persisted — direct-call memory was removed.
+    void repoUrl;
 
     onProgress(100, "Refactor complete");
     this.log("info", `Refactored ${filePath} — ${result.changes.length} change(s).`);

@@ -1,10 +1,10 @@
 // CodeInsight AI — Repository Analyst Agent
-// Phase 3: Autonomous AI Software Engineer
 //
 // Analyzes a GitHub repository using the existing parser + analysis
 // engine v2 pipeline. Produces a structured AnalysisReport that other
 // agents (reviewer, bug-fixer, documenter, ...) can consume via the
-// shared context or repository memory.
+// task `input` field — legacy shared context / repository
+// memory have been removed.
 
 import type {
   AgentCapability,
@@ -14,8 +14,6 @@ import type {
   TaskResult,
 } from "./types";
 import { BaseAgent } from "./base-agent";
-import { contextRegistry } from "./shared-context";
-import { repositoryMemory } from "./repository-memory";
 import type { AIProviderConfig } from "./ai-client";
 import type { AnalysisReport } from "@/lib/types";
 
@@ -170,14 +168,6 @@ class RepositoryAnalystAgent extends BaseAgent {
     const preSupplied = input.analysisReport as AnalysisReport | undefined;
     if (preSupplied && preSupplied.repoUrl) {
       this.log("info", "Using caller-supplied analysis report");
-      contextRegistry.recordEvent(task.id, this.id, "analysis-reused", "Used pre-supplied analysis report", "info");
-      contextRegistry.setMemory(task.id, "analysisReport", preSupplied);
-      contextRegistry.getOrCreate(task.id).analysisReport = preSupplied;
-      try {
-        await repositoryMemory.remember(preSupplied.repoUrl, "lastAnalysis", preSupplied, "analysis");
-      } catch (err: unknown) {
-        this.log("warn", `repositoryMemory.remember failed: ${err instanceof Error ? err.message : String(err)}`);
-      }
       onProgress(100, "Analysis reused");
       return this.buildResult(preSupplied, true);
     }
@@ -202,13 +192,6 @@ class RepositoryAnalystAgent extends BaseAgent {
     }
 
     this.log("info", `Analyzing ${parsed.owner}/${parsed.repo}`);
-    contextRegistry.recordEvent(
-      task.id,
-      this.id,
-      "analysis-start",
-      `Started analysis of ${parsed.owner}/${parsed.repo}`,
-      "info",
-    );
 
     let report: AnalysisReport;
     let usedFallback = false;
@@ -243,39 +226,13 @@ class RepositoryAnalystAgent extends BaseAgent {
           artifacts: [],
         };
       }
-      // ── Fallback: synthesised mock report (matches /api/analyze behaviour) ──
+      // ── Fallback: no mock engine available — surface the error ──
       const msg = err instanceof Error ? err.message : String(err);
-      this.log("warn", `GitHub fetch/analyze failed (${msg}); falling back to mock report`);
-      contextRegistry.recordEvent(
-        task.id,
-        this.id,
-        "analysis-fallback",
-        `Live analysis failed (${msg}); using mock engine`,
-        "warn",
-      );
+      this.log("warn", `GitHub fetch/analyze failed (${msg}); no fallback available`);
       onProgress(85, "Live analysis failed — no fallback available");
       throw new Error(`Live analysis failed: ${msg}. No fallback engine available.`);
       usedFallback = true;
     }
-
-    // Persist for downstream agents + long-term memory.
-    contextRegistry.setMemory(task.id, "analysisReport", report);
-    contextRegistry.getOrCreate(task.id).analysisReport = report;
-    contextRegistry.getOrCreate(task.id).repositoryUrl = report.repoUrl;
-    try {
-      await repositoryMemory.remember(report.repoUrl, "lastAnalysis", report, "analysis");
-    } catch (err: unknown) {
-      this.log("warn", `repositoryMemory.remember failed: ${err instanceof Error ? err.message : String(err)}`);
-    }
-
-    contextRegistry.recordEvent(
-      task.id,
-      this.id,
-      "analysis-complete",
-      `Analysis complete — score ${report.scores.overall}/100, ${report.totalFiles} files${usedFallback ? " (mock)" : ""}`,
-      usedFallback ? "warn" : "info",
-      { overallScore: report.scores.overall, totalFiles: report.totalFiles },
-    );
 
     onProgress(100, `Analysis complete — score ${report.scores.overall}/100`);
     return this.buildResult(report, !usedFallback);

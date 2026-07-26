@@ -4,7 +4,6 @@
 import type { AgentId, AgentInfo, Task, TaskResult } from "./types";
 import { BaseAgent } from "./base-agent";
 import { callAIForJSON, type AIProviderConfig, type AIMessage } from "./ai-client";
-import { repositoryMemory } from "./repository-memory";
 
 /* ────────────── Input shapes ────────────── */
 
@@ -95,22 +94,17 @@ export class CodeReviewerAgent extends BaseAgent {
 
     if (signal.aborted) return cancelled(this.info.name);
 
-    onProgress(90, "Recording decision in shared context");
+    onProgress(90, "Review complete");
     this.recordDecision(
       task.id,
       `Code review completed — score ${review.score}/100, ${review.issues.length} issues`,
       review.summary,
     );
 
-    if (repoUrl) {
-      try {
-        await repositoryMemory.remember(repoUrl, `review:${task.id}`, review, "decision");
-      } catch {
-        // best-effort; ignore memory write errors
-      }
-    }
+    // repoUrl is accepted for backward compat with the existing API contract,
+    // but no longer persisted — direct-call memory was removed.
+    void repoUrl;
 
-    onProgress(100, "Review complete");
     this.log("info", `Reviewed ${reviewable.length} file(s): score ${review.score}/100, ${review.issues.length} issues`);
 
     const reportMarkdown = renderReviewReport(review, reviewable.length, totalLines);
