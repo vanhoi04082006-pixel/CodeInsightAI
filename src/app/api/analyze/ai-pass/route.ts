@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
     const maxTokens = (MODEL_MAX_TOKENS as any)[aiConfig?.model] ?? 2000;
     const langInstruction = lang === "vi"
       ? "\n\nQUAN TRỌNG: Trả lời bằng tiếng Việt. Giữ nguyên code, file paths, thuật ngữ kỹ thuật bằng tiếng Anh."
-      : "";
+      : "\n\nIMPORTANT: Respond in English. Keep code, file paths, and technical terms as-is.";
 
     const messages: AIMessage[] = [
       { role: "system", content: "You are a Senior Staff Engineer. Respond in valid JSON only, no markdown fences, no explanation. Start with { and end with }." + langInstruction },

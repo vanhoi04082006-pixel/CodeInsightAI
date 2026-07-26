@@ -165,7 +165,9 @@ export async function POST(req: NextRequest) {
 
   // Build messages
   const systemPrompt = personality?.systemPrompt || "You are CodeInsight AI, a senior software engineer.";
-  const langInstruction = language === "vi" ? "\n\nTrả lời bằng tiếng Việt." : "";
+  const langInstruction = language === "vi"
+    ? "\n\nTrả lời bằng tiếng Việt. Giữ nguyên code, file paths, và thuật ngữ kỹ thuật bằng tiếng Anh."
+    : "\n\nRespond in English. Keep code, file paths, and technical terms as-is.";
   const llmMessages: AIMessage[] = [
     { role: "system", content: systemPrompt + langInstruction },
     ...history.slice(-10).map(h => ({ role: h.role as "user" | "assistant", content: h.content })),

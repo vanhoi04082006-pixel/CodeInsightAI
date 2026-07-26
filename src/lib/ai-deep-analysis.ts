@@ -138,7 +138,7 @@ async function runPass(
   const prompt = buildPrompt(passType, parsed, report);
   const langInstruction = language === "vi"
     ? "\n\nQUAN TRỌNG: Trả lời bằng tiếng Việt (Tiếng Việt). Giữ nguyên code, file paths, tên hàm, tên class, và thuật ngữ kỹ thuật bằng tiếng Anh. Viết tất cả giải thích và mô tả bằng tiếng Việt."
-    : "";
+    : "\n\nIMPORTANT: Respond in English. Keep code, file paths, function names, class names, and technical terms as-is. Write all explanations and descriptions in English.";
   const messages: AIMessage[] = [
     { role: "system", content: "You are a Senior Staff Engineer. Respond in valid JSON only, no markdown fences, no explanation. Start your response with { and end with }." + langInstruction },
     { role: "user", content: prompt },

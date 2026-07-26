@@ -17,8 +17,11 @@ import {
   Rocket,
 } from "lucide-react";
 import { useAppStore } from "@/lib/store";
+import { useProvidersStore } from "@/lib/providers-store";
 import { useT } from "@/lib/i18n";
 import type { View } from "@/lib/types";
+import { isProduction } from "@/lib/env";
+import { useSession } from "next-auth/react";
 import {
   Dialog,
   DialogContent,
@@ -43,7 +46,24 @@ export function CommandPalette() {
   const setOpen = useAppStore((s) => s.setCommandOpen);
   const setView = useAppStore((s) => s.setView);
   const activeReport = useAppStore((s) => s.activeReport);
+  const aiMode = useProvidersStore((s) => s.aiMode);
+  const { data: session } = useSession();
+  const role = (session?.user as any)?.role;
+  const plan = (session?.user as any)?.plan;
+  const isAdmin = role === "admin";
+  const isPro = plan !== "free" || isAdmin;
   const { t } = useT();
+
+  // Lock logic — must match app-shell.tsx
+  const missionLocked = isProduction && !isPro;
+  const providersLocked = aiMode !== "byok";
+
+  // Filter out locked commands (same logic as sidebar)
+  const visibleCommands = COMMANDS.filter((c) => {
+    if (c.id === "providers" && providersLocked) return false;
+    if (c.id === "mission" && missionLocked) return false;
+    return true;
+  });
 
   const run = (v: View) => {
     if ((v === "project" || v === "chat") && !activeReport) {
@@ -69,11 +89,12 @@ export function CommandPalette() {
         </div>
         <div className="max-h-80 overflow-y-auto scrollbar-thin p-2">
           {Object.entries(
-            COMMANDS.reduce<Record<string, typeof COMMANDS>>((acc, c) => {
+            visibleCommands.reduce<Record<string, typeof COMMANDS>>((acc, c) => {
               (acc[c.group] = acc[c.group] || []).push(c);
               return acc;
             }, {})
           ).map(([group, items]) => (
+            items.length > 0 && (
             <div key={group} className="mb-2">
               <p className="px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground">{t("common", `commandPalette.${group}`)}</p>
               {items.map((c) => {
@@ -92,6 +113,7 @@ export function CommandPalette() {
                 );
               })}
             </div>
+            )
           ))}
         </div>
         <div className="flex items-center justify-between border-t border-white/10 px-4 py-2 text-[10px] text-muted-foreground">
