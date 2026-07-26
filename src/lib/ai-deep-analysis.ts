@@ -18,7 +18,7 @@
 // All new fields are OPTIONAL on DeepAnalysisResult — existing data without them
 // still renders fine.
 
-import type { AnalysisReport, AIFinding, AIOverview } from "@/lib/types";
+import type { AnalysisReport, AIFinding, AIOverview, EnhancedPriority, RoadmapPhase } from "@/lib/types";
 import type { ParsedRepository } from "@/lib/repo-parser";
 import { callAI, type AIProviderConfig, type AIMessage } from "@/lib/ai-client";
 import { buildPromptForPass, type PassType } from "@/lib/ai-deep-analysis-helpers";
@@ -55,16 +55,12 @@ export interface DeepAnalysisResult {
     }>;
     score: number;
   };
-  priorities: Array<{
-    issue: string;
-    businessImpact: string;
-    recommendation: string;
-    evidence?: string[];
-    confidence?: number;
-    severity?: "critical" | "high" | "medium" | "low";
-    fixPlan?: string[];
-  }>;
-  roadmap: Array<{ phase: string; tasks: string[] }>;
+  // Phase 2 (P2.3): Enhanced Roadmap Agent — priorities now carry effort/phase/deps,
+  // roadmap phases are typed P0-P3, and a CTO-facing executiveNote is attached.
+  // All new fields are OPTIONAL — backward-compatible with existing data.
+  priorities: EnhancedPriority[];
+  roadmap: RoadmapPhase[];
+  executiveNote?: string;                                       // NEW (P2.3) — CTO narrative
   duplicateAnalysis?: Array<{
     files: string[];
     type: string;
@@ -126,6 +122,7 @@ export async function runDeepAnalysis(
       },
       priorities: prioritiesResult?.priorities || [],
       roadmap: prioritiesResult?.roadmap || [],
+      executiveNote: prioritiesResult?.executiveNote,           // P2.3 — CTO narrative
       duplicateAnalysis: duplicateResult?.duplicates || [],
     };
 

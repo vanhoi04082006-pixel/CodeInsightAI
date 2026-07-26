@@ -332,3 +332,46 @@ export interface AIOverview {
   fastestScoreGain: string;  // what will improve the score fastest
   healthAssessment: string;  // 2-3 sentence overall health narrative
 }
+
+/* ---------- Phase 2 (P2.3): Enhanced Roadmap Agent types ----------
+ * Backward-compatible: all new fields are OPTIONAL. Existing priorities
+ * without effortHours/releasePhase still render unchanged.
+ *
+ * A deterministic post-processor (`src/lib/roadmap-sequencer.ts`) validates
+ * the AI output: drops invalid dependsOn refs, breaks cycles, promotes
+ * releasePhase when dependencies require it, and re-sums effort per phase.
+ */
+
+/** Release phases — used by priorities AND roadmap phases. P0 = now, P3 = backlog. */
+export type ReleasePhase = "P0" | "P1" | "P2" | "P3";
+
+/** Effort band — coarse-grained companion to effortHours. */
+export type EffortBand = "trivial" | "small" | "medium" | "large" | "xl";
+
+/** Enhanced priority — superset of the legacy priorities[]. Fields are backward-compatible. */
+export interface EnhancedPriority {
+  // Existing (kept for backward compatibility)
+  issue: string;
+  businessImpact: string;
+  recommendation: string;
+  evidence?: string[];
+  confidence?: number;
+  severity?: "critical" | "high" | "medium" | "low";
+  fixPlan?: string[];
+  // NEW (Phase 2 — P2.3)
+  effortHours?: number;       // 0.5, 1, 2, 4, 8, 16, 40 — Fibonacci-ish
+  effortBand?: EffortBand;    // trivial | small | medium | large | xl (matches effortHours)
+  roiScore?: number;          // 0-100 (business impact / effort — higher = better ROI)
+  releasePhase?: ReleasePhase; // P0=now, P1=this sprint, P2=next, P3=backlog
+  dependsOn?: string[];       // titles of other priorities that MUST be done first
+  blocks?: string[];          // titles of priorities this unblocks
+}
+
+/** A roadmap phase — typed P0–P3 (was freeform string pre-P2.3). */
+export interface RoadmapPhase {
+  phase: ReleasePhase;
+  title?: string;                       // e.g. "Critical Security Fixes"
+  tasks: string[];
+  estimatedEffortHours?: number;        // sum of member priorities' effortHours
+  blockedBy?: ReleasePhase[];           // which phases must complete first (empty for P0)
+}

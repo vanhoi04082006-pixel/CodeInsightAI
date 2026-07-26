@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireUserId } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { callAI, type AIMessage } from "@/lib/ai-client";
+import { sequenceRoadmap } from "@/lib/roadmap-sequencer";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -223,10 +224,26 @@ function updateReportWithPassResult(report: any, passType: PassType, result: any
     case "quality":
       deep.codeQualityReview = result.reviews || [];
       break;
-    case "priorities":
-      deep.priorities = result.priorities || [];
-      deep.roadmap = result.roadmap || [];
+    case "priorities": {
+      // Phase 2 (P2.3): run the deterministic sequencer on AI output before
+      // persisting. Validates dependsOn refs, breaks cycles, promotes
+      // releasePhase when dependencies require it, re-sums effort per phase.
+      // Never throws — failures degrade to warnings, input is preserved.
+      const rawPriorities = result.priorities || [];
+      const rawRoadmap = result.roadmap || [];
+      const { sequencedPriorities, sequencedRoadmap, warnings } = sequenceRoadmap(
+        rawPriorities,
+        rawRoadmap,
+      );
+      if (warnings.length > 0) {
+        console.warn("[roadmap-sequencer] warnings:", warnings);
+        (report as any)._sequencerWarnings = warnings;
+      }
+      deep.priorities = sequencedPriorities;
+      deep.roadmap = sequencedRoadmap;
+      deep.executiveNote = result.executiveNote;
       break;
+    }
     case "performance":
       deep.performanceReview = result.reviews || [];
       break;

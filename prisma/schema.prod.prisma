@@ -116,6 +116,7 @@ model Analysis {
   messages           ChatMessage[]
   fileSummaries      FileSummary[]
   shareTokens        ShareToken[]
+  codeGraph          CodeGraphSnapshot?
 
   @@index([userId])
   @@index([repoUrl])
@@ -156,6 +157,27 @@ model FileSummary {
 
   @@index([analysisId])
   @@index([path])
+}
+
+// ==========================================
+// CODE GRAPH SNAPSHOT (Phase 2 — symbol-level graph persistence)
+// ==========================================
+// One row per analysis. JSON-stringified CodeGraph (nodes + edges).
+// Persisted once after parseRepository() runs in /api/analyze POST, then read
+// by /api/codegraph/[analysisId] to avoid rebuilding on every request.
+
+model CodeGraphSnapshot {
+  id          String   @id @default(cuid())
+  analysisId  String   @unique
+  graph       String   // JSON-stringified CodeGraph
+  nodeCount   Int
+  edgeCount   Int
+  truncated   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  analysis    Analysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+
+  @@index([analysisId])
 }
 
 // ==========================================

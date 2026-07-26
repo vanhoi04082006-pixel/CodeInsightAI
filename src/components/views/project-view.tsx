@@ -26,6 +26,10 @@ import {
   Zap,
   Wrench,
   RefreshCw,
+  Clock,
+  Target,
+  GitFork,
+  AlertTriangle,
 } from "lucide-react";
 import { GlassCard, ScoreGauge, GradientText, NeonDivider, SeverityBadge } from "@/components/shared/ui";
 import { DependencyGraph } from "@/components/shared/dependency-graph";
@@ -1230,9 +1234,58 @@ function RoadmapTab({ report }: { report: AnalysisReport }) {
   const deep = (report as any).deepAnalysis as any;
   const aiRoadmap: any[] | undefined = deep?.roadmap;
   const aiPriorities: any[] | undefined = deep?.priorities;
+  const executiveNote: string | undefined = deep?.executiveNote;
+  const sequencerWarnings: string[] | undefined = (report as any)._sequencerWarnings;
   const hasAi = !!aiRoadmap || !!aiPriorities;
+
+  // P2.3 — sort priorities by releasePhase asc, then roiScore desc.
+  // (The sequencer already does this, but we re-sort defensively in case
+  // the report was generated before the sequencer existed.)
+  const sortedPriorities = (aiPriorities ?? []).slice().sort((a: any, b: any) => {
+    const phaseOrder: Record<string, number> = { P0: 0, P1: 1, P2: 2, P3: 3 };
+    const pa = phaseOrder[a.releasePhase] ?? 3;
+    const pb = phaseOrder[b.releasePhase] ?? 3;
+    if (pa !== pb) return pa - pb;
+    return (b.roiScore ?? 0) - (a.roiScore ?? 0);
+  });
+
   return (
     <div className="space-y-4">
+      {/* Sequencer warnings (debug visibility — when the AI mis-estimated or had invalid deps) */}
+      {sequencerWarnings && sequencerWarnings.length > 0 && (
+        <GlassCard className="border-amber-500/20 bg-amber-500/[0.04] p-3">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-semibold text-amber-300">
+                {t("reports", "roadmap.sequencerWarnings")} ({sequencerWarnings.length})
+              </p>
+              <ul className="mt-1 space-y-0.5">
+                {sequencerWarnings.slice(0, 5).map((w, i) => (
+                  <li key={i} className="text-[11px] text-amber-200/80">• {w}</li>
+                ))}
+                {sequencerWarnings.length > 5 && (
+                  <li className="text-[11px] text-amber-200/60">
+                    +{sequencerWarnings.length - 5} more…
+                  </li>
+                )}
+              </ul>
+            </div>
+          </div>
+        </GlassCard>
+      )}
+
+      {/* Executive Note — CTO-facing sequencing narrative */}
+      {executiveNote && (
+        <GlassCard className="border-violet-500/20 bg-gradient-to-br from-violet-500/[0.05] to-transparent p-4">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-violet-300" />
+            <h3 className="text-sm font-semibold">{t("reports", "roadmap.executiveNote")}</h3>
+          </div>
+          <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{executiveNote}</p>
+        </GlassCard>
+      )}
+
       {/* AI Priorities — deep analysis (full width, shown above the roadmap grid) */}
       {aiPriorities && aiPriorities.length > 0 && (
         <GlassCard className="border-violet-500/20 bg-gradient-to-br from-violet-500/[0.05] to-transparent p-5">
@@ -1244,7 +1297,7 @@ function RoadmapTab({ report }: { report: AnalysisReport }) {
             </span>
           </div>
           <div className="mt-3 space-y-2">
-            {aiPriorities.map((p: any, i: number) => (
+            {sortedPriorities.map((p: any, i: number) => (
               <motion.div
                 key={i}
                 initial={{ opacity: 0, y: 8 }}
@@ -1254,7 +1307,62 @@ function RoadmapTab({ report }: { report: AnalysisReport }) {
               >
                 <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-violet-500/20 text-[10px] font-bold text-violet-300">{i + 1}</span>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium">{p.issue}</p>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <p className="text-sm font-medium">{p.issue}</p>
+                    {/* Release phase badge — P0 red / P1 amber / P2 cyan / P3 gray */}
+                    {p.releasePhase && (
+                      <span
+                        className={cn(
+                          "rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase",
+                          p.releasePhase === "P0"
+                            ? "bg-rose-500/20 text-rose-300"
+                            : p.releasePhase === "P1"
+                            ? "bg-amber-500/20 text-amber-300"
+                            : p.releasePhase === "P2"
+                            ? "bg-cyan-500/20 text-cyan-300"
+                            : "bg-white/10 text-muted-foreground"
+                        )}
+                        title={t("reports", `roadmap.phase${p.releasePhase}` as any)}
+                      >
+                        {p.releasePhase}
+                      </span>
+                    )}
+                    {/* Effort badge — ⏱️ 4h */}
+                    {typeof p.effortHours === "number" && (
+                      <span className="flex items-center gap-0.5 rounded-md bg-white/5 px-1.5 py-0.5 text-[9px] font-medium text-foreground/80">
+                        <Clock className="h-2.5 w-2.5" />
+                        {t("reports", "roadmap.effortHours")}: {p.effortHours}h
+                        {p.effortBand ? ` · ${p.effortBand}` : ""}
+                      </span>
+                    )}
+                    {/* ROI mini-bar — 0-100 colored */}
+                    {typeof p.roiScore === "number" && (
+                      <span
+                        className="flex items-center gap-1 rounded-md bg-white/5 px-1.5 py-0.5 text-[9px] font-medium"
+                        title={t("reports", "roadmap.roi")}
+                      >
+                        <Target className="h-2.5 w-2.5 text-emerald-400" />
+                        <span className="text-foreground/70">{t("reports", "roadmap.roi")}</span>
+                        <span
+                          className="inline-block h-1.5 w-8 overflow-hidden rounded-full bg-white/10"
+                        >
+                          <span
+                            className="block h-full rounded-full"
+                            style={{
+                              width: `${Math.max(0, Math.min(100, p.roiScore))}%`,
+                              background:
+                                p.roiScore >= 75
+                                  ? "#34d399"
+                                  : p.roiScore >= 50
+                                  ? "#fbbf24"
+                                  : "#fb7185",
+                            }}
+                          />
+                        </span>
+                        <span className="tabular-nums text-foreground/80">{Math.round(p.roiScore)}</span>
+                      </span>
+                    )}
+                  </div>
                   {p.businessImpact && (
                     <p className="mt-0.5 text-[11px] text-muted-foreground">
                       <span className="font-medium text-foreground/80">{t("reports", "aiInsights.businessImpact")}:</span> {p.businessImpact}
@@ -1264,6 +1372,40 @@ function RoadmapTab({ report }: { report: AnalysisReport }) {
                     <p className="mt-0.5 text-[11px] text-muted-foreground">
                       <span className="font-medium text-foreground/80">{t("reports", "aiInsights.recommendation")}:</span> {p.recommendation}
                     </p>
+                  )}
+                  {/* dependsOn chips — if non-empty, show "depends on: [title]" */}
+                  {Array.isArray(p.dependsOn) && p.dependsOn.length > 0 && (
+                    <div className="mt-1.5 flex flex-wrap items-center gap-1">
+                      <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
+                        <GitFork className="h-2.5 w-2.5" />
+                        {t("reports", "roadmap.dependsOn")}:
+                      </span>
+                      {p.dependsOn.map((dep: string, j: number) => (
+                        <code
+                          key={j}
+                          className="rounded bg-violet-500/10 px-1.5 py-0.5 text-[10px] text-violet-200"
+                        >
+                          {dep}
+                        </code>
+                      ))}
+                    </div>
+                  )}
+                  {/* blocks chips — mirror of dependsOn, for discoverability */}
+                  {Array.isArray(p.blocks) && p.blocks.length > 0 && (
+                    <div className="mt-1 flex flex-wrap items-center gap-1">
+                      <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
+                        <GitFork className="h-2.5 w-2.5 rotate-180" />
+                        {t("reports", "roadmap.blocks")}:
+                      </span>
+                      {p.blocks.map((blk: string, j: number) => (
+                        <code
+                          key={j}
+                          className="rounded bg-cyan-500/10 px-1.5 py-0.5 text-[10px] text-cyan-200"
+                        >
+                          {blk}
+                        </code>
+                      ))}
+                    </div>
                   )}
                 </div>
               </motion.div>
@@ -1292,16 +1434,68 @@ function RoadmapTab({ report }: { report: AnalysisReport }) {
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.05 }}
-                  className="rounded-xl border border-cyan-500/15 bg-cyan-500/[0.03] p-3"
+                  className={cn(
+                    "rounded-xl border p-3",
+                    phase.phase === "P0"
+                      ? "border-rose-500/20 bg-rose-500/[0.04]"
+                      : phase.phase === "P1"
+                      ? "border-amber-500/20 bg-amber-500/[0.04]"
+                      : phase.phase === "P2"
+                      ? "border-cyan-500/15 bg-cyan-500/[0.03]"
+                      : "border-white/5 bg-white/[0.02]"
+                  )}
                 >
-                  <p className="text-xs font-semibold text-cyan-200">{phase.phase}</p>
-                  <ul className="mt-1 space-y-0.5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span
+                      className={cn(
+                        "rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase",
+                        phase.phase === "P0"
+                          ? "bg-rose-500/20 text-rose-300"
+                          : phase.phase === "P1"
+                          ? "bg-amber-500/20 text-amber-300"
+                          : phase.phase === "P2"
+                          ? "bg-cyan-500/20 text-cyan-300"
+                          : "bg-white/10 text-muted-foreground"
+                      )}
+                      title={t("reports", `roadmap.phase${phase.phase}` as any)}
+                    >
+                      {phase.phase}
+                    </span>
+                    {phase.title && (
+                      <p className="text-xs font-semibold text-foreground/90">{phase.title}</p>
+                    )}
+                    {/* Phase total effort */}
+                    {typeof phase.estimatedEffortHours === "number" && phase.estimatedEffortHours > 0 && (
+                      <span className="ml-auto flex items-center gap-0.5 rounded-md bg-white/5 px-1.5 py-0.5 text-[10px] font-medium text-foreground/80">
+                        <Clock className="h-2.5 w-2.5" />
+                        {t("reports", "roadmap.phaseTotal")}: {phase.estimatedEffortHours}h
+                      </span>
+                    )}
+                  </div>
+                  <ul className="mt-1.5 space-y-0.5">
                     {phase.tasks?.map((task: string, j: number) => (
                       <li key={j} className="flex items-start gap-1 text-[11px] text-muted-foreground">
                         <span className="mt-0.5 text-cyan-300">→</span> {task}
                       </li>
                     ))}
                   </ul>
+                  {/* blockedBy chips — which phases must complete first */}
+                  {Array.isArray(phase.blockedBy) && phase.blockedBy.length > 0 && (
+                    <div className="mt-1.5 flex flex-wrap items-center gap-1">
+                      <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
+                        <AlertTriangle className="h-2.5 w-2.5 text-amber-400" />
+                        {t("reports", "roadmap.blockedBy")}:
+                      </span>
+                      {phase.blockedBy.map((b: string, j: number) => (
+                        <code
+                          key={j}
+                          className="rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-200"
+                        >
+                          {b}
+                        </code>
+                      ))}
+                    </div>
+                  )}
                 </motion.div>
               ))}
             </div>

@@ -106,13 +106,34 @@ Respond as JSON:
 {"reviews": [{"issue": "string", "rootCause": "string", "fixCode": "string (code block)", "impact": "string", "evidence": ["file:line"], "confidence": 0.85, "fixPlan": ["step1", "step2"], "severity": "medium"}]}`;
 
     case "priorities":
+      // Phase 2 (P2.3): Enhanced Roadmap Agent — effort + deps + phases + sequencer
+      // New fields: effortHours, effortBand, roiScore, releasePhase, dependsOn, blocks
+      // Plus roadmap phases (typed P0-P3), executiveNote for the CTO.
       return `${repoInfo}
 
 All issues summary:
 ${topIssues}
 
-Prioritize the top issues by business impact. For EACH priority, include evidence (file:line refs), confidence (0.0-1.0), severity, and a step-by-step fixPlan. Respond as JSON:
-{"priorities": [{"issue": "string", "businessImpact": "string", "recommendation": "string", "evidence": ["file:line"], "confidence": 0.9, "severity": "high", "fixPlan": ["step1", "step2"]}], "roadmap": [{"phase": "string", "tasks": ["string"]}]}`;
+Prioritize the top issues by business impact. For EACH priority, you MUST include:
+- effortHours: estimated effort in hours (use Fibonacci-ish: 0.5, 1, 2, 4, 8, 16, 40). Calibration: trivial=0.5h, small=2h, medium=4h, large=8h, xl=16h+
+- effortBand: "trivial" | "small" | "medium" | "large" | "xl" (matching the hours)
+- roiScore: 0-100 (business impact / effort — higher = better ROI)
+- releasePhase: "P0" (now/critical) | "P1" (this sprint) | "P2" (next sprint) | "P3" (backlog)
+- dependsOn: array of issue titles that MUST be done first (empty if none)
+- blocks: array of issue titles this unblocks (empty if none)
+
+For the roadmap, each phase MUST have:
+- phase: "P0" | "P1" | "P2" | "P3"
+- title: short phase name (e.g. "Critical Security Fixes")
+- tasks: array of task descriptions
+- estimatedEffortHours: sum of member efforts
+- blockedBy: array of phases that must complete first (empty for P0)
+
+Also provide:
+- executiveNote: 1-paragraph narrative for the CTO explaining the sequencing strategy.
+
+Respond as JSON:
+{"priorities": [{"issue": "string", "businessImpact": "string", "recommendation": "string", "evidence": ["file:line"], "confidence": 0.85, "severity": "high", "fixPlan": ["step1"], "effortHours": 4, "effortBand": "medium", "roiScore": 75, "releasePhase": "P1", "dependsOn": ["other issue title"], "blocks": []}], "roadmap": [{"phase": "P0", "title": "Critical Fixes", "tasks": ["..."], "estimatedEffortHours": 8, "blockedBy": []}], "executiveNote": "string"}`;
 
     case "performance":
       return `${repoInfo}

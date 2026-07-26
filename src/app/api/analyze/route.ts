@@ -209,6 +209,25 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    // Persist CodeGraph snapshot (Phase 2) — best-effort, never block analysis on failure
+    if (parsedRepo) {
+      try {
+        const { buildCodeGraph } = await import("@/lib/codegraph/builder");
+        const graph = buildCodeGraph(parsedRepo);
+        await db.codeGraphSnapshot.create({
+          data: {
+            analysisId: created.id,
+            graph: JSON.stringify(graph),
+            nodeCount: graph.nodeCount,
+            edgeCount: graph.edgeCount,
+            truncated: (graph as any).truncated || false,
+          },
+        });
+      } catch (e) {
+        console.warn("[codegraph] snapshot persist failed:", e);
+      }
+    }
+
     incrementUsage(userId, "analysis").catch(() => {});
 
     // ── PHASE 2: AI passes run via /api/analyze/ai-pass (frontend calls) ──

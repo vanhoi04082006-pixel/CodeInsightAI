@@ -139,6 +139,21 @@
     "fastestScoreGain": "Tăng điểm nhanh nhất",
     "healthAssessment": "Đánh giá sức khỏe"
   },
+  "roadmap": {
+    "effortHours": "Nỗ lực",
+    "releasePhase": "Giai đoạn",
+    "phaseP0": "P0 — Ngay",
+    "phaseP1": "P1 — Sprint này",
+    "phaseP2": "P2 — Sprint tới",
+    "phaseP3": "P3 — Backlog",
+    "dependsOn": "Phụ thuộc vào",
+    "blocks": "Chặn",
+    "blockedBy": "Bị chặn bởi",
+    "phaseTotal": "Tổng giai đoạn",
+    "roi": "ROI",
+    "executiveNote": "Ghi chú điều hành",
+    "sequencerWarnings": "Cảnh báo sequencer"
+  },
   "action": {
     "fixNow": "Sửa ngay",
     "generateTest": "Tạo test",
