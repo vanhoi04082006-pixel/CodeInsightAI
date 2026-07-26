@@ -116,6 +116,24 @@ export const authOptions: NextAuthOptions = {
                 } catch { /* ignore concurrent updates */ }
               }
             }
+            // First-user-auto-admin: if no admin exists yet AND this user is
+            // not already admin, promote them. This lets a fresh deployment
+            // work without configuring ADMIN_EMAIL — the first person to
+            // sign in becomes the admin. Only runs if user is not banned.
+            if (token.role !== "admin" && !dbUser.banned) {
+              try {
+                const adminCount = await db.user.count({ where: { role: "admin" } });
+                if (adminCount === 0) {
+                  token.role = "admin";
+                  token.plan = "enterprise";
+                  await db.user.update({
+                    where: { id: uid },
+                    data: { role: "admin", plan: "enterprise" },
+                  });
+                  console.log(`[auth] First-user auto-admin: promoted ${dbUser.email} to admin`);
+                }
+              } catch { /* ignore */ }
+            }
             // Make sure display fields stay in sync with DB
             token.name = dbUser.name ?? token.name;
             token.email = dbUser.email ?? token.email;
