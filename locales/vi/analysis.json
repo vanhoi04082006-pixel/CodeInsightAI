@@ -54,6 +54,7 @@
     "tailwind": "CSS engine"
   },
   "passes": {
+    "overview": "Tổng quan AI",
     "summary": "Tóm tắt điều hành",
     "priorities": "Ưu tiên & Lộ trình",
     "security": "Đánh giá bảo mật",

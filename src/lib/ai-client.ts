@@ -12,6 +12,15 @@
 // - Azure OpenAI API
 //
 // All calls support: streaming, temperature, maxTokens, timeout, abort.
+//
+// W6-C — ENTERPRISE HARDENING:
+// - Secret redaction is applied to EVERY message before it leaves the system.
+//   The AI sees `[REDACTED_OPENAI_KEY]` placeholders instead of real secrets.
+// - Every call produces one AICallLog row (best-effort, never throws) so we can
+//   track cost (tokens × model), latency, errors, and redaction counts.
+
+import { redactMessages, redactSecrets } from "./redaction";
+import { logAICall } from "./audit";
 
 export interface AIProviderConfig {
   providerId: string;
@@ -28,12 +37,26 @@ export interface AIMessage {
   content: string;
 }
 
+/**
+ * Optional audit context for an AI call. If provided, the AICallLog row will
+ * be richer (links to a user + analysis + agent). All fields optional.
+ * Backward compatible — existing callers don't need to pass this.
+ */
+export interface AICallAuditContext {
+  userId?: string | null;
+  analysisId?: string | null;
+  agent?: string | null; // "security" | "overview" | "chat" | "deep-analysis" | ...
+  passType?: string | null;
+}
+
 export interface AICallOptions {
   temperature?: number;
   maxTokens?: number;
   timeout?: number; // seconds, default 60
   signal?: AbortSignal;
   responseFormat?: "text" | "json_object";
+  /** W6-C: optional context for the AICallLog row. */
+  audit?: AICallAuditContext;
 }
 
 export interface AICallResult {
@@ -50,6 +73,11 @@ export interface AICallResult {
 /**
  * Call any AI provider with a unified interface.
  * Automatically detects the API format based on providerId.
+ *
+ * W6-C: Secrets are redacted from all messages BEFORE the network request.
+ * An AICallLog row is written after the call (success or error) with token
+ * counts, latency, status, and redaction metadata. Audit logging is
+ * best-effort and never throws.
  *
  * @example
  * const result = await callAI(
@@ -68,6 +96,10 @@ export async function callAI(
   const maxTokens = options.maxTokens ?? provider.maxTokens ?? 4096;
   const timeoutMs = (options.timeout ?? provider.timeout ?? 60) * 1000;
 
+  // ── W6-C: Redact secrets before anything leaves the process ──
+  const redaction = computeRedaction(messages);
+  const safeMessages = redaction.redactedMessages;
+
   // Build abort signal with timeout
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -77,22 +109,93 @@ export async function callAI(
     options.signal.addEventListener("abort", () => controller.abort());
   }
 
+  const startedAt = Date.now();
+  let timedOut = false;
+
+  // Detect timeout via the abort event (distinguishes caller-abort from timeout-abort)
+  controller.signal.addEventListener("abort", () => {
+    if (controller.signal.reason === undefined || controller.signal.reason === "timeout") {
+      // Heuristic: if no explicit reason was set by the caller, treat as timeout.
+      timedOut = true;
+    }
+  });
+
   try {
-    // Route to the correct API format
+    // Route to the correct API format — pass the REDACTED messages
+    let result: AICallResult;
     if (providerId === "anthropic") {
-      return await callAnthropic(provider, messages, temperature, maxTokens, controller.signal, options.responseFormat);
+      result = await callAnthropic(provider, safeMessages, temperature, maxTokens, controller.signal, options.responseFormat);
     } else if (providerId === "gemini") {
-      return await callGemini(provider, messages, temperature, maxTokens, controller.signal, options.responseFormat);
+      result = await callGemini(provider, safeMessages, temperature, maxTokens, controller.signal, options.responseFormat);
     } else if (providerId === "azure") {
-      return await callAzure(provider, messages, temperature, maxTokens, controller.signal, options.responseFormat);
+      result = await callAzure(provider, safeMessages, temperature, maxTokens, controller.signal, options.responseFormat);
     } else {
       // OpenAI-compatible (default): OpenRouter, OpenAI, DeepSeek, Groq, Together,
       // Fireworks, Mistral, xAI, Ollama, LM Studio, Custom
-      return await callOpenAICompatible(provider, messages, temperature, maxTokens, controller.signal, options.responseFormat);
+      result = await callOpenAICompatible(provider, safeMessages, temperature, maxTokens, controller.signal, options.responseFormat);
     }
+
+    // ── W6-C: Best-effort audit log on success ──
+    void logAICall({
+      userId: options.audit?.userId ?? null,
+      analysisId: options.audit?.analysisId ?? null,
+      agent: options.audit?.agent ?? null,
+      passType: options.audit?.passType ?? null,
+      provider: providerId,
+      model: provider.model,
+      inputTokens: result.usage?.promptTokens ?? null,
+      outputTokens: result.usage?.completionTokens ?? null,
+      totalTokens: result.usage?.totalTokens ?? null,
+      latencyMs: Date.now() - startedAt,
+      status: "success",
+      redactionCount: redaction.redactionCount,
+      redactedLabels: redaction.redactedLabels,
+    }).catch(() => { /* never throw on audit failure */ });
+
+    return result;
+  } catch (err) {
+    // ── W6-C: Best-effort audit log on error ──
+    const isTimeout = timedOut || (err instanceof Error && err.name === "AbortError");
+    void logAICall({
+      userId: options.audit?.userId ?? null,
+      analysisId: options.audit?.analysisId ?? null,
+      agent: options.audit?.agent ?? null,
+      passType: options.audit?.passType ?? null,
+      provider: providerId,
+      model: provider.model,
+      latencyMs: Date.now() - startedAt,
+      status: isTimeout ? "timeout" : "error",
+      error: err instanceof Error ? err.message : String(err),
+      redactionCount: redaction.redactionCount,
+      redactedLabels: redaction.redactedLabels,
+    }).catch(() => { /* never throw on audit failure */ });
+    throw err;
   } finally {
     clearTimeout(timer);
   }
+}
+
+/** Helper: redact a messages array and return both the safe messages + metadata. */
+function computeRedaction(messages: AIMessage[]): {
+  redactionCount: number;
+  redactedLabels: string[];
+  redactedMessages: AIMessage[];
+} {
+  // Compute counts from the ORIGINAL messages so we capture every secret.
+  let totalCount = 0;
+  const allLabels = new Set<string>();
+  for (const m of messages) {
+    const r = redactSecrets(m.content);
+    totalCount += r.redactionCount;
+    for (const lbl of r.redactedLabels) allLabels.add(lbl);
+  }
+  // Produce the sanitized messages array (no secrets).
+  const redactedMessages = redactMessages(messages);
+  return {
+    redactionCount: totalCount,
+    redactedLabels: Array.from(allLabels),
+    redactedMessages,
+  };
 }
 
 /**
@@ -109,11 +212,19 @@ export async function* streamAI(
   const maxTokens = options.maxTokens ?? provider.maxTokens ?? 4096;
   const timeoutMs = (options.timeout ?? provider.timeout ?? 60) * 1000;
 
+  // ── W6-C: Redact secrets before anything leaves the process ──
+  const redaction = computeRedaction(messages);
+  const safeMessages = redaction.redactedMessages;
+
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   if (options.signal) {
     options.signal.addEventListener("abort", () => controller.abort());
   }
+
+  const startedAt = Date.now();
+  let loggedStatus: "success" | "error" | "timeout" | null = null;
+  let loggedError: string | null = null;
 
   try {
     let url: string;
@@ -126,8 +237,8 @@ export async function* streamAI(
         : `${provider.baseUrl}/v1/messages`;
       headers["x-api-key"] = provider.apiKey;
       headers["anthropic-version"] = "2023-06-01";
-      const systemMsg = messages.find((m) => m.role === "system")?.content || "";
-      const chatMsgs = messages.filter((m) => m.role !== "system");
+      const systemMsg = safeMessages.find((m) => m.role === "system")?.content || "";
+      const chatMsgs = safeMessages.filter((m) => m.role !== "system");
       body = {
         model: provider.model,
         max_tokens: maxTokens,
@@ -138,13 +249,13 @@ export async function* streamAI(
       };
     } else if (providerId === "gemini") {
       url = `${provider.baseUrl.replace(/\/$/, "")}/models/${provider.model}:streamGenerateContent?key=${provider.apiKey}&alt=sse`;
-      const contents = messages
+      const contents = safeMessages
         .filter((m) => m.role !== "system")
         .map((m) => ({
           role: m.role === "assistant" ? "model" : "user",
           parts: [{ text: m.content }],
         }));
-      const systemInstruction = messages.find((m) => m.role === "system");
+      const systemInstruction = safeMessages.find((m) => m.role === "system");
       body = {
         contents,
         ...(systemInstruction ? { systemInstruction: { parts: [{ text: systemInstruction.content }] } } : {}),
@@ -155,7 +266,7 @@ export async function* streamAI(
       url = `${provider.baseUrl.replace(/\/$/, "")}/${provider.model}/chat/completions?api-version=2024-06-01`;
       headers["api-key"] = provider.apiKey;
       body = {
-        messages: messages.map((m) => ({ role: m.role, content: m.content })),
+        messages: safeMessages.map((m) => ({ role: m.role, content: m.content })),
         temperature,
         max_tokens: maxTokens,
         stream: true,
@@ -172,7 +283,7 @@ export async function* streamAI(
       }
       body = {
         model: provider.model,
-        messages: messages.map((m) => ({ role: m.role, content: m.content })),
+        messages: safeMessages.map((m) => ({ role: m.role, content: m.content })),
         temperature,
         max_tokens: maxTokens,
         stream: true,
@@ -237,8 +348,30 @@ export async function* streamAI(
         }
       }
     }
+    loggedStatus = "success";
+  } catch (err) {
+    const isAbort = err instanceof Error && err.name === "AbortError";
+    loggedStatus = isAbort ? "timeout" : "error";
+    loggedError = err instanceof Error ? err.message : String(err);
+    throw err;
   } finally {
     clearTimeout(timer);
+    // ── W6-C: Best-effort audit log (streaming — token counts not available) ──
+    if (loggedStatus) {
+      void logAICall({
+        userId: options.audit?.userId ?? null,
+        analysisId: options.audit?.analysisId ?? null,
+        agent: options.audit?.agent ?? null,
+        passType: options.audit?.passType ?? null,
+        provider: providerId,
+        model: provider.model,
+        latencyMs: Date.now() - startedAt,
+        status: loggedStatus,
+        error: loggedError,
+        redactionCount: redaction.redactionCount,
+        redactedLabels: redaction.redactedLabels,
+      }).catch(() => { /* never throw on audit failure */ });
+    }
   }
 }
 

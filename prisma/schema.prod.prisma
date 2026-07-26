@@ -41,6 +41,7 @@ model User {
   usageRecords    UsageRecord[]
   settings        UserSettings[]
   auditLogs       AuditLog[]
+  aiCallLogs      AICallLog[]
   shareTokens     ShareToken[]
 }
 
@@ -333,4 +334,40 @@ model PlatformAIConfig {
 
   @@unique([providerId])  // one config per provider
   @@index([enabled])
+}
+
+// ==========================================
+// AI CALL LOG (every AI provider call — redaction + cost telemetry)
+// ==========================================
+// Captures one row per callAI()/streamAI() invocation: which provider/model,
+// how many tokens, latency, success/error, and how many secrets were redacted
+// before the prompt left the system. userId is nullable because callAI() is
+// the single chokepoint and doesn't always have user context (background jobs,
+// system passes). API routes can call logAICall() directly to attach userId.
+
+model AICallLog {
+  id              String   @id @default(cuid())
+  userId          String?  // null when called from background/system context
+  analysisId      String?
+  agent           String?  // "security" | "overview" | "chat" | "deep-analysis" | etc.
+  passType        String?  // analysis pass name (architecture | security | ...)
+  provider        String   // openai | anthropic | openrouter | gemini | azure | etc.
+  model           String
+  inputTokens     Int?
+  outputTokens    Int?
+  totalTokens     Int?
+  latencyMs       Int?
+  status          String   // "success" | "error" | "timeout"
+  error           String?  // truncated error message (max ~500 chars)
+  redactionCount  Int      @default(0)  // number of secrets stripped before send
+  redactedLabels  String   @default("[]") // JSON array of secret types redacted
+  createdAt       DateTime @default(now())
+
+  user            User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([analysisId])
+  @@index([provider, model])
+  @@index([createdAt])
+  @@index([status])
 }

@@ -293,3 +293,42 @@ export interface AnalysisRecord {
   report: AnalysisReport | null;
   createdAt: string;
 }
+
+/* ---------- AI Deep Analysis — structured output (Wave 6 Phase 1) ----------
+ * Backward-compatible: every new field is OPTIONAL. Existing data without
+ * evidence / confidence / fixPlan / severity continues to render unchanged.
+ */
+
+/** A single AI finding — used by security, code-quality, and performance reviews. */
+export interface AIFinding {
+  // Legacy fields (kept for backward compatibility)
+  issue: string;
+  rootCause?: string;
+  fixCode?: string;
+  impact?: string;
+  expectedImprovement?: string;
+  // Wave 6 Phase 1 — structured enterprise output
+  evidence?: string[];      // exact "file:line" references, e.g. ["src/auth.ts:42"]
+  confidence?: number;      // 0.0–1.0 (how confident the AI is this is a real issue)
+  fixPlan?: string[];       // step-by-step fix instructions
+  severity?: "critical" | "high" | "medium" | "low";  // AI-assigned severity (may differ from static rule)
+}
+
+/** Top-level AI overview pass — executive-level decision intelligence. */
+export interface AIOverview {
+  topRisks: Array<{
+    title: string;
+    description: string;
+    severity: "critical" | "high" | "medium" | "low";
+    evidence?: string[];
+  }>;
+  quickWins: Array<{
+    title: string;
+    description: string;
+    effort: "small" | "medium" | "large";
+    evidence?: string[];
+  }>;
+  fixFirst: string;          // what to fix first and why
+  fastestScoreGain: string;  // what will improve the score fastest
+  healthAssessment: string;  // 2-3 sentence overall health narrative
+}

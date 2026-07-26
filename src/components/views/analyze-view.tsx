@@ -133,8 +133,9 @@ export function AnalyzeView() {
     setAiStatus("pending");
     useAppStore.getState().setAiPending(true);
 
-    // Map AI pass types to feature routing keys
+    // Map AI pass types to feature routing keys (Wave 6 Phase 1: overview added)
     const PASS_TO_FEATURE: Record<string, string> = {
+      overview: "summary",         // NEW — routes to summary/default provider
       summary: "summary",
       priorities: "summary",
       security: "security",
@@ -146,7 +147,9 @@ export function AnalyzeView() {
     };
 
     const tAnalysis = useI18nStore.getState().t;
+    // Wave 6 Phase 1: overview runs FIRST so leadership gets a 30-second read early.
     const passes = [
+      { type: "overview", name: tAnalysis("analysis", "passes.overview") },
       { type: "summary", name: tAnalysis("analysis", "passes.summary") },
       { type: "priorities", name: tAnalysis("analysis", "passes.priorities") },
       { type: "security", name: tAnalysis("analysis", "passes.security") },

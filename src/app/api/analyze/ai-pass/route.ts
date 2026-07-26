@@ -10,7 +10,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 55; // Under 60s Hobby limit
 
-type PassType = "summary" | "security" | "architecture" | "quality" | "priorities" | "performance" | "bestPractices" | "duplicates";
+// Wave 6 Phase 1: added "overview" pass (executive decision intelligence).
+type PassType = "overview" | "summary" | "security" | "architecture" | "quality" | "priorities" | "performance" | "bestPractices" | "duplicates";
 
 const MODEL_MAX_TOKENS: Record<string, number> = {
   "gpt-5-nano": 1000, "gpt-4.1-nano": 1500, "gpt-4o-mini": 2000,
@@ -152,8 +153,8 @@ export async function POST(req: NextRequest) {
     if (result) {
       updateReportWithPassResult(report, passType, result);
 
-      // Check if all passes are done
-      const allPasses = ["summary", "security", "architecture", "quality", "priorities", "performance", "bestPractices", "duplicates"];
+      // Check if all passes are done (Wave 6 Phase 1: 9 passes — overview added)
+      const allPasses: PassType[] = ["overview", "summary", "security", "architecture", "quality", "priorities", "performance", "bestPractices", "duplicates"];
       const completedPasses = (report as any)._aiPassesCompleted || [];
       if (!completedPasses.includes(passType)) completedPasses.push(passType);
       (report as any)._aiPassesCompleted = completedPasses;
@@ -205,6 +206,10 @@ function updateReportWithPassResult(report: any, passType: PassType, result: any
   const deep = report.deepAnalysis;
 
   switch (passType) {
+    case "overview":
+      // Wave 6 Phase 1: executive-level decision intelligence (topRisks / quickWins / fixFirst / fastestScoreGain)
+      deep.aiOverview = result;
+      break;
     case "summary":
       deep.executiveSummary = result.summary || report.summary;
       report.aiEnhancement = { aiSummary: deep.executiveSummary, aiBadge: "ai-enhanced" };

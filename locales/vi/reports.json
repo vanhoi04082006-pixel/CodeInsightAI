@@ -117,6 +117,7 @@
     "codeQualityReview": "Đánh giá chất lượng code AI",
     "expected": "Kỳ vọng",
     "fixCode": "Mã sửa lỗi",
+    "fixPlan": "Kế hoạch sửa",
     "businessImpact": "Tác động kinh doanh",
     "bestPractices": "Kiểm tra best practices AI",
     "scoreMax": "/ 100",
@@ -129,6 +130,23 @@
     "estimatedLinesSaved": "Số dòng tiết kiệm ước tính",
     "staticOnly": "Chỉ phân tích tĩnh",
     "staticOnlyDesc": "Chưa có AI insights. Thêm AI provider hoặc bật Platform AI để phân tích sâu bằng AI."
+  },
+  "aiOverview": {
+    "title": "Tổng quan AI",
+    "topRisks": "Rủi ro hàng đầu",
+    "quickWins": "Thắng nhanh",
+    "fixFirst": "Sửa trước",
+    "fastestScoreGain": "Tăng điểm nhanh nhất",
+    "healthAssessment": "Đánh giá sức khỏe"
+  },
+  "action": {
+    "fixNow": "Sửa ngay",
+    "generateTest": "Tạo test",
+    "refactor": "Tái cấu trúc",
+    "agentStarted": "Agent đã khởi động — xem Mission Control",
+    "agentFailed": "Agent khởi động thất bại",
+    "askAI": "Hỏi AI về file này",
+    "aiExplain": "Giải thích AI"
   },
   "project": {
     "titleProject": "Dự án",

@@ -4,13 +4,21 @@ import { useState } from "react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { motion, AnimatePresence } from "framer-motion";
-import { Copy, Check, FileCode, Sparkles, ChevronRight } from "lucide-react";
+import { Copy, Check, FileCode, Sparkles, ChevronRight, Loader2 } from "lucide-react";
 import type { CodeSnippet } from "@/lib/types";
 import { useT } from "@/lib/i18n";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-export function CodeViewer({ snippets }: { snippets: CodeSnippet[] }) {
+export function CodeViewer({
+  snippets,
+  onAskAI,
+  aiLoading,
+}: {
+  snippets: CodeSnippet[];
+  onAskAI?: (snippet: CodeSnippet) => void;
+  aiLoading?: boolean;
+}) {
   const { t } = useT();
   const [active, setActive] = useState(0);
   const [copied, setCopied] = useState(false);
@@ -63,13 +71,25 @@ export function CodeViewer({ snippets }: { snippets: CodeSnippet[] }) {
             </div>
             <span className="ml-2 font-mono text-xs text-muted-foreground">{snippet.file}</span>
           </div>
-          <button
-            onClick={copy}
-            className="flex items-center gap-1.5 rounded-md border border-white/10 bg-white/5 px-2 py-1 text-[11px] text-muted-foreground transition hover:bg-white/10 hover:text-foreground"
-          >
-            {copied ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
-            {copied ? t("common", "codeViewer.copied") : t("common", "codeViewer.copy")}
-          </button>
+          <div className="flex items-center gap-1.5">
+            {onAskAI && (
+              <button
+                onClick={() => onAskAI(snippet)}
+                disabled={aiLoading}
+                className="flex items-center gap-1.5 rounded-md border border-violet-400/30 bg-violet-500/10 px-2 py-1 text-[11px] text-violet-300 transition hover:bg-violet-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {aiLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                {t("reports", "action.askAI")}
+              </button>
+            )}
+            <button
+              onClick={copy}
+              className="flex items-center gap-1.5 rounded-md border border-white/10 bg-white/5 px-2 py-1 text-[11px] text-muted-foreground transition hover:bg-white/10 hover:text-foreground"
+            >
+              {copied ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+              {copied ? t("common", "codeViewer.copied") : t("common", "codeViewer.copy")}
+            </button>
+          </div>
         </div>
         {/* code */}
         <div className="max-h-[480px] overflow-auto scrollbar-thin">

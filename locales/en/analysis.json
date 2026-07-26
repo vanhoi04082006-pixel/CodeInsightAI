@@ -54,6 +54,7 @@
     "tailwind": "CSS engine"
   },
   "passes": {
+    "overview": "Overview",
     "summary": "Executive Summary",
     "priorities": "Priorities & Roadmap",
     "security": "Security Review",

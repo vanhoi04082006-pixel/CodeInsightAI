@@ -117,6 +117,7 @@
     "codeQualityReview": "AI Code Quality Review",
     "expected": "Expected",
     "fixCode": "Fix code",
+    "fixPlan": "Fix plan",
     "businessImpact": "Business impact",
     "bestPractices": "AI Best Practices Audit",
     "scoreMax": "/ 100",
@@ -129,6 +130,23 @@
     "estimatedLinesSaved": "Est. lines saved",
     "staticOnly": "Static Analysis Only",
     "staticOnlyDesc": "No AI insights available. Add an AI provider or enable Platform AI for deep AI-powered insights."
+  },
+  "aiOverview": {
+    "title": "AI Overview",
+    "topRisks": "Top Risks",
+    "quickWins": "Quick Wins",
+    "fixFirst": "Fix First",
+    "fastestScoreGain": "Fastest Score Gain",
+    "healthAssessment": "Health Assessment"
+  },
+  "action": {
+    "fixNow": "Fix Now",
+    "generateTest": "Generate Test",
+    "refactor": "Refactor",
+    "agentStarted": "Agent started — check Mission Control",
+    "agentFailed": "Agent failed to start",
+    "askAI": "Ask AI about this file",
+    "aiExplain": "AI Explanation"
   },
   "project": {
     "titleProject": "Project",

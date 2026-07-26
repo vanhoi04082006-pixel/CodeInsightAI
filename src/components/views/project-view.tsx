@@ -24,6 +24,8 @@ import {
   Activity,
   Loader2,
   Zap,
+  Wrench,
+  RefreshCw,
 } from "lucide-react";
 import { GlassCard, ScoreGauge, GradientText, NeonDivider, SeverityBadge } from "@/components/shared/ui";
 import { DependencyGraph } from "@/components/shared/dependency-graph";
@@ -32,9 +34,9 @@ import { CodeViewer } from "@/components/shared/code-viewer";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useAppStore } from "@/lib/store";
-import type { AnalysisReport, Issue } from "@/lib/types";
+import type { AnalysisReport, Issue, CodeSnippet } from "@/lib/types";
 import { toast } from "sonner";
-import { useT } from "@/lib/i18n";
+import { useT, useI18nStore } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 type Tab = "overview" | "architecture" | "bugs" | "security" | "performance" | "dependencies" | "code" | "docs" | "roadmap" | "codegraph";
@@ -268,8 +270,80 @@ function OverviewTab({ report }: { report: AnalysisReport }) {
   const aiEnh = (report as any).aiEnhancement as any;
   const aiExecSummary: string | undefined = deep?.executiveSummary || aiEnh?.aiSummary;
   const hasAiExec = !!aiExecSummary;
+  const aiOverview = deep?.aiOverview;
   return (
     <div className="grid gap-4 lg:grid-cols-3">
+      {/* AI Overview — top of the tab when AI deep analysis is available */}
+      {aiOverview && (
+        <GlassCard className="border-violet-500/20 bg-gradient-to-br from-violet-500/[0.05] to-transparent p-6 lg:col-span-3">
+          <div className="mb-4 flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-violet-300" />
+            <h3 className="text-sm font-semibold">{t("reports", "aiOverview.title")}</h3>
+            <span className="rounded-full bg-violet-500/15 px-2 py-0.5 text-[10px] text-violet-300">✨ AI</span>
+          </div>
+
+          {/* Health Assessment */}
+          {aiOverview.healthAssessment && (
+            <div className="mb-4">
+              <p className="mb-1 text-[10px] uppercase tracking-wider text-violet-300">{t("reports", "aiOverview.healthAssessment")}</p>
+              <p className="text-sm leading-relaxed text-foreground/85">{aiOverview.healthAssessment}</p>
+            </div>
+          )}
+
+          <div className="grid gap-4 md:grid-cols-2">
+            {/* Top Risks */}
+            {aiOverview.topRisks?.length > 0 && (
+              <div>
+                <h4 className="mb-2 text-xs uppercase tracking-wider text-rose-400">{t("reports", "aiOverview.topRisks")}</h4>
+                {aiOverview.topRisks.map((risk: any, i: number) => (
+                  <div key={i} className="mb-2 rounded-lg border border-rose-500/15 bg-rose-500/[0.03] p-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-sm font-medium">{risk.title}</span>
+                      {risk.severity && <SeverityBadge severity={risk.severity} />}
+                    </div>
+                    {risk.description && <p className="mt-1 text-xs text-muted-foreground">{risk.description}</p>}
+                    {risk.evidence && risk.evidence.length > 0 && <EvidenceChips evidence={risk.evidence} />}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Quick Wins */}
+            {aiOverview.quickWins?.length > 0 && (
+              <div>
+                <h4 className="mb-2 text-xs uppercase tracking-wider text-emerald-400">{t("reports", "aiOverview.quickWins")}</h4>
+                {aiOverview.quickWins.map((win: any, i: number) => (
+                  <div key={i} className="mb-2 rounded-lg border border-emerald-500/15 bg-emerald-500/[0.03] p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-medium">{win.title}</span>
+                      {win.effort && <span className="text-[10px] text-muted-foreground">{win.effort}</span>}
+                    </div>
+                    {win.description && <p className="mt-1 text-xs text-muted-foreground">{win.description}</p>}
+                    {win.evidence && win.evidence.length > 0 && <EvidenceChips evidence={win.evidence} />}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Fix First + Fastest Score Gain */}
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            {aiOverview.fixFirst && (
+              <div className="rounded-lg border border-amber-500/15 bg-amber-500/[0.03] p-3">
+                <p className="text-[10px] uppercase tracking-wider text-amber-400">{t("reports", "aiOverview.fixFirst")}</p>
+                <p className="mt-1 text-sm text-foreground/85">{aiOverview.fixFirst}</p>
+              </div>
+            )}
+            {aiOverview.fastestScoreGain && (
+              <div className="rounded-lg border border-cyan-500/15 bg-cyan-500/[0.03] p-3">
+                <p className="text-[10px] uppercase tracking-wider text-cyan-300">{t("reports", "aiOverview.fastestScoreGain")}</p>
+                <p className="mt-1 text-sm text-foreground/85">{aiOverview.fastestScoreGain}</p>
+              </div>
+            )}
+          </div>
+        </GlassCard>
+      )}
+
       <GlassCard strong className="p-6 lg:col-span-1">
         <p className="text-xs uppercase tracking-wider text-muted-foreground">{t("reports", "healthScore")}</p>
         <div className="mt-3 flex justify-center">
@@ -567,6 +641,39 @@ function IssuesTab({ issues, title, color, report, id }: { issues: Issue[]; titl
     id === "security" ? t("reports", "aiInsights.securityReview") :
     id === "performance" ? t("reports", "aiInsights.perfReview") :
     t("reports", "aiInsights.codeQualityReview");
+  const [actionLoading, setActionLoading] = useState(false);
+  const handleAgentAction = async (kind: string, issue: Issue) => {
+    setActionLoading(true);
+    try {
+      const res = await fetch("/api/agents/execute", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          kind,
+          title: `${issue.title} — ${issue.file}${issue.line ? `:${issue.line}` : ""}`,
+          input: {
+            issue: issue.title,
+            file: issue.file,
+            line: issue.line,
+            description: issue.description,
+            recommendation: issue.recommendation,
+            severity: issue.severity,
+            category: issue.category,
+          },
+        }),
+      });
+      const data = await res.json();
+      if (data.taskId || data.status) {
+        toast.success(t("reports", "action.agentStarted"));
+      } else {
+        toast.error(data.error || t("reports", "action.agentFailed"));
+      }
+    } catch {
+      toast.error(t("reports", "action.agentFailed"));
+    } finally {
+      setActionLoading(false);
+    }
+  };
   return (
     <div className="space-y-4">
       <GlassCard className="p-5">
@@ -605,7 +712,11 @@ function IssuesTab({ issues, title, color, report, id }: { issues: Issue[]; titl
           <div className="mt-3 space-y-3">
             {aiReviews.map((r: any, i: number) => (
               <div key={i} className="rounded-lg border border-violet-500/15 bg-violet-500/[0.03] p-3">
-                <p className="text-sm font-medium text-violet-100">{r.issue}</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-sm font-medium text-violet-100">{r.issue}</p>
+                  {r.severity && <SeverityBadge severity={r.severity} />}
+                  <ConfidenceBadge confidence={r.confidence} />
+                </div>
                 {r.rootCause && (
                   <p className="mt-1 text-xs text-muted-foreground">
                     <span className="font-medium text-foreground/80">{t("reports", "aiInsights.rootCause")}:</span> {r.rootCause}
@@ -620,6 +731,17 @@ function IssuesTab({ issues, title, color, report, id }: { issues: Issue[]; titl
                   <p className="mt-1 text-xs text-emerald-300">
                     <span className="font-medium">{t("reports", "aiInsights.expected")}:</span> {r.expectedImprovement}
                   </p>
+                )}
+                {r.evidence && r.evidence.length > 0 && <EvidenceChips evidence={r.evidence} />}
+                {r.fixPlan && r.fixPlan.length > 0 && (
+                  <div className="mt-2">
+                    <p className="mb-1 text-[10px] font-medium uppercase tracking-wider text-cyan-300">{t("reports", "aiInsights.fixPlan")}</p>
+                    <ol className="list-decimal space-y-0.5 pl-5 text-xs text-foreground/85">
+                      {r.fixPlan.map((step: string, j: number) => (
+                        <li key={j}>{step}</li>
+                      ))}
+                    </ol>
+                  </div>
                 )}
                 {r.fixCode && (
                   <div className="mt-2">
@@ -695,6 +817,19 @@ function IssuesTab({ issues, title, color, report, id }: { issues: Issue[]; titl
                             <Sparkles className="h-3.5 w-3.5" /> {t("reports", "aiRecommendation")}
                           </p>
                           <p className="mt-1 text-sm text-foreground/85">{iss.recommendation}</p>
+                        </div>
+
+                        {/* Action buttons — invoke agents to fix / test / refactor this issue */}
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <Button size="sm" variant="outline" onClick={() => handleAgentAction("fix-bug", iss)} disabled={actionLoading}>
+                            {actionLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wrench className="h-3.5 w-3.5" />} {t("reports", "action.fixNow")}
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => handleAgentAction("test", iss)} disabled={actionLoading}>
+                            {actionLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5" />} {t("reports", "action.generateTest")}
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => handleAgentAction("refactor", iss)} disabled={actionLoading}>
+                            {actionLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />} {t("reports", "action.refactor")}
+                          </Button>
                         </div>
                       </div>
                     </motion.div>
@@ -844,6 +979,30 @@ function DependenciesTab({ report }: { report: AnalysisReport }) {
 /* ---------- Code ---------- */
 function CodeTab({ report }: { report: AnalysisReport }) {
   const { t } = useT();
+  const [aiExplain, setAiExplain] = useState<string | null>(null);
+  const [explainLoading, setExplainLoading] = useState(false);
+
+  const askAI = async (snippet: CodeSnippet) => {
+    setExplainLoading(true);
+    setAiExplain(null);
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: `Analyze the file ${snippet.file}. Explain: 1) What this file does 2) Main risks 3) Patterns used 4) Refactor suggestions. Code:\n\`\`\`\n${snippet.code}\n\`\`\``,
+          language: useI18nStore.getState().locale,
+        }),
+      });
+      const data = await res.json();
+      setAiExplain(data.reply || data.message?.content || "No response");
+    } catch {
+      setAiExplain("AI explanation unavailable");
+    } finally {
+      setExplainLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <GlassCard className="p-5">
@@ -855,7 +1014,29 @@ function CodeTab({ report }: { report: AnalysisReport }) {
           {t("reports", "aiCodeExplorerDesc")}
         </p>
       </GlassCard>
-      <CodeViewer snippets={report.snippets} />
+      <CodeViewer
+        snippets={report.snippets}
+        onAskAI={askAI}
+        aiLoading={explainLoading}
+      />
+      {(aiExplain || explainLoading) && (
+        <GlassCard className="border-violet-500/20 bg-gradient-to-br from-violet-500/[0.05] to-transparent p-5">
+          <div className="flex flex-wrap items-center gap-2">
+            <Sparkles className="h-4 w-4 text-violet-300" />
+            <h4 className="text-sm font-semibold">{t("reports", "action.aiExplain")}</h4>
+            <span className="flex items-center gap-1 rounded-full bg-violet-500/15 px-2 py-0.5 text-[10px] font-medium text-violet-300">
+              <Sparkles className="h-3 w-3" /> AI
+            </span>
+          </div>
+          {explainLoading ? (
+            <p className="mt-3 flex items-center gap-2 text-sm text-amber-300">
+              <Loader2 className="h-4 w-4 animate-spin" /> {t("reports", "project.aiAnalyzing")}
+            </p>
+          ) : (
+            <pre className="mt-3 max-h-[400px] overflow-y-auto whitespace-pre-wrap rounded-lg border border-white/5 bg-black/40 p-3 font-mono text-[11px] leading-relaxed text-foreground/85 scrollbar-thin">{aiExplain}</pre>
+          )}
+        </GlassCard>
+      )}
     </div>
   );
 }
@@ -1133,6 +1314,32 @@ function Stat({ label, value, accent }: { label: string; value: string | number;
       <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</p>
       <p className="mt-0.5 text-lg font-bold tabular-nums" style={{ color: accent }}>{value}</p>
     </div>
+  );
+}
+
+/* ---------- AI helper components — shared across OverviewTab and IssuesTab ---------- */
+function EvidenceChips({ evidence }: { evidence: string[] }) {
+  if (!evidence || evidence.length === 0) return null;
+  return (
+    <div className="mt-2 flex flex-wrap gap-1">
+      {evidence.map((e, i) => (
+        <code key={i} className="rounded bg-white/5 px-1.5 py-0.5 text-[10px] text-muted-foreground">{e}</code>
+      ))}
+    </div>
+  );
+}
+
+function ConfidenceBadge({ confidence }: { confidence?: number }) {
+  if (confidence == null) return null;
+  const pct = Math.round(confidence * 100);
+  const color = pct >= 80 ? "#34d399" : pct >= 50 ? "#fbbf24" : "#fb7185";
+  return (
+    <span
+      className="rounded-full px-1.5 py-0.5 text-[9px] font-medium"
+      style={{ background: `${color}20`, color }}
+    >
+      {pct}% confidence
+    </span>
   );
 }
 
