@@ -24,10 +24,10 @@ export function analyzeParsedRepository(
   const securityIssues = analyzeSecurity(validCodeFiles, language);
   const bugIssues = analyzeBugs(validCodeFiles, language);
   const perfIssues = analyzePerformance(validCodeFiles, language);
-  const perfPositiveFindings = getPositiveFindings(validCodeFiles);
+  const perfPositiveFindings = getPositiveFindings(validCodeFiles, language);
 
-  const arch = detectArchitecture(parsed.files);
-  const techDebt = analyzeTechDebt(parsed.files);
+  const arch = detectArchitecture(parsed.files, language);
+  const techDebt = analyzeTechDebt(parsed.files, language);
 
   const securityScore = calcScore(securityIssues, 100);
   const performanceScore = calcScore(perfIssues, 100);
@@ -179,11 +179,11 @@ export function analyzeParsedRepository(
     ].filter(Boolean))),
     scores: { overall, security: securityScore, performance: performanceScore, architecture: architectureScore, maintainability: maintainabilityScore, codeQuality: codeQualityScore },
     scoreBreakdown: [
-      { label: "Security", score: securityScore, max: 100, weight: 25 },
-      { label: "Performance", score: performanceScore, max: 100, weight: 20 },
-      { label: "Architecture", score: architectureScore, max: 100, weight: 20 },
-      { label: "Maintainability", score: maintainabilityScore, max: 100, weight: 20 },
-      { label: "Code Quality", score: codeQualityScore, max: 100, weight: 15 },
+      { label: translate(language, "static", "scoreLabels.security"), score: securityScore, max: 100, weight: 25 },
+      { label: translate(language, "static", "scoreLabels.performance"), score: performanceScore, max: 100, weight: 20 },
+      { label: translate(language, "static", "scoreLabels.architecture"), score: architectureScore, max: 100, weight: 20 },
+      { label: translate(language, "static", "scoreLabels.maintainability"), score: maintainabilityScore, max: 100, weight: 20 },
+      { label: translate(language, "static", "scoreLabels.codeQuality"), score: codeQualityScore, max: 100, weight: 15 },
     ],
     primaryLanguage: parsed.languages[0]?.name ?? "Unknown",
     totalFiles: parsed.totalFiles,

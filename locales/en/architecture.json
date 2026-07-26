@@ -1,0 +1,85 @@
+{
+  "patterns": {
+    "featureBased": {
+      "name": "Feature-based Architecture",
+      "description": "Code is organized by feature/domain rather than technical role. Each feature directory contains its own components, services, and types."
+    },
+    "clean": {
+      "name": "Clean Architecture",
+      "description": "Layers are separated by dependency direction — domain is independent of infrastructure."
+    },
+    "mvc": {
+      "name": "MVC (Model-View-Controller)",
+      "description": "Classic separation: Models for data, Views for presentation, Controllers for routing."
+    },
+    "layered": {
+      "name": "Layered Architecture",
+      "description": "Horizontal layers: presentation → application → domain → infrastructure."
+    },
+    "nextjsAppRouter": {
+      "name": "Next.js App Router (Feature-based Modular)",
+      "description": "Uses Next.js App Router conventions. Routes are file-system based. Layouts and pages compose the UI tree."
+    },
+    "modularMonolith": {
+      "name": "Modular Monolith",
+      "description": "Single-deployment application with module-based organization."
+    }
+  },
+  "layers": {
+    "features": { "name": "Features", "responsibility": "Self-contained feature modules" },
+    "domain": { "name": "Domain", "responsibility": "Business entities & rules" },
+    "useCases": { "name": "Use Cases", "responsibility": "Application logic" },
+    "infrastructure": { "name": "Infrastructure", "responsibility": "DB, APIs, external services" },
+    "infrastructureLayered": { "name": "Infrastructure", "responsibility": "DB, APIs" },
+    "models": { "name": "Models", "responsibility": "Data models & schemas" },
+    "views": { "name": "Views", "responsibility": "UI templates" },
+    "controllers": { "name": "Controllers", "responsibility": "Request handlers" },
+    "presentation": { "name": "Presentation", "responsibility": "Components & routes" },
+    "application": { "name": "Application", "responsibility": "Services & hooks" },
+    "app": { "name": "App", "responsibility": "Routes, layouts, pages" },
+    "components": { "name": "Components", "responsibility": "Reusable UI" },
+    "lib": { "name": "Lib", "responsibility": "Shared utilities" },
+    "api": { "name": "API", "responsibility": "Backend routes" },
+    "root": { "name": "Root", "responsibility": "Mixed concerns" }
+  },
+  "strengths": {
+    "lowCoupling": "Low average coupling ({value} imports/file) — modules are well-separated",
+    "goodFanRatio": "Good fan-in/fan-out ratio — modules are reused without being overly dependent",
+    "goodCohesion": "Good internal cohesion ({value}%) — modules group related functionality",
+    "stableDependency": "Stable dependency direction — most modules depend inward toward stable cores (I={value})",
+    "goodAbstraction": "Good abstraction layering ({value}% abstract modules) — interfaces/types decouple consumers",
+    "closeToMainSeq": "Close to the Main Sequence (D={value}) — architecture follows stable dependencies principle",
+    "noLayerViolations": "No layer violations detected — dependency direction is clean",
+    "noCircularDeps": "No direct circular dependencies — file-level import graph is acyclic",
+    "hasTests": "Test files detected alongside source — good testing discipline",
+    "strongTypeScript": "Strong TypeScript adoption ({ts}/{total} files)",
+    "hasLinting": "Linting/formatting config detected — enforces consistent code style",
+    "hasCI": "CI/CD pipeline configured — automated builds and tests"
+  },
+  "weaknesses": {
+    "highCoupling": "High average coupling ({value} imports/file) — modules depend on too many others",
+    "lowCohesion": "Low cohesion ({value}%) — files within the same directory don't import each other much",
+    "highInstability": "High instability (I={value}) — too many modules depend on volatile/concrete layers",
+    "farFromMainSeq": "Far from the Main Sequence (D={value}) — some modules are both concrete AND unstable (pain zone) or abstract AND stable (useless zone)",
+    "layerViolations": "{count} layer violation(s): component files importing DB/infrastructure directly (bypassing service layer)",
+    "godModules": "{count} god module(s) with >20 functions: {value}",
+    "fileCircularDeps": "{count} direct circular dependency pair(s) detected — these create tight coupling",
+    "dirCircularDeps": "{count} directory-level circular dependency chain(s):",
+    "noTests": "No test files detected — reliability risk",
+    "layerViolationEntry": "{from} → {to} (component importing DB layer)",
+    "bulletItem": "  → {value}"
+  },
+  "techDebt": {
+    "highComplexity": { "title": "High complexity in {file} (Cx={cx})", "impact": "Maintainability", "estimate": "1 day" },
+    "largeFile": { "title": "Large file: {file} ({lines} lines)", "impact": "Readability", "estimate": "2 days" },
+    "godModule": { "title": "God module: {file} ({count} functions)", "impact": "Cohesion", "estimate": "3 days" },
+    "highCoupling": { "title": "High coupling: {file} ({count} imports)", "impact": "Coupling", "estimate": "1 day" },
+    "deepNesting": { "title": "Deep nesting in {file}", "impact": "Readability", "estimate": "1 day" },
+    "duplicatedFunction": { "title": "Duplicated function '{fn}' in {count} files", "impact": "DRY", "estimate": "1 day" },
+    "noTests": { "title": "No test files detected", "impact": "Reliability", "estimate": "5 days" },
+    "missingReadme": { "title": "Missing README.md", "impact": "Onboarding", "estimate": "0.5 days" },
+    "missingGitignore": { "title": "Missing .gitignore", "impact": "Security", "estimate": "0.1 days" },
+    "missingTsconfig": { "title": "Missing tsconfig.json", "impact": "Type Safety", "estimate": "0.5 days" },
+    "missingLinter": { "title": "Missing ESLint/Biome config", "impact": "Code Quality", "estimate": "0.5 days" }
+  }
+}

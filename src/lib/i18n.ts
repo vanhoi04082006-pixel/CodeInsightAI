@@ -26,6 +26,7 @@ import enPro from "../../locales/en/pro.json";
 import enGuide from "../../locales/en/guide.json";
 import enStatic from "../../locales/en/static.json";
 import enIssues from "../../locales/en/issues.json";
+import enArchitecture from "../../locales/en/architecture.json";
 
 import viCommon from "../../locales/vi/common.json";
 import viSettings from "../../locales/vi/settings.json";
@@ -48,6 +49,7 @@ import viPro from "../../locales/vi/pro.json";
 import viGuide from "../../locales/vi/guide.json";
 import viStatic from "../../locales/vi/static.json";
 import viIssues from "../../locales/vi/issues.json";
+import viArchitecture from "../../locales/vi/architecture.json";
 
 type Dict = Record<string, unknown>;
 
@@ -60,6 +62,7 @@ export const DICTS: Record<Locale, Record<string, Dict>> = {
     mission: enMission, codegraph: enCodegraph, admin: enAdmin, pro: enPro, guide: enGuide,
     issues: enIssues,
     static: enStatic,
+    architecture: enArchitecture,
   },
   vi: {
     common: viCommon, settings: viSettings, dashboard: viDashboard,
@@ -69,13 +72,14 @@ export const DICTS: Record<Locale, Record<string, Dict>> = {
     mission: viMission, codegraph: viCodegraph, admin: viAdmin, pro: viPro, guide: viGuide,
     issues: viIssues,
     static: viStatic,
+    architecture: viArchitecture,
   },
 };
 
 export const NAMESPACES = [
   "common", "settings", "dashboard", "analysis", "landing", "reports", "errors",
   "providers", "personality", "developer", "history", "chat", "notifications", "agents",
-  "mission", "codegraph", "admin", "pro", "guide", "issues", "static",
+  "mission", "codegraph", "admin", "pro", "guide", "issues", "static", "architecture",
 ] as const;
 
 export const COOKIE_NAME = "codeinsight-lang";

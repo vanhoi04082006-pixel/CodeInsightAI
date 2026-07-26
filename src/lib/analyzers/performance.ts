@@ -300,26 +300,27 @@ export function analyzePerformance(files: { path: string; content: string }[], l
  * Get positive findings (best practices the repo already follows).
  * Shown when perfIssues.length === 0 to avoid empty tab.
  */
-export function getPositiveFindings(files: { path: string; content: string }[]): string[] {
+export function getPositiveFindings(files: { path: string; content: string }[], language: string = "en"): string[] {
   const findings: string[] = [];
   const allContent = files.map(f => f.content).join("\n");
+  const t = (key: string) => translateIssue(language, `positiveFindings.${key}`);
 
-  if (allContent.includes("useMemo")) findings.push("✅ Uses useMemo for expensive computations");
-  if (allContent.includes("useCallback")) findings.push("✅ Uses useCallback for handler memoization");
-  if (allContent.includes("React.memo") || allContent.includes("memo(")) findings.push("✅ Wraps components in React.memo");
-  if (allContent.includes("dynamic(") || allContent.includes("next/dynamic")) findings.push("✅ Uses dynamic imports for code-splitting");
-  if (allContent.includes("next/image") || allContent.includes("<Image")) findings.push("✅ Uses next/image for optimized images");
-  if (allContent.includes("Promise.all")) findings.push("✅ Uses Promise.all for parallel async operations");
-  if (allContent.includes("requestAnimationFrame")) findings.push("✅ Uses requestAnimationFrame for animations");
-  if (allContent.match(/take\s*:/) && allContent.match(/skip\s*:/)) findings.push("✅ Implements pagination on DB queries");
-  if (!allContent.includes("moment") && !allContent.includes("lodash")) findings.push("✅ Avoids heavy libraries (moment.js, lodash)");
-  if (!allContent.match(/console\.(log|debug)\s*\(/)) findings.push("✅ No console.log calls in production code");
-  if (allContent.includes("Suspense")) findings.push("✅ Uses Suspense boundaries around lazy-loaded components");
-  if (allContent.includes("useReducer")) findings.push("✅ Uses useReducer for complex state management");
-  if (allContent.includes("clearInterval") || allContent.includes("clearTimeout")) findings.push("✅ Properly cleans up timers (clearInterval/clearTimeout)");
-  if (allContent.includes("removeEventListener")) findings.push("✅ Properly removes event listeners in cleanup");
-  if (allContent.includes(".unsubscribe") || allContent.includes(".off(")) findings.push("✅ Unsubscribes from observables/sockets");
-  if (!allContent.includes("dangerouslySetInnerHTML")) findings.push("✅ Avoids dangerouslySetInnerHTML (no XSS risk)");
+  if (allContent.includes("useMemo")) findings.push(t("useMemo"));
+  if (allContent.includes("useCallback")) findings.push(t("useCallback"));
+  if (allContent.includes("React.memo") || allContent.includes("memo(")) findings.push(t("reactMemo"));
+  if (allContent.includes("dynamic(") || allContent.includes("next/dynamic")) findings.push(t("dynamicImport"));
+  if (allContent.includes("next/image") || allContent.includes("<Image")) findings.push(t("nextImage"));
+  if (allContent.includes("Promise.all")) findings.push(t("promiseAll"));
+  if (allContent.includes("requestAnimationFrame")) findings.push(t("requestAnimationFrame"));
+  if (allContent.match(/take\s*:/) && allContent.match(/skip\s*:/)) findings.push(t("pagination"));
+  if (!allContent.includes("moment") && !allContent.includes("lodash")) findings.push(t("avoidsHeavyLibs"));
+  if (!allContent.match(/console\.(log|debug)\s*\(/)) findings.push(t("noConsoleLog"));
+  if (allContent.includes("Suspense")) findings.push(t("suspenseBoundaries"));
+  if (allContent.includes("useReducer")) findings.push(t("useReducer"));
+  if (allContent.includes("clearInterval") || allContent.includes("clearTimeout")) findings.push(t("cleansUpTimers"));
+  if (allContent.includes("removeEventListener")) findings.push(t("removesEventListeners"));
+  if (allContent.includes(".unsubscribe") || allContent.includes(".off(")) findings.push(t("unsubscribes"));
+  if (!allContent.includes("dangerouslySetInnerHTML")) findings.push(t("noDangerouslySetInnerHTML"));
 
   return findings;
 }

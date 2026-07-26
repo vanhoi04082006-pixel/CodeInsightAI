@@ -6,6 +6,7 @@
   "security": "Security",
   "performance": "Performance",
   "dependencies": "Dependencies",
+  "codegraph": "CodeGraph",
   "code": "Code",
   "docs": "Docs",
   "roadmap": "Roadmap",

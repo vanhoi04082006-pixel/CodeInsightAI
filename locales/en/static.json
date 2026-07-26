@@ -60,5 +60,12 @@
       "dockerDetected": "- Project has a `Dockerfile`. Build & run with Docker:",
       "dockerMissing": "- No `Dockerfile` or clear build framework detected — configure manually for your stack."
     }
+  },
+  "scoreLabels": {
+    "security": "Security",
+    "performance": "Performance",
+    "architecture": "Architecture",
+    "maintainability": "Maintainability",
+    "codeQuality": "Code Quality"
   }
 }

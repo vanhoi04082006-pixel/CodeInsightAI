@@ -60,5 +60,12 @@
       "dockerDetected": "- Dự án có `Dockerfile`. Build & run bằng Docker:",
       "dockerMissing": "- Chưa phát hiện `Dockerfile` hay framework build rõ ràng — cấu hình thủ công theo stack của bạn."
     }
+  },
+  "scoreLabels": {
+    "security": "Bảo mật",
+    "performance": "Hiệu suất",
+    "architecture": "Kiến trúc",
+    "maintainability": "Khả năng bảo trì",
+    "codeQuality": "Chất lượng code"
   }
 }

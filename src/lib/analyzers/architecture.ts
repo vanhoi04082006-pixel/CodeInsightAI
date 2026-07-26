@@ -4,6 +4,7 @@
 // god modules, fan-in/fan-out, real strengths/weaknesses.
 import type { ParsedFile } from "../repo-parser";
 import type { Issue } from "../types";
+import { translateArch } from "../architecture-i18n";
 
 export interface ArchitectureMetrics {
   avgCoupling: number;
@@ -28,12 +29,13 @@ export interface ArchitectureResult {
   metrics: ArchitectureMetrics;
 }
 
-export function detectArchitecture(files: ParsedFile[]): ArchitectureResult {
+export function detectArchitecture(files: ParsedFile[], language: string = "en"): ArchitectureResult {
+  const t = (key: string, vars?: Record<string, string | number>) => translateArch(language, key, vars);
   const dirs = new Set<string>();
   files.forEach(f => { const parts = f.path.split("/"); if (parts.length > 1) dirs.add(parts[0]); });
 
   // ── Compute real metrics from import graph ──
-  const metrics = computeMetrics(files);
+  const metrics = computeMetrics(files, language);
   const { layerViolations, godModules, dirCircularDeps, fileCircularDeps, avgCoupling, avgCohesion, instability, abstractness, distanceFromMain, fanInAvg, fanOutAvg } = metrics;
 
   // Build dynamic strengths/weaknesses
@@ -41,110 +43,110 @@ export function detectArchitecture(files: ParsedFile[]): ArchitectureResult {
   const weaknesses: string[] = [];
 
   // Coupling analysis (fan-out)
-  if (avgCoupling < 3) strengths.push(`Low average coupling (${avgCoupling.toFixed(1)} imports/file) — modules are well-separated`);
-  else if (avgCoupling > 8) weaknesses.push(`High average coupling (${avgCoupling.toFixed(1)} imports/file) — modules depend on too many others`);
+  if (avgCoupling < 3) strengths.push(t("strengths.lowCoupling", { value: avgCoupling.toFixed(1) }));
+  else if (avgCoupling > 8) weaknesses.push(t("weaknesses.highCoupling", { value: avgCoupling.toFixed(1) }));
 
   // Fan-in analysis (how many depend on me)
-  if (fanInAvg > 5 && fanOutAvg < 3) strengths.push(`Good fan-in/fan-out ratio — modules are reused without being overly dependent`);
+  if (fanInAvg > 5 && fanOutAvg < 3) strengths.push(t("strengths.goodFanRatio"));
 
   // Cohesion analysis
-  if (avgCohesion > 0.5) strengths.push(`Good internal cohesion (${(avgCohesion * 100).toFixed(0)}%) — modules group related functionality`);
-  else if (avgCohesion < 0.2 && files.length > 10) weaknesses.push(`Low cohesion (${(avgCohesion * 100).toFixed(0)}%) — files within the same directory don't import each other much`);
+  if (avgCohesion > 0.5) strengths.push(t("strengths.goodCohesion", { value: (avgCohesion * 100).toFixed(0) }));
+  else if (avgCohesion < 0.2 && files.length > 10) weaknesses.push(t("weaknesses.lowCohesion", { value: (avgCohesion * 100).toFixed(0) }));
 
   // Instability (Robert C. Martin): I = Ce / (Ca + Ce)
-  if (instability < 0.3 && files.length > 10) strengths.push(`Stable dependency direction — most modules depend inward toward stable cores (I=${instability.toFixed(2)})`);
-  else if (instability > 0.7 && files.length > 10) weaknesses.push(`High instability (I=${instability.toFixed(2)}) — too many modules depend on volatile/concrete layers`);
+  if (instability < 0.3 && files.length > 10) strengths.push(t("strengths.stableDependency", { value: instability.toFixed(2) }));
+  else if (instability > 0.7 && files.length > 10) weaknesses.push(t("weaknesses.highInstability", { value: instability.toFixed(2) }));
 
   // Abstractness
-  if (abstractness > 0.3 && files.length > 10) strengths.push(`Good abstraction layering (${(abstractness * 100).toFixed(0)}% abstract modules) — interfaces/types decouple consumers`);
+  if (abstractness > 0.3 && files.length > 10) strengths.push(t("strengths.goodAbstraction", { value: (abstractness * 100).toFixed(0) }));
 
   // Distance from Main Sequence |A + I - 1|
-  if (distanceFromMain < 0.2 && files.length > 10) strengths.push(`Close to the Main Sequence (D=${distanceFromMain.toFixed(2)}) — architecture follows stable dependencies principle`);
-  else if (distanceFromMain > 0.5 && files.length > 10) weaknesses.push(`Far from the Main Sequence (D=${distanceFromMain.toFixed(2)}) — some modules are both concrete AND unstable (pain zone) or abstract AND stable (useless zone)`);
+  if (distanceFromMain < 0.2 && files.length > 10) strengths.push(t("strengths.closeToMainSeq", { value: distanceFromMain.toFixed(2) }));
+  else if (distanceFromMain > 0.5 && files.length > 10) weaknesses.push(t("weaknesses.farFromMainSeq", { value: distanceFromMain.toFixed(2) }));
 
   // Layer violations
   if (layerViolations.length > 0) {
-    weaknesses.push(`${layerViolations.length} layer violation(s): component files importing DB/infrastructure directly (bypassing service layer)`);
-    layerViolations.slice(0, 3).forEach(v => weaknesses.push(`  → ${v}`));
+    weaknesses.push(t("weaknesses.layerViolations", { count: layerViolations.length }));
+    layerViolations.slice(0, 3).forEach(v => weaknesses.push(t("weaknesses.bulletItem", { value: v })));
   } else if (files.length > 5) {
-    strengths.push(`No layer violations detected — dependency direction is clean`);
+    strengths.push(t("strengths.noLayerViolations"));
   }
 
   // God modules
   if (godModules.length > 0) {
-    weaknesses.push(`${godModules.length} god module(s) with >20 functions: ${godModules.slice(0, 3).join(", ")}`);
+    weaknesses.push(t("weaknesses.godModules", { count: godModules.length, value: godModules.slice(0, 3).join(", ") }));
   }
 
   // File-level circular deps (A→B→A)
   if (fileCircularDeps > 0) {
-    weaknesses.push(`${fileCircularDeps} direct circular dependency pair(s) detected — these create tight coupling`);
+    weaknesses.push(t("weaknesses.fileCircularDeps", { count: fileCircularDeps }));
   } else if (files.length > 5) {
-    strengths.push(`No direct circular dependencies — file-level import graph is acyclic`);
+    strengths.push(t("strengths.noCircularDeps"));
   }
 
   // Directory-level circular deps (A/→B/→A/)
   if (dirCircularDeps.length > 0) {
-    weaknesses.push(`${dirCircularDeps.length} directory-level circular dependency chain(s):`);
-    dirCircularDeps.slice(0, 4).forEach(c => weaknesses.push(`  → ${c}`));
+    weaknesses.push(t("weaknesses.dirCircularDeps", { count: dirCircularDeps.length }));
+    dirCircularDeps.slice(0, 4).forEach(c => weaknesses.push(t("weaknesses.bulletItem", { value: c })));
   }
 
   // Test files
   const hasTests = files.some(f => f.path.includes(".test.") || f.path.includes(".spec.") || f.path.includes("__tests__"));
-  if (hasTests) strengths.push(`Test files detected alongside source — good testing discipline`);
-  else weaknesses.push(`No test files detected — reliability risk`);
+  if (hasTests) strengths.push(t("strengths.hasTests"));
+  else weaknesses.push(t("weaknesses.noTests"));
 
   // TypeScript usage
   const tsFiles = files.filter(f => f.path.endsWith(".ts") || f.path.endsWith(".tsx")).length;
-  if (tsFiles > files.length * 0.5) strengths.push(`Strong TypeScript adoption (${tsFiles}/${files.length} files)`);
+  if (tsFiles > files.length * 0.5) strengths.push(t("strengths.strongTypeScript", { ts: tsFiles, total: files.length }));
 
   // Config files present (linting, formatting)
   const hasLinting = files.some(f => /(\.eslintrc|eslint\.config|biome\.json|prettier)/.test(f.path));
-  if (hasLinting) strengths.push(`Linting/formatting config detected — enforces consistent code style`);
+  if (hasLinting) strengths.push(t("strengths.hasLinting"));
 
   // CI/CD config
   const hasCI = files.some(f => f.path.includes(".github/workflows") || f.path.includes(".gitlab-ci") || f.path.includes("Jenkinsfile"));
-  if (hasCI) strengths.push(`CI/CD pipeline configured — automated builds and tests`);
+  if (hasCI) strengths.push(t("strengths.hasCI"));
 
   // ── Pattern detection ──
   // Feature-based: src/features/*/...
   if (dirs.has("features") || files.some(f => f.path.includes("features/")))
-    return archResult("Feature-based Architecture",
-      "Code is organized by feature/domain rather than technical role. Each feature directory contains its own components, services, and types.",
-      [l("Features", "Self-contained feature modules", countIn(files,"features"))],
+    return archResult(t("patterns.featureBased.name"),
+      t("patterns.featureBased.description"),
+      [lLayer(language, "features", countIn(files,"features"))],
       strengths, weaknesses, metrics);
 
   // Clean Architecture: domain/use-cases/infrastructure
   if (dirs.has("domain")||dirs.has("use-cases")||dirs.has("entities"))
-    return archResult("Clean Architecture",
-      "Layers are separated by dependency direction — domain is independent of infrastructure.",
-      [l("Domain","Business entities & rules",countIn(files,"domain")),l("Use Cases","Application logic",countIn(files,"use-cases")),l("Infrastructure","DB, APIs, external services",countIn(files,"infrastructure"))],
+    return archResult(t("patterns.clean.name"),
+      t("patterns.clean.description"),
+      [lLayer(language,"domain",countIn(files,"domain")),lLayer(language,"useCases",countIn(files,"use-cases")),lLayer(language,"infrastructure",countIn(files,"infrastructure"))],
       strengths, weaknesses, metrics);
 
   // MVC
   if (dirs.has("controllers")&&dirs.has("models")&&dirs.has("views"))
-    return archResult("MVC (Model-View-Controller)",
-      "Classic separation: Models for data, Views for presentation, Controllers for routing.",
-      [l("Models","Data models & schemas",countIn(files,"models")),l("Views","UI templates",countIn(files,"views")),l("Controllers","Request handlers",countIn(files,"controllers"))],
+    return archResult(t("patterns.mvc.name"),
+      t("patterns.mvc.description"),
+      [lLayer(language,"models",countIn(files,"models")),lLayer(language,"views",countIn(files,"views")),lLayer(language,"controllers",countIn(files,"controllers"))],
       strengths, weaknesses, metrics);
 
   // Layered
   if (dirs.has("presentation")||dirs.has("application")||dirs.has("infrastructure"))
-    return archResult("Layered Architecture",
-      "Horizontal layers: presentation → application → domain → infrastructure.",
-      [l("Presentation","Components & routes",countIn(files,"presentation")),l("Application","Services & hooks",countIn(files,"application")),l("Infrastructure","DB, APIs",countIn(files,"infrastructure"))],
+    return archResult(t("patterns.layered.name"),
+      t("patterns.layered.description"),
+      [lLayer(language,"presentation",countIn(files,"presentation")),lLayer(language,"application",countIn(files,"application")),lLayer(language,"infrastructureLayered",countIn(files,"infrastructure"))],
       strengths, weaknesses, metrics);
 
   // Next.js App Router (default)
   if (files.some(f => f.path.startsWith("app/")||f.path.startsWith("src/app/")))
-    return archResult("Next.js App Router (Feature-based Modular)",
-      "Uses Next.js App Router conventions. Routes are file-system based. Layouts and pages compose the UI tree.",
-      [l("App","Routes, layouts, pages",countIn(files,"app")),l("Components","Reusable UI",countIn(files,"components")),l("Lib","Shared utilities",countIn(files,"lib")),l("API","Backend routes",countIn(files,"api"))],
+    return archResult(t("patterns.nextjsAppRouter.name"),
+      t("patterns.nextjsAppRouter.description"),
+      [lLayer(language,"app",countIn(files,"app")),lLayer(language,"components",countIn(files,"components")),lLayer(language,"lib",countIn(files,"lib")),lLayer(language,"api",countIn(files,"api"))],
       strengths, weaknesses, metrics);
 
   // Monolith fallback
-  return archResult("Modular Monolith",
-    "Single-deployment application with module-based organization.",
-    [l("Root","Mixed concerns",files.length)],
+  return archResult(t("patterns.modularMonolith.name"),
+    t("patterns.modularMonolith.description"),
+    [lLayer(language,"root",files.length)],
     strengths, weaknesses, metrics);
 }
 
@@ -157,7 +159,7 @@ export function detectArchitecture(files: ParsedFile[]): ArchitectureResult {
  *   - A (Abstractness) = Na / Nc (abstract modules / total modules)
  *   - D (Distance from Main Sequence) = |A + I - 1|
  */
-function computeMetrics(files: ParsedFile[]): ArchitectureMetrics {
+function computeMetrics(files: ParsedFile[], language: string = "en"): ArchitectureMetrics {
   let totalCoupling = 0;       // total imports across all files
   let intraCount = 0;          // intra-directory imports
   let totalCount = 0;          // total resolved imports
@@ -252,7 +254,7 @@ function computeMetrics(files: ParsedFile[]): ArchitectureMetrics {
         resolved.path.includes("/prisma/") ||
         resolved.imports.some(i => i.includes("prisma") || i.includes("mongoose") || i.includes("typeorm") || i.includes("sequelize") || i.includes("knex"));
       if (isComponent && isInfrastructure) {
-        layerViolations.push(`${f.path} → ${resolvedPath} (component importing DB layer)`);
+        layerViolations.push(translateArch(language, "weaknesses.layerViolationEntry", { from: f.path, to: resolvedPath }));
       }
     }
 
@@ -393,16 +395,17 @@ function computeMetrics(files: ParsedFile[]): ArchitectureMetrics {
   };
 }
 
-export function analyzeTechDebt(files: ParsedFile[]): { score: number; items: { title: string; impact: string; estimate: string }[] } {
+export function analyzeTechDebt(files: ParsedFile[], language: string = "en"): { score: number; items: { title: string; impact: string; estimate: string }[] } {
+  const t = (key: string, vars?: Record<string, string | number>) => translateArch(language, key, vars);
   const items: { title: string; impact: string; estimate: string }[] = [];
   let debtScore = 0;
 
   for (const f of files) {
-    if (f.complexity > 15) { items.push({ title: `High complexity in ${f.path} (Cx=${f.complexity})`, impact: "Maintainability", estimate: "1 day" }); debtScore += 10; }
-    if (f.lines > 300) { items.push({ title: `Large file: ${f.path} (${f.lines} lines)`, impact: "Readability", estimate: "2 days" }); debtScore += 8; }
-    if (f.functions.length > 20) { items.push({ title: `God module: ${f.path} (${f.functions.length} functions)`, impact: "Cohesion", estimate: "3 days" }); debtScore += 12; }
-    if (f.imports.length > 15) { items.push({ title: `High coupling: ${f.path} (${f.imports.length} imports)`, impact: "Coupling", estimate: "1 day" }); debtScore += 6; }
-    if (f.complexity > 25) { items.push({ title: `Deep nesting in ${f.path}`, impact: "Readability", estimate: "1 day" }); debtScore += 5; }
+    if (f.complexity > 15) { items.push({ title: t("techDebt.highComplexity.title", { file: f.path, cx: f.complexity }), impact: t("techDebt.highComplexity.impact"), estimate: t("techDebt.highComplexity.estimate") }); debtScore += 10; }
+    if (f.lines > 300) { items.push({ title: t("techDebt.largeFile.title", { file: f.path, lines: f.lines }), impact: t("techDebt.largeFile.impact"), estimate: t("techDebt.largeFile.estimate") }); debtScore += 8; }
+    if (f.functions.length > 20) { items.push({ title: t("techDebt.godModule.title", { file: f.path, count: f.functions.length }), impact: t("techDebt.godModule.impact"), estimate: t("techDebt.godModule.estimate") }); debtScore += 12; }
+    if (f.imports.length > 15) { items.push({ title: t("techDebt.highCoupling.title", { file: f.path, count: f.imports.length }), impact: t("techDebt.highCoupling.impact"), estimate: t("techDebt.highCoupling.estimate") }); debtScore += 6; }
+    if (f.complexity > 25) { items.push({ title: t("techDebt.deepNesting.title", { file: f.path }), impact: t("techDebt.deepNesting.impact"), estimate: t("techDebt.deepNesting.estimate") }); debtScore += 5; }
   }
 
   // Duplicated function names
@@ -410,29 +413,29 @@ export function analyzeTechDebt(files: ParsedFile[]): { score: number; items: { 
   for (const f of files) { for (const fn of f.functions) { const arr = funcNames.get(fn) || []; arr.push(f.path); funcNames.set(fn, arr); } }
   for (const [fn, paths] of funcNames) {
     if (paths.length > 2 && !["map","filter","forEach","render","toString","valueOf","constructor","init","main"].includes(fn)) {
-      items.push({ title: `Duplicated function '${fn}' in ${paths.length} files`, impact: "DRY", estimate: "1 day" }); debtScore += 5;
+      items.push({ title: t("techDebt.duplicatedFunction.title", { fn, count: paths.length }), impact: t("techDebt.duplicatedFunction.impact"), estimate: t("techDebt.duplicatedFunction.estimate") }); debtScore += 5;
     }
   }
 
   // Missing tests
   if (!files.some(f => f.path.includes(".test.")||f.path.includes(".spec.")||f.path.includes("__tests__"))) {
-    items.push({ title: "No test files detected", impact: "Reliability", estimate: "5 days" }); debtScore += 20;
+    items.push({ title: t("techDebt.noTests.title"), impact: t("techDebt.noTests.impact"), estimate: t("techDebt.noTests.estimate") }); debtScore += 20;
   }
   // Missing README
   if (!files.some(f => f.path.toLowerCase() === "readme.md")) {
-    items.push({ title: "Missing README.md", impact: "Onboarding", estimate: "0.5 days" }); debtScore += 5;
+    items.push({ title: t("techDebt.missingReadme.title"), impact: t("techDebt.missingReadme.impact"), estimate: t("techDebt.missingReadme.estimate") }); debtScore += 5;
   }
   // Missing .gitignore
   if (!files.some(f => f.path === ".gitignore")) {
-    items.push({ title: "Missing .gitignore", impact: "Security", estimate: "0.1 days" }); debtScore += 3;
+    items.push({ title: t("techDebt.missingGitignore.title"), impact: t("techDebt.missingGitignore.impact"), estimate: t("techDebt.missingGitignore.estimate") }); debtScore += 3;
   }
   // Missing TypeScript config
   if (!files.some(f => f.path === "tsconfig.json") && files.some(f => f.path.endsWith(".ts"))) {
-    items.push({ title: "Missing tsconfig.json", impact: "Type Safety", estimate: "0.5 days" }); debtScore += 5;
+    items.push({ title: t("techDebt.missingTsconfig.title"), impact: t("techDebt.missingTsconfig.impact"), estimate: t("techDebt.missingTsconfig.estimate") }); debtScore += 5;
   }
   // Missing ESLint config
   if (!files.some(f => /(\.eslintrc|eslint\.config|biome\.json)/.test(f.path)) && files.some(f => f.path.endsWith(".ts") || f.path.endsWith(".tsx"))) {
-    items.push({ title: "Missing ESLint/Biome config", impact: "Code Quality", estimate: "0.5 days" }); debtScore += 4;
+    items.push({ title: t("techDebt.missingLinter.title"), impact: t("techDebt.missingLinter.impact"), estimate: t("techDebt.missingLinter.estimate") }); debtScore += 4;
   }
 
   return { score: Math.min(debtScore, 100), items: items.slice(0, 15) };
@@ -441,5 +444,11 @@ export function analyzeTechDebt(files: ParsedFile[]): { score: number; items: { 
 function archResult(p:string,d:string,layers:{name:string;responsibility:string;files:number}[],s:string[],w:string[],m:ArchitectureMetrics):ArchitectureResult{
   return {pattern:p,description:d,layers,strengths:s,weaknesses:w,metrics:m};
 }
-function l(name:string,responsibility:string,files:number){return{name,responsibility,files};}
+function lLayer(language: string, key: string, files: number) {
+  return {
+    name: translateArch(language, `layers.${key}.name`),
+    responsibility: translateArch(language, `layers.${key}.responsibility`),
+    files,
+  };
+}
 function countIn(files:ParsedFile[],dir:string):number{return files.filter(f=>f.path.startsWith(dir+"/")||f.path.startsWith("src/"+dir+"/")).length;}

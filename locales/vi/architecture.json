@@ -1,0 +1,85 @@
+{
+  "patterns": {
+    "featureBased": {
+      "name": "Feature-based Architecture",
+      "description": "Code được tổ chức theo tính năng/lĩnh vực thay vì vai trò kỹ thuật. Mỗi thư mục tính năng chứa các components, services và types riêng."
+    },
+    "clean": {
+      "name": "Clean Architecture",
+      "description": "Các layer được phân tách theo hướng phụ thuộc — domain độc lập với infrastructure."
+    },
+    "mvc": {
+      "name": "MVC (Model-View-Controller)",
+      "description": "Phân tách cổ điển: Models cho dữ liệu, Views cho trình bày, Controllers cho định tuyến."
+    },
+    "layered": {
+      "name": "Layered Architecture",
+      "description": "Các layer ngang: presentation → application → domain → infrastructure."
+    },
+    "nextjsAppRouter": {
+      "name": "Next.js App Router (Feature-based Modular)",
+      "description": "Sử dụng quy ước Next.js App Router. Routes dựa trên file-system. Layouts và pages kết hợp tạo UI tree."
+    },
+    "modularMonolith": {
+      "name": "Modular Monolith",
+      "description": "Ứng dụng single-deployment với tổ chức dựa trên module."
+    }
+  },
+  "layers": {
+    "features": { "name": "Features", "responsibility": "Các module tính năng độc lập" },
+    "domain": { "name": "Domain", "responsibility": "Thực thể & quy tắc nghiệp vụ" },
+    "useCases": { "name": "Use Cases", "responsibility": "Logic ứng dụng" },
+    "infrastructure": { "name": "Infrastructure", "responsibility": "DB, APIs, dịch vụ bên ngoài" },
+    "infrastructureLayered": { "name": "Infrastructure", "responsibility": "DB, APIs" },
+    "models": { "name": "Models", "responsibility": "Models & schemas dữ liệu" },
+    "views": { "name": "Views", "responsibility": "Templates UI" },
+    "controllers": { "name": "Controllers", "responsibility": "Bộ xử lý request" },
+    "presentation": { "name": "Presentation", "responsibility": "Components & routes" },
+    "application": { "name": "Application", "responsibility": "Services & hooks" },
+    "app": { "name": "App", "responsibility": "Routes, layouts, pages" },
+    "components": { "name": "Components", "responsibility": "UI tái sử dụng" },
+    "lib": { "name": "Lib", "responsibility": "Tiện ích dùng chung" },
+    "api": { "name": "API", "responsibility": "Routes backend" },
+    "root": { "name": "Root", "responsibility": "Các mối quan tâm hỗn hợp" }
+  },
+  "strengths": {
+    "lowCoupling": "Coupling trung bình thấp ({value} imports/file) — các module được phân tách tốt",
+    "goodFanRatio": "Tỷ lệ fan-in/fan-out tốt — các module được tái sử dụng mà không quá phụ thuộc",
+    "goodCohesion": "Cohesion nội bộ tốt ({value}%) — các module nhóm các chức năng liên quan",
+    "stableDependency": "Hướng phụ thuộc ổn định — hầu hết các module phụ thuộc vào các core ổn định (I={value})",
+    "goodAbstraction": "Phân layer abstraction tốt ({value}% module trừu tượng) — interfaces/types tách biệt các consumer",
+    "closeToMainSeq": "Gần Main Sequence (D={value}) — kiến trúc tuân theo nguyên tắc phụ thuộc ổn định",
+    "noLayerViolations": "Không phát hiện layer violation — hướng phụ thuộc sạch",
+    "noCircularDeps": "Không có phụ thuộc vòng trực tiếp — import graph ở mức file không có chu trình",
+    "hasTests": "Phát hiện file test cùng với source — kỷ luật test tốt",
+    "strongTypeScript": "Áp dụng TypeScript mạnh mẽ ({ts}/{total} files)",
+    "hasLinting": "Phát hiện config linting/formatting — đảm bảo code style nhất quán",
+    "hasCI": "CI/CD pipeline đã được cấu hình — build và test tự động"
+  },
+  "weaknesses": {
+    "highCoupling": "Coupling trung bình cao ({value} imports/file) — các module phụ thuộc vào quá nhiều module khác",
+    "lowCohesion": "Cohesion thấp ({value}%) — các file trong cùng thư mục không import nhau nhiều",
+    "highInstability": "Instability cao (I={value}) — quá nhiều module phụ thuộc vào các layer volatile/concrete",
+    "farFromMainSeq": "Xa Main Sequence (D={value}) — một số module vừa concrete vừa unstable (pain zone) hoặc vừa abstract vừa stable (useless zone)",
+    "layerViolations": "{count} layer violation(s): các file component import trực tiếp DB/infrastructure (bỏ qua service layer)",
+    "godModules": "{count} god module(s) với >20 functions: {value}",
+    "fileCircularDeps": "Phát hiện {count} cặp phụ thuộc vòng trực tiếp — chúng tạo ra coupling chặt",
+    "dirCircularDeps": "{count} chuỗi phụ thuộc vòng ở mức thư mục:",
+    "noTests": "Không phát hiện file test — rủi ro về độ tin cậy",
+    "layerViolationEntry": "{from} → {to} (component import DB layer)",
+    "bulletItem": "  → {value}"
+  },
+  "techDebt": {
+    "highComplexity": { "title": "Độ phức tạp cao trong {file} (Cx={cx})", "impact": "Khả năng bảo trì", "estimate": "1 ngày" },
+    "largeFile": { "title": "File lớn: {file} ({lines} dòng)", "impact": "Khả năng đọc", "estimate": "2 ngày" },
+    "godModule": { "title": "God module: {file} ({count} functions)", "impact": "Sự gắn kết", "estimate": "3 ngày" },
+    "highCoupling": { "title": "Coupling cao: {file} ({count} imports)", "impact": "Sự phụ thuộc", "estimate": "1 ngày" },
+    "deepNesting": { "title": "Nesting sâu trong {file}", "impact": "Khả năng đọc", "estimate": "1 ngày" },
+    "duplicatedFunction": { "title": "Function trùng lặp '{fn}' trong {count} file", "impact": "DRY", "estimate": "1 ngày" },
+    "noTests": { "title": "Không phát hiện file test", "impact": "Độ tin cậy", "estimate": "5 ngày" },
+    "missingReadme": { "title": "Thiếu README.md", "impact": "Onboarding", "estimate": "0.5 ngày" },
+    "missingGitignore": { "title": "Thiếu .gitignore", "impact": "Security", "estimate": "0.1 ngày" },
+    "missingTsconfig": { "title": "Thiếu tsconfig.json", "impact": "Type Safety", "estimate": "0.5 ngày" },
+    "missingLinter": { "title": "Thiếu config ESLint/Biome", "impact": "Chất lượng code", "estimate": "0.5 ngày" }
+  }
+}
