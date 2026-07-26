@@ -4,7 +4,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireUserId } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { callAI, type AIMessage } from "@/lib/ai-client";
+import { callAI, type AIMessage, TokenBudgetExceededError } from "@/lib/ai-client";
+import { getUserPlanInfo } from "@/lib/billing/token-budget";
 import { sequenceRoadmap } from "@/lib/roadmap-sequencer";
 
 export const runtime = "nodejs";
@@ -24,13 +25,19 @@ export async function POST(req: NextRequest) {
   const userId = await requireUserId();
   if (!userId) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 
+  // P3.1: hoist passType out of the try block so the outer catch handler can
+  // include it in the 429 budget-exceeded response.
+  let passType: PassType | undefined;
+
   try {
     const body = await req.json();
-    const { analysisId, passType, language, platformProvider, platformModel, provider } = body as {
+    const parsed = body as {
       analysisId: string; passType: PassType; language?: string;
       platformProvider?: string; platformModel?: string;
       provider?: { providerId: string; apiKey: string; baseUrl: string; model: string };
     };
+    const { analysisId, language, platformProvider, platformModel, provider } = parsed;
+    passType = parsed.passType;
 
     if (!analysisId || !passType) {
       return NextResponse.json({ error: "analysisId and passType required" }, { status: 400 });
@@ -116,15 +123,24 @@ export async function POST(req: NextRequest) {
       { role: "user", content: prompt },
     ];
 
+    // P3.1: look up the user's plan + role for token-budget enforcement.
+    // callAI() will throw TokenBudgetExceededError synchronously before the
+    // fetch() if the user is over their monthly limit. Caught below → 429.
+    const planInfo = await getUserPlanInfo(userId);
+
     // Run AI pass (2 attempts: json_object → plain text)
     let result: any = null;
     try {
       const aiResult = await callAI(aiConfig, messages, {
         temperature: 0.3, maxTokens, timeout: 45,
         responseFormat: "json_object",
+        userId,
+        plan: planInfo.plan,
       });
       if (aiResult.content) result = safeJsonParse(aiResult.content);
     } catch (e: any) {
+      // P3.1: budget-exceeded propagates immediately — don't retry with half tokens.
+      if (e instanceof TokenBudgetExceededError) throw e;
       const errMsg = e?.message || "";
       if (errMsg.includes("402") || errMsg.includes("credits")) {
         // Retry with half tokens
@@ -132,9 +148,13 @@ export async function POST(req: NextRequest) {
           const aiResult = await callAI(aiConfig, messages, {
             temperature: 0.3, maxTokens: Math.min(1500, Math.floor(maxTokens / 2)), timeout: 45,
             responseFormat: "json_object",
+            userId,
+            plan: planInfo.plan,
           });
           if (aiResult.content) result = safeJsonParse(aiResult.content);
-        } catch {}
+        } catch (e2: any) {
+          if (e2 instanceof TokenBudgetExceededError) throw e2;
+        }
       }
     }
 
@@ -143,9 +163,12 @@ export async function POST(req: NextRequest) {
       try {
         const aiResult = await callAI(aiConfig, messages, {
           temperature: 0.3, maxTokens, timeout: 45,
+          userId,
+          plan: planInfo.plan,
         });
         if (aiResult.content) result = safeJsonParse(aiResult.content);
       } catch (e: any) {
+        if (e instanceof TokenBudgetExceededError) throw e;
         console.warn(`[ai-pass] ${passType} failed:`, e?.message?.slice(0, 200));
       }
     }
@@ -184,6 +207,25 @@ export async function POST(req: NextRequest) {
       });
     }
   } catch (e: any) {
+    // P3.1: budget-exceeded → 429 with structured budget payload.
+    if (e instanceof TokenBudgetExceededError) {
+      return NextResponse.json({
+        error: "Token budget exceeded",
+        message: `You've used ${e.status.used.toLocaleString()} / ${e.status.limit === -1 ? "∞" : e.status.limit.toLocaleString()} tokens this month. Upgrade your plan for more tokens.`,
+        passType: passType ?? null,
+        status: "blocked",
+        budget: {
+          used: e.status.used,
+          limit: e.status.limit,
+          remaining: e.status.remaining,
+          exceeded: true,
+          unlimited: e.status.unlimited,
+          resetsAt: e.status.resetsAt.toISOString(),
+          retryAfterMs: e.retryAfterMs,
+        },
+        upgradeUrl: "/?view=settings",
+      }, { status: 429 });
+    }
     console.error("[/api/analyze/ai-pass] Error:", e);
     return NextResponse.json({ error: e?.message || "AI pass failed" }, { status: 500 });
   }

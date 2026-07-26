@@ -190,3 +190,8 @@ export async function requireUserId(): Promise<string | null> {
   const uid = (session?.user as any)?.id ?? (session as any)?.uid ?? null;
   return uid ?? null;
 }
+
+// Re-export the multi-tenant ownership helper so routes can do a single
+// import: `import { requireUserId, verifyAnalysisOwnership } from "@/lib/auth"`.
+// See `src/lib/ownership.ts` for the full pattern + share-token exception.
+export { verifyAnalysisOwnership, isAnalysisAccessible } from "@/lib/ownership";

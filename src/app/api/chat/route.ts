@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireUserId } from "@/lib/auth";
+import { requireUserId, verifyAnalysisOwnership } from "@/lib/auth";
 import { decrypt } from "@/lib/crypto";
 import { isProduction } from "@/lib/env";
 import { checkQuota, incrementUsage } from "@/lib/billing/usage";
-import { callAI, type AIMessage } from "@/lib/ai-client";
+import { callAI, type AIMessage, TokenBudgetExceededError } from "@/lib/ai-client";
+import { getUserPlanInfo } from "@/lib/billing/token-budget";
 import { resolveEffectiveProvider } from "@/lib/platform-ai";
 import type { AnalysisReport, ChatMessage } from "@/lib/types";
 
@@ -45,6 +46,11 @@ interface ChatBody {
   aiMode?: "byok" | "platform"; // SaaS: BYOK or Platform AI
   platformProvider?: string;   // Pro user's selected platform provider
   platformModel?: string;      // Pro user's selected model
+  // P3.7: optional share token — when present, the analysis is loaded via the
+  // public share-token capability rather than user ownership. Used by the
+  // shared-report chat UI (read-only). Routes that don't support shared chat
+  // simply omit this and rely on userId ownership.
+  shareToken?: string;
 }
 
 const DEFAULT_SYSTEM_PROMPT = `You are CodeInsight AI — an elite AI CTO, Software Architect, Security Expert, Performance Engineer, and Senior Staff Engineer combined.
@@ -136,17 +142,28 @@ export async function POST(req: NextRequest) {
     }
 
     // Load the analysis + report for context
+    // P3.7 (multi-tenant isolation): MUST verify ownership (or valid share
+    // token) before reading the analysis row. Without this check, user A
+    // could chat against user B's analysis context by guessing analysisId.
+    // Returns 404 (not 403) on unauthorized access — never leak that the
+    // resource exists to a different tenant.
     let report: AnalysisReport | null = null;
     let analysisRow: { id: string } | null = null;
     if (body.analysisId) {
-      const row = await db.analysis.findUnique({ where: { id: body.analysisId } });
-      if (row) {
-        analysisRow = { id: row.id };
-        try {
-          report = JSON.parse(row.report) as AnalysisReport;
-        } catch {
-          report = null;
-        }
+      const analysis = await verifyAnalysisOwnership(
+        body.analysisId,
+        userId,
+        { select: { id: true, userId: true, report: true } },
+        body.shareToken,
+      );
+      if (!analysis) {
+        return NextResponse.json({ error: "Analysis not found" }, { status: 404 });
+      }
+      analysisRow = { id: analysis.id };
+      try {
+        report = JSON.parse(analysis.report) as AnalysisReport;
+      } catch {
+        report = null;
       }
     }
 
@@ -343,6 +360,11 @@ Use this graph knowledge to answer questions about function callers, callees, de
       } catch {}
     }
 
+    // P3.1: look up the user's plan + role for token-budget enforcement.
+    // (auth.ts already auto-upgrades admins to plan="enterprise", so the
+    // checkTokenBudget call inside callAI() will see "enterprise" and bypass.)
+    const planInfo = userId ? await getUserPlanInfo(userId) : { plan: "free", role: "user" };
+
     try {
       if (finalProvider) {
         // Use unified ai-client (supports all 14 providers)
@@ -356,6 +378,10 @@ Use this graph knowledge to answer questions about function callers, callees, de
                 temperature: personality?.temperature ?? 0.7,
                 maxTokens: personality?.maxTokens && personality.maxTokens > 0 ? personality.maxTokens : 4096,
                 timeout: 60,
+                // P3.1: budget enforcement — callAI() will throw TokenBudgetExceededError
+                // synchronously (before fetch) if the user is over their monthly limit.
+                userId: userId ?? undefined,
+                plan: planInfo.plan,
               }
             );
             reply = result.content;
@@ -365,6 +391,9 @@ Use this graph knowledge to answer questions about function callers, callees, de
               await new Promise(r => setTimeout(r, 500)); // wait 500ms before retry
             }
           } catch (callErr) {
+            // P3.1: never retry a budget-exceeded error — the second attempt
+            // would hit the same check.
+            if (callErr instanceof TokenBudgetExceededError) throw callErr;
             if (attempt === 0) {
               console.warn(`[/api/chat] Call failed on attempt 1 — retrying...`, callErr);
               await new Promise(r => setTimeout(r, 500));
@@ -391,6 +420,24 @@ Use this graph knowledge to answer questions about function callers, callees, de
         }
       }
     } catch (err) {
+      // P3.1: token-budget exceeded → 429 with friendly upgrade CTA.
+      // Caught here so we don't fall through to the generic "AI Error" path.
+      if (err instanceof TokenBudgetExceededError) {
+        return NextResponse.json({
+          error: "Token budget exceeded",
+          message: `You've used ${err.status.used.toLocaleString()} / ${err.status.limit === -1 ? "∞" : err.status.limit.toLocaleString()} tokens this month. Upgrade to Pro for 10M tokens/month or Team for 50M.`,
+          budget: {
+            used: err.status.used,
+            limit: err.status.limit,
+            remaining: err.status.remaining,
+            exceeded: true,
+            unlimited: err.status.unlimited,
+            resetsAt: err.status.resetsAt.toISOString(),
+            retryAfterMs: err.retryAfterMs,
+          },
+          upgradeUrl: "/?view=settings",
+        }, { status: 429 });
+      }
       console.error("[/api/chat] LLM error", err);
       llmError = err instanceof Error ? err.message : String(err);
       reply = "";

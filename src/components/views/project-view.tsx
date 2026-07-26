@@ -82,6 +82,10 @@ export function ProjectView({ isShared = false }: { isShared?: boolean }) {
   const aiPending = useAppStore((s) => s.aiPending);
   const [tab, setTab] = useState<Tab>("overview");
   const [sharing, setSharing] = useState(false);
+  // P3.6 — Analysis Snapshots: PDF generation is async; track pending state
+  // for the button spinner. Declared here (before the early return) to
+  // satisfy React's rules-of-hooks (no conditional hook calls).
+  const [pdfLoading, setPdfLoading] = useState(false);
 
   if (!report) {
     return (
@@ -146,15 +150,44 @@ export function ProjectView({ isShared = false }: { isShared?: boolean }) {
     toast.success(t("reports", "project.downloadedMarkdown"));
   };
 
-  const downloadJSON = () => {
-    const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
+  // Export the raw AnalysisReport object as JSON — full data for programmatic
+  // import / audit. P3.6 — Analysis Snapshots.
+  const exportJSON = () => {
+    const json = JSON.stringify(report, null, 2);
+    const blob = new Blob([json], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${report.repoOwner}-${report.repoName}-report.json`;
+    a.download = `${report.repoOwner}-${report.repoName}-analysis.json`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success(t("reports", "project.downloadedJson"));
+    toast.success(t("reports", "project.jsonExported"));
+  };
+
+  // Export the report as a structured compliance-ready PDF (P3.6).
+  // Client-side generation via `jspdf` + `jspdf-autotable` (dynamic import
+  // keeps the ~200KB bundle out of the initial payload). No server round-trip
+  // — works inside Vercel's 60s function limit since it runs in the browser.
+  const exportPDF = async () => {
+    if (pdfLoading) return;
+    setPdfLoading(true);
+    try {
+      toast.info(t("reports", "project.generatingPDF"));
+      const { generateAnalysisPDF } = await import("@/lib/export/pdf-generator");
+      const blob = generateAnalysisPDF(report);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${report.repoOwner}-${report.repoName}-analysis.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success(t("reports", "project.pdfExported"));
+    } catch (e) {
+      console.error("[P3.6] PDF generation failed:", e);
+      toast.error(t("reports", "project.pdfFailed"));
+    } finally {
+      setPdfLoading(false);
+    }
   };
 
   return (
@@ -208,8 +241,11 @@ export function ProjectView({ isShared = false }: { isShared?: boolean }) {
             <Button onClick={downloadMarkdown} variant="outline" size="sm">
               <Download className="mr-1.5 h-4 w-4" /> .md
             </Button>
-            <Button onClick={downloadJSON} variant="outline" size="sm">
-              <Download className="mr-1.5 h-4 w-4" /> .json
+            <Button onClick={exportJSON} variant="outline" size="sm">
+              <Download className="mr-1.5 h-4 w-4" /> JSON
+            </Button>
+            <Button onClick={exportPDF} variant="outline" size="sm" disabled={pdfLoading}>
+              {pdfLoading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Download className="mr-1.5 h-4 w-4" />} PDF
             </Button>
             <Button onClick={shareReport} variant="outline" size="sm" disabled={sharing}>
               {sharing ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Share2 className="mr-1.5 h-4 w-4" />} {t("reports", "share")}

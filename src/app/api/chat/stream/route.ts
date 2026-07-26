@@ -3,10 +3,11 @@
 // Uses the unified streamAI() from lib/ai-client.ts — supports all 14 providers.
 import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
-import { requireUserId } from "@/lib/auth";
+import { requireUserId, verifyAnalysisOwnership } from "@/lib/auth";
 import { decrypt } from "@/lib/crypto";
 import { isProduction } from "@/lib/env";
-import { streamAI, type AIMessage } from "@/lib/ai-client";
+import { streamAI, type AIMessage, TokenBudgetExceededError } from "@/lib/ai-client";
+import { getUserPlanInfo } from "@/lib/billing/token-budget";
 import { resolveEffectiveProvider } from "@/lib/platform-ai";
 
 export const runtime = "nodejs";
@@ -44,6 +45,8 @@ interface ChatBody {
   platformProvider?: string;   // Pro user's selected platform provider
   platformModel?: string;      // Pro user's selected model
   debug?: boolean;             // Enable debug metadata in done event
+  // P3.7: optional share token — see /api/chat/route.ts for the rationale.
+  shareToken?: string;
 }
 
 export async function POST(req: NextRequest) {
@@ -60,6 +63,36 @@ export async function POST(req: NextRequest) {
   }
 
   const userId = await requireUserId();
+
+  // P3.7 (multi-tenant isolation): when an analysisId is supplied, verify
+  // ownership (or valid share token) BEFORE streaming. Without this check,
+  // user A could write chat messages to user B's analysis via the persist
+  // step at the end of the stream. We return 404 (not 403) to avoid leaking
+  // that the resource exists.
+  //
+  // Note: streaming itself doesn't read analysis data — the analysisId is
+  // only used to persist the user/assistant message pair. So we only need
+  // to gate the persist path. We do the check up-front so we can fail fast
+  // with a clean HTTP 404 instead of an SSE error event mid-stream.
+  let verifiedAnalysisId: string | null = null;
+  if (body.analysisId) {
+    const analysis = await verifyAnalysisOwnership(
+      body.analysisId,
+      userId,
+      { select: { id: true, userId: true } },
+      body.shareToken,
+    );
+    if (!analysis) {
+      return new Response(
+        "data: " + JSON.stringify({ error: "Analysis not found" }) + "\n\n",
+        {
+          status: 404,
+          headers: { "Content-Type": "text/event-stream" },
+        },
+      );
+    }
+    verifiedAnalysisId = analysis.id;
+  }
 
   // ── Resolve effective provider ──
   // In production, if the client sends a provider without apiKey, look up the
@@ -177,6 +210,11 @@ export async function POST(req: NextRequest) {
   const temperature = personality?.temperature ?? 0.7;
   const maxTokens = personality?.maxTokens && personality.maxTokens > 0 ? personality.maxTokens : 4096;
 
+  // P3.1: look up the user's plan for token-budget enforcement.
+  // streamAI() will throw TokenBudgetExceededError synchronously before
+  // opening the connection if the user is over their monthly limit.
+  const planInfo = userId ? await getUserPlanInfo(userId) : { plan: "free", role: "user" };
+
   // Create SSE stream using the unified streamAI() generator
   // FIXED: Retry logic — if stream returns empty, retry once before giving up
   const stream = new ReadableStream({
@@ -189,7 +227,14 @@ export async function POST(req: NextRequest) {
       for (let attempt = 0; attempt < 2; attempt++) {
         fullReply = "";
         try {
-          for await (const chunk of streamAI(finalProvider!, llmMessages, { temperature, maxTokens })) {
+          for await (const chunk of streamAI(finalProvider!, llmMessages, {
+            temperature,
+            maxTokens,
+            // P3.1: budget enforcement. streamAI() runs the pre-flight check
+            // before fetch() and throws TokenBudgetExceededError if blocked.
+            userId: userId ?? undefined,
+            plan: planInfo.plan,
+          })) {
             fullReply += chunk;
             controller.enqueue(encoder.encode(`data: ${JSON.stringify({ chunk })}\n\n`));
           }
@@ -205,6 +250,25 @@ export async function POST(req: NextRequest) {
             await new Promise(r => setTimeout(r, 500));
           }
         } catch (err: any) {
+          // P3.1: budget-exceeded — send a structured error event so the
+          // client can show an upgrade CTA. Never retry.
+          if (err instanceof TokenBudgetExceededError) {
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+              error: "Token budget exceeded",
+              budget: {
+                used: err.status.used,
+                limit: err.status.limit,
+                remaining: err.status.remaining,
+                exceeded: true,
+                unlimited: err.status.unlimited,
+                resetsAt: err.status.resetsAt.toISOString(),
+                retryAfterMs: err.retryAfterMs,
+              },
+              upgradeUrl: "/?view=settings",
+            })}\n\n`));
+            controller.close();
+            return;
+          }
           lastError = err?.message || "Stream failed";
           console.warn(`[/api/chat/stream] Attempt ${attempt + 1} error:`, lastError);
           if (attempt === 0) {
@@ -282,14 +346,14 @@ export async function POST(req: NextRequest) {
       }
       controller.enqueue(encoder.encode(`data: ${JSON.stringify(doneData)}\n\n`));
 
-      // Persist to DB
-      if (body.analysisId && fullReply.trim()) {
+      // Persist to DB (P3.7: only if ownership/share token was verified up-front)
+      if (verifiedAnalysisId && fullReply.trim()) {
         try {
           await db.chatMessage.create({
-            data: { analysisId: body.analysisId, role: "user", content: message },
+            data: { analysisId: verifiedAnalysisId, role: "user", content: message },
           });
           await db.chatMessage.create({
-            data: { analysisId: body.analysisId, role: "assistant", content: fullReply },
+            data: { analysisId: verifiedAnalysisId, role: "assistant", content: fullReply },
           });
         } catch { /* best-effort persist */ }
       }

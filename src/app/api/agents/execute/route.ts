@@ -1,10 +1,11 @@
-import { requireUserId } from "@/lib/auth";
+import { requireUserId, verifyAnalysisOwnership } from "@/lib/auth";
 // POST /api/agents/execute — Execute a single task with an agent
 // GET  /api/agents/execute?taskId=xxx — Poll task status
 import { NextRequest, NextResponse } from "next/server";
 import { registerAllAgents, taskQueue, eventBus } from "@/lib/agents";
 import type { TaskKind } from "@/lib/agents/types";
 import type { AIProviderConfig } from "@/lib/agents/ai-client";
+import { checkTokenBudget, getUserPlanInfo } from "@/lib/billing/token-budget";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,6 +20,29 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing 'kind' or 'title'" }, { status: 400 });
     }
 
+    // P3.1: pre-flight token-budget check. Agent tasks fan out into multiple
+    // callAI() invocations, so we block the enqueue if the user is already
+    // over their monthly limit. (Per-call enforcement inside the agent loop
+    // is deferred — the agent wrapper would need to forward userId+plan.)
+    const planInfo = await getUserPlanInfo(userId);
+    const budget = await checkTokenBudget(userId, planInfo.plan);
+    if (!budget.allowed && budget.status) {
+      return NextResponse.json({
+        error: "Token budget exceeded",
+        message: `You've used ${budget.status.used.toLocaleString()} / ${budget.status.limit === -1 ? "∞" : budget.status.limit.toLocaleString()} tokens this month. Upgrade your plan for more tokens.`,
+        status: "blocked",
+        budget: {
+          used: budget.status.used,
+          limit: budget.status.limit,
+          remaining: budget.status.remaining,
+          exceeded: true,
+          unlimited: budget.status.unlimited,
+          resetsAt: budget.status.resetsAt.toISOString(),
+        },
+        upgradeUrl: "/?view=settings",
+      }, { status: 429 });
+    }
+
     registerAllAgents();
 
     // Validate provider config if provided
@@ -27,6 +51,28 @@ export async function POST(req: NextRequest) {
       provider = input.provider as AIProviderConfig;
       if (!provider.apiKey && provider.providerId !== "ollama" && provider.providerId !== "lmstudio") {
         return NextResponse.json({ error: "Provider apiKey required" }, { status: 400 });
+      }
+    }
+
+    // P3.7 (multi-tenant isolation): when input.analysisId is provided, the
+    // task will read or write against that analysis (e.g. agents that query
+    // the report, codegraph, file summaries). Verify the calling user owns
+    // the analysis BEFORE enqueuing — otherwise user A could enqueue an
+    // agent that reads user B's analysis data via input.analysisId.
+    //
+    // Returns 404 (not 403) to avoid leaking that the resource exists.
+    // Note: this gates the *enqueue* path. The agent itself doesn't re-check
+    // — that's fine because the only way to reach the agent is via this
+    // endpoint, which we've now gated.
+    if (input?.analysisId && typeof input.analysisId === "string") {
+      const owned = await verifyAnalysisOwnership(input.analysisId, userId, {
+        select: { id: true, userId: true },
+      });
+      if (!owned) {
+        return NextResponse.json(
+          { error: "Analysis not found" },
+          { status: 404 },
+        );
       }
     }
 

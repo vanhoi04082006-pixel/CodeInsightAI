@@ -48,6 +48,7 @@ model User {
   analyses        Analysis[]
   credentials     ProviderCredential[]
   usageRecords    UsageRecord[]
+  tokenUsageRecords TokenUsageRecord[]
   settings        UserSettings[]
   auditLogs       AuditLog[]
   aiCallLogs      AICallLog[]
@@ -248,6 +249,34 @@ model UsageRecord {
 
   @@index([userId, month])
   @@unique([userId, type, month])
+}
+
+// ==========================================
+// TOKEN USAGE RECORD (P3.1 — real monthly token budget enforcement)
+// ==========================================
+// One row per (user, month) holding the cumulative real token count consumed
+// by ALL their AI calls (chat + analysis + agents + streaming). Incremented
+// atomically on each callAI()/streamAI() via Prisma's `increment` operator —
+// no SUM query on AICallLog needed in the hot path.
+//
+// The `month` string rolls over naturally: the first AI call on the 1st of a
+// new month creates a fresh row with totalTokens=0. No background cron needed.
+
+model TokenUsageRecord {
+  id          String   @id @default(cuid())
+  userId      String
+  month       String   // "2026-07" — same format as UsageRecord
+  totalTokens Int      @default(0)
+  inputTokens Int      @default(0)
+  outputTokens Int     @default(0)
+  callCount   Int      @default(0)
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, month])
+  @@index([userId, month])
 }
 
 // ==========================================

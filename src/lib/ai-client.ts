@@ -21,6 +21,15 @@
 
 import { redactMessages, redactSecrets } from "./redaction";
 import { logAICall } from "./audit";
+import {
+  checkTokenBudget,
+  recordTokenUsage,
+  estimateTokensFromText,
+  TokenBudgetExceededError,
+} from "./billing/token-budget";
+
+// Re-export so callers can `import { TokenBudgetExceededError } from "@/lib/ai-client"`.
+export { TokenBudgetExceededError };
 
 export interface AIProviderConfig {
   providerId: string;
@@ -57,6 +66,18 @@ export interface AICallOptions {
   responseFormat?: "text" | "json_object";
   /** W6-C: optional context for the AICallLog row. */
   audit?: AICallAuditContext;
+  /**
+   * P3.1: User id for token-budget enforcement. If both `userId` AND `plan`
+   * are provided, `callAI()` does a pre-flight budget check (single indexed
+   * DB read) and throws `TokenBudgetExceededError` if the user is over their
+   * monthly limit. If either is missing, the check is skipped (system / bg
+   * calls). After a successful call, `recordTokenUsage()` is called
+   * best-effort with `result.usage.totalTokens` (or chars/4 estimate for
+   * streaming).
+   */
+  userId?: string;
+  /** P3.1: User's plan ("free" | "pro" | "team" | "enterprise"). */
+  plan?: string;
 }
 
 export interface AICallResult {
@@ -99,6 +120,19 @@ export async function callAI(
   // ── W6-C: Redact secrets before anything leaves the process ──
   const redaction = computeRedaction(messages);
   const safeMessages = redaction.redactedMessages;
+
+  // ── P3.1: Token budget pre-flight check ──
+  // If the caller provided `userId` + `plan`, do a single indexed DB read
+  // to confirm the user is under their monthly token budget. Throws
+  // `TokenBudgetExceededError` synchronously BEFORE the network call so the
+  // caller can return a 429 without paying for an AI call they can't make.
+  // Skipped entirely when userId/plan are missing (system / bg calls).
+  if (options.userId && options.plan) {
+    const { allowed, status } = await checkTokenBudget(options.userId, options.plan);
+    if (!allowed && status) {
+      throw new TokenBudgetExceededError(status);
+    }
+  }
 
   // Build abort signal with timeout
   const controller = new AbortController();
@@ -152,8 +186,27 @@ export async function callAI(
       redactedLabels: redaction.redactedLabels,
     }).catch(() => { /* never throw on audit failure */ });
 
+    // ── P3.1: Best-effort token usage accounting ──
+    // Increment the user's monthly cache atomically. Uses real token counts
+    // from `result.usage.*` when the provider returns them; falls back to
+    // chars/4 estimate if totalTokens is missing. Never throws.
+    if (options.userId) {
+      const inTok = result.usage?.promptTokens ?? 0;
+      const outTok = result.usage?.completionTokens ?? 0;
+      const totalTok = result.usage?.totalTokens ?? 0;
+      void recordTokenUsage(options.userId, inTok, outTok, totalTok).catch(() => {
+        /* silent — accounting is best-effort */
+      });
+    }
+
     return result;
   } catch (err) {
+    // TokenBudgetExceededError is re-thrown unchanged — the caller catches it
+    // and returns a 429. We don't log it as an error AICallLog row because no
+    // network call was actually made (it was blocked before fetch()).
+    if (err instanceof TokenBudgetExceededError) {
+      throw err;
+    }
     // ── W6-C: Best-effort audit log on error ──
     const isTimeout = timedOut || (err instanceof Error && err.name === "AbortError");
     void logAICall({
@@ -216,6 +269,16 @@ export async function* streamAI(
   const redaction = computeRedaction(messages);
   const safeMessages = redaction.redactedMessages;
 
+  // ── P3.1: Token budget pre-flight check ──
+  // Throws `TokenBudgetExceededError` synchronously BEFORE the fetch() so the
+  // caller can return a 429 without paying for a stream they can't afford.
+  if (options.userId && options.plan) {
+    const { allowed, status } = await checkTokenBudget(options.userId, options.plan);
+    if (!allowed && status) {
+      throw new TokenBudgetExceededError(status);
+    }
+  }
+
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   if (options.signal) {
@@ -225,6 +288,8 @@ export async function* streamAI(
   const startedAt = Date.now();
   let loggedStatus: "success" | "error" | "timeout" | null = null;
   let loggedError: string | null = null;
+  // P3.1: track total yielded chars so we can estimate tokens post-stream.
+  let yieldedChars = 0;
 
   try {
     let url: string;
@@ -342,7 +407,10 @@ export async function* streamAI(
             chunk = parsed.choices?.[0]?.delta?.content || "";
           }
 
-          if (chunk) yield chunk;
+          if (chunk) {
+            yield chunk;
+            yieldedChars += chunk.length;
+          }
         } catch {
           // ignore parse errors for partial chunks
         }
@@ -350,6 +418,11 @@ export async function* streamAI(
     }
     loggedStatus = "success";
   } catch (err) {
+    // P3.1: TokenBudgetExceededError is re-thrown unchanged — no audit log
+    // entry because no network call was actually made.
+    if (err instanceof TokenBudgetExceededError) {
+      throw err;
+    }
     const isAbort = err instanceof Error && err.name === "AbortError";
     loggedStatus = isAbort ? "timeout" : "error";
     loggedError = err instanceof Error ? err.message : String(err);
@@ -371,6 +444,23 @@ export async function* streamAI(
         redactionCount: redaction.redactionCount,
         redactedLabels: redaction.redactedLabels,
       }).catch(() => { /* never throw on audit failure */ });
+    }
+
+    // ── P3.1: Best-effort token accounting for streaming ──
+    // SSE streams don't return `usage.totalTokens` (the standard is messy
+    // across OpenAI / Anthropic / Gemini). Estimate from yielded chars (4
+    // chars ≈ 1 token) PLUS an estimate of the input prompt tokens so we
+    // don't systematically undercount chat. Only counted on successful
+    // streams; failed streams don't consume significant output tokens.
+    if (options.userId && loggedStatus === "success") {
+      const outTokens = estimateTokensFromText("a".repeat(yieldedChars));
+      const inTokens = estimateTokensFromText(
+        safeMessages.map((m) => m.content).join("")
+      );
+      const total = inTokens + outTokens;
+      void recordTokenUsage(options.userId, inTokens, outTokens, total).catch(() => {
+        /* silent — accounting is best-effort */
+      });
     }
   }
 }
