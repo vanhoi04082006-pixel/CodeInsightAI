@@ -103,16 +103,16 @@ async function resolveAIProvider(
       } catch {}
     }
 
-    // 4. Client-provided key (local dev)
+    // 4. Client-provided key (local dev / BYOK from frontend)
     if (body.provider?.apiKey) {
       return {
         providerId: body.provider.providerId,
         apiKey: body.provider.apiKey,
         baseUrl: body.provider.baseUrl || "",
         model: body.provider.model || "",
-        temperature: 0.7,
-        maxTokens: 4096,
-        timeout: 60,
+        temperature: body.provider.temperature ?? 0.7,
+        maxTokens: body.provider.maxTokens ?? 4096,
+        timeout: body.provider.timeout ?? 60,
       };
     }
   } catch (e) {

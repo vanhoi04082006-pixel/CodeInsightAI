@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
     const parsed = body as {
       analysisId: string; passType: PassType; language?: string;
       platformProvider?: string; platformModel?: string;
-      provider?: { providerId: string; apiKey: string; baseUrl: string; model: string };
+      provider?: { providerId: string; apiKey: string; baseUrl: string; model: string; maxTokens?: number; temperature?: number; timeout?: number };
     };
     const { analysisId, language, platformProvider, platformModel, provider } = parsed;
     passType = parsed.passType;
@@ -126,7 +126,9 @@ export async function POST(req: NextRequest) {
         apiKey: provider.apiKey,
         baseUrl: provider.baseUrl || "",
         model: provider.model || "",
-        temperature: 0.7, maxTokens: 4096, timeout: 50,
+        temperature: provider.temperature ?? 0.7,
+        maxTokens: provider.maxTokens ?? 4096,
+        timeout: provider.timeout ?? 50,
       };
       usedPlatformAI = false;
     }
@@ -180,7 +182,15 @@ export async function POST(req: NextRequest) {
       })),
     }, report);
 
-    const baseMaxTokens = (MODEL_MAX_TOKENS as any)[aiConfig?.model] ?? 3000;
+    // ── maxTokens resolution priority ──
+    // 1. User-configured maxTokens on the provider (BYOK) — respects what
+    //    user set in Providers view. -1 or 0 = unlimited → use model default.
+    // 2. Model-specific default from MODEL_MAX_TOKENS table.
+    // 3. Fallback 3000.
+    // Then apply PASS_TOKEN_BOOST multiplier (complex passes need more tokens).
+    const userMaxTokens = (provider as any)?.maxTokens || (aiConfig as any)?.maxTokens;
+    const modelDefault = (MODEL_MAX_TOKENS as any)[aiConfig?.model] ?? 3000;
+    const baseMaxTokens = (userMaxTokens && userMaxTokens > 0) ? userMaxTokens : modelDefault;
     const boost = PASS_TOKEN_BOOST[passType ?? ""] ?? 1.0;
     const maxTokens = Math.round(baseMaxTokens * boost);
     // Cap at 8000 to avoid exceeding model context windows on small models

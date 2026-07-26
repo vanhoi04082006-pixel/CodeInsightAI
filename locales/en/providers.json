@@ -104,5 +104,6 @@
     "saving": "Saving…",
     "save": "Save (encrypted)"
   },
-  "productionLocalHidden": "Production mode: local providers (Ollama, LM Studio) are hidden because they can't be reached from a browser on this domain."
+  "productionLocalHidden": "Production mode: local providers (Ollama, LM Studio) are hidden because they can't be reached from a browser on this domain.",
+  "maxTokensHint": "Max tokens per AI call. -1 = unlimited (use model default). Applies to both Chat and Analyze. For Analyze, complex passes (security/performance) get 2x boost automatically."
 }

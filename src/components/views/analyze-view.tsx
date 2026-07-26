@@ -268,7 +268,7 @@ export function AnalyzeView() {
       const aiBody: Record<string, any> = {};
 
       // Build feature routing map (BYOK Custom mode only)
-      // Maps feature → { providerId, apiKey, baseUrl, model }
+      // Maps feature → { providerId, apiKey, baseUrl, model, maxTokens }
       const featureRouting: Record<string, any> = {};
       if (aiMode === "byok" && Object.keys(routing).length > 0) {
         for (const [feature, providerId] of Object.entries(routing)) {
@@ -279,6 +279,9 @@ export function AnalyzeView() {
               apiKey: p.apiKey,
               baseUrl: p.baseUrl,
               model: p.model,
+              maxTokens: p.maxTokens,
+              temperature: p.temperature,
+              timeout: p.timeout,
             };
           }
         }
@@ -295,6 +298,9 @@ export function AnalyzeView() {
           baseUrl: byokProvider.baseUrl,
           model: byokProvider.model,
           label: byokProvider.label,
+          maxTokens: byokProvider.maxTokens,
+          temperature: byokProvider.temperature,
+          timeout: byokProvider.timeout,
         };
         aiBody.aiMode = "byok";
         // Send feature routing if user has set it
