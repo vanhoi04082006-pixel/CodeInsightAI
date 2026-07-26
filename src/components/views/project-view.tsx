@@ -32,6 +32,17 @@ import { DependencyGraph } from "@/components/shared/dependency-graph";
 import { CodeGraphView } from "@/components/shared/codegraph-view";
 import { CodeViewer } from "@/components/shared/code-viewer";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useAppStore } from "@/lib/store";
 import type { AnalysisReport, Issue, CodeSnippet } from "@/lib/types";
@@ -295,7 +306,7 @@ function OverviewTab({ report }: { report: AnalysisReport }) {
             {aiOverview.topRisks?.length > 0 && (
               <div>
                 <h4 className="mb-2 text-xs uppercase tracking-wider text-rose-400">{t("reports", "aiOverview.topRisks")}</h4>
-                {aiOverview.topRisks.map((risk: any, i: number) => (
+                {(aiOverview.topRisks || []).slice(0, 3).map((risk: any, i: number) => (
                   <div key={i} className="mb-2 rounded-lg border border-rose-500/15 bg-rose-500/[0.03] p-3">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="text-sm font-medium">{risk.title}</span>
@@ -312,7 +323,7 @@ function OverviewTab({ report }: { report: AnalysisReport }) {
             {aiOverview.quickWins?.length > 0 && (
               <div>
                 <h4 className="mb-2 text-xs uppercase tracking-wider text-emerald-400">{t("reports", "aiOverview.quickWins")}</h4>
-                {aiOverview.quickWins.map((win: any, i: number) => (
+                {(aiOverview.quickWins || []).slice(0, 3).map((win: any, i: number) => (
                   <div key={i} className="mb-2 rounded-lg border border-emerald-500/15 bg-emerald-500/[0.03] p-3">
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-sm font-medium">{win.title}</span>
@@ -819,17 +830,86 @@ function IssuesTab({ issues, title, color, report, id }: { issues: Issue[]; titl
                           <p className="mt-1 text-sm text-foreground/85">{iss.recommendation}</p>
                         </div>
 
-                        {/* Action buttons — invoke agents to fix / test / refactor this issue */}
+                        {/* Action buttons — invoke agents to fix / test / refactor this issue.
+                            Wrapped in AlertDialog for confirmation before running. */}
                         <div className="mt-3 flex flex-wrap gap-2">
-                          <Button size="sm" variant="outline" onClick={() => handleAgentAction("fix-bug", iss)} disabled={actionLoading}>
-                            {actionLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wrench className="h-3.5 w-3.5" />} {t("reports", "action.fixNow")}
-                          </Button>
-                          <Button size="sm" variant="outline" onClick={() => handleAgentAction("test", iss)} disabled={actionLoading}>
-                            {actionLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5" />} {t("reports", "action.generateTest")}
-                          </Button>
-                          <Button size="sm" variant="outline" onClick={() => handleAgentAction("refactor", iss)} disabled={actionLoading}>
-                            {actionLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />} {t("reports", "action.refactor")}
-                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button size="sm" variant="outline" disabled={actionLoading}>
+                                {actionLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wrench className="h-3.5 w-3.5" />} {t("reports", "action.fixNow")}
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>{t("reports", "action.confirmTitle")}</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  {t("reports", "action.confirmDescFix")}
+                                  <br /><br />
+                                  <span className="font-medium text-foreground">{t("reports", "action.targetIssue")}:</span> {iss.title}
+                                  <br />
+                                  <code className="text-[10px] text-muted-foreground">{iss.file}{iss.line ? `:${iss.line}` : ""}</code>
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>{t("reports", "action.confirmCancel")}</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleAgentAction("fix-bug", iss)}>
+                                  {t("reports", "action.confirmRun")}
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button size="sm" variant="outline" disabled={actionLoading}>
+                                {actionLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5" />} {t("reports", "action.generateTest")}
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>{t("reports", "action.confirmTitle")}</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  {t("reports", "action.confirmDescTest")}
+                                  <br /><br />
+                                  <span className="font-medium text-foreground">{t("reports", "action.targetIssue")}:</span> {iss.title}
+                                  <br />
+                                  <code className="text-[10px] text-muted-foreground">{iss.file}{iss.line ? `:${iss.line}` : ""}</code>
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>{t("reports", "action.confirmCancel")}</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleAgentAction("test", iss)}>
+                                  {t("reports", "action.confirmRun")}
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button size="sm" variant="outline" disabled={actionLoading}>
+                                {actionLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />} {t("reports", "action.refactor")}
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>{t("reports", "action.confirmTitle")}</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  {t("reports", "action.confirmDescRefactor")}
+                                  <br /><br />
+                                  <span className="font-medium text-foreground">{t("reports", "action.targetIssue")}:</span> {iss.title}
+                                  <br />
+                                  <code className="text-[10px] text-muted-foreground">{iss.file}{iss.line ? `:${iss.line}` : ""}</code>
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>{t("reports", "action.confirmCancel")}</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleAgentAction("refactor", iss)}>
+                                  {t("reports", "action.confirmRun")}
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </div>
                       </div>
                     </motion.div>
