@@ -136,6 +136,11 @@ export async function POST(req: NextRequest) {
     // 2. Platform AI — admin's default
     if (!aiConfig && platformProvider) {
       aiConfig = await getPlatformAIProvider(platformProvider, platformModel);
+      // Override maxTokens if user configured it in the mode toggle
+      if (aiConfig && body.platformMaxTokens !== undefined) {
+        const userMax = body.platformMaxTokens;
+        (aiConfig as any).maxTokens = (userMax && userMax > 0) ? userMax : 4096;
+      }
       usedPlatformAI = !!aiConfig;
     }
     if (!aiConfig) {

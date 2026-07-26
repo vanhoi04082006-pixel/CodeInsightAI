@@ -77,6 +77,11 @@ async function resolveAIProvider(
     // 1. Pro user selected platform provider
     if (platformProvider) {
       const config = await getPlatformAIProvider(platformProvider, platformModel);
+      // Override maxTokens if user configured it in the mode toggle
+      if (config && body.platformMaxTokens !== undefined) {
+        const userMax = body.platformMaxTokens;
+        (config as any).maxTokens = (userMax && userMax > 0) ? userMax : 4096;
+      }
       if (config) return config;
     }
 

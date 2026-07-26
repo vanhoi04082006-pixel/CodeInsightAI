@@ -290,6 +290,7 @@ export function AnalyzeView() {
       if (platformSelection && (!byokProvider || aiMode === "platform")) {
         aiBody.platformProvider = platformSelection.providerId;
         aiBody.platformModel = platformSelection.model;
+        aiBody.platformMaxTokens = platformSelection.maxTokens ?? -1;
         aiBody.aiMode = "platform";
       } else if (byokProvider) {
         aiBody.provider = {
