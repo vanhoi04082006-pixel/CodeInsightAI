@@ -1476,7 +1476,7 @@ function RoadmapTab({ report }: { report: AnalysisReport }) {
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
             <div className="min-w-0 flex-1">
               <p className="text-xs font-semibold text-amber-300">
-                {t("reports", "roadmap.sequencerWarnings")} ({sequencerWarnings.length})
+                {t("reports", "roadmapMeta.sequencerWarnings")} ({sequencerWarnings.length})
               </p>
               <ul className="mt-1 space-y-0.5">
                 {sequencerWarnings.slice(0, 5).map((w, i) => (
@@ -1498,7 +1498,7 @@ function RoadmapTab({ report }: { report: AnalysisReport }) {
         <GlassCard className="border-violet-500/20 bg-gradient-to-br from-violet-500/[0.05] to-transparent p-4">
           <div className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-violet-300" />
-            <h3 className="text-sm font-semibold">{t("reports", "roadmap.executiveNote")}</h3>
+            <h3 className="text-sm font-semibold">{t("reports", "roadmapMeta.executiveNote")}</h3>
           </div>
           <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{executiveNote}</p>
         </GlassCard>
@@ -1540,7 +1540,7 @@ function RoadmapTab({ report }: { report: AnalysisReport }) {
                             ? "bg-cyan-500/20 text-cyan-300"
                             : "bg-white/10 text-muted-foreground"
                         )}
-                        title={t("reports", `roadmap.phase${p.releasePhase}` as any)}
+                        title={t("reports", `roadmapMeta.phase${p.releasePhase}` as any)}
                       >
                         {p.releasePhase}
                       </span>
@@ -1549,7 +1549,7 @@ function RoadmapTab({ report }: { report: AnalysisReport }) {
                     {typeof p.effortHours === "number" && (
                       <span className="flex items-center gap-0.5 rounded-md bg-white/5 px-1.5 py-0.5 text-[9px] font-medium text-foreground/80">
                         <Clock className="h-2.5 w-2.5" />
-                        {t("reports", "roadmap.effortHours")}: {p.effortHours}h
+                        {t("reports", "roadmapMeta.effortHours")}: {p.effortHours}h
                         {p.effortBand ? ` · ${p.effortBand}` : ""}
                       </span>
                     )}
@@ -1557,10 +1557,10 @@ function RoadmapTab({ report }: { report: AnalysisReport }) {
                     {typeof p.roiScore === "number" && (
                       <span
                         className="flex items-center gap-1 rounded-md bg-white/5 px-1.5 py-0.5 text-[9px] font-medium"
-                        title={t("reports", "roadmap.roi")}
+                        title={t("reports", "roadmapMeta.roi")}
                       >
                         <Target className="h-2.5 w-2.5 text-emerald-400" />
-                        <span className="text-foreground/70">{t("reports", "roadmap.roi")}</span>
+                        <span className="text-foreground/70">{t("reports", "roadmapMeta.roi")}</span>
                         <span
                           className="inline-block h-1.5 w-8 overflow-hidden rounded-full bg-white/10"
                         >
@@ -1596,7 +1596,7 @@ function RoadmapTab({ report }: { report: AnalysisReport }) {
                     <div className="mt-1.5 flex flex-wrap items-center gap-1">
                       <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
                         <GitFork className="h-2.5 w-2.5" />
-                        {t("reports", "roadmap.dependsOn")}:
+                        {t("reports", "roadmapMeta.dependsOn")}:
                       </span>
                       {p.dependsOn.map((dep: string, j: number) => (
                         <code
@@ -1613,7 +1613,7 @@ function RoadmapTab({ report }: { report: AnalysisReport }) {
                     <div className="mt-1 flex flex-wrap items-center gap-1">
                       <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
                         <GitFork className="h-2.5 w-2.5 rotate-180" />
-                        {t("reports", "roadmap.blocks")}:
+                        {t("reports", "roadmapMeta.blocks")}:
                       </span>
                       {p.blocks.map((blk: string, j: number) => (
                         <code
@@ -1803,7 +1803,7 @@ function RoadmapTab({ report }: { report: AnalysisReport }) {
                           ? "bg-cyan-500/20 text-cyan-300"
                           : "bg-white/10 text-muted-foreground"
                       )}
-                      title={t("reports", `roadmap.phase${phase.phase}` as any)}
+                      title={t("reports", `roadmapMeta.phase${phase.phase}` as any)}
                     >
                       {phase.phase}
                     </span>
@@ -1814,7 +1814,7 @@ function RoadmapTab({ report }: { report: AnalysisReport }) {
                     {typeof phase.estimatedEffortHours === "number" && phase.estimatedEffortHours > 0 && (
                       <span className="ml-auto flex items-center gap-0.5 rounded-md bg-white/5 px-1.5 py-0.5 text-[10px] font-medium text-foreground/80">
                         <Clock className="h-2.5 w-2.5" />
-                        {t("reports", "roadmap.phaseTotal")}: {phase.estimatedEffortHours}h
+                        {t("reports", "roadmapMeta.phaseTotal")}: {phase.estimatedEffortHours}h
                       </span>
                     )}
                   </div>
@@ -1830,7 +1830,7 @@ function RoadmapTab({ report }: { report: AnalysisReport }) {
                     <div className="mt-1.5 flex flex-wrap items-center gap-1">
                       <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
                         <AlertTriangle className="h-2.5 w-2.5 text-amber-400" />
-                        {t("reports", "roadmap.blockedBy")}:
+                        {t("reports", "roadmapMeta.blockedBy")}:
                       </span>
                       {phase.blockedBy.map((b: string, j: number) => (
                         <code

@@ -9,7 +9,6 @@
   "codegraph": "CodeGraph",
   "code": "Code",
   "docs": "Docs",
-  "roadmap": "Roadmap",
   "healthScore": "Health Score",
   "aiSummary": "Summary",
   "keyFiles": "Key Files",
@@ -139,21 +138,6 @@
     "fastestScoreGain": "Fastest Score Gain",
     "healthAssessment": "Health Assessment"
   },
-  "roadmap": {
-    "effortHours": "Effort",
-    "releasePhase": "Phase",
-    "phaseP0": "P0 — Now",
-    "phaseP1": "P1 — This Sprint",
-    "phaseP2": "P2 — Next Sprint",
-    "phaseP3": "P3 — Backlog",
-    "dependsOn": "Depends on",
-    "blocks": "Blocks",
-    "blockedBy": "Blocked by",
-    "phaseTotal": "Phase total",
-    "roi": "ROI",
-    "executiveNote": "Executive Note",
-    "sequencerWarnings": "Sequencer warnings"
-  },
   "action": {
     "fixNow": "Fix Now",
     "generateTest": "Generate Test",
@@ -240,5 +224,21 @@
     "unblocks": "Unblocks",
     "confidence": "Confidence",
     "canParallelize": "Can parallelize"
-  }
+  },
+  "roadmapMeta": {
+    "effortHours": "Effort",
+    "releasePhase": "Phase",
+    "phaseP0": "P0 — Now",
+    "phaseP1": "P1 — This Sprint",
+    "phaseP2": "P2 — Next Sprint",
+    "phaseP3": "P3 — Backlog",
+    "dependsOn": "Depends on",
+    "blocks": "Blocks",
+    "blockedBy": "Blocked by",
+    "phaseTotal": "Phase total",
+    "roi": "ROI",
+    "executiveNote": "Executive Note",
+    "sequencerWarnings": "Sequencer warnings"
+  },
+  "roadmap": "Roadmap"
 }
