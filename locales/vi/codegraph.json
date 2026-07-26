@@ -75,5 +75,15 @@
       "component": "UI component — logic trình bày với ít business rule.",
       "config": "Cấu hình — cài đặt tĩnh, env loader và feature flag."
     }
+  },
+  "aiInsight": {
+    "title": "Phân tích đồ thị AI",
+    "button": "🤖 Phân tích đồ thị AI",
+    "loading": "AI đang phân tích đồ thị...",
+    "centralNodes": "Nút trung tâm",
+    "fragileModules": "Module dễ vỡ",
+    "refactorSequence": "Trình tự tái cấu trúc",
+    "overallAssessment": "Đánh giá tổng thể",
+    "failed": "Phân tích AI thất bại"
   }
 }

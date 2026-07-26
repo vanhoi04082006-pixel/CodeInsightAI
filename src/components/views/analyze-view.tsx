@@ -203,7 +203,14 @@ export function AnalyzeView() {
           }
         } else if (data.status === "failed") {
           console.warn(`[ai-pass] ${pass.type} failed:`, data.error);
+          // Show toast so user knows which pass failed + why
+          toast.error(`${pass.name}: ${data.error || "AI returned no valid result"}`, {
+            duration: 4000,
+          });
           completedCount++; // Count as attempted, continue
+        } else if (data.status === "skipped") {
+          console.warn(`[ai-pass] ${pass.type} skipped:`, data.error);
+          completedCount++;
         }
       } catch (e) {
         console.warn(`[ai-pass] ${pass.type} error:`, e);

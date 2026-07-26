@@ -168,6 +168,10 @@
     "docTabFolderGuide": "Hướng dẫn thư mục",
     "docTabComponentGuide": "Hướng dẫn component",
     "docTabDeploymentGuide": "Hướng dẫn triển khai",
+    "enhanceWithAI": "✨ Nâng cấp bằng AI",
+    "aiEnhancing": "AI đang tạo...",
+    "backToStatic": "↩ Về bản tĩnh",
+    "enhanceFailed": "Nâng cấp AI thất bại",
     "cannotShareNotSaved": "Không thể chia sẻ — phân tích chưa được lưu vào DB.",
     "shareLinkCopied": "Đã sao chép link chia sẻ vào clipboard!",
     "shareLinkExpires": "Hết hạn sau 7 ngày. Ai có link đều có thể xem (read-only).",
@@ -201,7 +205,15 @@
     "resolvedIssues": "Đã giải quyết",
     "filesAdded": "File thêm",
     "filesDeleted": "File xóa",
-    "techDebtChange": "Thay đổi tech debt"
+    "techDebtChange": "Thay đổi tech debt",
+    "aiExplainButton": "🤖 AI giải thích thay đổi",
+    "aiExplainLoading": "AI đang phân tích thay đổi...",
+    "aiSummary": "Tóm tắt AI",
+    "trendAnalysis": "Phân tích xu hướng",
+    "concerns": "Lo ngại",
+    "wins": "Thắng",
+    "recommendation": "Khuyến nghị",
+    "aiSummaryFailed": "Tóm tắt AI thất bại"
   },
   "regressions": {
     "whatChanged": "Đã thay đổi gì từ lần scan trước",

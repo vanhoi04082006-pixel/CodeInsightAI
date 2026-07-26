@@ -168,6 +168,10 @@
     "docTabFolderGuide": "Folder Guide",
     "docTabComponentGuide": "Component Guide",
     "docTabDeploymentGuide": "Deployment Guide",
+    "enhanceWithAI": "✨ Enhance with AI",
+    "aiEnhancing": "AI generating...",
+    "backToStatic": "↩ Back to static",
+    "enhanceFailed": "AI enhance failed",
     "cannotShareNotSaved": "Cannot share — analysis not saved to DB yet.",
     "shareLinkCopied": "Share link copied to clipboard!",
     "shareLinkExpires": "Expires in 7 days. Anyone with the link can view (read-only).",
@@ -201,7 +205,15 @@
     "resolvedIssues": "Resolved Issues",
     "filesAdded": "Files Added",
     "filesDeleted": "Files Deleted",
-    "techDebtChange": "Tech Debt Change"
+    "techDebtChange": "Tech Debt Change",
+    "aiExplainButton": "🤖 AI Explain Changes",
+    "aiExplainLoading": "AI analyzing changes...",
+    "aiSummary": "AI Summary",
+    "trendAnalysis": "Trend Analysis",
+    "concerns": "Concerns",
+    "wins": "Wins",
+    "recommendation": "Recommendation",
+    "aiSummaryFailed": "AI summary failed"
   },
   "regressions": {
     "whatChanged": "What changed since last scan",

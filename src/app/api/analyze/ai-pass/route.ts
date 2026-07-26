@@ -30,9 +30,23 @@ export const maxDuration = 55; // Under 60s Hobby limit
 type PassType = "overview" | "summary" | "security" | "architecture" | "quality" | "priorities" | "performance" | "bestPractices" | "duplicates";
 
 const MODEL_MAX_TOKENS: Record<string, number> = {
-  "gpt-5-nano": 1000, "gpt-4.1-nano": 1500, "gpt-4o-mini": 2000,
-  "gpt-5-mini": 3000, "gpt-4.1-mini": 4000, "claude-sonnet-4-5": 4000,
-  "deepseek-chat": 3000, "grok-4-fast-reasoning": 2000, "qwen3-coder-flash": 3000,
+  "gpt-5-nano": 2000, "gpt-4.1-nano": 3000, "gpt-4o-mini": 4000,
+  "gpt-5-mini": 6000, "gpt-4.1-mini": 8000, "claude-sonnet-4-5": 8000,
+  "deepseek-chat": 6000, "grok-4-fast-reasoning": 4000, "qwen3-coder-flash": 6000,
+};
+
+// Complex passes need more tokens (structured output with evidence +
+// confidence + fixPlan per item). Override per-passType.
+const PASS_TOKEN_BOOST: Record<string, number> = {
+  security: 2.0,      // 28 issues × structured fields = large output
+  quality: 2.0,       // bugs (73) × structured fields
+  performance: 2.0,   // 173 issues × structured fields
+  priorities: 1.5,    // enhanced roadmap with effort + deps + phases
+  architecture: 1.5,  // strengths/weaknesses/suggestions
+  duplicates: 1.5,    // duplicate analysis
+  bestPractices: 1.5, // passed/failed lists
+  overview: 1.0,      // executive summary
+  summary: 1.0,       // 2-3 sentence summary
 };
 
 export async function POST(req: NextRequest) {
@@ -166,7 +180,11 @@ export async function POST(req: NextRequest) {
       })),
     }, report);
 
-    const maxTokens = (MODEL_MAX_TOKENS as any)[aiConfig?.model] ?? 2000;
+    const baseMaxTokens = (MODEL_MAX_TOKENS as any)[aiConfig?.model] ?? 3000;
+    const boost = PASS_TOKEN_BOOST[passType ?? ""] ?? 1.0;
+    const maxTokens = Math.round(baseMaxTokens * boost);
+    // Cap at 8000 to avoid exceeding model context windows on small models
+    const cappedMaxTokens = Math.min(maxTokens, 8000);
 
     // P3.5: Policy engine — evaluate enabled policies against this AI call.
     // Runs AFTER provider resolution (so we know providerId/model) and AFTER
@@ -177,13 +195,13 @@ export async function POST(req: NextRequest) {
     //
     // Fail-open: if loadPolicies() throws (DB error), `policies` is `[]`
     // and evaluatePolicies returns no violations — the call proceeds.
-    let effectiveMaxTokens = maxTokens;
+    let effectiveMaxTokens = cappedMaxTokens;
     const policies = await loadPolicies();
     if (policies.length > 0) {
       const violations = evaluatePolicies(policies, {
         providerId: aiConfig.providerId,
         model: aiConfig.model,
-        maxTokens,
+        maxTokens: cappedMaxTokens,
         userId,
         plan: planInfo.plan,
       });
@@ -205,10 +223,12 @@ export async function POST(req: NextRequest) {
       if (tokenWarn) {
         const policy = policies.find((p) => p.id === tokenWarn.policyId);
         const cap = policy?.config?.maxTokens ?? 4000;
-        effectiveMaxTokens = Math.min(maxTokens, cap);
-        console.warn(
-          `[policies] ${passType} maxTokens capped ${maxTokens} → ${effectiveMaxTokens}`,
-        );
+        effectiveMaxTokens = Math.min(cappedMaxTokens, cap);
+        if (effectiveMaxTokens !== cappedMaxTokens) {
+          console.warn(
+            `[policies] ${passType} maxTokens capped ${cappedMaxTokens} → ${effectiveMaxTokens}`,
+          );
+        }
       }
     }
 
@@ -244,7 +264,7 @@ export async function POST(req: NextRequest) {
     // ── Attempt 1: json_object response format ──
     try {
       const aiResult = await callAIWithFallback(aiConfig, fallbacks, messages, {
-        temperature: 0.3, maxTokens: effectiveMaxTokens, timeout: 45,
+        temperature: 0.3, maxTokens: effectiveMaxTokens, timeout: 55,
         responseFormat: "json_object",
         userId,
         plan: planInfo.plan,
@@ -265,7 +285,7 @@ export async function POST(req: NextRequest) {
         if (errMsg.includes("402") || errMsg.includes("credits")) {
           try {
             const aiResult = await callAI(aiConfig, messages, {
-              temperature: 0.3, maxTokens: Math.min(1500, Math.floor(effectiveMaxTokens / 2)), timeout: 45,
+              temperature: 0.3, maxTokens: Math.min(1500, Math.floor(effectiveMaxTokens / 2)), timeout: 55,
               responseFormat: "json_object",
               userId,
               plan: planInfo.plan,
@@ -281,20 +301,40 @@ export async function POST(req: NextRequest) {
     }
 
     // ── Attempt 2: without response_format (some providers reject json_object) ──
+    // Use a stronger system prompt that explicitly forbids markdown fences.
     if (!result) {
       try {
-        const aiResult = await callAIWithFallback(aiConfig, fallbacks, messages, {
-          temperature: 0.3, maxTokens: effectiveMaxTokens, timeout: 45,
+        const fallbackMessages: AIMessage[] = [
+          { role: "system", content: "You are a Senior Staff Engineer. Output ONLY valid JSON — no markdown, no code fences, no explanation. Start with { and end with }. Do NOT wrap in ```json blocks." + langInstruction },
+          { role: "user", content: prompt },
+        ];
+        const aiResult = await callAIWithFallback(aiConfig, fallbacks, fallbackMessages, {
+          temperature: 0.2, maxTokens: effectiveMaxTokens, timeout: 55,
           userId,
           plan: planInfo.plan,
           audit: { userId, analysisId, passType },
         });
-        if (aiResult.content) result = safeJsonParse(aiResult.content);
+        if (aiResult.content) {
+          // Aggressive cleaning: strip markdown fences, extract first {...} block
+          let cleaned = aiResult.content.trim();
+          cleaned = cleaned.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "");
+          // If still has fences in middle, extract first { to last }
+          const firstBrace = cleaned.indexOf("{");
+          const lastBrace = cleaned.lastIndexOf("}");
+          if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+            cleaned = cleaned.slice(firstBrace, lastBrace + 1);
+          }
+          result = safeJsonParse(cleaned);
+          // Try one more: fix trailing commas
+          if (!result) {
+            result = safeJsonParse(cleaned.replace(/,(\s*[}\]])/g, "$1"));
+          }
+        }
         providerUsed = aiResult.providerUsed;
         attemptedProviders = aiResult.attemptedProviders;
       } catch (e: any) {
         if (e instanceof TokenBudgetExceededError) throw e;
-        console.warn(`[ai-pass] ${passType} failed:`, e?.message?.slice(0, 200));
+        console.warn(`[ai-pass] ${passType} attempt 2 failed:`, e?.message?.slice(0, 200));
       }
     }
 
@@ -330,9 +370,14 @@ export async function POST(req: NextRequest) {
         report, // return updated report so frontend can update
       });
     } else {
+      // Include attempted providers + last error for debugging
+      const lastError = attemptedProviders?.find(p => p.error)?.error;
       return NextResponse.json({
         passType, status: "failed",
-        error: "AI returned no valid result",
+        error: lastError || "AI returned no valid JSON after 2 attempts",
+        providerUsed: providerUsed ?? null,
+        attemptedProviders: attemptedProviders ?? [],
+        maxTokens: effectiveMaxTokens,
       });
     }
   } catch (e: any) {
