@@ -154,7 +154,10 @@
     "addProviderTitle": "Add New Provider",
     "addProviderDesc": "Select an AI provider to configure. You can add multiple providers and Pro users will choose which one to use.",
     "availableEmpty": "No providers available to add",
-    "availableEmptyDesc": "All providers are already configured, or there was an issue loading the provider list. Refresh the page to retry."
+    "availableEmptyDesc": "All providers are already configured, or there was an issue loading the provider list. Refresh the page to retry.",
+    "accessDenied": "Admin Access Required",
+    "accessDeniedDesc": "You need admin privileges to configure Platform AI providers.",
+    "accessDeniedHint": "Sign in with an admin account (configured via ADMIN_EMAIL env var), or ask your admin to configure providers."
   },
   "subscriptions": {
     "totalSubscribers": "Total Subscribers",

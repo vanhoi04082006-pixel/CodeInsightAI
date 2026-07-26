@@ -154,7 +154,10 @@
     "addProviderTitle": "Thêm nhà cung cấp mới",
     "addProviderDesc": "Chọn nhà cung cấp AI để cấu hình. Bạn có thể thêm nhiều nhà cung cấp và người dùng Pro sẽ chọn nhà cung cấp nào để sử dụng.",
     "availableEmpty": "Không có nhà cung cấp nào để thêm",
-    "availableEmptyDesc": "Tất cả nhà cung cấp đã được cấu hình, hoặc có lỗi khi tải danh sách. Tải lại trang để thử lại."
+    "availableEmptyDesc": "Tất cả nhà cung cấp đã được cấu hình, hoặc có lỗi khi tải danh sách. Tải lại trang để thử lại.",
+    "accessDenied": "Cần Quyền Quản Trị",
+    "accessDeniedDesc": "Bạn cần quyền quản trị để cấu hình nhà cung cấp Platform AI.",
+    "accessDeniedHint": "Đăng nhập bằng tài khoản quản trị (cấu hình qua biến môi trường ADMIN_EMAIL), hoặc yêu cầu quản trị viên cấu hình nhà cung cấp."
   },
   "subscriptions": {
     "totalSubscribers": "Tổng người đăng ký",

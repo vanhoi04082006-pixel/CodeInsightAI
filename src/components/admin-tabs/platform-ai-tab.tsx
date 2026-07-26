@@ -39,11 +39,23 @@ export function PlatformAITab() {
   // (admin-friendly format: array of {providerId, model}).
   const [fallbackChainText, setFallbackChainText] = useState<string>("");
   const [savingFallback, setSavingFallback] = useState(false);
+  const [accessDenied, setAccessDenied] = useState(false);
 
   const load = async () => {
     setLoading(true);
     try {
       const res = await fetch("/api/admin/platform-ai");
+      if (!res.ok) {
+        // 403 = not admin, 500 = server error
+        if (res.status === 403) {
+          setAccessDenied(true);
+        } else {
+          toast.error(t("admin", "platformAi.toast.loadFailed"));
+        }
+        setConfigured([]);
+        setAvailable([]);
+        return;
+      }
       const data = await res.json();
       setConfigured(data.configured || []);
       setAvailable(data.available || []);
@@ -239,6 +251,17 @@ export function PlatformAITab() {
   };
 
   if (loading) return <LoadingCard />;
+
+  if (accessDenied) {
+    return (
+      <GlassCard className="p-8 text-center">
+        <AlertCircle className="mx-auto h-10 w-10 text-rose-400" />
+        <h3 className="mt-3 text-lg font-semibold text-rose-300">{t("admin", "platformAi.accessDenied")}</h3>
+        <p className="mt-1 text-sm text-muted-foreground">{t("admin", "platformAi.accessDeniedDesc")}</p>
+        <p className="mt-3 text-xs text-muted-foreground">{t("admin", "platformAi.accessDeniedHint")}</p>
+      </GlassCard>
+    );
+  }
 
   return (
     <div className="space-y-4">
