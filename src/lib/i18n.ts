@@ -24,6 +24,8 @@ import enCodegraph from "../../locales/en/codegraph.json";
 import enAdmin from "../../locales/en/admin.json";
 import enPro from "../../locales/en/pro.json";
 import enGuide from "../../locales/en/guide.json";
+import enStatic from "../../locales/en/static.json";
+import enIssues from "../../locales/en/issues.json";
 
 import viCommon from "../../locales/vi/common.json";
 import viSettings from "../../locales/vi/settings.json";
@@ -44,6 +46,8 @@ import viCodegraph from "../../locales/vi/codegraph.json";
 import viAdmin from "../../locales/vi/admin.json";
 import viPro from "../../locales/vi/pro.json";
 import viGuide from "../../locales/vi/guide.json";
+import viStatic from "../../locales/vi/static.json";
+import viIssues from "../../locales/vi/issues.json";
 
 type Dict = Record<string, unknown>;
 
@@ -54,6 +58,8 @@ export const DICTS: Record<Locale, Record<string, Dict>> = {
     providers: enProviders, personality: enPersonality, developer: enDeveloper,
     history: enHistory, chat: enChat, notifications: enNotifications, agents: enAgents,
     mission: enMission, codegraph: enCodegraph, admin: enAdmin, pro: enPro, guide: enGuide,
+    issues: enIssues,
+    static: enStatic,
   },
   vi: {
     common: viCommon, settings: viSettings, dashboard: viDashboard,
@@ -61,13 +67,15 @@ export const DICTS: Record<Locale, Record<string, Dict>> = {
     providers: viProviders, personality: viPersonality, developer: viDeveloper,
     history: viHistory, chat: viChat, notifications: viNotifications, agents: viAgents,
     mission: viMission, codegraph: viCodegraph, admin: viAdmin, pro: viPro, guide: viGuide,
+    issues: viIssues,
+    static: viStatic,
   },
 };
 
 export const NAMESPACES = [
   "common", "settings", "dashboard", "analysis", "landing", "reports", "errors",
   "providers", "personality", "developer", "history", "chat", "notifications", "agents",
-  "mission", "codegraph", "admin", "pro", "guide",
+  "mission", "codegraph", "admin", "pro", "guide", "issues", "static",
 ] as const;
 
 export const COOKIE_NAME = "codeinsight-lang";

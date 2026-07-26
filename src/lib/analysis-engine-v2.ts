@@ -5,8 +5,13 @@ import { analyzeSecurity } from "./analyzers/security";
 import { analyzeBugs } from "./analyzers/bugs";
 import { analyzePerformance, getPositiveFindings } from "./analyzers/performance";
 import { detectArchitecture, analyzeTechDebt } from "./analyzers/architecture";
+import { translate } from "./static-i18n";
 
-export function analyzeParsedRepository(parsed: ParsedRepository, rawFiles?: { path: string; content: string }[]): AnalysisReport {
+export function analyzeParsedRepository(
+  parsed: ParsedRepository,
+  rawFiles?: { path: string; content: string }[],
+  language: string = "en",
+): AnalysisReport {
   // Lấy danh sách file để check lỗi
   const filesForAnalysis = rawFiles || parsed.files.map(f => ({ path: f.path, content: generatePseudoContent(f) }));
   
@@ -16,9 +21,9 @@ export function analyzeParsedRepository(parsed: ParsedRepository, rawFiles?: { p
     return !['.md', '.json', '.yml', '.yaml', '.txt', '.csv', '.lock'].includes(ext);
   });
 
-  const securityIssues = analyzeSecurity(validCodeFiles);
-  const bugIssues = analyzeBugs(validCodeFiles);
-  const perfIssues = analyzePerformance(validCodeFiles);
+  const securityIssues = analyzeSecurity(validCodeFiles, language);
+  const bugIssues = analyzeBugs(validCodeFiles, language);
+  const perfIssues = analyzePerformance(validCodeFiles, language);
   const perfPositiveFindings = getPositiveFindings(validCodeFiles);
 
   const arch = detectArchitecture(parsed.files);
@@ -79,7 +84,7 @@ export function analyzeParsedRepository(parsed: ParsedRepository, rawFiles?: { p
       // Flag only if NOT in inbound imports
       return !inboundImports.has(f.path);
     })
-    .map(f => ({ path: f.path, lines: f.lines, reason: "Tệp này không được import ở bất kỳ đâu trong dự án." }));
+    .map(f => ({ path: f.path, lines: f.lines, reason: translate(language, "static", "deadCode.reason") }));
 
   const funcMap = new Map<string, string[]>();
   parsed.files.forEach(f => f.functions.forEach(fn => {
@@ -115,11 +120,15 @@ export function analyzeParsedRepository(parsed: ParsedRepository, rawFiles?: { p
       const issuesInFile = allIssues.filter(i => i.file === cf.path);
       
       let codePreview = "";
-      let exp = cf.description || `Mô-đun chức năng cho ${cf.path.split('/').pop()}`;
+      let exp = cf.description || translate(language, "static", "snippet.moduleFallback", { fileName: cf.path.split('/').pop() || "" });
 
       if (issuesInFile.length > 0) {
         const primaryIssue = issuesInFile.sort((a,b) => (a.severity === "critical" ? -1 : 1))[0];
-        exp = `**Phát hiện rủi ro [${primaryIssue.severity.toUpperCase()}]:** ${primaryIssue.title}.\n\n💡 **AI Gợi ý:** ${primaryIssue.recommendation}`;
+        exp = translate(language, "static", "snippet.riskDetected", {
+          severity: primaryIssue.severity.toUpperCase(),
+          title: primaryIssue.title,
+          recommendation: primaryIssue.recommendation,
+        });
         
         if (primaryIssue.line && primaryIssue.line > 0 && primaryIssue.line <= lines.length) {
           const lineIdx = primaryIssue.line - 1;
@@ -128,15 +137,15 @@ export function analyzeParsedRepository(parsed: ParsedRepository, rawFiles?: { p
           
           codePreview = lines.slice(start, end).map((l, i) => {
             const currentLine = start + i + 1;
-            return currentLine === primaryIssue.line ? `${l} // 🔴 [AI CẢNH BÁO]: ${primaryIssue.title}` : l;
+            return currentLine === primaryIssue.line ? `${l} // 🔴 [${translate(language, "static", "snippet.aiWarningMarker")}]: ${primaryIssue.title}` : l;
           }).join("\n");
           
-          codePreview = `// Trích đoạn quanh dòng số ${primaryIssue.line}\n` + codePreview;
+          codePreview = translate(language, "static", "snippet.excerptAroundLine", { line: primaryIssue.line }) + "\n" + codePreview;
         } else {
           codePreview = lines.slice(0, 30).join("\n");
         }
       } else {
-        exp = `**Phân tích Kiến trúc:** Tệp có độ phức tạp cao (Điểm Complexity: ${cf.complexity}). CodeInsight AI khuyến nghị bạn nên áp dụng nguyên tắc S.O.L.I.D để tách nhỏ các hàm tại đây.`;
+        exp = translate(language, "static", "snippet.architectureAnalysis", { complexity: cf.complexity });
         codePreview = lines.slice(0, 30).join("\n");
       }
 
@@ -144,7 +153,7 @@ export function analyzeParsedRepository(parsed: ParsedRepository, rawFiles?: { p
         file: cf.path,
         language: cf.language.toLowerCase() === "typescript" ? "tsx" : cf.language.toLowerCase(),
         title: cf.path.split('/').pop() || "Code Snippet",
-        code: codePreview + (lines.length > 30 && !issuesInFile[0]?.line ? "\n\n// ... (đã rút gọn để hiển thị)" : ""),
+        code: codePreview + (lines.length > 30 && !issuesInFile[0]?.line ? "\n\n" + translate(language, "static", "snippet.truncatedNotice") : ""),
         explanation: exp
       });
     }
@@ -155,7 +164,14 @@ export function analyzeParsedRepository(parsed: ParsedRepository, rawFiles?: { p
     repoOwner: parsed.owner,
     repoName: parsed.name,
     repoBranch: parsed.branch,
-    summary: `Repository quy mô ${parsed.totalFiles} tệp với ${parsed.totalLines.toLocaleString()} dòng mã. Phân tích bởi CodeInsight AI cho thấy điểm sức khỏe đạt ${overall}/100. Đã phát hiện ${securityIssues.length} vấn đề bảo mật, ${bugIssues.length} bugs logic và ${perfIssues.length} điểm nghẽn hiệu năng.`,
+    summary: translate(language, "static", "summary", {
+      totalFiles: parsed.totalFiles,
+      totalLines: parsed.totalLines.toLocaleString(),
+      overall,
+      secCount: securityIssues.length,
+      bugCount: bugIssues.length,
+      perfCount: perfIssues.length,
+    }),
     tags: Array.from(new Set([
       ...(parsed.languages[0]?.name ? [parsed.languages[0].name] : []),
       ...(parsed.frameworks[0]?.name ? [parsed.frameworks[0].name] : []),
@@ -192,19 +208,31 @@ export function analyzeParsedRepository(parsed: ParsedRepository, rawFiles?: { p
       metrics: arch.metrics,
     },
     technicalDebt: { score: techDebt.score, items: techDebt.items },
-    roadmap: genRoadmap(securityIssues, perfIssues, arch),
+    roadmap: genRoadmap(securityIssues, perfIssues, arch, language),
     monetization: [
-      { title: "SaaS API / Usage-based tier", description: "Cung cấp quyền truy cập API có tính phí dựa trên giới hạn request (Stripe Billing).", potential: "high" },
-      { title: "Gói Enterprise / B2B", description: "Bổ sung SSO, Audit logs và hỗ trợ riêng cho tổ chức.", potential: "high" },
-      { title: "Sản phẩm mã nguồn mở trả phí", description: "Bán các bản Template Premium hoặc module nâng cao mở rộng.", potential: "medium" },
+      {
+        title: translate(language, "static", "monetization.saas.title"),
+        description: translate(language, "static", "monetization.saas.description"),
+        potential: "high",
+      },
+      {
+        title: translate(language, "static", "monetization.enterprise.title"),
+        description: translate(language, "static", "monetization.enterprise.description"),
+        potential: "high",
+      },
+      {
+        title: translate(language, "static", "monetization.premium.title"),
+        description: translate(language, "static", "monetization.premium.description"),
+        potential: "medium",
+      },
     ],
     documentation: {
-      readme: genReadme(parsed),
-      apiDocs: genApiDocs(parsed),
+      readme: genReadme(parsed, language),
+      apiDocs: genApiDocs(parsed, language),
       architectureMd: genArchitectureMd(parsed, arch),
       folderGuide: genFolderGuide(parsed),
-      componentGuide: genComponentGuide(parsed),
-      deploymentGuide: genDeploymentGuide(parsed),
+      componentGuide: genComponentGuide(parsed, language),
+      deploymentGuide: genDeploymentGuide(parsed, language),
     },
     activity,
     complexityTrend,
@@ -298,14 +326,14 @@ function genMaintainabilityTrend(): ChartPoint[] {
   return months.map(m => { v = clamp(v + (Math.random()-0.55)*4, 60, 95); return { label: m, value: v }; });
 }
 
-function genRoadmap(sec: Issue[], perf: Issue[], arch: any): AnalysisReport["roadmap"] {
+function genRoadmap(sec: Issue[], perf: Issue[], arch: any, language: string): AnalysisReport["roadmap"] {
   const items: AnalysisReport["roadmap"] = [];
   
   const critSec = sec.filter(i => i.severity === "critical" || i.severity === "high");
   if (critSec.length > 0) {
     items.push({ 
-      title: "Giai đoạn 1: Vá lổ hổng bảo mật", 
-      description: `Xử lý ${critSec.length} cảnh báo bảo mật nguy hiểm (Hardcoded Secrets, Injection).`, 
+      title: translate(language, "static", "roadmap.phase1.title"), 
+      description: translate(language, "static", "roadmap.phase1.description", { count: critSec.length }), 
       priority: "high", 
       category: "Security" 
     });
@@ -314,16 +342,16 @@ function genRoadmap(sec: Issue[], perf: Issue[], arch: any): AnalysisReport["roa
   const highPerf = perf.filter(i => i.severity === "high" || i.severity === "medium");
   if (highPerf.length > 0) {
     items.push({ 
-      title: "Giai đoạn 2: Tối ưu hiệu năng", 
-      description: `Xử lý ${highPerf.length} vấn đề làm chậm ứng dụng (N+1 Query, Re-render).`, 
+      title: translate(language, "static", "roadmap.phase2.title"), 
+      description: translate(language, "static", "roadmap.phase2.description", { count: highPerf.length }), 
       priority: "medium", 
       category: "Performance" 
     });
   }
 
   items.push({ 
-    title: "Giai đoạn 3: Giảm Technical Debt", 
-    description: "Tái cấu trúc các tệp phức tạp, gộp mã trùng lặp và xóa Dead Code.", 
+    title: translate(language, "static", "roadmap.phase3.title"), 
+    description: translate(language, "static", "roadmap.phase3.description"), 
     priority: "medium", 
     category: "Maintainability" 
   });
@@ -331,14 +359,16 @@ function genRoadmap(sec: Issue[], perf: Issue[], arch: any): AnalysisReport["roa
   return items;
 }
 
-function genReadme(parsed: ParsedRepository): string {
-  return `# ${parsed.name} 🚀\n\n> **Báo cáo tự động bởi CodeInsight AI.**\n\n${parsed.totalFiles} files · ${parsed.totalLines.toLocaleString()} lines · ${parsed.languages[0]?.name ?? "Unknown"}\n\n## 🛠 Tech Stack\n${parsed.frameworks.map(f=>`- **${f.name}** ${f.version}`).join("\n")||"- None"}`;
+function genReadme(parsed: ParsedRepository, language: string): string {
+  const autoNote = translate(language, "static", "docs.readmeAutoNote");
+  return `# ${parsed.name} 🚀\n\n${autoNote}\n\n${parsed.totalFiles} files · ${parsed.totalLines.toLocaleString()} lines · ${parsed.languages[0]?.name ?? "Unknown"}\n\n## 🛠 Tech Stack\n${parsed.frameworks.map(f=>`- **${f.name}** ${f.version}`).join("\n")||"- None"}`;
 }
 
-function genApiDocs(parsed: ParsedRepository): string {
+function genApiDocs(parsed: ParsedRepository, language: string): string {
   const routes = parsed.files.flatMap(f => f.routes.map(r => ({ path: r, file: f.path })));
-  if (routes.length === 0) return `# API Reference\nKhông tìm thấy API route.\n`;
-  return `# API Reference\n\n${routes.map(r=>`### \`${r.path}\`\nĐịnh nghĩa tại: \`${r.file}\``).join("\n\n")}\n`;
+  if (routes.length === 0) return translate(language, "static", "docs.apiNoRoutes");
+  const entries = routes.map(r => translate(language, "static", "docs.apiRouteEntry", { path: r.path, file: r.file })).join("\n\n");
+  return `# API Reference\n\n${entries}\n`;
 }
 
 function genArchitectureMd(parsed: ParsedRepository, arch: any): string {
@@ -359,7 +389,7 @@ function genFolderGuide(parsed: ParsedRepository): string {
   return `# Folder Guide\n\n| Folder | Files | Lines | Languages |\n|--------|-------|-------|-----------|\n${dirs.map(([dir, info]) => `| \`${dir}/\` | ${info.files} | ${info.lines.toLocaleString()} | ${Array.from(info.langs).join(", ")} |`).join("\n")}\n`;
 }
 
-function genComponentGuide(parsed: ParsedRepository): string {
+function genComponentGuide(parsed: ParsedRepository, language: string): string {
   // Gom các component theo file (.tsx/.jsx/.vue/.svelte) — dựa trên dữ liệu parse thật.
   const UI_EXTS = [".tsx", ".jsx", ".vue", ".svelte"];
   const rows: { file: string; components: string[]; lines: number }[] = [];
@@ -370,7 +400,7 @@ function genComponentGuide(parsed: ParsedRepository): string {
   }
 
   if (rows.length === 0) {
-    return `# Component Guide\n\nKhông phát hiện UI component nào trong kho mã (không có tệp \`.tsx\`, \`.jsx\`, \`.vue\` hoặc \`.svelte\` chứa component).\n`;
+    return translate(language, "static", "docs.componentNoneFound");
   }
 
   const total = rows.reduce((s, r) => s + r.components.length, 0);
@@ -379,10 +409,12 @@ function genComponentGuide(parsed: ParsedRepository): string {
     .map(r => `| \`${r.components.join("`, `")}\` | ${r.lines.toLocaleString()} | \`${r.file}\` |`)
     .join("\n");
 
-  return `# Component Guide\n\nPhát hiện **${total}** UI component trong **${rows.length}** tệp.\n\n| Component(s) | Dòng | Tệp định nghĩa |\n|--------------|------|-----------------|\n${table}\n`;
+  const summary = translate(language, "static", "docs.componentSummary", { total, files: rows.length });
+  const tableHeader = translate(language, "static", "docs.componentTableHeader");
+  return `# Component Guide\n\n${summary}\n\n${tableHeader}\n${table}\n`;
 }
 
-function genDeploymentGuide(parsed: ParsedRepository): string {
+function genDeploymentGuide(parsed: ParsedRepository, language: string): string {
   // Gói gọn package manager; hiển thị thân thiện khi không xác định được.
   const pm = parsed.packageManager && parsed.packageManager !== "unknown"
     ? parsed.packageManager
@@ -412,11 +444,13 @@ function genDeploymentGuide(parsed: ParsedRepository): string {
   const isNext = fwNames.some(n => /next/i.test(n));
 
   const lines: string[] = [];
-  lines.push("# Deployment Guide");
+  lines.push(translate(language, "static", "docs.deployment.title"));
   lines.push("");
-  lines.push(`Package manager: **${pm ?? "không xác định"}**${pm ? "" : " (không thấy tệp lock — suy luận từ ngôn ngữ)."}`);
+  lines.push(pm
+    ? translate(language, "static", "docs.deployment.packageManagerKnown", { pm })
+    : translate(language, "static", "docs.deployment.packageManagerUnknown"));
   lines.push("");
-  lines.push("## 1. Cài đặt");
+  lines.push(translate(language, "static", "docs.deployment.sectionInstall"));
   if (installCmd) {
     lines.push("");
     lines.push("```bash");
@@ -424,12 +458,12 @@ function genDeploymentGuide(parsed: ParsedRepository): string {
     lines.push("```");
   } else {
     lines.push("");
-    lines.push("- Không tự suy luận được lệnh cài đặt. Vui lòng tham khảo tài liệu của framework/ngôn ngữ tương ứng.");
+    lines.push(translate(language, "static", "docs.deployment.installUnknown"));
   }
 
   if (devCmd) {
     lines.push("");
-    lines.push("## 2. Chạy ở môi trường dev");
+    lines.push(translate(language, "static", "docs.deployment.sectionDev"));
     lines.push("");
     lines.push("```bash");
     lines.push(devCmd);
@@ -437,20 +471,20 @@ function genDeploymentGuide(parsed: ParsedRepository): string {
   }
 
   lines.push("");
-  lines.push("## 3. Build & Triển khai");
+  lines.push(translate(language, "static", "docs.deployment.sectionBuild"));
   if (isNext) {
     lines.push("");
     lines.push("```bash");
-    lines.push("# Build production");
+    lines.push(translate(language, "static", "docs.deployment.buildProduction"));
     lines.push(inferredPm === "bun" ? "bun run build" : inferredPm === "pnpm" ? "pnpm build" : "npm run build");
-    lines.push("# Khởi động production server");
+    lines.push(translate(language, "static", "docs.deployment.startProduction"));
     lines.push(inferredPm === "bun" ? "bun start" : inferredPm === "pnpm" ? "pnpm start" : "npm start");
     lines.push("```");
     lines.push("");
-    lines.push("- Nền tảng khuyến nghị: **Vercel** (`vercel deploy`) hoặc bất kỳ Node host nào (Railway, Render, Fly.io).");
+    lines.push(translate(language, "static", "docs.deployment.vercelRecommend"));
   } else if (hasDocker) {
     lines.push("");
-    lines.push("- Dự án có `Dockerfile`. Build & run bằng Docker:");
+    lines.push(translate(language, "static", "docs.deployment.dockerDetected"));
     lines.push("");
     lines.push("```bash");
     lines.push("docker build -t app .");
@@ -458,7 +492,7 @@ function genDeploymentGuide(parsed: ParsedRepository): string {
     lines.push("```");
   } else {
     lines.push("");
-    lines.push("- Chưa phát hiện `Dockerfile` hay framework build rõ ràng — cấu hình thủ công theo stack của bạn.");
+    lines.push(translate(language, "static", "docs.deployment.dockerMissing"));
   }
 
   return lines.join("\n") + "\n";

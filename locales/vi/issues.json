@@ -1,0 +1,363 @@
+{
+  "security": {
+    "hardcodedOpenAIKey": {
+      "title": "Hardcoded OpenAI API key",
+      "description": "Tìm thấy OpenAI API key hardcoded trong {file}. Credential bị lộ trong source code và git history.",
+      "recommendation": "Chuyển sang env var và rotate ngay. Thêm pre-commit secret scanner."
+    },
+    "hardcodedAnthropicKey": {
+      "title": "Hardcoded Anthropic API key",
+      "description": "Tìm thấy Anthropic API key hardcoded trong {file}. Credential bị lộ trong source code và git history.",
+      "recommendation": "Chuyển sang env var và rotate ngay. Thêm pre-commit secret scanner."
+    },
+    "hardcodedGitHubPat": {
+      "title": "Hardcoded GitHub PAT",
+      "description": "Tìm thấy GitHub PAT hardcoded trong {file}. Credential bị lộ trong source code và git history.",
+      "recommendation": "Chuyển sang env var và rotate ngay. Thêm pre-commit secret scanner."
+    },
+    "hardcodedGoogleKey": {
+      "title": "Hardcoded Google API key",
+      "description": "Tìm thấy Google API key hardcoded trong {file}. Credential bị lộ trong source code và git history.",
+      "recommendation": "Chuyển sang env var và rotate ngay. Thêm pre-commit secret scanner."
+    },
+    "hardcodedAWSKey": {
+      "title": "Hardcoded AWS access key",
+      "description": "Tìm thấy AWS access key hardcoded trong {file}. Credential bị lộ trong source code và git history.",
+      "recommendation": "Chuyển sang env var và rotate ngay. Thêm pre-commit secret scanner."
+    },
+    "embeddedPrivateKey": {
+      "title": "Embedded private key",
+      "description": "Tìm thấy private key embedded trong {file}. Credential bị lộ trong source code và git history.",
+      "recommendation": "Chuyển sang env var và rotate ngay. Thêm pre-commit secret scanner."
+    },
+    "hardcodedCred": {
+      "title": "Hardcoded credential in assignment",
+      "description": "Credential được gán bằng literal ở dòng {line}.",
+      "recommendation": "Dùng process.env cho mọi credential."
+    },
+    "jwtHardcodedSecret": {
+      "title": "JWT signed with hardcoded secret",
+      "description": "JWT được sign bằng literal string.",
+      "recommendation": "Dùng process.env.JWT_SECRET."
+    },
+    "jwtNoneAlgorithm": {
+      "title": "JWT 'none' algorithm",
+      "description": "Algorithm 'none' bỏ qua signature verification.",
+      "recommendation": "Chỉ định allowed algorithms (HS256, RS256). Không bao giờ chấp nhận 'none'."
+    },
+    "weakMd5": {
+      "title": "Weak MD5 hashing",
+      "description": "MD5 đã bị phá vỡ về mặt mã hóa.",
+      "recommendation": "Chuyển sang bcrypt/argon2 với work factor >= 12."
+    },
+    "sqlInjection": {
+      "title": "Potential SQL Injection",
+      "description": "User input được nội suy vào SQL query.",
+      "recommendation": "Dùng parameterized queries. Không bao giờ nội suy user input."
+    },
+    "commandInjection": {
+      "title": "Potential Command Injection",
+      "description": "User input trong shell command.",
+      "recommendation": "Dùng execFile với argument array."
+    },
+    "pathTraversal": {
+      "title": "Potential Path Traversal",
+      "description": "Path chứa '../'.",
+      "recommendation": "Validate paths bằng path.resolve(). Kiểm tra nằm trong allowed dir."
+    },
+    "ssrf": {
+      "title": "Potential SSRF",
+      "description": "Server-side request với URL do user kiểm soát.",
+      "recommendation": "Validate URLs theo allowlist. Block internal IPs."
+    },
+    "xssDangerouslySetInnerHTML": {
+      "title": "Unescaped HTML via dangerouslySetInnerHTML",
+      "description": "Bypass bảo vệ XSS của React.",
+      "recommendation": "Sanitize bằng DOMPurify trước khi render."
+    },
+    "unsafeEval": {
+      "title": "Unsafe eval() usage",
+      "description": "eval() thực thi arbitrary code.",
+      "recommendation": "Thay bằng JSON.parse hoặc safe alternative."
+    },
+    "openRedirect": {
+      "title": "Potential Open Redirect",
+      "description": "Redirect URL từ user input.",
+      "recommendation": "Validate theo allowlist các trusted domains."
+    },
+    "corsWildcard": {
+      "title": "Wildcard CORS origin",
+      "description": "CORS cho phép tất cả origins.",
+      "recommendation": "Restrict theo các trusted origins cụ thể."
+    }
+  },
+  "bugs": {
+    "nullDeref": {
+      "title": "Potential null dereference",
+      "description": "ctx.user được truy cập mà không null check ở dòng {line}.",
+      "recommendation": "Guard: if(!ctx.user) throw new Error('UNAUTHORIZED')"
+    },
+    "missingDeps": {
+      "title": "Missing useEffect dependency array",
+      "description": "useEffect không có dependency array chạy trên mỗi render.",
+      "recommendation": "Thêm dependency array: useEffect(fn, [deps])"
+    },
+    "asyncStateAfterUnmount": {
+      "title": "Async state update after unmount",
+      "description": "async useEffect có thể set state sau khi unmount.",
+      "recommendation": "Dùng AbortController hoặc mounted flag."
+    },
+    "unhandledRejection": {
+      "title": "Unhandled promise rejection",
+      "description": "Promise chain không có .catch().",
+      "recommendation": "Thêm .catch() hoặc dùng try/await/catch."
+    },
+    "looseEquality": {
+      "title": "Loose equality (==)",
+      "description": "== thực hiện type coercion, có thể gây bugs.",
+      "recommendation": "Dùng === cho strict equality."
+    },
+    "consoleLog": {
+      "title": "console.log in production code",
+      "description": "console.log còn sót trong production code.",
+      "recommendation": "Xóa hoặc thay bằng proper logger."
+    },
+    "varInsteadOfLetConst": {
+      "title": "var instead of let/const",
+      "description": "var có function scope, không phải block scope.",
+      "recommendation": "Dùng let hoặc const."
+    },
+    "emptyCatch": {
+      "title": "Empty catch block",
+      "description": "Error bị nuốt âm thầm.",
+      "recommendation": "Log hoặc rethrow error."
+    },
+    "missingAwait": {
+      "title": "Missing await before async call",
+      "description": "Async function được gọi mà không có await — promise có thể không resolve.",
+      "recommendation": "Thêm từ khóa await."
+    },
+    "infiniteLoop": {
+      "title": "Potential infinite loop",
+      "description": "while(true) không có break/return.",
+      "recommendation": "Thêm break condition hoặc giới hạn iterations."
+    },
+    "unusedVariable": {
+      "title": "Unused variable: {name}",
+      "description": "'{name}' được khai báo nhưng không bao giờ dùng.",
+      "recommendation": "Xóa biến không dùng hoặc thêm tiền tố _ nếu cố ý."
+    }
+  },
+  "performance": {
+    "lodashFull": {
+      "title": "Entire lodash imported",
+      "description": "Import toàn bộ lodash ships ~70KB ra client.",
+      "recommendation": "Dùng 'import debounce from lodash/debounce' hoặc chuyển sang es-toolkit."
+    },
+    "moment": {
+      "title": "moment.js is very large",
+      "description": "moment.js thêm ~230KB vào bundle.",
+      "recommendation": "Dùng date-fns hoặc day.js (2KB) thay thế."
+    },
+    "underscore": {
+      "title": "underscore imported",
+      "description": "underscore thêm ~60KB. Dùng lodash/es modules riêng lẻ hoặc native JS.",
+      "recommendation": "Dùng lodash/es modules riêng lẻ hoặc native JS."
+    },
+    "rxjsFull": {
+      "title": "Full rxjs import",
+      "description": "Import toàn bộ rxjs rất lớn. Dùng 'import { map } from rxjs/operators'.",
+      "recommendation": "Dùng 'import { map } from rxjs/operators'."
+    },
+    "antdFull": {
+      "title": "antd full import without tree-shaking",
+      "description": "antd có thể bundle các components không dùng. Dùng babel-plugin-import hoặc individual imports.",
+      "recommendation": "Dùng babel-plugin-import hoặc individual imports."
+    },
+    "barrelFile": {
+      "title": "Barrel file with many re-exports",
+      "description": "index.ts re-export nhiều modules — prevents tree-shaking.",
+      "recommendation": "Split barrel file hoặc dùng direct imports."
+    },
+    "expensiveComputation": {
+      "title": "Expensive computation in render",
+      "description": "Array sort/filter/reduce trong render mà không có useMemo.",
+      "recommendation": "Bọc trong useMemo với proper dependencies."
+    },
+    "handlerNotMemoized": {
+      "title": "Handler not memoized",
+      "description": "Function handler tạo inline và truyền cho child — gây re-renders.",
+      "recommendation": "Bọc handler trong useCallback."
+    },
+    "useStateObjectSpread": {
+      "title": "useState object spread",
+      "description": "Spread state object trên mỗi update là lãng phí. Dùng useState riêng lẻ hoặc useReducer.",
+      "recommendation": "Dùng useState hooks riêng lẻ hoặc useReducer cho complex state."
+    },
+    "multipleInlineStyles": {
+      "title": "Multiple inline style objects",
+      "description": "Dynamic style objects tạo reference mới mỗi render — gây re-renders.",
+      "recommendation": "Chuyển static styles sang CSS classes hoặc useMemo."
+    },
+    "componentNotMemoized": {
+      "title": "Component not wrapped in React.memo",
+      "description": "Exported component sẽ re-render trên mỗi parent render.",
+      "recommendation": "Bọc component trong React.memo() nếu props ổn định."
+    },
+    "largeFile": {
+      "title": "Large component file",
+      "description": "Component file có {count} dòng — nên tách ra.",
+      "recommendation": "Tách thành sub-components nhỏ hơn."
+    },
+    "missingKeyInList": {
+      "title": "Missing key in list render",
+      "description": "React list không có key prop gây re-render inefficiency.",
+      "recommendation": "Thêm key={item.id} cho mỗi list item."
+    },
+    "manyInlineHandlers": {
+      "title": "Many inline handlers",
+      "description": "Nhiều inline onClick handlers gây child re-renders.",
+      "recommendation": "Extract vào useCallback hoặc define ngoài render."
+    },
+    "sequentialAwait": {
+      "title": "Sequential await in loop",
+      "description": "Await trong loop là sequential — chậm cho independent operations.",
+      "recommendation": "Dùng Promise.all() cho parallel execution."
+    },
+    "asyncWithoutAwait": {
+      "title": "Async function without await",
+      "description": "Function khai báo async nhưng không dùng await — unnecessary overhead.",
+      "recommendation": "Xóa từ khóa async hoặc thêm await."
+    },
+    "consoleLogPerf": {
+      "title": "console.log in production",
+      "description": "console.log trong production code waste performance.",
+      "recommendation": "Xóa hoặc dùng conditional logger."
+    },
+    "evalOrNewFunction": {
+      "title": "eval or new Function",
+      "description": "eval() và new Function() chậm và nguy hiểm.",
+      "recommendation": "Thay bằng JSON.parse hoặc safe parser."
+    },
+    "setTimeoutForAnimation": {
+      "title": "setTimeout for animation",
+      "description": "setTimeout không sync với refresh rate — dùng requestAnimationFrame.",
+      "recommendation": "Dùng requestAnimationFrame cho visual updates."
+    },
+    "heavyComponentNotDynamic": {
+      "title": "Heavy component not dynamically imported",
+      "description": "Heavy component import eager — tăng initial bundle.",
+      "recommendation": "Dùng next/dynamic(() => import('...')) cho code-splitting."
+    },
+    "imgInsteadOfNextImage": {
+      "title": "<img> instead of next/image",
+      "description": "Dùng <img> bỏ lỡ automatic optimization, lazy loading, và responsive sizes.",
+      "recommendation": "Dùng next/image <Image> component."
+    },
+    "unnecessaryUseClient": {
+      "title": "Unnecessary use client directive",
+      "description": "File có 'use client' nhưng không dùng client-only hooks hay event handlers.",
+      "recommendation": "Xóa 'use client' để enable server rendering."
+    },
+    "nPlusOne": {
+      "title": "N+1 query pattern",
+      "description": "Database query trong .map() — mỗi iteration hit DB.",
+      "recommendation": "Batch bằng findMany({ where: { id: { in } } }) hoặc dùng includes()."
+    },
+    "unboundedQuery": {
+      "title": "Unbounded query — no pagination",
+      "description": "findMany không có take/skip load toàn bộ records.",
+      "recommendation": "Thêm take/skip cho pagination."
+    },
+    "syncFileIo": {
+      "title": "Sync file I/O in request handler",
+      "description": "readFileSync blocks event loop.",
+      "recommendation": "Dùng fs.promises.readFile thay thế."
+    },
+    "regexpInRender": {
+      "title": "RegExp constructed in render",
+      "description": "Tạo RegExp trong render rất tốn kém.",
+      "recommendation": "Move RegExp ra ngoài component hoặc useMemo."
+    },
+    "setIntervalNoClear": {
+      "title": "setInterval without clearInterval",
+      "description": "setInterval start nhưng không bao giờ clear — memory leak + zombie callbacks.",
+      "recommendation": "Lưu id và call clearInterval trong useEffect cleanup."
+    },
+    "addEventListenerNoRemove": {
+      "title": "addEventListener without removeEventListener",
+      "description": "Event listener được thêm nhưng không bao giờ remove — memory leak qua các re-mounts.",
+      "recommendation": "Call removeEventListener trong useEffect cleanup."
+    },
+    "setTimeoutNoClear": {
+      "title": "setTimeout without clearTimeout in effect",
+      "description": "setTimeout trong useEffect không có cleanup — callback fire sau unmount.",
+      "recommendation": "Return clearTimeout từ useEffect."
+    },
+    "subscriptionNoUnsubscribe": {
+      "title": "Subscription not unsubscribed",
+      "description": "Observable/socket subscription không unsubscribe — leak qua các remounts.",
+      "recommendation": "Dùng takeUntil, hoặc unsubscribe trong useEffect cleanup."
+    },
+    "dangerouslySetInnerHTMLPerf": {
+      "title": "dangerouslySetInnerHTML used",
+      "description": "Bypass React reconciliation và là XSS vector.",
+      "recommendation": "Sanitize bằng DOMPurify hoặc render as React children."
+    },
+    "lazyNoSuspense": {
+      "title": "React.lazy without Suspense boundary",
+      "description": "Lazy component render không có Suspense fallback — sẽ throw nếu chưa ready.",
+      "recommendation": "Bọc lazy components trong <Suspense fallback={...}>."
+    },
+    "nestedTernary": {
+      "title": "Nested ternary expressions",
+      "description": "Nested ternaries khó đọc và có thể gây unnecessary re-evaluation.",
+      "recommendation": "Refactor thành lookup map, switch, hoặc early returns."
+    },
+    "defaultPropObject": {
+      "title": "Object/array default prop value",
+      "description": "Default {} hoặc [] tạo reference mới mỗi render — breaks memoization.",
+      "recommendation": "Dùng null/undefined default hoặc define constant ngoài component."
+    },
+    "largeInlineData": {
+      "title": "Large inline data in component",
+      "description": "Large array/object literal khai báo trong component — re-allocate mỗi render.",
+      "recommendation": "Move static data ra ngoài component hoặc sang separate module."
+    },
+    "useEffectNoDeps": {
+      "title": "useEffect without dependency array",
+      "description": "useEffect không có dependency array chạy sau mỗi render.",
+      "recommendation": "Thêm dependency array [] hoặc [deps]."
+    },
+    "manyUseState": {
+      "title": "Many useState hooks for related state",
+      "description": "{count} useState calls — related state nên được consolidate.",
+      "recommendation": "Dùng useReducer cho related state transitions."
+    },
+    "propsToMemoizedChildNotWrapped": {
+      "title": "Props to memoized child not wrapped",
+      "description": "Truyền inline handlers cho React.memo children defeats memoization.",
+      "recommendation": "Bọc handlers trong useCallback với proper deps."
+    },
+    "jsonParseInRender": {
+      "title": "JSON.parse in render",
+      "description": "Parse JSON trong render chạy mỗi render — tốn kém.",
+      "recommendation": "Parse một lần ngoài component hoặc useMemo."
+    },
+    "stringConcatInLoop": {
+      "title": "String concat in loop",
+      "description": "Build strings với += trong loop là O(n²). Dùng array.push + join.",
+      "recommendation": "Collect vào array và .join() ở cuối."
+    },
+    "layoutThrashing": {
+      "title": "Layout thrashing in loop",
+      "description": "Đọc layout properties trong loop forces sync reflow mỗi iteration.",
+      "recommendation": "Đọc tất cả layout values trước, rồi mới mutate."
+    },
+    "domQueryInRender": {
+      "title": "DOM query in render",
+      "description": "document.querySelector trong render chậm và breaks SSR. Dùng useRef.",
+      "recommendation": "Dùng useRef để access DOM nodes."
+    }
+  }
+}

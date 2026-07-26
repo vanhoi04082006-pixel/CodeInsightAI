@@ -1,0 +1,64 @@
+{
+  "summary": "Repository quy mô {totalFiles} tệp với {totalLines} dòng mã. Phân tích bởi CodeInsight AI cho thấy điểm sức khỏe đạt {overall}/100. Đã phát hiện {secCount} vấn đề bảo mật, {bugCount} bugs logic và {perfCount} điểm nghẽn hiệu năng.",
+  "deadCode": {
+    "reason": "Tệp này không được import ở bất kỳ đâu trong dự án."
+  },
+  "snippet": {
+    "moduleFallback": "Mô-đun chức năng cho {fileName}",
+    "riskDetected": "**Phát hiện rủi ro [{severity}]:** {title}.\n\n💡 **Gợi ý:** {recommendation}",
+    "aiWarningMarker": "AI CẢNH BÁO",
+    "excerptAroundLine": "// Trích đoạn quanh dòng số {line}",
+    "architectureAnalysis": "**Phân tích Kiến trúc:** Tệp có độ phức tạp cao (Điểm Complexity: {complexity}). CodeInsight AI khuyến nghị bạn nên áp dụng nguyên tắc S.O.L.I.D để tách nhỏ các hàm tại đây.",
+    "truncatedNotice": "// ... (đã rút gọn để hiển thị)"
+  },
+  "monetization": {
+    "saas": {
+      "title": "SaaS API / Usage-based tier",
+      "description": "Cung cấp quyền truy cập API có tính phí dựa trên giới hạn request (Stripe Billing)."
+    },
+    "enterprise": {
+      "title": "Gói Enterprise / B2B",
+      "description": "Bổ sung SSO, Audit logs và hỗ trợ riêng cho tổ chức."
+    },
+    "premium": {
+      "title": "Sản phẩm mã nguồn mở trả phí",
+      "description": "Bán các bản Template Premium hoặc module nâng cao mở rộng."
+    }
+  },
+  "roadmap": {
+    "phase1": {
+      "title": "Giai đoạn 1: Vá lỗ hổng bảo mật",
+      "description": "Xử lý {count} cảnh báo bảo mật nguy hiểm (Hardcoded Secrets, Injection)."
+    },
+    "phase2": {
+      "title": "Giai đoạn 2: Tối ưu hiệu năng",
+      "description": "Xử lý {count} vấn đề làm chậm ứng dụng (N+1 Query, Re-render)."
+    },
+    "phase3": {
+      "title": "Giai đoạn 3: Giảm Technical Debt",
+      "description": "Tái cấu trúc các tệp phức tạp, gộp mã trùng lặp và xóa Dead Code."
+    }
+  },
+  "docs": {
+    "readmeAutoNote": "> **Báo cáo tự động bởi CodeInsight AI.**",
+    "apiNoRoutes": "# API Reference\nKhông tìm thấy API route.\n",
+    "apiRouteEntry": "### `{path}`\nĐịnh nghĩa tại: `{file}`",
+    "componentNoneFound": "# Component Guide\n\nKhông phát hiện UI component nào trong kho mã (không có tệp `.tsx`, `.jsx`, `.vue` hoặc `.svelte` chứa component).\n",
+    "componentSummary": "Phát hiện **{total}** UI component trong **{files}** tệp.",
+    "componentTableHeader": "| Component(s) | Dòng | Tệp định nghĩa |\n|--------------|------|-----------------|",
+    "deployment": {
+      "title": "# Deployment Guide",
+      "packageManagerKnown": "Package manager: **{pm}**",
+      "packageManagerUnknown": "Package manager: **không xác định** (không thấy tệp lock — suy luận từ ngôn ngữ).",
+      "sectionInstall": "## 1. Cài đặt",
+      "installUnknown": "- Không tự suy luận được lệnh cài đặt. Vui lòng tham khảo tài liệu của framework/ngôn ngữ tương ứng.",
+      "sectionDev": "## 2. Chạy ở môi trường dev",
+      "sectionBuild": "## 3. Build & Triển khai",
+      "buildProduction": "# Build production",
+      "startProduction": "# Khởi động production server",
+      "vercelRecommend": "- Nền tảng khuyến nghị: **Vercel** (`vercel deploy`) hoặc bất kỳ Node host nào (Railway, Render, Fly.io).",
+      "dockerDetected": "- Dự án có `Dockerfile`. Build & run bằng Docker:",
+      "dockerMissing": "- Chưa phát hiện `Dockerfile` hay framework build rõ ràng — cấu hình thủ công theo stack của bạn."
+    }
+  }
+}

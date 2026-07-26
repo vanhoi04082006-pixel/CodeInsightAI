@@ -1,0 +1,363 @@
+{
+  "security": {
+    "hardcodedOpenAIKey": {
+      "title": "Hardcoded OpenAI API key",
+      "description": "Hardcoded OpenAI API key found in {file}. Credential exposed in source code and git history.",
+      "recommendation": "Move to env var and rotate immediately. Add pre-commit secret scanner."
+    },
+    "hardcodedAnthropicKey": {
+      "title": "Hardcoded Anthropic API key",
+      "description": "Hardcoded Anthropic API key found in {file}. Credential exposed in source code and git history.",
+      "recommendation": "Move to env var and rotate immediately. Add pre-commit secret scanner."
+    },
+    "hardcodedGitHubPat": {
+      "title": "Hardcoded GitHub PAT",
+      "description": "Hardcoded GitHub PAT found in {file}. Credential exposed in source code and git history.",
+      "recommendation": "Move to env var and rotate immediately. Add pre-commit secret scanner."
+    },
+    "hardcodedGoogleKey": {
+      "title": "Hardcoded Google API key",
+      "description": "Hardcoded Google API key found in {file}. Credential exposed in source code and git history.",
+      "recommendation": "Move to env var and rotate immediately. Add pre-commit secret scanner."
+    },
+    "hardcodedAWSKey": {
+      "title": "Hardcoded AWS access key",
+      "description": "Hardcoded AWS access key found in {file}. Credential exposed in source code and git history.",
+      "recommendation": "Move to env var and rotate immediately. Add pre-commit secret scanner."
+    },
+    "embeddedPrivateKey": {
+      "title": "Embedded private key",
+      "description": "Embedded private key found in {file}. Credential exposed in source code and git history.",
+      "recommendation": "Move to env var and rotate immediately. Add pre-commit secret scanner."
+    },
+    "hardcodedCred": {
+      "title": "Hardcoded credential in assignment",
+      "description": "Credential assigned as literal at line {line}.",
+      "recommendation": "Use process.env for all credentials."
+    },
+    "jwtHardcodedSecret": {
+      "title": "JWT signed with hardcoded secret",
+      "description": "JWT signed with literal string.",
+      "recommendation": "Use process.env.JWT_SECRET."
+    },
+    "jwtNoneAlgorithm": {
+      "title": "JWT 'none' algorithm",
+      "description": "'none' algorithm bypasses signature verification.",
+      "recommendation": "Specify allowed algorithms (HS256, RS256). Never accept 'none'."
+    },
+    "weakMd5": {
+      "title": "Weak MD5 hashing",
+      "description": "MD5 is cryptographically broken.",
+      "recommendation": "Migrate to bcrypt/argon2 with work factor >= 12."
+    },
+    "sqlInjection": {
+      "title": "Potential SQL Injection",
+      "description": "User input interpolated into SQL query.",
+      "recommendation": "Use parameterized queries. Never interpolate user input."
+    },
+    "commandInjection": {
+      "title": "Potential Command Injection",
+      "description": "User input in shell command.",
+      "recommendation": "Use execFile with argument array."
+    },
+    "pathTraversal": {
+      "title": "Potential Path Traversal",
+      "description": "Path includes '../'.",
+      "recommendation": "Validate paths with path.resolve(). Verify within allowed dir."
+    },
+    "ssrf": {
+      "title": "Potential SSRF",
+      "description": "Server-side request with user-controlled URL.",
+      "recommendation": "Validate URLs against allowlist. Block internal IPs."
+    },
+    "xssDangerouslySetInnerHTML": {
+      "title": "Unescaped HTML via dangerouslySetInnerHTML",
+      "description": "Bypasses React XSS protection.",
+      "recommendation": "Sanitize with DOMPurify before rendering."
+    },
+    "unsafeEval": {
+      "title": "Unsafe eval() usage",
+      "description": "eval() executes arbitrary code.",
+      "recommendation": "Replace with JSON.parse or safe alternative."
+    },
+    "openRedirect": {
+      "title": "Potential Open Redirect",
+      "description": "Redirect URL from user input.",
+      "recommendation": "Validate against allowlist of trusted domains."
+    },
+    "corsWildcard": {
+      "title": "Wildcard CORS origin",
+      "description": "CORS allows all origins.",
+      "recommendation": "Restrict to specific trusted origins."
+    }
+  },
+  "bugs": {
+    "nullDeref": {
+      "title": "Potential null dereference",
+      "description": "ctx.user accessed without null check at line {line}.",
+      "recommendation": "Guard: if(!ctx.user) throw new Error('UNAUTHORIZED')"
+    },
+    "missingDeps": {
+      "title": "Missing useEffect dependency array",
+      "description": "useEffect without dependency array runs on every render.",
+      "recommendation": "Add dependency array: useEffect(fn, [deps])"
+    },
+    "asyncStateAfterUnmount": {
+      "title": "Async state update after unmount",
+      "description": "async useEffect may set state after unmount.",
+      "recommendation": "Use AbortController or a mounted flag."
+    },
+    "unhandledRejection": {
+      "title": "Unhandled promise rejection",
+      "description": "Promise chain without .catch().",
+      "recommendation": "Add .catch() or use try/await/catch."
+    },
+    "looseEquality": {
+      "title": "Loose equality (==)",
+      "description": "== does type coercion, may cause bugs.",
+      "recommendation": "Use === for strict equality."
+    },
+    "consoleLog": {
+      "title": "console.log in production code",
+      "description": "console.log left in production code.",
+      "recommendation": "Remove or replace with a proper logger."
+    },
+    "varInsteadOfLetConst": {
+      "title": "var instead of let/const",
+      "description": "var has function scope, not block scope.",
+      "recommendation": "Use let or const."
+    },
+    "emptyCatch": {
+      "title": "Empty catch block",
+      "description": "Error silently swallowed.",
+      "recommendation": "Log or rethrow the error."
+    },
+    "missingAwait": {
+      "title": "Missing await before async call",
+      "description": "Async function called without await — promise may not resolve.",
+      "recommendation": "Add await keyword."
+    },
+    "infiniteLoop": {
+      "title": "Potential infinite loop",
+      "description": "while(true) without break/return.",
+      "recommendation": "Add a break condition or limit iterations."
+    },
+    "unusedVariable": {
+      "title": "Unused variable: {name}",
+      "description": "'{name}' is declared but never used.",
+      "recommendation": "Remove the unused variable or prefix with _ if intentional."
+    }
+  },
+  "performance": {
+    "lodashFull": {
+      "title": "Entire lodash imported",
+      "description": "Importing all of lodash ships ~70KB to client.",
+      "recommendation": "Use 'import debounce from lodash/debounce' or switch to es-toolkit."
+    },
+    "moment": {
+      "title": "moment.js is very large",
+      "description": "moment.js adds ~230KB to bundle.",
+      "recommendation": "Use date-fns or day.js (2KB) instead."
+    },
+    "underscore": {
+      "title": "underscore imported",
+      "description": "underscore adds ~60KB. Use individual lodash/es modules or native JS.",
+      "recommendation": "Use individual lodash/es modules or native JS."
+    },
+    "rxjsFull": {
+      "title": "Full rxjs import",
+      "description": "Importing all of rxjs is huge. Use 'import { map } from rxjs/operators'.",
+      "recommendation": "Use 'import { map } from rxjs/operators'."
+    },
+    "antdFull": {
+      "title": "antd full import without tree-shaking",
+      "description": "antd may bundle unused components. Use babel-plugin-import or individual imports.",
+      "recommendation": "Use babel-plugin-import or individual imports."
+    },
+    "barrelFile": {
+      "title": "Barrel file with many re-exports",
+      "description": "index.ts re-exports many modules — prevents tree-shaking.",
+      "recommendation": "Split barrel file or use direct imports."
+    },
+    "expensiveComputation": {
+      "title": "Expensive computation in render",
+      "description": "Array sort/filter/reduce in render without useMemo.",
+      "recommendation": "Wrap in useMemo with proper dependencies."
+    },
+    "handlerNotMemoized": {
+      "title": "Handler not memoized",
+      "description": "Function handler created inline and passed to child — causes re-renders.",
+      "recommendation": "Wrap handler in useCallback."
+    },
+    "useStateObjectSpread": {
+      "title": "useState object spread",
+      "description": "Spreading state object on every update is wasteful. Use separate useState or useReducer.",
+      "recommendation": "Use individual useState hooks or useReducer for complex state."
+    },
+    "multipleInlineStyles": {
+      "title": "Multiple inline style objects",
+      "description": "Dynamic style objects create new references each render — causes re-renders.",
+      "recommendation": "Move static styles to CSS classes or useMemo."
+    },
+    "componentNotMemoized": {
+      "title": "Component not wrapped in React.memo",
+      "description": "Exported component will re-render on every parent render.",
+      "recommendation": "Wrap component in React.memo() if props are stable."
+    },
+    "largeFile": {
+      "title": "Large component file",
+      "description": "Component file has {count} lines — consider splitting.",
+      "recommendation": "Split into smaller sub-components."
+    },
+    "missingKeyInList": {
+      "title": "Missing key in list render",
+      "description": "React list without key prop causes re-render inefficiency.",
+      "recommendation": "Add key={item.id} to each list item."
+    },
+    "manyInlineHandlers": {
+      "title": "Many inline handlers",
+      "description": "Multiple inline onClick handlers cause child re-renders.",
+      "recommendation": "Extract to useCallback or define outside render."
+    },
+    "sequentialAwait": {
+      "title": "Sequential await in loop",
+      "description": "Awaiting inside a loop is sequential — slow for independent operations.",
+      "recommendation": "Use Promise.all() for parallel execution."
+    },
+    "asyncWithoutAwait": {
+      "title": "Async function without await",
+      "description": "Function declared async but doesn't use await — unnecessary overhead.",
+      "recommendation": "Remove async keyword or add await."
+    },
+    "consoleLogPerf": {
+      "title": "console.log in production",
+      "description": "console.log calls in production code waste performance.",
+      "recommendation": "Remove or use a conditional logger."
+    },
+    "evalOrNewFunction": {
+      "title": "eval or new Function",
+      "description": "eval() and new Function() are slow and dangerous.",
+      "recommendation": "Replace with JSON.parse or a safe parser."
+    },
+    "setTimeoutForAnimation": {
+      "title": "setTimeout for animation",
+      "description": "setTimeout is not synced with refresh rate — use requestAnimationFrame.",
+      "recommendation": "Use requestAnimationFrame for visual updates."
+    },
+    "heavyComponentNotDynamic": {
+      "title": "Heavy component not dynamically imported",
+      "description": "Heavy component imported eagerly — increases initial bundle.",
+      "recommendation": "Use next/dynamic(() => import('...')) for code-splitting."
+    },
+    "imgInsteadOfNextImage": {
+      "title": "<img> instead of next/image",
+      "description": "Using <img> misses automatic optimization, lazy loading, and responsive sizes.",
+      "recommendation": "Use next/image <Image> component."
+    },
+    "unnecessaryUseClient": {
+      "title": "Unnecessary use client directive",
+      "description": "File has 'use client' but uses no client-only hooks or event handlers.",
+      "recommendation": "Remove 'use client' to enable server rendering."
+    },
+    "nPlusOne": {
+      "title": "N+1 query pattern",
+      "description": "Database query inside .map() — each iteration hits the DB.",
+      "recommendation": "Batch with findMany({ where: { id: { in } } }) or use includes()."
+    },
+    "unboundedQuery": {
+      "title": "Unbounded query — no pagination",
+      "description": "findMany without take/skip loads all records.",
+      "recommendation": "Add take/skip for pagination."
+    },
+    "syncFileIo": {
+      "title": "Sync file I/O in request handler",
+      "description": "readFileSync blocks the event loop.",
+      "recommendation": "Use fs.promises.readFile instead."
+    },
+    "regexpInRender": {
+      "title": "RegExp constructed in render",
+      "description": "Creating RegExp in render is expensive.",
+      "recommendation": "Move RegExp outside component or useMemo."
+    },
+    "setIntervalNoClear": {
+      "title": "setInterval without clearInterval",
+      "description": "setInterval started but never cleared — memory leak + zombie callbacks.",
+      "recommendation": "Store the id and call clearInterval in useEffect cleanup."
+    },
+    "addEventListenerNoRemove": {
+      "title": "addEventListener without removeEventListener",
+      "description": "Event listener added but never removed — memory leak across re-mounts.",
+      "recommendation": "Call removeEventListener in useEffect cleanup."
+    },
+    "setTimeoutNoClear": {
+      "title": "setTimeout without clearTimeout in effect",
+      "description": "setTimeout in useEffect without cleanup — callback fires after unmount.",
+      "recommendation": "Return clearTimeout from useEffect."
+    },
+    "subscriptionNoUnsubscribe": {
+      "title": "Subscription not unsubscribed",
+      "description": "Observable/socket subscription without unsubscribe — leak across remounts.",
+      "recommendation": "Use takeUntil, or unsubscribe in useEffect cleanup."
+    },
+    "dangerouslySetInnerHTMLPerf": {
+      "title": "dangerouslySetInnerHTML used",
+      "description": "Bypasses React reconciliation and is a XSS vector.",
+      "recommendation": "Sanitize with DOMPurify or render as React children."
+    },
+    "lazyNoSuspense": {
+      "title": "React.lazy without Suspense boundary",
+      "description": "Lazy component rendered without Suspense fallback — will throw if not ready.",
+      "recommendation": "Wrap lazy components in <Suspense fallback={...}>."
+    },
+    "nestedTernary": {
+      "title": "Nested ternary expressions",
+      "description": "Nested ternaries are hard to read and can cause unnecessary re-evaluation.",
+      "recommendation": "Refactor to a lookup map, switch, or early returns."
+    },
+    "defaultPropObject": {
+      "title": "Object/array default prop value",
+      "description": "Default {} or [] creates a new reference each render — breaks memoization.",
+      "recommendation": "Use null/undefined default or define the constant outside the component."
+    },
+    "largeInlineData": {
+      "title": "Large inline data in component",
+      "description": "Large array/object literal declared inside component — re-allocated every render.",
+      "recommendation": "Move static data outside the component or to a separate module."
+    },
+    "useEffectNoDeps": {
+      "title": "useEffect without dependency array",
+      "description": "useEffect without a dependency array runs after every render.",
+      "recommendation": "Add a dependency array [] or [deps]."
+    },
+    "manyUseState": {
+      "title": "Many useState hooks for related state",
+      "description": "{count} useState calls — related state should be consolidated.",
+      "recommendation": "Use useReducer for related state transitions."
+    },
+    "propsToMemoizedChildNotWrapped": {
+      "title": "Props to memoized child not wrapped",
+      "description": "Passing inline handlers to React.memo children defeats memoization.",
+      "recommendation": "Wrap handlers in useCallback with proper deps."
+    },
+    "jsonParseInRender": {
+      "title": "JSON.parse in render",
+      "description": "Parsing JSON in render runs every render — expensive.",
+      "recommendation": "Parse once outside component or useMemo."
+    },
+    "stringConcatInLoop": {
+      "title": "String concat in loop",
+      "description": "Building strings with += in a loop is O(n²). Use array.push + join.",
+      "recommendation": "Collect into an array and .join() at the end."
+    },
+    "layoutThrashing": {
+      "title": "Layout thrashing in loop",
+      "description": "Reading layout properties inside a loop forces sync reflow each iteration.",
+      "recommendation": "Read all layout values first, then mutate."
+    },
+    "domQueryInRender": {
+      "title": "DOM query in render",
+      "description": "document.querySelector in render is slow and breaks SSR. Use useRef.",
+      "recommendation": "Use useRef to access DOM nodes."
+    }
+  }
+}

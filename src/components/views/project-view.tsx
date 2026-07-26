@@ -29,7 +29,6 @@ import { GlassCard, ScoreGauge, GradientText, NeonDivider, SeverityBadge } from 
 import { DependencyGraph } from "@/components/shared/dependency-graph";
 import { CodeGraphView } from "@/components/shared/codegraph-view";
 import { CodeViewer } from "@/components/shared/code-viewer";
-import { AIInsightsTab } from "@/components/project-tabs/ai-insights-tab";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useAppStore } from "@/lib/store";
@@ -38,7 +37,7 @@ import { toast } from "sonner";
 import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
-type Tab = "overview" | "architecture" | "bugs" | "security" | "performance" | "dependencies" | "code" | "docs" | "roadmap" | "codegraph" | "ai-insights";
+type Tab = "overview" | "architecture" | "bugs" | "security" | "performance" | "dependencies" | "code" | "docs" | "roadmap" | "codegraph";
 
 const TABS: { id: Tab; labelKey: string; icon: typeof LayoutGrid }[] = [
   { id: "overview", labelKey: "overview", icon: LayoutGrid },
@@ -49,7 +48,6 @@ const TABS: { id: Tab; labelKey: string; icon: typeof LayoutGrid }[] = [
   { id: "dependencies", labelKey: "dependencies", icon: Boxes },
   { id: "codegraph", labelKey: "codegraph", icon: Network },
   { id: "code", labelKey: "code", icon: FileCode },
-  { id: "ai-insights", labelKey: "ai-insights", icon: Sparkles },
   { id: "docs", labelKey: "docs", icon: FileText },
   { id: "roadmap", labelKey: "roadmap", icon: Rocket },
 ];
@@ -250,9 +248,6 @@ export function ProjectView({ isShared = false }: { isShared?: boolean }) {
           <TabsContent value="code" className="mt-4">
             <CodeTab report={report} />
           </TabsContent>
-          <TabsContent value="ai-insights" className="mt-4">
-            <AIInsightsTab report={report} />
-          </TabsContent>
           <TabsContent value="docs" className="mt-4">
             <DocsTab report={report} />
           </TabsContent>
@@ -268,6 +263,11 @@ export function ProjectView({ isShared = false }: { isShared?: boolean }) {
 /* ---------- Overview ---------- */
 function OverviewTab({ report }: { report: AnalysisReport }) {
   const { t } = useT();
+  const aiPending = useAppStore((s) => s.aiPending);
+  const deep = (report as any).deepAnalysis as any;
+  const aiEnh = (report as any).aiEnhancement as any;
+  const aiExecSummary: string | undefined = deep?.executiveSummary || aiEnh?.aiSummary;
+  const hasAiExec = !!aiExecSummary;
   return (
     <div className="grid gap-4 lg:grid-cols-3">
       <GlassCard strong className="p-6 lg:col-span-1">
@@ -297,8 +297,20 @@ function OverviewTab({ report }: { report: AnalysisReport }) {
       </GlassCard>
 
       <GlassCard className="p-6 lg:col-span-2">
-        <h3 className="text-sm font-semibold">{t("reports", "aiSummary")}</h3>
-        <p className="mt-2 text-sm leading-relaxed text-foreground/85">{report.summary}</p>
+        <div className="flex items-center gap-2">
+          <h3 className="text-sm font-semibold">{t("reports", "aiSummary")}</h3>
+          {hasAiExec && (
+            <span className="flex items-center gap-1 rounded-full bg-violet-500/15 px-2 py-0.5 text-[10px] font-medium text-violet-300">
+              <Sparkles className="h-3 w-3" /> {t("reports", "project.aiEnhanced")}
+            </span>
+          )}
+        </div>
+        <p className="mt-2 text-sm leading-relaxed text-foreground/85">{aiExecSummary || report.summary}</p>
+        {aiPending && (
+          <p className="mt-2 flex items-center gap-1.5 text-[11px] text-amber-300">
+            <Loader2 className="h-3 w-3 animate-spin" /> {t("reports", "project.aiAnalyzing")}
+          </p>
+        )}
         <NeonDivider className="my-4" />
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <Stat label={t("reports", "primaryLanguage")} value={report.primaryLanguage} />
@@ -338,8 +350,57 @@ function OverviewTab({ report }: { report: AnalysisReport }) {
 function ArchitectureTab({ report }: { report: AnalysisReport }) {
   const { t } = useT();
   const a = report.architecture;
+  const deep = (report as any).deepAnalysis as any;
+  const archReview = deep?.architectureReview;
+  const bestPractices = deep?.bestPracticesAudit;
   return (
     <div className="space-y-4">
+      {/* AI Architecture Review — deep analysis (shown above static content when AI is available) */}
+      {archReview && (
+        <GlassCard className="border-violet-500/20 bg-gradient-to-br from-violet-500/[0.05] to-transparent p-6">
+          <div className="flex flex-wrap items-center gap-2">
+            <Network className="h-5 w-5 text-violet-300" />
+            <h3 className="text-lg font-semibold">{t("reports", "aiInsights.archReview")}</h3>
+            <span className="flex items-center gap-1 rounded-full bg-violet-500/15 px-2 py-0.5 text-[10px] font-medium text-violet-300">
+              <Sparkles className="h-3 w-3" /> {t("reports", "project.aiEnhanced")}
+            </span>
+          </div>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-emerald-400">{t("reports", "aiInsights.strengths")}</p>
+              <ul className="mt-1 space-y-1">
+                {archReview.strengths?.map((s: string, i: number) => (
+                  <li key={i} className="flex items-start gap-1.5 text-xs text-foreground/85">
+                    <Check className="mt-0.5 h-3 w-3 shrink-0 text-emerald-400" /> {s}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-rose-400">{t("reports", "aiInsights.weaknesses")}</p>
+              <ul className="mt-1 space-y-1">
+                {archReview.weaknesses?.map((w: string, i: number) => (
+                  <li key={i} className="flex items-start gap-1.5 text-xs text-foreground/85">
+                    <span className="mt-1 h-1 w-1 shrink-0 rounded-full bg-rose-400" /> {w}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+          {archReview.suggestions?.length > 0 && (
+            <div className="mt-4 space-y-2">
+              <p className="text-[10px] uppercase tracking-wider text-violet-300">{t("reports", "aiInsights.suggestions")}</p>
+              {archReview.suggestions.map((s: any, i: number) => (
+                <div key={i} className="rounded-lg border border-white/5 bg-white/[0.02] p-2.5">
+                  <p className="text-xs font-medium">{s.title} <span className="ml-1 text-[9px] text-muted-foreground">({s.effort})</span></p>
+                  <p className="text-[11px] text-muted-foreground">{s.description}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </GlassCard>
+      )}
+
       <GlassCard className="p-6">
         <div className="flex flex-wrap items-center gap-2">
           <Network className="h-5 w-5 text-cyan-300" />
@@ -435,6 +496,46 @@ function ArchitectureTab({ report }: { report: AnalysisReport }) {
           </div>
         </GlassCard>
       )}
+
+      {/* AI Best Practices Audit — deep analysis (Architecture tab) */}
+      {bestPractices && (
+        <GlassCard className="border-violet-500/20 bg-gradient-to-br from-violet-500/[0.05] to-transparent p-6">
+          <div className="flex flex-wrap items-center gap-2">
+            <Network className="h-4 w-4 text-violet-300" />
+            <h4 className="text-sm font-semibold">{t("reports", "aiInsights.bestPractices")} — {bestPractices.framework}</h4>
+            <span className="flex items-center gap-1 rounded-full bg-violet-500/15 px-2 py-0.5 text-[10px] font-medium text-violet-300">
+              <Sparkles className="h-3 w-3" /> {t("reports", "project.aiEnhanced")}
+            </span>
+          </div>
+          <div className="mt-3 flex items-center gap-3">
+            <div className="text-3xl font-bold" style={{ color: bestPractices.score >= 70 ? "#34d399" : bestPractices.score >= 40 ? "#fbbf24" : "#fb7185" }}>
+              {bestPractices.score}
+            </div>
+            <span className="text-xs text-muted-foreground">{t("reports", "aiInsights.scoreMax")}</span>
+          </div>
+          {bestPractices.passed?.length > 0 && (
+            <div className="mt-3">
+              <p className="mb-1 text-[10px] uppercase tracking-wider text-emerald-400">{t("reports", "aiInsights.passed")}</p>
+              <div className="flex flex-wrap gap-1">
+                {bestPractices.passed.map((p: string, i: number) => (
+                  <span key={i} className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] text-emerald-300">✓ {p}</span>
+                ))}
+              </div>
+            </div>
+          )}
+          {bestPractices.failed?.length > 0 && (
+            <div className="mt-3 space-y-2">
+              <p className="mb-1 text-[10px] uppercase tracking-wider text-rose-400">{t("reports", "aiInsights.needsImprovement")}</p>
+              {bestPractices.failed.map((f: any, i: number) => (
+                <div key={i} className="rounded border border-rose-500/10 bg-rose-500/[0.02] p-2">
+                  <p className="text-xs font-medium text-rose-200">{f.practice}</p>
+                  <p className="text-[11px] text-muted-foreground">{f.recommendation}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </GlassCard>
+      )}
     </div>
   );
 }
@@ -456,6 +557,16 @@ function MetricCard({ label, value, hint, tone }: { label: string; value: string
 function IssuesTab({ issues, title, color, report, id }: { issues: Issue[]; title: string; color: string; report: AnalysisReport; id: "bugs" | "security" | "performance" }) {
   const { t } = useT();
   const [expanded, setExpanded] = useState<string | null>(issues[0]?.id ?? null);
+  const deep = (report as any).deepAnalysis as any;
+  // Pick the matching AI deep review list based on the tab id.
+  const aiReviews: any[] | undefined =
+    id === "security" ? deep?.securityReview :
+    id === "performance" ? deep?.performanceReview :
+    deep?.codeQualityReview;
+  const aiTitle =
+    id === "security" ? t("reports", "aiInsights.securityReview") :
+    id === "performance" ? t("reports", "aiInsights.perfReview") :
+    t("reports", "aiInsights.codeQualityReview");
   return (
     <div className="space-y-4">
       <GlassCard className="p-5">
@@ -480,6 +591,47 @@ function IssuesTab({ issues, title, color, report, id }: { issues: Issue[]; titl
           </div>
         </div>
       </GlassCard>
+
+      {/* AI Deep Review — enriches the top issues with root cause + fix code + impact */}
+      {aiReviews && aiReviews.length > 0 && (
+        <GlassCard className="border-violet-500/20 bg-gradient-to-br from-violet-500/[0.05] to-transparent p-5">
+          <div className="flex flex-wrap items-center gap-2">
+            <Sparkles className="h-4 w-4 text-violet-300" />
+            <h4 className="text-sm font-semibold">{aiTitle}</h4>
+            <span className="flex items-center gap-1 rounded-full bg-violet-500/15 px-2 py-0.5 text-[10px] font-medium text-violet-300">
+              <Sparkles className="h-3 w-3" /> {t("reports", "project.aiEnhanced")}
+            </span>
+          </div>
+          <div className="mt-3 space-y-3">
+            {aiReviews.map((r: any, i: number) => (
+              <div key={i} className="rounded-lg border border-violet-500/15 bg-violet-500/[0.03] p-3">
+                <p className="text-sm font-medium text-violet-100">{r.issue}</p>
+                {r.rootCause && (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    <span className="font-medium text-foreground/80">{t("reports", "aiInsights.rootCause")}:</span> {r.rootCause}
+                  </p>
+                )}
+                {r.impact && (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    <span className="font-medium text-foreground/80">{t("reports", "aiInsights.impact")}:</span> {r.impact}
+                  </p>
+                )}
+                {r.expectedImprovement && (
+                  <p className="mt-1 text-xs text-emerald-300">
+                    <span className="font-medium">{t("reports", "aiInsights.expected")}:</span> {r.expectedImprovement}
+                  </p>
+                )}
+                {r.fixCode && (
+                  <div className="mt-2">
+                    <p className="mb-1 text-[10px] font-medium uppercase tracking-wider text-cyan-300">{t("reports", "aiInsights.fixCode")}</p>
+                    <pre className="overflow-x-auto rounded-md bg-black/40 p-2 text-[10px] font-mono text-emerald-300"><code>{r.fixCode}</code></pre>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </GlassCard>
+      )}
 
       {/* If no issues and this is Performance tab, show positive findings */}
       {issues.length === 0 && id === "performance" && report.perfPositiveFindings && report.perfPositiveFindings.length > 0 && (
@@ -560,6 +712,8 @@ function IssuesTab({ issues, title, color, report, id }: { issues: Issue[]; titl
 /* ---------- Dependencies ---------- */
 function DependenciesTab({ report }: { report: AnalysisReport }) {
   const { t } = useT();
+  const deep = (report as any).deepAnalysis as any;
+  const aiDuplicates: any[] | undefined = deep?.duplicateAnalysis;
   return (
     <div className="space-y-4">
       <GlassCard className="p-5">
@@ -572,6 +726,46 @@ function DependenciesTab({ report }: { report: AnalysisReport }) {
         </p>
       </GlassCard>
       <DependencyGraph report={report} />
+
+      {/* AI Duplicate Analysis — deep analysis (enriches the static duplicate detection) */}
+      {aiDuplicates && aiDuplicates.length > 0 && (
+        <GlassCard className="border-violet-500/20 bg-gradient-to-br from-violet-500/[0.05] to-transparent p-5">
+          <div className="flex flex-wrap items-center gap-2">
+            <Copy className="h-4 w-4 text-violet-300" />
+            <h4 className="text-sm font-semibold">{t("reports", "aiInsights.duplicateAnalysis")}</h4>
+            <span className="flex items-center gap-1 rounded-full bg-violet-500/15 px-2 py-0.5 text-[10px] font-medium text-violet-300">
+              <Sparkles className="h-3 w-3" /> {t("reports", "project.aiEnhanced")}
+            </span>
+          </div>
+          <div className="mt-3 space-y-2">
+            {aiDuplicates.map((d: any, i: number) => (
+              <div key={i} className="rounded-lg border border-violet-500/15 bg-violet-500/[0.03] p-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded bg-violet-500/15 px-1.5 py-0.5 text-[9px] font-bold uppercase text-violet-300">{d.type}</span>
+                  {d.estimatedLinesSaved ? (
+                    <span className="ml-auto text-[10px] text-emerald-300">{t("reports", "aiInsights.estimatedLinesSaved")}: {d.estimatedLinesSaved}</span>
+                  ) : null}
+                </div>
+                {d.files?.length > 0 && (
+                  <div className="mt-1.5 space-y-0.5">
+                    {d.files.map((f: string, j: number) => (
+                      <p key={j} className="truncate pl-3 font-mono text-[10px] text-muted-foreground">{f}</p>
+                    ))}
+                  </div>
+                )}
+                {d.description && (
+                  <p className="mt-1 text-xs text-muted-foreground">{d.description}</p>
+                )}
+                {d.recommendation && (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    <span className="font-medium text-foreground/80">{t("reports", "aiInsights.recommendation")}:</span> {d.recommendation}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        </GlassCard>
+      )}
 
       {/* Dead code + duplicates */}
       <div className="grid gap-4 lg:grid-cols-2">
@@ -772,39 +966,111 @@ function DocsTab({ report }: { report: AnalysisReport }) {
 /* ---------- Roadmap ---------- */
 function RoadmapTab({ report }: { report: AnalysisReport }) {
   const { t } = useT();
+  const deep = (report as any).deepAnalysis as any;
+  const aiRoadmap: any[] | undefined = deep?.roadmap;
+  const aiPriorities: any[] | undefined = deep?.priorities;
+  const hasAi = !!aiRoadmap || !!aiPriorities;
   return (
     <div className="space-y-4">
-      <div className="grid gap-4 lg:grid-cols-2">
-        <GlassCard className="p-5">
-          <div className="flex items-center gap-2">
-            <Rocket className="h-5 w-5 text-cyan-300" />
-            <h3 className="text-lg font-semibold">{t("reports", "featureRoadmap")}</h3>
+      {/* AI Priorities — deep analysis (full width, shown above the roadmap grid) */}
+      {aiPriorities && aiPriorities.length > 0 && (
+        <GlassCard className="border-violet-500/20 bg-gradient-to-br from-violet-500/[0.05] to-transparent p-5">
+          <div className="flex flex-wrap items-center gap-2">
+            <Zap className="h-4 w-4 text-violet-300" />
+            <h3 className="text-lg font-semibold">{t("reports", "aiInsights.priorities")}</h3>
+            <span className="flex items-center gap-1 rounded-full bg-violet-500/15 px-2 py-0.5 text-[10px] font-medium text-violet-300">
+              <Sparkles className="h-3 w-3" /> {t("reports", "project.aiEnhanced")}
+            </span>
           </div>
           <div className="mt-3 space-y-2">
-            {report.roadmap.map((r, i) => (
+            {aiPriorities.map((p: any, i: number) => (
               <motion.div
                 key={i}
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05 }}
-                className="rounded-xl border border-white/5 bg-white/[0.02] p-3"
+                className="flex items-start gap-2 rounded-lg border border-violet-500/15 bg-violet-500/[0.03] p-3"
               >
-                <div className="flex items-center gap-2">
-                  <span
-                    className={cn(
-                      "rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase",
-                      r.priority === "high" ? "bg-rose-400/15 text-rose-400" : r.priority === "medium" ? "bg-amber-400/15 text-amber-400" : "bg-cyan-400/15 text-cyan-300"
-                    )}
-                  >
-                    {r.priority}
-                  </span>
-                  <span className="text-[10px] uppercase text-muted-foreground">{r.category}</span>
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-violet-500/20 text-[10px] font-bold text-violet-300">{i + 1}</span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium">{p.issue}</p>
+                  {p.businessImpact && (
+                    <p className="mt-0.5 text-[11px] text-muted-foreground">
+                      <span className="font-medium text-foreground/80">{t("reports", "aiInsights.businessImpact")}:</span> {p.businessImpact}
+                    </p>
+                  )}
+                  {p.recommendation && (
+                    <p className="mt-0.5 text-[11px] text-muted-foreground">
+                      <span className="font-medium text-foreground/80">{t("reports", "aiInsights.recommendation")}:</span> {p.recommendation}
+                    </p>
+                  )}
                 </div>
-                <p className="mt-1.5 text-sm font-medium">{r.title}</p>
-                <p className="mt-0.5 text-xs text-muted-foreground">{r.description}</p>
               </motion.div>
             ))}
           </div>
+        </GlassCard>
+      )}
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        {/* AI Roadmap (replaces static when available) / Feature Roadmap (static fallback) */}
+        <GlassCard className={hasAi && aiRoadmap?.length ? "border-violet-500/20 bg-gradient-to-br from-violet-500/[0.05] to-transparent p-5" : "p-5"}>
+          <div className="flex flex-wrap items-center gap-2">
+            <Rocket className="h-5 w-5 text-cyan-300" />
+            <h3 className="text-lg font-semibold">{aiRoadmap?.length ? t("reports", "aiInsights.roadmap") : t("reports", "featureRoadmap")}</h3>
+            {aiRoadmap?.length ? (
+              <span className="flex items-center gap-1 rounded-full bg-violet-500/15 px-2 py-0.5 text-[10px] font-medium text-violet-300">
+                <Sparkles className="h-3 w-3" /> {t("reports", "project.aiEnhanced")}
+              </span>
+            ) : null}
+          </div>
+          {aiRoadmap && aiRoadmap.length > 0 ? (
+            <div className="mt-3 space-y-3">
+              {aiRoadmap.map((phase: any, i: number) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.05 }}
+                  className="rounded-xl border border-cyan-500/15 bg-cyan-500/[0.03] p-3"
+                >
+                  <p className="text-xs font-semibold text-cyan-200">{phase.phase}</p>
+                  <ul className="mt-1 space-y-0.5">
+                    {phase.tasks?.map((task: string, j: number) => (
+                      <li key={j} className="flex items-start gap-1 text-[11px] text-muted-foreground">
+                        <span className="mt-0.5 text-cyan-300">→</span> {task}
+                      </li>
+                    ))}
+                  </ul>
+                </motion.div>
+              ))}
+            </div>
+          ) : (
+            <div className="mt-3 space-y-2">
+              {report.roadmap.map((r, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.05 }}
+                  className="rounded-xl border border-white/5 bg-white/[0.02] p-3"
+                >
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={cn(
+                        "rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase",
+                        r.priority === "high" ? "bg-rose-400/15 text-rose-400" : r.priority === "medium" ? "bg-amber-400/15 text-amber-400" : "bg-cyan-400/15 text-cyan-300"
+                      )}
+                    >
+                      {r.priority}
+                    </span>
+                    <span className="text-[10px] uppercase text-muted-foreground">{r.category}</span>
+                  </div>
+                  <p className="mt-1.5 text-sm font-medium">{r.title}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">{r.description}</p>
+                </motion.div>
+              ))}
+            </div>
+          )}
         </GlassCard>
 
         <div className="space-y-4">

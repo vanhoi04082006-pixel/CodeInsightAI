@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
     const body = await req.json();
-    const { repoUrl, files } = body as { repoUrl: string; files?: { path: string; content: string }[] };
+    const { repoUrl, files, language } = body as { repoUrl: string; files?: { path: string; content: string }[]; language?: string };
 
     if (!repoUrl) return NextResponse.json({ error: "repoUrl is required" }, { status: 400 });
 
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
       const result = parseRepository(parsedUrl.url, parsedUrl.owner, parsedUrl.name, parsedUrl.branch, files);
 
       const { analyzeParsedRepository } = await import("@/lib/analysis-engine-v2");
-      const report = analyzeParsedRepository(result, files);
+      const report = analyzeParsedRepository(result, files, language || "en");
 
       const created = await db.analysis.create({
         data: {

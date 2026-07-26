@@ -162,6 +162,9 @@ class RepositoryAnalystAgent extends BaseAgent {
     const _provider: AIProviderConfig | undefined = input.provider as AIProviderConfig | undefined;
     const ghToken: string | null =
       typeof input.githubToken === "string" && input.githubToken.length > 0 ? input.githubToken : null;
+    // Language for static analysis report content (defaults to English).
+    const language: string =
+      typeof input.language === "string" ? input.language : "en";
 
     // ── Fast path: caller already supplied an analysis report ──────────────
     const preSupplied = input.analysisReport as AnalysisReport | undefined;
@@ -230,7 +233,7 @@ class RepositoryAnalystAgent extends BaseAgent {
         branch,
         files,
       );
-      report = analyzeParsedRepository(parsedRepo, files);
+      report = analyzeParsedRepository(parsedRepo, files, language);
     } catch (err: unknown) {
       if (signal.aborted) {
         return {

@@ -166,7 +166,7 @@ export async function POST(req: NextRequest) {
     let report: AnalysisReport;
     let parsedRepo: any;
     try {
-      const result = await fetchAndAnalyzeFromGitHub(parsed.owner, parsed.name, ghToken);
+      const result = await fetchAndAnalyzeFromGitHub(parsed.owner, parsed.name, ghToken, language);
       report = result.report;
       parsedRepo = result.parsedRepo;
     } catch (fetchErr: any) {
@@ -294,7 +294,7 @@ async function runAIAnalysisInBackground(
 }
 
 // ── Fetch + parse + analyze from GitHub ──
-async function fetchAndAnalyzeFromGitHub(owner: string, repo: string, ghToken: string | null = null) {
+async function fetchAndAnalyzeFromGitHub(owner: string, repo: string, ghToken: string | null = null, language: string = "en") {
   let fileContents: { path: string; content: string }[] = [];
   let branch = "main";
 
@@ -349,7 +349,7 @@ async function fetchAndAnalyzeFromGitHub(owner: string, repo: string, ghToken: s
   const { parseRepository } = await import("@/lib/repo-parser");
   const { analyzeParsedRepository } = await import("@/lib/analysis-engine-v2");
   const parsedRepo = parseRepository(`https://github.com/${owner}/${repo}`, owner, repo, branch, fileContents);
-  const report = analyzeParsedRepository(parsedRepo, fileContents);
+  const report = analyzeParsedRepository(parsedRepo, fileContents, language);
   return { report, parsedRepo };
 }
 

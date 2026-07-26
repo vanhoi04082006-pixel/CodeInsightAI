@@ -1,0 +1,64 @@
+{
+  "summary": "Repository of {totalFiles} files with {totalLines} lines of code. CodeInsight AI analysis shows a health score of {overall}/100. Found {secCount} security issues, {bugCount} logic bugs, and {perfCount} performance bottlenecks.",
+  "deadCode": {
+    "reason": "This file is not imported anywhere in the project."
+  },
+  "snippet": {
+    "moduleFallback": "Functional module for {fileName}",
+    "riskDetected": "**Detected [{severity}] risk:** {title}.\n\n💡 **Suggestion:** {recommendation}",
+    "aiWarningMarker": "AI WARNING",
+    "excerptAroundLine": "// Excerpt around line {line}",
+    "architectureAnalysis": "**Architecture Analysis:** File has high complexity (Complexity score: {complexity}). CodeInsight AI recommends applying the S.O.L.I.D principles to split the functions here.",
+    "truncatedNotice": "// ... (truncated for display)"
+  },
+  "monetization": {
+    "saas": {
+      "title": "SaaS API / Usage-based tier",
+      "description": "Offer paid API access with request-limit billing (Stripe Billing)."
+    },
+    "enterprise": {
+      "title": "Enterprise / B2B package",
+      "description": "Add SSO, Audit logs, and dedicated support for organizations."
+    },
+    "premium": {
+      "title": "Paid open-source product",
+      "description": "Sell Premium Templates or advanced extension modules."
+    }
+  },
+  "roadmap": {
+    "phase1": {
+      "title": "Phase 1: Patch security holes",
+      "description": "Address {count} critical security alerts (Hardcoded Secrets, Injection)."
+    },
+    "phase2": {
+      "title": "Phase 2: Optimize performance",
+      "description": "Address {count} issues slowing the application (N+1 Query, Re-render)."
+    },
+    "phase3": {
+      "title": "Phase 3: Reduce Technical Debt",
+      "description": "Refactor complex files, merge duplicated code, and remove Dead Code."
+    }
+  },
+  "docs": {
+    "readmeAutoNote": "> **Auto-generated report by CodeInsight AI.**",
+    "apiNoRoutes": "# API Reference\nNo API routes found.\n",
+    "apiRouteEntry": "### `{path}`\nDefined at: `{file}`",
+    "componentNoneFound": "# Component Guide\n\nNo UI components detected in the repository (no `.tsx`, `.jsx`, `.vue` or `.svelte` file containing components).\n",
+    "componentSummary": "Detected **{total}** UI components in **{files}** files.",
+    "componentTableHeader": "| Component(s) | Lines | File |\n|--------------|-------|------|",
+    "deployment": {
+      "title": "# Deployment Guide",
+      "packageManagerKnown": "Package manager: **{pm}**",
+      "packageManagerUnknown": "Package manager: **unknown** (no lock file found — inferred from language).",
+      "sectionInstall": "## 1. Install",
+      "installUnknown": "- Could not infer the install command. Please refer to the documentation of the relevant framework/language.",
+      "sectionDev": "## 2. Run in dev mode",
+      "sectionBuild": "## 3. Build & Deploy",
+      "buildProduction": "# Build production",
+      "startProduction": "# Start production server",
+      "vercelRecommend": "- Recommended platform: **Vercel** (`vercel deploy`) or any Node host (Railway, Render, Fly.io).",
+      "dockerDetected": "- Project has a `Dockerfile`. Build & run with Docker:",
+      "dockerMissing": "- No `Dockerfile` or clear build framework detected — configure manually for your stack."
+    }
+  }
+}
