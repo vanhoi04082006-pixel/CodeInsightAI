@@ -226,5 +226,15 @@
     },
     "regressions": "Thoái lui",
     "improvements": "Cải thiện"
+  },
+  "refactorRoadmap": {
+    "title": "Tuần tự tái cấu trúc",
+    "loading": "Đang xây dựng roadmap...",
+    "totalEffort": "Tổng nỗ lực",
+    "parallelSpeedup": "Tăng tốc song song",
+    "graphValidated": "Đã xác thực bằng graph",
+    "unblocks": "Mở khóa",
+    "confidence": "Độ tin cậy",
+    "canParallelize": "Có thể song song"
   }
 }

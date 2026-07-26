@@ -226,5 +226,15 @@
     },
     "regressions": "Regressions",
     "improvements": "Improvements"
+  },
+  "refactorRoadmap": {
+    "title": "Refactor Sequencing",
+    "loading": "Building graph-validated roadmap...",
+    "totalEffort": "Total effort",
+    "parallelSpeedup": "Parallel speedup",
+    "graphValidated": "Graph-validated",
+    "unblocks": "Unblocks",
+    "confidence": "Confidence",
+    "canParallelize": "Can parallelize"
   }
 }

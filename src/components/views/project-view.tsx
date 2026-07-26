@@ -53,6 +53,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useAppStore } from "@/lib/store";
 import type { AnalysisReport, AnalysisDiffResult, Issue, CodeSnippet } from "@/lib/types";
 import type { RegressionReport } from "@/lib/regression-detector";
+import type { RefactorRoadmap } from "@/lib/refactor-roadmap";
 import { toast } from "sonner";
 import { useT, useI18nStore } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -1379,6 +1380,46 @@ function RoadmapTab({ report }: { report: AnalysisReport }) {
   const sequencerWarnings: string[] | undefined = (report as any)._sequencerWarnings;
   const hasAi = !!aiRoadmap || !!aiPriorities;
 
+  // Phase 2 (P2.5) — graph-validated refactor sequencing.
+  // Loads the RefactorRoadmap on mount when an active analysis exists; the
+  // card renders BELOW the AI Priorities card so the user sees the AI's
+  // claims first, then the graph-validated version with confidence badges.
+  // Uses the project's idiomatic async-IIFE pattern (matches trends-card.tsx)
+  // so setState calls happen in async continuations — not in the synchronous
+  // effect body — to satisfy the `react-hooks/set-state-in-effect` lint rule.
+  const activeAnalysisId = useAppStore((s) => s.activeAnalysisId);
+  const [refactorRoadmap, setRefactorRoadmap] = useState<RefactorRoadmap | null>(null);
+  const [roadmapLoading, setRoadmapLoading] = useState(false);
+
+  useEffect(() => {
+    if (!activeAnalysisId) return;
+    let cancelled = false;
+    (async () => {
+      setRoadmapLoading(true);
+      try {
+        const r = await fetch(
+          `/api/analysis/refactor-roadmap?analysisId=${activeAnalysisId}`,
+        );
+        if (cancelled) return;
+        if (!r.ok) {
+          setRefactorRoadmap(null);
+          return;
+        }
+        const data = (await r.json()) as RefactorRoadmap;
+        if (cancelled) return;
+        setRefactorRoadmap(data);
+      } catch {
+        if (cancelled) return;
+        setRefactorRoadmap(null);
+      } finally {
+        if (!cancelled) setRoadmapLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeAnalysisId]);
+
   // P2.3 — sort priorities by releasePhase asc, then roiScore desc.
   // (The sequencer already does this, but we re-sort defensively in case
   // the report was generated before the sequencer existed.)
@@ -1550,6 +1591,134 @@ function RoadmapTab({ report }: { report: AnalysisReport }) {
                   )}
                 </div>
               </motion.div>
+            ))}
+          </div>
+        </GlassCard>
+      )}
+
+      {/* Phase 2 (P2.5) — Refactor Sequencing card.
+          Graph-validated phase ordering. Renders BELOW the AI Priorities card
+          so the user sees the AI's claimed deps first, then the graph-validated
+          version with confidence badges (high=graph, medium=AI-only, low=none).
+          Fetches /api/analysis/refactor-roadmap on mount. */}
+      {roadmapLoading && (
+        <GlassCard className="p-5">
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span className="text-xs">{t("reports", "refactorRoadmap.loading")}</span>
+          </div>
+        </GlassCard>
+      )}
+
+      {refactorRoadmap && !roadmapLoading && (
+        <GlassCard className="border-violet-500/20 bg-gradient-to-br from-violet-500/[0.04] to-transparent p-5">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Network className="h-5 w-5 text-violet-300" />
+              <h3 className="text-lg font-semibold">{t("reports", "refactorRoadmap.title")}</h3>
+              <span className="rounded-full bg-violet-500/15 px-2 py-0.5 text-[10px] text-violet-300">
+                ✨ {t("reports", "refactorRoadmap.graphValidated")}
+              </span>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-muted-foreground">{t("reports", "refactorRoadmap.totalEffort")}</p>
+              <p className="text-lg font-bold tabular-nums">{refactorRoadmap.totalEffortHours}h</p>
+            </div>
+          </div>
+
+          {refactorRoadmap.warnings.length > 0 && (
+            <div className="mb-3 rounded-lg border border-amber-500/15 bg-amber-500/[0.03] p-2">
+              {refactorRoadmap.warnings.map((w, i) => (
+                <p key={i} className="text-xs text-amber-300">⚠ {w}</p>
+              ))}
+            </div>
+          )}
+
+          <div className="flex items-center gap-2 mb-3 text-xs text-muted-foreground">
+            <span>
+              {t("reports", "refactorRoadmap.parallelSpeedup")}:{" "}
+              <strong className="text-cyan-300 tabular-nums">{refactorRoadmap.parallelSpeedupFactor}x</strong>
+            </span>
+          </div>
+
+          {/* Phase columns (P0 → P3) */}
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+            {refactorRoadmap.phases.map((phase) => (
+              <div
+                key={phase.phase}
+                className="rounded-lg border border-white/5 bg-white/[0.02] p-3"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span
+                    className={cn(
+                      "rounded-md px-1.5 py-0.5 text-[10px] font-bold",
+                      phase.phase === "P0"
+                        ? "bg-rose-400/15 text-rose-400"
+                        : phase.phase === "P1"
+                          ? "bg-amber-400/15 text-amber-400"
+                          : phase.phase === "P2"
+                            ? "bg-cyan-400/15 text-cyan-300"
+                            : "bg-white/10 text-muted-foreground",
+                    )}
+                  >
+                    {phase.phase}
+                  </span>
+                  {phase.canParallelize && (
+                    <span
+                      className="text-[9px] text-emerald-400"
+                      title={t("reports", "refactorRoadmap.canParallelize")}
+                    >
+                      ⚡ parallel
+                    </span>
+                  )}
+                </div>
+                <p className="text-[10px] text-muted-foreground mb-2">
+                  {phase.title} · {phase.totalEffortHours}h
+                </p>
+
+                {phase.issues.map((iss, i) => (
+                  <div
+                    key={i}
+                    className="mb-2 rounded border border-white/5 bg-black/20 p-2 text-xs"
+                  >
+                    <p className="font-medium leading-tight">{iss.issue}</p>
+                    <code className="block text-[10px] text-muted-foreground mt-0.5 truncate" title={iss.file}>
+                      {iss.file}
+                    </code>
+                    <div className="flex items-center gap-1 mt-1 flex-wrap">
+                      <span className="text-[10px] tabular-nums">⏱️ {iss.effortHours}h</span>
+                      <span
+                        className={cn(
+                          "rounded px-1 text-[9px] font-medium",
+                          iss.confidence === "high"
+                            ? "bg-emerald-500/15 text-emerald-300"
+                            : iss.confidence === "medium"
+                              ? "bg-amber-500/15 text-amber-300"
+                              : "bg-white/10 text-muted-foreground",
+                        )}
+                        title={t("reports", "refactorRoadmap.confidence")}
+                      >
+                        {iss.confidence}
+                      </span>
+                      {iss.graphValidatedDeps.length > 0 && (
+                        <span
+                          className="text-[9px] text-violet-300"
+                          title={iss.graphValidatedDeps
+                            .map((d) => `${d.from}→${d.to} (${d.edgeType})`)
+                            .join(", ")}
+                        >
+                          🔗 {iss.graphValidatedDeps.length}
+                        </span>
+                      )}
+                    </div>
+                    {iss.unblocks.length > 0 && (
+                      <p className="text-[9px] text-cyan-300 mt-1 leading-tight">
+                        {t("reports", "refactorRoadmap.unblocks")}: {iss.unblocks.join(", ")}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
             ))}
           </div>
         </GlassCard>
