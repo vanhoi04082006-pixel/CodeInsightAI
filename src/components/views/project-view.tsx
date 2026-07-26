@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   LayoutGrid,
   Network,
@@ -16,6 +16,7 @@ import {
   Sparkles,
   FileCode,
   TrendingUp,
+  TrendingDown,
   DollarSign,
   ExternalLink,
   Copy,
@@ -30,6 +31,7 @@ import {
   Target,
   GitFork,
   AlertTriangle,
+  GitCompare,
 } from "lucide-react";
 import { GlassCard, ScoreGauge, GradientText, NeonDivider, SeverityBadge } from "@/components/shared/ui";
 import { DependencyGraph } from "@/components/shared/dependency-graph";
@@ -49,12 +51,13 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useAppStore } from "@/lib/store";
-import type { AnalysisReport, Issue, CodeSnippet } from "@/lib/types";
+import type { AnalysisReport, AnalysisDiffResult, Issue, CodeSnippet } from "@/lib/types";
+import type { RegressionReport } from "@/lib/regression-detector";
 import { toast } from "sonner";
 import { useT, useI18nStore } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
-type Tab = "overview" | "architecture" | "bugs" | "security" | "performance" | "dependencies" | "code" | "docs" | "roadmap" | "codegraph";
+type Tab = "overview" | "architecture" | "bugs" | "security" | "performance" | "dependencies" | "code" | "docs" | "roadmap" | "codegraph" | "timeline";
 
 const TABS: { id: Tab; labelKey: string; icon: typeof LayoutGrid }[] = [
   { id: "overview", labelKey: "overview", icon: LayoutGrid },
@@ -67,6 +70,7 @@ const TABS: { id: Tab; labelKey: string; icon: typeof LayoutGrid }[] = [
   { id: "code", labelKey: "code", icon: FileCode },
   { id: "docs", labelKey: "docs", icon: FileText },
   { id: "roadmap", labelKey: "roadmap", icon: Rocket },
+  { id: "timeline", labelKey: "timeline.title", icon: GitCompare },
 ];
 
 export function ProjectView({ isShared = false }: { isShared?: boolean }) {
@@ -242,7 +246,7 @@ export function ProjectView({ isShared = false }: { isShared?: boolean }) {
           </div>
 
           <TabsContent value="overview" className="mt-4">
-            <OverviewTab report={report} />
+            <OverviewTab report={report} onJumpToTimeline={() => setTab("timeline")} />
           </TabsContent>
           <TabsContent value="architecture" className="mt-4">
             <ArchitectureTab report={report} />
@@ -271,6 +275,9 @@ export function ProjectView({ isShared = false }: { isShared?: boolean }) {
           <TabsContent value="roadmap" className="mt-4">
             <RoadmapTab report={report} />
           </TabsContent>
+          <TabsContent value="timeline" className="mt-4">
+            <TimelineTab report={report} />
+          </TabsContent>
         </Tabs>
       </div>
     </div>
@@ -278,16 +285,150 @@ export function ProjectView({ isShared = false }: { isShared?: boolean }) {
 }
 
 /* ---------- Overview ---------- */
-function OverviewTab({ report }: { report: AnalysisReport }) {
+function OverviewTab({ report, onJumpToTimeline }: { report: AnalysisReport; onJumpToTimeline?: () => void }) {
   const { t } = useT();
   const aiPending = useAppStore((s) => s.aiPending);
+  const activeAnalysisId = useAppStore((s) => s.activeAnalysisId);
   const deep = (report as any).deepAnalysis as any;
   const aiEnh = (report as any).aiEnhancement as any;
   const aiExecSummary: string | undefined = deep?.executiveSummary || aiEnh?.aiSummary;
   const hasAiExec = !!aiExecSummary;
   const aiOverview = deep?.aiOverview;
+
+  // Phase 2 (P2.2 + P2.4) — "What changed since last scan" banner.
+  // Loads the previous-vs-current diff on mount and classifies it into a
+  // RegressionReport (verdict + regressions[] + improvements[] + headline).
+  // Renders only when a previous analysis exists (the API returns
+  // `{ previousAnalysis: null }` when there's no prior scan).
+  const [regressions, setRegressions] = useState<RegressionReport | null>(null);
+
+  useEffect(() => {
+    if (!activeAnalysisId) return;
+    let cancelled = false;
+    fetch(`/api/analysis/regressions?analysisId=${activeAnalysisId}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancelled) return;
+        // Endpoint returns either { previousAnalysis: null } (no prior scan)
+        // or a full RegressionReport (which always carries `comparedTo`).
+        if (data && data.comparedTo) setRegressions(data as RegressionReport);
+      })
+      .catch(() => {
+        /* silent — banner just doesn't render */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeAnalysisId]);
+
   return (
     <div className="grid gap-4 lg:grid-cols-3">
+      {/* What-changed banner (Phase 2 — P2.4). Renders only when a previous
+          analysis of this repo exists. Color-coded by verdict:
+            - regressed  → rose border + bg tint
+            - improved   → emerald border + bg tint
+            - neutral    → cyan border + bg tint */}
+      {regressions && regressions.comparedTo?.analysisId && (
+        <GlassCard
+          className={cn(
+            "p-4 lg:col-span-3 border-2",
+            regressions.verdict === "regressed"
+              ? "border-rose-500/40 bg-rose-500/[0.05]"
+              : regressions.verdict === "improved"
+                ? "border-emerald-500/40 bg-emerald-500/[0.05]"
+                : "border-cyan-500/20 bg-cyan-500/[0.03]"
+          )}
+        >
+          <div className="mb-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {regressions.verdict === "regressed" ? (
+                <TrendingDown className="h-4 w-4 text-rose-400" />
+              ) : regressions.verdict === "improved" ? (
+                <TrendingUp className="h-4 w-4 text-emerald-400" />
+              ) : (
+                <Activity className="h-4 w-4 text-cyan-300" />
+              )}
+              <h3 className="text-sm font-semibold">
+                {t("reports", "regressions.whatChanged")}
+              </h3>
+              <span
+                className={cn(
+                  "rounded-full px-2 py-0.5 text-[10px] font-medium",
+                  regressions.verdict === "regressed"
+                    ? "bg-rose-500/15 text-rose-300"
+                    : regressions.verdict === "improved"
+                      ? "bg-emerald-500/15 text-emerald-300"
+                      : "bg-white/10 text-muted-foreground"
+                )}
+              >
+                {t("reports", `regressions.verdict.${regressions.verdict}`)}
+              </span>
+            </div>
+            {onJumpToTimeline && (
+              <Button size="sm" variant="ghost" onClick={onJumpToTimeline}>
+                {t("reports", "regressions.viewTimeline")} →
+              </Button>
+            )}
+          </div>
+
+          <p className="mb-3 text-sm font-medium text-foreground/85">
+            {regressions.headline}
+          </p>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            {/* Regressions */}
+            {regressions.regressions.length > 0 && (
+              <div>
+                <h4 className="mb-1 text-[10px] uppercase tracking-wider text-rose-400">
+                  {t("reports", "regressions.regressions")} ({regressions.regressions.length})
+                </h4>
+                <div className="space-y-1.5">
+                  {regressions.regressions.slice(0, 5).map((r, i) => (
+                    <div key={i} className="text-xs">
+                      <div className="flex items-center gap-2">
+                        <SeverityBadge severity={r.severity} />
+                        <span className="font-medium">{r.title}</span>
+                      </div>
+                      <p className="ml-1 text-muted-foreground">{r.detail}</p>
+                      {r.evidence && r.evidence.length > 0 && (
+                        <EvidenceChips evidence={r.evidence} />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Improvements */}
+            {regressions.improvements.length > 0 && (
+              <div>
+                <h4 className="mb-1 text-[10px] uppercase tracking-wider text-emerald-400">
+                  {t("reports", "regressions.improvements")} ({regressions.improvements.length})
+                </h4>
+                <div className="space-y-1.5">
+                  {regressions.improvements.slice(0, 5).map((imp, i) => (
+                    <div key={i} className="text-xs">
+                      <span className="font-medium text-emerald-300">✓ {imp.title}</span>
+                      <p className="ml-1 text-muted-foreground">{imp.detail}</p>
+                      {imp.evidence && imp.evidence.length > 0 && (
+                        <EvidenceChips evidence={imp.evidence} />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {regressions.comparedTo?.createdAt && (
+            <p className="mt-2 text-[10px] text-muted-foreground">
+              {t("reports", "regressions.comparedTo")}{" "}
+              {new Date(regressions.comparedTo.createdAt).toLocaleDateString()}
+            </p>
+          )}
+        </GlassCard>
+      )}
+
       {/* AI Overview — top of the tab when AI deep analysis is available */}
       {aiOverview && (
         <GlassCard className="border-violet-500/20 bg-gradient-to-br from-violet-500/[0.05] to-transparent p-6 lg:col-span-3">
@@ -1614,6 +1755,339 @@ function ConfidenceBadge({ confidence }: { confidence?: number }) {
     >
       {pct}% confidence
     </span>
+  );
+}
+
+/* ---------- Timeline (Phase 2 — P2.2) ----------
+ * Two halves:
+ *  1. Score trajectory bar chart — every analysis of this repo (oldest→newest)
+ *     rendered as a vertical bar whose height = overall score. Click to set
+ *     the "to" comparison point.
+ *  2. Compare-from → compare-to dropdowns — fetches /api/analysis/diff and
+ *     renders score deltas (red/green), added/resolved issues, file changes,
+ *     tech-debt delta.
+ *
+ * Backward-compatible: if fewer than 2 analyses exist, the diff UI is hidden
+ * and an empty-state message ("No previous analyses…") is shown.
+ */
+interface TimelineEntry {
+  id: string;
+  createdAt: string;
+  scores: {
+    overall: number;
+    security: number;
+    performance: number;
+    architecture: number;
+    maintainability: number;
+    codeQuality: number;
+  };
+  aiStatus: string;
+}
+
+function TimelineTab({ report }: { report: AnalysisReport }) {
+  const { t } = useT();
+  const [timeline, setTimeline] = useState<TimelineEntry[]>([]);
+  const [fromId, setFromId] = useState<string>("");
+  const [toId, setToId] = useState<string>("");
+  const [diff, setDiff] = useState<AnalysisDiffResult | null>(null);
+  const [loading, setLoading] = useState(false);
+  // Lazy initial state — only show the loading spinner if we actually have a
+  // repo to fetch the timeline for. Avoids the "Loading..." flash when the
+  // report has no repoOwner/repoName (e.g. legacy data).
+  const [timelineLoading, setTimelineLoading] = useState(
+    () => !!report.repoOwner && !!report.repoName
+  );
+
+  // Load timeline on mount — fetch the chronological list of analyses for
+  // this repo (oldest → newest). Falls back to empty list on error.
+  useEffect(() => {
+    if (!report.repoOwner || !report.repoName) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(
+          `/api/analysis/timeline?repoOwner=${encodeURIComponent(report.repoOwner)}&repoName=${encodeURIComponent(report.repoName)}`
+        );
+        if (cancelled) return;
+        const data = await res.json();
+        if (cancelled) return;
+        const list: TimelineEntry[] = Array.isArray(data?.analyses) ? data.analyses : [];
+        setTimeline(list);
+        // Default: compare first (oldest) → last (newest)
+        if (list.length >= 2) {
+          setFromId(list[0].id);
+          setToId(list[list.length - 1].id);
+        }
+      } catch {
+        /* silent — empty state will render */
+      } finally {
+        if (!cancelled) setTimelineLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [report.repoOwner, report.repoName]);
+
+  // Load diff whenever from/to changes. If either is missing or they're the
+  // same analysis, we skip the fetch — the cleanup of the previous effect
+  // (run before this body) clears any stale diff.
+  useEffect(() => {
+    if (!fromId || !toId || fromId === toId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        setLoading(true);
+        const res = await fetch(`/api/analysis/diff?from=${fromId}&to=${toId}`);
+        if (cancelled) return;
+        const data = await res.json();
+        if (cancelled) return;
+        setDiff(data);
+      } catch {
+        /* silent — keeps previous diff */
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+      // Clear stale diff when deps change so the user never sees a diff for
+      // a from→to pair they're no longer looking at.
+      setDiff(null);
+    };
+  }, [fromId, toId]);
+
+  const scoreLabel = (key: string): string => {
+    if (key === "codeQuality") return "quality";
+    if (key === "performance") return "perf";
+    return key;
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Score trajectory chart */}
+      <GlassCard className="p-5">
+        <div className="mb-3 flex items-center gap-2">
+          <TrendingUp className="h-4 w-4 text-cyan-300" />
+          <h3 className="text-lg font-semibold">{t("reports", "timeline.scoreTrajectory")}</h3>
+        </div>
+        {timelineLoading ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-3 w-3 animate-spin" />
+            {t("reports", "timeline.loading")}
+          </div>
+        ) : timeline.length === 0 ? (
+          <p className="text-sm text-muted-foreground">{t("reports", "timeline.noHistory")}</p>
+        ) : (
+          <div className="flex items-end gap-2" style={{ height: "8rem" }}>
+            {timeline.map((a) => {
+              const score = Math.max(0, Math.min(100, a.scores.overall || 0));
+              const isSelected = a.id === fromId || a.id === toId;
+              return (
+                <button
+                  key={a.id}
+                  type="button"
+                  onClick={() => setToId(a.id)}
+                  className={cn(
+                    "flex h-full flex-1 flex-col items-center justify-end gap-1 rounded-t transition-opacity",
+                    isSelected ? "opacity-100" : "opacity-70 hover:opacity-100"
+                  )}
+                  title={`${new Date(a.createdAt).toLocaleString()}: ${score}/100 (click to set as compare target)`}
+                >
+                  <span className="text-xs font-medium tabular-nums">{score}</span>
+                  <div
+                    className="w-full rounded-t bg-gradient-to-t from-cyan-500 to-violet-500"
+                    style={{ height: `${Math.max(score, 4)}%` }}
+                  />
+                  <span className="text-[10px] text-muted-foreground tabular-nums">
+                    {new Date(a.createdAt).toLocaleDateString(undefined, {
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </GlassCard>
+
+      {/* Compare from → to */}
+      <GlassCard className="p-5">
+        <div className="mb-3 flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2">
+            <GitCompare className="h-4 w-4 text-cyan-300" />
+            <h3 className="text-lg font-semibold">{t("reports", "timeline.compare")}</h3>
+          </div>
+          {timeline.length >= 2 && (
+            <>
+              <select
+                value={fromId}
+                onChange={(e) => setFromId(e.target.value)}
+                className="rounded border border-white/10 bg-white/5 px-2 py-1 text-sm"
+              >
+                {timeline.map((a) => (
+                  <option key={a.id} value={a.id} className="bg-background">
+                    {new Date(a.createdAt).toLocaleDateString()} ({a.scores.overall})
+                  </option>
+                ))}
+              </select>
+              <span className="text-muted-foreground">→</span>
+              <select
+                value={toId}
+                onChange={(e) => setToId(e.target.value)}
+                className="rounded border border-white/10 bg-white/5 px-2 py-1 text-sm"
+              >
+                {timeline.map((a) => (
+                  <option key={a.id} value={a.id} className="bg-background">
+                    {new Date(a.createdAt).toLocaleDateString()} ({a.scores.overall})
+                  </option>
+                ))}
+              </select>
+            </>
+          )}
+        </div>
+
+        {timeline.length < 2 && !timelineLoading && (
+          <p className="text-sm text-muted-foreground">{t("reports", "timeline.noHistory")}</p>
+        )}
+
+        {loading && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-3 w-3 animate-spin" />
+            {t("reports", "timeline.loading")}
+          </div>
+        )}
+
+        {diff && !loading && (
+          <div className="space-y-3">
+            {/* Score deltas */}
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+              {Object.entries(diff.scores).map(([key, delta]) => (
+                <div
+                  key={key}
+                  className="rounded-lg border border-white/5 bg-white/[0.02] p-2 text-center"
+                >
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                    {scoreLabel(key)}
+                  </p>
+                  <p
+                    className={cn(
+                      "text-lg font-bold tabular-nums",
+                      delta > 0
+                        ? "text-emerald-400"
+                        : delta < 0
+                          ? "text-rose-400"
+                          : "text-muted-foreground"
+                    )}
+                  >
+                    {delta > 0 ? "+" : ""}
+                    {delta}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            {/* Summary */}
+            <div className="rounded-lg border border-cyan-500/15 bg-cyan-500/[0.03] p-3">
+              <p className="text-sm text-foreground/85">{diff.summary}</p>
+            </div>
+
+            {/* Added issues */}
+            {diff.issues.added.length > 0 && (
+              <div>
+                <h4 className="mb-2 text-xs uppercase tracking-wider text-rose-400">
+                  {t("reports", "timeline.newIssues")} ({diff.issues.added.length})
+                </h4>
+                <div className="space-y-1">
+                  {diff.issues.added.slice(0, 10).map((iss, i) => (
+                    <div key={i} className="text-xs">
+                      <SeverityBadge severity={iss.severity} />
+                      <span className="ml-2">{iss.title}</span>
+                      <code className="ml-2 text-[10px] text-muted-foreground">{iss.file}</code>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Resolved issues */}
+            {diff.issues.resolved.length > 0 && (
+              <div>
+                <h4 className="mb-2 text-xs uppercase tracking-wider text-emerald-400">
+                  {t("reports", "timeline.resolvedIssues")} ({diff.issues.resolved.length})
+                </h4>
+                <div className="space-y-1">
+                  {diff.issues.resolved.slice(0, 10).map((iss, i) => (
+                    <div key={i} className="text-xs opacity-60 line-through">
+                      <SeverityBadge severity={iss.severity} />
+                      <span className="ml-2">{iss.title}</span>
+                      <code className="ml-2 text-[10px] text-muted-foreground">{iss.file}</code>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Files changed */}
+            {(diff.files.added.length > 0 || diff.files.deleted.length > 0) && (
+              <div className="grid grid-cols-2 gap-3">
+                {diff.files.added.length > 0 && (
+                  <div>
+                    <h4 className="mb-1 text-xs uppercase tracking-wider text-emerald-400">
+                      {t("reports", "timeline.filesAdded")} ({diff.files.added.length})
+                    </h4>
+                    <div className="space-y-0.5">
+                      {diff.files.added.slice(0, 5).map((f) => (
+                        <code key={f} className="block truncate text-[10px] text-muted-foreground">
+                          {f}
+                        </code>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {diff.files.deleted.length > 0 && (
+                  <div>
+                    <h4 className="mb-1 text-xs uppercase tracking-wider text-rose-400">
+                      {t("reports", "timeline.filesDeleted")} ({diff.files.deleted.length})
+                    </h4>
+                    <div className="space-y-0.5">
+                      {diff.files.deleted.slice(0, 5).map((f) => (
+                        <code key={f} className="block truncate text-[10px] text-muted-foreground">
+                          {f}
+                        </code>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Tech debt */}
+            {diff.techDebt.scoreDelta !== 0 && (
+              <div className="rounded-lg border border-amber-500/15 bg-amber-500/[0.03] p-3">
+                <p className="text-xs">
+                  <span className="font-medium">{t("reports", "timeline.techDebtChange")}:</span>{" "}
+                  <span
+                    className={cn(
+                      "font-bold tabular-nums",
+                      diff.techDebt.scoreDelta < 0 ? "text-emerald-400" : "text-rose-400"
+                    )}
+                  >
+                    {diff.techDebt.scoreDelta > 0 ? "+" : ""}
+                    {diff.techDebt.scoreDelta}
+                  </span>
+                  <span className="text-muted-foreground">
+                    {" "}
+                    ({diff.techDebt.itemsAdded} new, {diff.techDebt.itemsResolved} resolved)
+                  </span>
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+      </GlassCard>
+    </div>
   );
 }
 

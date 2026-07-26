@@ -202,5 +202,29 @@
     "metricHintDirCycles": "dir→dir chains",
     "metricHintLayerViolations": "comp→DB",
     "metricHintGodModules": ">20 funcs"
+  },
+  "timeline": {
+    "title": "Timeline",
+    "scoreTrajectory": "Score Trajectory",
+    "compare": "Compare",
+    "loading": "Loading diff...",
+    "noHistory": "No previous analyses. Scan this repo again to see changes over time.",
+    "newIssues": "New Issues",
+    "resolvedIssues": "Resolved Issues",
+    "filesAdded": "Files Added",
+    "filesDeleted": "Files Deleted",
+    "techDebtChange": "Tech Debt Change"
+  },
+  "regressions": {
+    "whatChanged": "What changed since last scan",
+    "comparedTo": "Compared to",
+    "viewTimeline": "View timeline",
+    "verdict": {
+      "improved": "Improved",
+      "regressed": "Regressed",
+      "neutral": "Neutral"
+    },
+    "regressions": "Regressions",
+    "improvements": "Improvements"
   }
 }

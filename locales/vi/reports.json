@@ -202,5 +202,29 @@
     "metricHintDirCycles": "chuỗi dir→dir",
     "metricHintLayerViolations": "comp→DB",
     "metricHintGodModules": ">20 hàm"
+  },
+  "timeline": {
+    "title": "Dòng thời gian",
+    "scoreTrajectory": "Biểu đồ điểm",
+    "compare": "So sánh",
+    "loading": "Đang tải diff...",
+    "noHistory": "Chưa có phân tích trước đó. Scan lại repo này để xem thay đổi theo thời gian.",
+    "newIssues": "Vấn đề mới",
+    "resolvedIssues": "Đã giải quyết",
+    "filesAdded": "File thêm",
+    "filesDeleted": "File xóa",
+    "techDebtChange": "Thay đổi tech debt"
+  },
+  "regressions": {
+    "whatChanged": "Đã thay đổi gì từ lần scan trước",
+    "comparedTo": "So với",
+    "viewTimeline": "Xem dòng thời gian",
+    "verdict": {
+      "improved": "Cải thiện",
+      "regressed": "Thoái lui",
+      "neutral": "Trung tính"
+    },
+    "regressions": "Thoái lui",
+    "improvements": "Cải thiện"
   }
 }

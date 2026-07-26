@@ -375,3 +375,16 @@ export interface RoadmapPhase {
   estimatedEffortHours?: number;        // sum of member priorities' effortHours
   blockedBy?: ReleasePhase[];           // which phases must complete first (empty for P0)
 }
+
+/* ---------- Phase 2 (P2.2): Analysis Timeline + Diff ----------
+ * Result of diffAnalyses(fromReport, toReport) — used by:
+ *   - /api/analysis/diff        — explicit from/to comparison
+ *   - /api/analysis/regressions — auto-picks previous analysis, computes diff
+ *   - TimelineTab UI           — renders score trajectory + diff view
+ *
+ * Re-exported here from analysis-diff.ts so callers can `import type {
+ * AnalysisDiffResult } from "@/lib/types"` consistently with other domain
+ * types. The implementation (including jaccardSimilarity) lives in
+ * src/lib/analysis-diff.ts.
+ */
+export type { AnalysisDiffResult } from "./analysis-diff";
