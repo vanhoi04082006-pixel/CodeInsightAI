@@ -310,5 +310,21 @@
     },
     "userDisplayName": "You",
     "aiDisplayName": "AI CTO"
+  },
+  "ui": {
+    "showOnlyModified": "Show only modified files",
+    "agentNetworkAria": "Agent network graph showing 11 agents and their collaboration links",
+    "refresh": "Refresh",
+    "clear": "Clear",
+    "commandFailed": "Command failed",
+    "clearTerminal": "Clear terminal",
+    "previousCommand": "Previous command",
+    "nextCommand": "Next command",
+    "showAgentDock": "Show agent dock",
+    "hideAgentDock": "Hide agent dock",
+    "filePathCopied": "File path copied",
+    "clipboardUnavailable": "Clipboard unavailable",
+    "copyFilePath": "Copy file path",
+    "toggleFullFile": "Toggle full-file view"
   }
 }

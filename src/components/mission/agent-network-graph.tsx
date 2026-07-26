@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { AGENTS } from "./agent-meta";
 import { useMissionStore, type AgentStatus } from "@/lib/mission-store";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -94,6 +95,7 @@ export function AgentNetworkGraph({ className }: { className?: string }) {
   const events = useMissionStore((s) => s.events);
   const missionId = useMissionStore((s) => s.missionId);
   const demoMode = useMissionStore((s) => s.demoMode);
+  const { t } = useT();
 
   const [positions, setPositions] = useState<Map<string, { x: number; y: number }>>(
     new Map()
@@ -310,7 +312,7 @@ export function AgentNetworkGraph({ className }: { className?: string }) {
           className="h-auto w-full"
           style={{ aspectRatio: "1 / 1" }}
           role="img"
-          aria-label="Agent network graph showing 11 agents and their collaboration links"
+          aria-label={t("mission", "ui.agentNetworkAria")}
         >
           <defs>
             <radialGradient id="ang-bg-grad" cx="50%" cy="50%" r="55%">

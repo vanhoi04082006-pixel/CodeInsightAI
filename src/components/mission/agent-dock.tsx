@@ -25,6 +25,7 @@ import type {
   MissionEvent,
 } from "@/lib/mission-store";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -52,6 +53,7 @@ export function AgentDock({
   events,
   className,
 }: AgentDockProps) {
+  const { t } = useT();
   const [collapsed, setCollapsed] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
 
@@ -92,7 +94,7 @@ export function AgentDock({
               variant="ghost"
               onClick={() => setCollapsed(false)}
               className="h-7 w-7 p-0 text-muted-foreground"
-              title="Show agent dock"
+              title={t("mission", "ui.showAgentDock")}
             >
               <PanelLeftOpen className="h-3.5 w-3.5" />
             </Button>
@@ -123,6 +125,7 @@ function AgentDockInner({
   onSelect: (id: string) => void;
   onCollapse: () => void;
 }) {
+  const { t } = useT();
   const activeCount = Object.values(agentStatuses).filter(
     (a) => a.status === "thinking" || a.status === "acting"
   ).length;
@@ -135,7 +138,7 @@ function AgentDockInner({
           <button
             onClick={onCollapse}
             className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition hover:bg-white/5 hover:text-foreground"
-            aria-label="Hide agent dock"
+            aria-label={t("mission", "ui.hideAgentDock")}
           >
             <PanelLeftClose className="h-3.5 w-3.5" />
           </button>

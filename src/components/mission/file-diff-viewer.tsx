@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useT } from "@/lib/i18n";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -189,6 +190,7 @@ export function FileDiffViewer({
   onSelect,
   className,
 }: FileDiffViewerProps) {
+  const { t } = useT();
   const [viewFullFile, setViewFullFile] = useState(false);
   const [copiedPath, setCopiedPath] = useState(false);
   const [diffText, setDiffText] = useState<string>("");
@@ -279,12 +281,12 @@ export function FileDiffViewer({
     try {
       await navigator.clipboard.writeText(file.path);
       setCopiedPath(true);
-      toast.success("File path copied");
+      toast.success(t("mission", "ui.filePathCopied"));
       setTimeout(() => setCopiedPath(false), 1500);
     } catch {
-      toast.error("Clipboard unavailable");
+      toast.error(t("mission", "ui.clipboardUnavailable"));
     }
-  }, [file]);
+  }, [file, t]);
 
   const meta = file ? actionMeta(file.action) : ACTION_META.modified;
   const ActionIcon = meta.icon;
@@ -393,7 +395,7 @@ export function FileDiffViewer({
               variant="ghost"
               onClick={onCopyPath}
               className="h-6 shrink-0 gap-1 px-2 text-[10px] text-muted-foreground hover:text-foreground"
-              title="Copy file path"
+              title={t("mission", "ui.copyFilePath")}
             >
               {copiedPath ? (
                 <Check className="h-3 w-3 text-emerald-400" />
@@ -408,7 +410,7 @@ export function FileDiffViewer({
               variant={viewFullFile ? "secondary" : "ghost"}
               onClick={() => setViewFullFile((v) => !v)}
               className="h-6 shrink-0 gap-1 px-2 text-[10px]"
-              title="Toggle full-file view"
+              title={t("mission", "ui.toggleFullFile")}
             >
               {viewFullFile ? (
                 <>

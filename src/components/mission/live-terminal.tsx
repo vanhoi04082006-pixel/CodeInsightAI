@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useT } from "@/lib/i18n";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -146,6 +147,7 @@ export function LiveTerminal({
   history = [],
   className,
 }: LiveTerminalProps) {
+  const { t } = useT();
   const [input, setInput] = useState("");
   const [running, setRunning] = useState(false);
   const [filter, setFilter] = useState<StreamFilter>("all");
@@ -202,12 +204,12 @@ export function LiveTerminal({
       setHistoryIdx(-1);
       setInput("");
     } catch {
-      toast.error("Command failed");
+      toast.error(t("mission", "ui.commandFailed"));
     } finally {
       setRunning(false);
       requestAnimationFrame(() => inputRef.current?.focus());
     }
-  }, [input, onRunCommand]);
+  }, [input, onRunCommand, t]);
 
   const onKeyDown = useCallback(
     (e: KeyboardEvent<HTMLInputElement>) => {
@@ -262,7 +264,7 @@ export function LiveTerminal({
             variant="ghost"
             onClick={onClear}
             className="h-6 gap-1 px-2 text-[10px] text-muted-foreground"
-            title="Clear terminal"
+            title={t("mission", "ui.clearTerminal")}
           >
             <Trash2 className="h-3 w-3" />
           </Button>
@@ -367,7 +369,7 @@ export function LiveTerminal({
                 setInput(localHistory[next] ?? "");
               }}
               className="flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:bg-white/5"
-              title="Previous command"
+              title={t("mission", "ui.previousCommand")}
             >
               <ChevronUp className="h-3 w-3" />
             </button>
@@ -379,7 +381,7 @@ export function LiveTerminal({
                 setInput(next < 0 ? "" : localHistory[next] ?? "");
               }}
               className="flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:bg-white/5"
-              title="Next command"
+              title={t("mission", "ui.nextCommand")}
             >
               <ChevronDown className="h-3 w-3" />
             </button>

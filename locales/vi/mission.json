@@ -310,5 +310,21 @@
     },
     "userDisplayName": "Bạn",
     "aiDisplayName": "AI CTO"
+  },
+  "ui": {
+    "showOnlyModified": "Chỉ hiện file đã sửa",
+    "agentNetworkAria": "Đồ thị mạng agent hiển thị 11 agent và liên kết hợp tác",
+    "refresh": "Làm mới",
+    "clear": "Xóa",
+    "commandFailed": "Lệnh thất bại",
+    "clearTerminal": "Xóa terminal",
+    "previousCommand": "Lệnh trước",
+    "nextCommand": "Lệnh tiếp theo",
+    "showAgentDock": "Hiện agent dock",
+    "hideAgentDock": "Ẩn agent dock",
+    "filePathCopied": "Đã sao chép đường dẫn file",
+    "clipboardUnavailable": "Clipboard không khả dụng",
+    "copyFilePath": "Sao chép đường dẫn file",
+    "toggleFullFile": "Bật/tắt xem toàn file"
   }
 }

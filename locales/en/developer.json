@@ -190,5 +190,11 @@
     "metricTotalTokens": "Total Tokens",
     "valueEnabled": "Enabled",
     "valueDisabled": "Disabled"
+  },
+  "codeBlock": {
+    "failedToCopy": "Failed to copy",
+    "toggleWordWrap": "Toggle word wrap",
+    "fullscreen": "Fullscreen",
+    "copy": "Copy"
   }
 }

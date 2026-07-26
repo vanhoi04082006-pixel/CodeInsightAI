@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -154,6 +155,7 @@ export function FileTreePanel({
   selectedPath,
   className,
 }: FileTreePanelProps) {
+  const { t } = useT();
   const [onlyModified, setOnlyModified] = useState(false);
   // Track collapsed state per directory path.
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
@@ -187,7 +189,7 @@ export function FileTreePanel({
             variant={onlyModified ? "secondary" : "ghost"}
             onClick={() => setOnlyModified((v) => !v)}
             className="h-6 gap-1 px-2 text-[10px]"
-            title="Show only modified files"
+            title={t("mission", "ui.showOnlyModified")}
           >
             <Filter className="h-3 w-3" />
             <span className="hidden lg:inline">Modified</span>

@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Copy, Check, Maximize2, Minimize2, WrapText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useT } from "@/lib/i18n";
 
 /**
  * CodeBlock — code/prompt display with line numbers, copy, fullscreen, word wrap.
@@ -27,6 +28,7 @@ export function CodeBlock({
   const [fullscreen, setFullscreen] = useState(false);
   const [copied, setCopied] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const { t } = useT();
 
   const lines = content.split("\n");
   const visibleLines = expanded ? lines : lines.slice(0, maxLines);
@@ -38,7 +40,7 @@ export function CodeBlock({
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
-      toast.error("Failed to copy");
+      toast.error(t("developer", "codeBlock.failedToCopy"));
     }
   };
 
@@ -93,13 +95,13 @@ export function CodeBlock({
           <div className="flex items-center justify-between border-b border-white/5 px-3 py-1.5">
             <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</span>
             <div className="flex items-center gap-1">
-              <button onClick={() => setWrap((w) => !w)} className="rounded p-1 text-muted-foreground opacity-0 transition hover:bg-white/5 hover:text-foreground group-hover:opacity-100" title="Toggle word wrap">
+              <button onClick={() => setWrap((w) => !w)} className="rounded p-1 text-muted-foreground opacity-0 transition hover:bg-white/5 hover:text-foreground group-hover:opacity-100" title={t("developer", "codeBlock.toggleWordWrap")}>
                 <WrapText className={cn("h-3 w-3", wrap && "text-cyan-300")} />
               </button>
-              <button onClick={() => setFullscreen(true)} className="rounded p-1 text-muted-foreground opacity-0 transition hover:bg-white/5 hover:text-foreground group-hover:opacity-100" title="Fullscreen">
+              <button onClick={() => setFullscreen(true)} className="rounded p-1 text-muted-foreground opacity-0 transition hover:bg-white/5 hover:text-foreground group-hover:opacity-100" title={t("developer", "codeBlock.fullscreen")}>
                 <Maximize2 className="h-3 w-3" />
               </button>
-              <button onClick={handleCopy} className="rounded p-1 text-muted-foreground opacity-0 transition hover:bg-white/5 hover:text-foreground group-hover:opacity-100" title="Copy">
+              <button onClick={handleCopy} className="rounded p-1 text-muted-foreground opacity-0 transition hover:bg-white/5 hover:text-foreground group-hover:opacity-100" title={t("developer", "codeBlock.copy")}>
                 {copied ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
               </button>
             </div>

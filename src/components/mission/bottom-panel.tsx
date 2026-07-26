@@ -22,6 +22,7 @@ import {
   LiveTerminalConnected,
   type TerminalLine as LiveTerminalLine,
 } from "./live-terminal";
+import { useT } from "@/lib/i18n";
 
 interface BottomPanelProps {
   terminalOutput: TerminalLine[];
@@ -298,6 +299,7 @@ export function BottomPanel({
   onTerminalOutput,
   className,
 }: BottomPanelProps) {
+  const { t } = useT();
   const [tab, setTab] = useState("terminal");
 
   return (
@@ -338,7 +340,7 @@ export function BottomPanel({
               size="sm"
               variant="ghost"
               className="h-6 gap-1 px-2 text-[10px] text-muted-foreground"
-              title="Refresh"
+              title={t("mission", "ui.refresh")}
             >
               <RefreshCw className="h-3 w-3" />
             </Button>
@@ -346,7 +348,7 @@ export function BottomPanel({
               size="sm"
               variant="ghost"
               className="h-6 gap-1 px-2 text-[10px] text-muted-foreground"
-              title="Clear"
+              title={t("mission", "ui.clear")}
             >
               <Trash2 className="h-3 w-3" />
             </Button>
