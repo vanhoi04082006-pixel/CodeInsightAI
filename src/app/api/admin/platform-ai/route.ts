@@ -20,7 +20,14 @@ export async function GET() {
   if (!adminId) return NextResponse.json({ error: "Admin only" }, { status: 403 });
 
   try {
-    const configs = await db.platformAIConfig.findMany({ orderBy: { createdAt: "asc" } });
+    let configs: any[] = [];
+    try {
+      configs = await db.platformAIConfig.findMany({ orderBy: { createdAt: "asc" } });
+    } catch (dbErr: any) {
+      // DB schema out of sync (e.g. fallbackChain column missing on prod)
+      // Return empty config instead of 500 — admin can still see UI
+      console.warn("[/api/admin/platform-ai] DB query failed (schema sync needed?):", dbErr?.message?.slice(0, 100));
+    }
 
     const configured = configs.map((c, i) => {
       let maskedKey = "••••";
@@ -36,14 +43,13 @@ export async function GET() {
         enabled: c.enabled,
         maskedKey,
         updatedAt: c.updatedAt,
-        isDefault: i === 0, // first in list = default
+        isDefault: i === 0,
       };
     });
 
-    // P3.2: expose the admin's configured fallback chain (stored as JSON on
-    // the first/default PlatformAIConfig row). Null if not set.
+    // P3.2: fallbackChain (safe access — field may not exist on old DBs)
     const defaultConfig = configs[0] ?? null;
-    const fallbackChain = defaultConfig?.fallbackChain ?? null;
+    const fallbackChain = (defaultConfig as any)?.fallbackChain ?? null;
 
     // Available providers NOT yet configured
     const configuredIds = new Set(configs.map((c) => c.providerId));
