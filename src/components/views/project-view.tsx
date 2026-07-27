@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   LayoutGrid,
   Network,
@@ -16,6 +16,7 @@ import {
   Sparkles,
   FileCode,
   TrendingUp,
+  TrendingDown,
   DollarSign,
   ExternalLink,
   Copy,
@@ -24,20 +25,40 @@ import {
   Activity,
   Loader2,
   Zap,
+  Wrench,
+  RefreshCw,
+  Clock,
+  Target,
+  GitFork,
+  AlertTriangle,
+  GitCompare,
 } from "lucide-react";
 import { GlassCard, ScoreGauge, GradientText, NeonDivider, SeverityBadge } from "@/components/shared/ui";
 import { DependencyGraph } from "@/components/shared/dependency-graph";
 import { CodeGraphView } from "@/components/shared/codegraph-view";
 import { CodeViewer } from "@/components/shared/code-viewer";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useAppStore } from "@/lib/store";
-import type { AnalysisReport, Issue } from "@/lib/types";
+import type { AnalysisReport, AnalysisDiffResult, Issue, CodeSnippet } from "@/lib/types";
+import type { RegressionReport } from "@/lib/regression-detector";
+import type { RefactorRoadmap } from "@/lib/refactor-roadmap";
 import { toast } from "sonner";
-import { useT } from "@/lib/i18n";
+import { useT, useI18nStore } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
-type Tab = "overview" | "architecture" | "bugs" | "security" | "performance" | "dependencies" | "code" | "docs" | "roadmap" | "codegraph";
+type Tab = "overview" | "architecture" | "bugs" | "security" | "performance" | "dependencies" | "code" | "docs" | "roadmap" | "codegraph" | "timeline";
 
 const TABS: { id: Tab; labelKey: string; icon: typeof LayoutGrid }[] = [
   { id: "overview", labelKey: "overview", icon: LayoutGrid },
@@ -50,6 +71,7 @@ const TABS: { id: Tab; labelKey: string; icon: typeof LayoutGrid }[] = [
   { id: "code", labelKey: "code", icon: FileCode },
   { id: "docs", labelKey: "docs", icon: FileText },
   { id: "roadmap", labelKey: "roadmap", icon: Rocket },
+  { id: "timeline", labelKey: "timeline.title", icon: GitCompare },
 ];
 
 export function ProjectView({ isShared = false }: { isShared?: boolean }) {
@@ -60,6 +82,10 @@ export function ProjectView({ isShared = false }: { isShared?: boolean }) {
   const aiPending = useAppStore((s) => s.aiPending);
   const [tab, setTab] = useState<Tab>("overview");
   const [sharing, setSharing] = useState(false);
+  // P3.6 — Analysis Snapshots: PDF generation is async; track pending state
+  // for the button spinner. Declared here (before the early return) to
+  // satisfy React's rules-of-hooks (no conditional hook calls).
+  const [pdfLoading, setPdfLoading] = useState(false);
 
   if (!report) {
     return (
@@ -124,15 +150,44 @@ export function ProjectView({ isShared = false }: { isShared?: boolean }) {
     toast.success(t("reports", "project.downloadedMarkdown"));
   };
 
-  const downloadJSON = () => {
-    const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
+  // Export the raw AnalysisReport object as JSON — full data for programmatic
+  // import / audit. P3.6 — Analysis Snapshots.
+  const exportJSON = () => {
+    const json = JSON.stringify(report, null, 2);
+    const blob = new Blob([json], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${report.repoOwner}-${report.repoName}-report.json`;
+    a.download = `${report.repoOwner}-${report.repoName}-analysis.json`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success(t("reports", "project.downloadedJson"));
+    toast.success(t("reports", "project.jsonExported"));
+  };
+
+  // Export the report as a structured compliance-ready PDF (P3.6).
+  // Client-side generation via `jspdf` + `jspdf-autotable` (dynamic import
+  // keeps the ~200KB bundle out of the initial payload). No server round-trip
+  // — works inside Vercel's 60s function limit since it runs in the browser.
+  const exportPDF = async () => {
+    if (pdfLoading) return;
+    setPdfLoading(true);
+    try {
+      toast.info(t("reports", "project.generatingPDF"));
+      const { generateAnalysisPDF } = await import("@/lib/export/pdf-generator");
+      const blob = generateAnalysisPDF(report);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${report.repoOwner}-${report.repoName}-analysis.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success(t("reports", "project.pdfExported"));
+    } catch (e) {
+      console.error("[P3.6] PDF generation failed:", e);
+      toast.error(t("reports", "project.pdfFailed"));
+    } finally {
+      setPdfLoading(false);
+    }
   };
 
   return (
@@ -186,8 +241,11 @@ export function ProjectView({ isShared = false }: { isShared?: boolean }) {
             <Button onClick={downloadMarkdown} variant="outline" size="sm">
               <Download className="mr-1.5 h-4 w-4" /> .md
             </Button>
-            <Button onClick={downloadJSON} variant="outline" size="sm">
-              <Download className="mr-1.5 h-4 w-4" /> .json
+            <Button onClick={exportJSON} variant="outline" size="sm">
+              <Download className="mr-1.5 h-4 w-4" /> JSON
+            </Button>
+            <Button onClick={exportPDF} variant="outline" size="sm" disabled={pdfLoading}>
+              {pdfLoading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Download className="mr-1.5 h-4 w-4" />} PDF
             </Button>
             <Button onClick={shareReport} variant="outline" size="sm" disabled={sharing}>
               {sharing ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Share2 className="mr-1.5 h-4 w-4" />} {t("reports", "share")}
@@ -225,7 +283,7 @@ export function ProjectView({ isShared = false }: { isShared?: boolean }) {
           </div>
 
           <TabsContent value="overview" className="mt-4">
-            <OverviewTab report={report} />
+            <OverviewTab report={report} onJumpToTimeline={() => setTab("timeline")} />
           </TabsContent>
           <TabsContent value="architecture" className="mt-4">
             <ArchitectureTab report={report} />
@@ -254,6 +312,9 @@ export function ProjectView({ isShared = false }: { isShared?: boolean }) {
           <TabsContent value="roadmap" className="mt-4">
             <RoadmapTab report={report} />
           </TabsContent>
+          <TabsContent value="timeline" className="mt-4">
+            <TimelineTab report={report} />
+          </TabsContent>
         </Tabs>
       </div>
     </div>
@@ -261,15 +322,221 @@ export function ProjectView({ isShared = false }: { isShared?: boolean }) {
 }
 
 /* ---------- Overview ---------- */
-function OverviewTab({ report }: { report: AnalysisReport }) {
+function OverviewTab({ report, onJumpToTimeline }: { report: AnalysisReport; onJumpToTimeline?: () => void }) {
   const { t } = useT();
   const aiPending = useAppStore((s) => s.aiPending);
+  const activeAnalysisId = useAppStore((s) => s.activeAnalysisId);
   const deep = (report as any).deepAnalysis as any;
   const aiEnh = (report as any).aiEnhancement as any;
   const aiExecSummary: string | undefined = deep?.executiveSummary || aiEnh?.aiSummary;
   const hasAiExec = !!aiExecSummary;
+  const aiOverview = deep?.aiOverview;
+
+  // Phase 2 (P2.2 + P2.4) — "What changed since last scan" banner.
+  // Loads the previous-vs-current diff on mount and classifies it into a
+  // RegressionReport (verdict + regressions[] + improvements[] + headline).
+  // Renders only when a previous analysis exists (the API returns
+  // `{ previousAnalysis: null }` when there's no prior scan).
+  const [regressions, setRegressions] = useState<RegressionReport | null>(null);
+
+  useEffect(() => {
+    if (!activeAnalysisId) return;
+    let cancelled = false;
+    fetch(`/api/analysis/regressions?analysisId=${activeAnalysisId}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancelled) return;
+        // Endpoint returns either { previousAnalysis: null } (no prior scan)
+        // or a full RegressionReport (which always carries `comparedTo`).
+        if (data && data.comparedTo) setRegressions(data as RegressionReport);
+      })
+      .catch(() => {
+        /* silent — banner just doesn't render */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeAnalysisId]);
+
   return (
     <div className="grid gap-4 lg:grid-cols-3">
+      {/* What-changed banner (Phase 2 — P2.4). Renders only when a previous
+          analysis of this repo exists. Color-coded by verdict:
+            - regressed  → rose border + bg tint
+            - improved   → emerald border + bg tint
+            - neutral    → cyan border + bg tint */}
+      {regressions && regressions.comparedTo?.analysisId && (
+        <GlassCard
+          className={cn(
+            "p-4 lg:col-span-3 border-2",
+            regressions.verdict === "regressed"
+              ? "border-rose-500/40 bg-rose-500/[0.05]"
+              : regressions.verdict === "improved"
+                ? "border-emerald-500/40 bg-emerald-500/[0.05]"
+                : "border-cyan-500/20 bg-cyan-500/[0.03]"
+          )}
+        >
+          <div className="mb-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {regressions.verdict === "regressed" ? (
+                <TrendingDown className="h-4 w-4 text-rose-400" />
+              ) : regressions.verdict === "improved" ? (
+                <TrendingUp className="h-4 w-4 text-emerald-400" />
+              ) : (
+                <Activity className="h-4 w-4 text-cyan-300" />
+              )}
+              <h3 className="text-sm font-semibold">
+                {t("reports", "regressions.whatChanged")}
+              </h3>
+              <span
+                className={cn(
+                  "rounded-full px-2 py-0.5 text-[10px] font-medium",
+                  regressions.verdict === "regressed"
+                    ? "bg-rose-500/15 text-rose-300"
+                    : regressions.verdict === "improved"
+                      ? "bg-emerald-500/15 text-emerald-300"
+                      : "bg-white/10 text-muted-foreground"
+                )}
+              >
+                {t("reports", `regressions.verdict.${regressions.verdict}`)}
+              </span>
+            </div>
+            {onJumpToTimeline && (
+              <Button size="sm" variant="ghost" onClick={onJumpToTimeline}>
+                {t("reports", "regressions.viewTimeline")} →
+              </Button>
+            )}
+          </div>
+
+          <p className="mb-3 text-sm font-medium text-foreground/85">
+            {regressions.headline}
+          </p>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            {/* Regressions */}
+            {regressions.regressions.length > 0 && (
+              <div>
+                <h4 className="mb-1 text-[10px] uppercase tracking-wider text-rose-400">
+                  {t("reports", "regressions.regressions")} ({regressions.regressions.length})
+                </h4>
+                <div className="space-y-1.5">
+                  {regressions.regressions.slice(0, 5).map((r, i) => (
+                    <div key={i} className="text-xs">
+                      <div className="flex items-center gap-2">
+                        <SeverityBadge severity={r.severity} />
+                        <span className="font-medium">{r.title}</span>
+                      </div>
+                      <p className="ml-1 text-muted-foreground">{r.detail}</p>
+                      {r.evidence && r.evidence.length > 0 && (
+                        <EvidenceChips evidence={r.evidence} />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Improvements */}
+            {regressions.improvements.length > 0 && (
+              <div>
+                <h4 className="mb-1 text-[10px] uppercase tracking-wider text-emerald-400">
+                  {t("reports", "regressions.improvements")} ({regressions.improvements.length})
+                </h4>
+                <div className="space-y-1.5">
+                  {regressions.improvements.slice(0, 5).map((imp, i) => (
+                    <div key={i} className="text-xs">
+                      <span className="font-medium text-emerald-300">✓ {imp.title}</span>
+                      <p className="ml-1 text-muted-foreground">{imp.detail}</p>
+                      {imp.evidence && imp.evidence.length > 0 && (
+                        <EvidenceChips evidence={imp.evidence} />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {regressions.comparedTo?.createdAt && (
+            <p className="mt-2 text-[10px] text-muted-foreground">
+              {t("reports", "regressions.comparedTo")}{" "}
+              {new Date(regressions.comparedTo.createdAt).toLocaleDateString()}
+            </p>
+          )}
+        </GlassCard>
+      )}
+
+      {/* AI Overview — top of the tab when AI deep analysis is available */}
+      {aiOverview && (
+        <GlassCard className="border-violet-500/20 bg-gradient-to-br from-violet-500/[0.05] to-transparent p-6 lg:col-span-3">
+          <div className="mb-4 flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-violet-300" />
+            <h3 className="text-sm font-semibold">{t("reports", "aiOverview.title")}</h3>
+            <span className="rounded-full bg-violet-500/15 px-2 py-0.5 text-[10px] text-violet-300">✨ AI</span>
+          </div>
+
+          {/* Health Assessment */}
+          {aiOverview.healthAssessment && (
+            <div className="mb-4">
+              <p className="mb-1 text-[10px] uppercase tracking-wider text-violet-300">{t("reports", "aiOverview.healthAssessment")}</p>
+              <p className="text-sm leading-relaxed text-foreground/85">{aiOverview.healthAssessment}</p>
+            </div>
+          )}
+
+          <div className="grid gap-4 md:grid-cols-2">
+            {/* Top Risks */}
+            {aiOverview.topRisks?.length > 0 && (
+              <div>
+                <h4 className="mb-2 text-xs uppercase tracking-wider text-rose-400">{t("reports", "aiOverview.topRisks")}</h4>
+                {(aiOverview.topRisks || []).slice(0, 3).map((risk: any, i: number) => (
+                  <div key={i} className="mb-2 rounded-lg border border-rose-500/15 bg-rose-500/[0.03] p-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-sm font-medium">{risk.title}</span>
+                      {risk.severity && <SeverityBadge severity={risk.severity} />}
+                    </div>
+                    {risk.description && <p className="mt-1 text-xs text-muted-foreground">{risk.description}</p>}
+                    {risk.evidence && risk.evidence.length > 0 && <EvidenceChips evidence={risk.evidence} />}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Quick Wins */}
+            {aiOverview.quickWins?.length > 0 && (
+              <div>
+                <h4 className="mb-2 text-xs uppercase tracking-wider text-emerald-400">{t("reports", "aiOverview.quickWins")}</h4>
+                {(aiOverview.quickWins || []).slice(0, 3).map((win: any, i: number) => (
+                  <div key={i} className="mb-2 rounded-lg border border-emerald-500/15 bg-emerald-500/[0.03] p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-medium">{win.title}</span>
+                      {win.effort && <span className="text-[10px] text-muted-foreground">{win.effort}</span>}
+                    </div>
+                    {win.description && <p className="mt-1 text-xs text-muted-foreground">{win.description}</p>}
+                    {win.evidence && win.evidence.length > 0 && <EvidenceChips evidence={win.evidence} />}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Fix First + Fastest Score Gain */}
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            {aiOverview.fixFirst && (
+              <div className="rounded-lg border border-amber-500/15 bg-amber-500/[0.03] p-3">
+                <p className="text-[10px] uppercase tracking-wider text-amber-400">{t("reports", "aiOverview.fixFirst")}</p>
+                <p className="mt-1 text-sm text-foreground/85">{aiOverview.fixFirst}</p>
+              </div>
+            )}
+            {aiOverview.fastestScoreGain && (
+              <div className="rounded-lg border border-cyan-500/15 bg-cyan-500/[0.03] p-3">
+                <p className="text-[10px] uppercase tracking-wider text-cyan-300">{t("reports", "aiOverview.fastestScoreGain")}</p>
+                <p className="mt-1 text-sm text-foreground/85">{aiOverview.fastestScoreGain}</p>
+              </div>
+            )}
+          </div>
+        </GlassCard>
+      )}
+
       <GlassCard strong className="p-6 lg:col-span-1">
         <p className="text-xs uppercase tracking-wider text-muted-foreground">{t("reports", "healthScore")}</p>
         <div className="mt-3 flex justify-center">
@@ -567,6 +834,41 @@ function IssuesTab({ issues, title, color, report, id }: { issues: Issue[]; titl
     id === "security" ? t("reports", "aiInsights.securityReview") :
     id === "performance" ? t("reports", "aiInsights.perfReview") :
     t("reports", "aiInsights.codeQualityReview");
+  const [actionLoading, setActionLoading] = useState(false);
+  const handleAgentAction = async (kind: string, issue: Issue) => {
+    setActionLoading(true);
+    try {
+      const res = await fetch("/api/agents/execute", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          kind,
+          title: `${issue.title} — ${issue.file}${issue.line ? `:${issue.line}` : ""}`,
+          input: {
+            issue: issue.title,
+            file: issue.file,
+            line: issue.line,
+            description: issue.description,
+            recommendation: issue.recommendation,
+            severity: issue.severity,
+            category: issue.category,
+          },
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(t("reports", "action.agentStarted"), {
+          description: data.summary?.slice(0, 100),
+        });
+      } else {
+        toast.error(data.error || t("reports", "action.agentFailed"));
+      }
+    } catch {
+      toast.error(t("reports", "action.agentFailed"));
+    } finally {
+      setActionLoading(false);
+    }
+  };
   return (
     <div className="space-y-4">
       <GlassCard className="p-5">
@@ -605,7 +907,11 @@ function IssuesTab({ issues, title, color, report, id }: { issues: Issue[]; titl
           <div className="mt-3 space-y-3">
             {aiReviews.map((r: any, i: number) => (
               <div key={i} className="rounded-lg border border-violet-500/15 bg-violet-500/[0.03] p-3">
-                <p className="text-sm font-medium text-violet-100">{r.issue}</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-sm font-medium text-violet-100">{r.issue}</p>
+                  {r.severity && <SeverityBadge severity={r.severity} />}
+                  <ConfidenceBadge confidence={r.confidence} />
+                </div>
                 {r.rootCause && (
                   <p className="mt-1 text-xs text-muted-foreground">
                     <span className="font-medium text-foreground/80">{t("reports", "aiInsights.rootCause")}:</span> {r.rootCause}
@@ -620,6 +926,17 @@ function IssuesTab({ issues, title, color, report, id }: { issues: Issue[]; titl
                   <p className="mt-1 text-xs text-emerald-300">
                     <span className="font-medium">{t("reports", "aiInsights.expected")}:</span> {r.expectedImprovement}
                   </p>
+                )}
+                {r.evidence && r.evidence.length > 0 && <EvidenceChips evidence={r.evidence} />}
+                {r.fixPlan && r.fixPlan.length > 0 && (
+                  <div className="mt-2">
+                    <p className="mb-1 text-[10px] font-medium uppercase tracking-wider text-cyan-300">{t("reports", "aiInsights.fixPlan")}</p>
+                    <ol className="list-decimal space-y-0.5 pl-5 text-xs text-foreground/85">
+                      {r.fixPlan.map((step: string, j: number) => (
+                        <li key={j}>{step}</li>
+                      ))}
+                    </ol>
+                  </div>
                 )}
                 {r.fixCode && (
                   <div className="mt-2">
@@ -695,6 +1012,88 @@ function IssuesTab({ issues, title, color, report, id }: { issues: Issue[]; titl
                             <Sparkles className="h-3.5 w-3.5" /> {t("reports", "aiRecommendation")}
                           </p>
                           <p className="mt-1 text-sm text-foreground/85">{iss.recommendation}</p>
+                        </div>
+
+                        {/* Action buttons — invoke agents to fix / test / refactor this issue.
+                            Wrapped in AlertDialog for confirmation before running. */}
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button size="sm" variant="outline" disabled={actionLoading}>
+                                {actionLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wrench className="h-3.5 w-3.5" />} {t("reports", "action.fixNow")}
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>{t("reports", "action.confirmTitle")}</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  {t("reports", "action.confirmDescFix")}
+                                  <br /><br />
+                                  <span className="font-medium text-foreground">{t("reports", "action.targetIssue")}:</span> {iss.title}
+                                  <br />
+                                  <code className="text-[10px] text-muted-foreground">{iss.file}{iss.line ? `:${iss.line}` : ""}</code>
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>{t("reports", "action.confirmCancel")}</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleAgentAction("fix-bug", iss)}>
+                                  {t("reports", "action.confirmRun")}
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button size="sm" variant="outline" disabled={actionLoading}>
+                                {actionLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5" />} {t("reports", "action.generateTest")}
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>{t("reports", "action.confirmTitle")}</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  {t("reports", "action.confirmDescTest")}
+                                  <br /><br />
+                                  <span className="font-medium text-foreground">{t("reports", "action.targetIssue")}:</span> {iss.title}
+                                  <br />
+                                  <code className="text-[10px] text-muted-foreground">{iss.file}{iss.line ? `:${iss.line}` : ""}</code>
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>{t("reports", "action.confirmCancel")}</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleAgentAction("test", iss)}>
+                                  {t("reports", "action.confirmRun")}
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button size="sm" variant="outline" disabled={actionLoading}>
+                                {actionLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />} {t("reports", "action.refactor")}
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>{t("reports", "action.confirmTitle")}</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  {t("reports", "action.confirmDescRefactor")}
+                                  <br /><br />
+                                  <span className="font-medium text-foreground">{t("reports", "action.targetIssue")}:</span> {iss.title}
+                                  <br />
+                                  <code className="text-[10px] text-muted-foreground">{iss.file}{iss.line ? `:${iss.line}` : ""}</code>
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>{t("reports", "action.confirmCancel")}</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleAgentAction("refactor", iss)}>
+                                  {t("reports", "action.confirmRun")}
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </div>
                       </div>
                     </motion.div>
@@ -844,7 +1243,30 @@ function DependenciesTab({ report }: { report: AnalysisReport }) {
 /* ---------- Code ---------- */
 function CodeTab({ report }: { report: AnalysisReport }) {
   const { t } = useT();
-  const activeAnalysisId = useAppStore((s) => s.activeAnalysisId);
+  const [aiExplain, setAiExplain] = useState<string | null>(null);
+  const [explainLoading, setExplainLoading] = useState(false);
+
+  const askAI = async (snippet: CodeSnippet) => {
+    setExplainLoading(true);
+    setAiExplain(null);
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: `Analyze the file ${snippet.file}. Explain: 1) What this file does 2) Main risks 3) Patterns used 4) Refactor suggestions. Code:\n\`\`\`\n${snippet.code}\n\`\`\``,
+          language: useI18nStore.getState().locale,
+        }),
+      });
+      const data = await res.json();
+      setAiExplain(data.reply || data.message?.content || "No response");
+    } catch {
+      setAiExplain("AI explanation unavailable");
+    } finally {
+      setExplainLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <GlassCard className="p-5">
@@ -856,23 +1278,94 @@ function CodeTab({ report }: { report: AnalysisReport }) {
           {t("reports", "aiCodeExplorerDesc")}
         </p>
       </GlassCard>
-      <CodeViewer snippets={report.snippets} analysisId={activeAnalysisId ?? undefined} />
+      <CodeViewer
+        snippets={report.snippets}
+        onAskAI={askAI}
+        aiLoading={explainLoading}
+      />
+      {(aiExplain || explainLoading) && (
+        <GlassCard className="border-violet-500/20 bg-gradient-to-br from-violet-500/[0.05] to-transparent p-5">
+          <div className="flex flex-wrap items-center gap-2">
+            <Sparkles className="h-4 w-4 text-violet-300" />
+            <h4 className="text-sm font-semibold">{t("reports", "action.aiExplain")}</h4>
+            <span className="flex items-center gap-1 rounded-full bg-violet-500/15 px-2 py-0.5 text-[10px] font-medium text-violet-300">
+              <Sparkles className="h-3 w-3" /> AI
+            </span>
+          </div>
+          {explainLoading ? (
+            <p className="mt-3 flex items-center gap-2 text-sm text-amber-300">
+              <Loader2 className="h-4 w-4 animate-spin" /> {t("reports", "project.aiAnalyzing")}
+            </p>
+          ) : (
+            <pre className="mt-3 max-h-[400px] overflow-y-auto whitespace-pre-wrap rounded-lg border border-white/5 bg-black/40 p-3 font-mono text-[11px] leading-relaxed text-foreground/85 scrollbar-thin">{aiExplain}</pre>
+          )}
+        </GlassCard>
+      )}
     </div>
   );
 }
 
 /* ---------- Docs ---------- */
 function DocsTab({ report }: { report: AnalysisReport }) {
-  const { t } = useT();
+  const { t, locale } = useT();
+  const activeAnalysisId = useAppStore((s) => s.activeAnalysisId);
   const [copied, setCopied] = useState<string | null>(null);
   const [diagram, setDiagram] = useState<"uml" | "sequence" | "erd">("uml");
   const [docTab, setDocTab] = useState<string>("readme");
+  // AI-enhance state — keyed by docId so each tab tracks its own AI content.
+  // `aiDocs[docId]` holds the AI-generated markdown (replaces static when set).
+  // `aiLoading` is the docId currently being generated (null = idle).
+  const [aiDocs, setAiDocs] = useState<Record<string, string>>({});
+  const [aiLoading, setAiLoading] = useState<string | null>(null);
 
   const copy = (which: string, content: string) => {
     navigator.clipboard.writeText(content);
     setCopied(which);
     toast.success(t("reports", "copiedToClipboard"));
     setTimeout(() => setCopied(null), 1500);
+  };
+
+  // Lazy AI call — only fires on button click. Loads the analysis report +
+  // parsed data on the server, asks the AI to generate a richer version of
+  // the active doc, and stores it in `aiDocs[docId]`. The static template
+  // stays the default; AI is on-demand only (saves tokens).
+  const handleEnhanceWithAI = async (docId: string) => {
+    if (!activeAnalysisId) {
+      toast.error(t("reports", "project.enhanceFailed"));
+      return;
+    }
+    setAiLoading(docId);
+    try {
+      const res = await fetch("/api/docs/enhance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          analysisId: activeAnalysisId,
+          docType: docId,
+          language: locale,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || data?.message || "AI enhance failed");
+      }
+      if (!data.content || !data.content.trim()) {
+        throw new Error("AI returned an empty response");
+      }
+      setAiDocs((prev) => ({ ...prev, [docId]: data.content }));
+    } catch (e: any) {
+      toast.error(`${t("reports", "project.enhanceFailed")}: ${e?.message ?? e}`);
+    } finally {
+      setAiLoading(null);
+    }
+  };
+
+  const handleBackToStatic = (docId: string) => {
+    setAiDocs((prev) => {
+      const next = { ...prev };
+      delete next[docId];
+      return next;
+    });
   };
 
   const docs = [
@@ -895,6 +1388,8 @@ function DocsTab({ report }: { report: AnalysisReport }) {
   // If current diagram tab is hidden, switch to first available
   const activeDiagram = allDiagrams.find(d => d.id === diagram) || allDiagrams[0];
   const activeDoc = docs.find(d => d.id === docTab) || docs[0];
+  const activeAiContent = activeDoc ? aiDocs[activeDoc.id] : undefined;
+  const isActiveLoading = activeDoc ? aiLoading === activeDoc.id : false;
 
   return (
     <div className="space-y-4">
@@ -930,32 +1425,84 @@ function DocsTab({ report }: { report: AnalysisReport }) {
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h4 className="flex items-center gap-2 text-sm font-semibold"><FileText className="h-4 w-4 text-cyan-300" /> {t("reports", "autoGeneratedDocs")}</h4>
           <div className="flex flex-wrap gap-1">
-            {docs.map((d) => (
-              <button
-                key={d.id}
-                onClick={() => setDocTab(d.id)}
-                className={cn(
-                  "rounded-md px-2.5 py-1 text-xs transition",
-                  docTab === d.id ? "text-foreground" : "text-muted-foreground hover:text-foreground"
-                )}
-                style={docTab === d.id ? { background: `${d.color}20`, color: d.color } : {}}
-              >
-                {d.label}
-              </button>
-            ))}
+            {docs.map((d) => {
+              const isAi = !!aiDocs[d.id];
+              return (
+                <button
+                  key={d.id}
+                  onClick={() => setDocTab(d.id)}
+                  className={cn(
+                    "flex items-center gap-1 rounded-md px-2.5 py-1 text-xs transition",
+                    docTab === d.id ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+                  )}
+                  style={docTab === d.id ? { background: `${d.color}20`, color: d.color } : {}}
+                >
+                  {d.label}
+                  {isAi && (
+                    <span
+                      title={t("reports", "project.aiEnhanced")}
+                      className="ml-0.5 inline-flex items-center rounded bg-violet-500/20 px-1 py-px text-[9px] font-bold text-violet-300"
+                    >
+                      <Sparkles className="mr-0.5 h-2.5 w-2.5" /> AI
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
         </div>
 
         {activeDoc && (
           <div className="mt-3">
-            <div className="mb-2 flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">{activeDoc.label}</span>
-              <Button size="sm" variant="ghost" onClick={() => copy(activeDoc.id, activeDoc.content)}>
-                {copied === activeDoc.id ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
-              </Button>
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+              <span className="flex items-center gap-2 text-xs text-muted-foreground">
+                {activeDoc.label}
+                {activeAiContent && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-violet-500/15 px-2 py-0.5 text-[10px] font-medium text-violet-300">
+                    <Sparkles className="h-3 w-3" /> {t("reports", "project.aiEnhanced")}
+                  </span>
+                )}
+              </span>
+              <div className="flex items-center gap-1.5">
+                {/* AI-enhance controls — hidden when there's no active analysis
+                    (e.g. shared views). Lazy: only fires on click. */}
+                {activeAnalysisId && !activeAiContent && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={isActiveLoading}
+                    onClick={() => handleEnhanceWithAI(activeDoc.id)}
+                    className="border-violet-500/30 bg-violet-500/[0.04] text-violet-200 hover:bg-violet-500/[0.08] hover:text-violet-100"
+                  >
+                    {isActiveLoading ? (
+                      <>
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        {t("reports", "project.aiEnhancing")}
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="h-3.5 w-3.5" />
+                        {t("reports", "project.enhanceWithAI")}
+                      </>
+                    )}
+                  </Button>
+                )}
+                {activeAiContent && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => handleBackToStatic(activeDoc.id)}
+                  >
+                    {t("reports", "project.backToStatic")}
+                  </Button>
+                )}
+                <Button size="sm" variant="ghost" onClick={() => copy(activeDoc.id, activeAiContent || activeDoc.content)}>
+                  {copied === activeDoc.id ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
+                </Button>
+              </div>
             </div>
             <pre className="max-h-[500px] overflow-y-auto whitespace-pre-wrap rounded-lg border border-white/5 bg-black/40 p-3 font-mono text-[11px] leading-relaxed text-foreground/80 scrollbar-thin">
-{activeDoc.content}
+{activeAiContent || activeDoc.content}
             </pre>
           </div>
         )}
@@ -970,9 +1517,98 @@ function RoadmapTab({ report }: { report: AnalysisReport }) {
   const deep = (report as any).deepAnalysis as any;
   const aiRoadmap: any[] | undefined = deep?.roadmap;
   const aiPriorities: any[] | undefined = deep?.priorities;
+  const executiveNote: string | undefined = deep?.executiveNote;
+  const sequencerWarnings: string[] | undefined = (report as any)._sequencerWarnings;
   const hasAi = !!aiRoadmap || !!aiPriorities;
+
+  // Phase 2 (P2.5) — graph-validated refactor sequencing.
+  // Loads the RefactorRoadmap on mount when an active analysis exists; the
+  // card renders BELOW the AI Priorities card so the user sees the AI's
+  // claims first, then the graph-validated version with confidence badges.
+  // Uses the project's idiomatic async-IIFE pattern (matches trends-card.tsx)
+  // so setState calls happen in async continuations — not in the synchronous
+  // effect body — to satisfy the `react-hooks/set-state-in-effect` lint rule.
+  const activeAnalysisId = useAppStore((s) => s.activeAnalysisId);
+  const [refactorRoadmap, setRefactorRoadmap] = useState<RefactorRoadmap | null>(null);
+  const [roadmapLoading, setRoadmapLoading] = useState(false);
+
+  useEffect(() => {
+    if (!activeAnalysisId) return;
+    let cancelled = false;
+    (async () => {
+      setRoadmapLoading(true);
+      try {
+        const r = await fetch(
+          `/api/analysis/refactor-roadmap?analysisId=${activeAnalysisId}`,
+        );
+        if (cancelled) return;
+        if (!r.ok) {
+          setRefactorRoadmap(null);
+          return;
+        }
+        const data = (await r.json()) as RefactorRoadmap;
+        if (cancelled) return;
+        setRefactorRoadmap(data);
+      } catch {
+        if (cancelled) return;
+        setRefactorRoadmap(null);
+      } finally {
+        if (!cancelled) setRoadmapLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeAnalysisId]);
+
+  // P2.3 — sort priorities by releasePhase asc, then roiScore desc.
+  // (The sequencer already does this, but we re-sort defensively in case
+  // the report was generated before the sequencer existed.)
+  const sortedPriorities = (aiPriorities ?? []).slice().sort((a: any, b: any) => {
+    const phaseOrder: Record<string, number> = { P0: 0, P1: 1, P2: 2, P3: 3 };
+    const pa = phaseOrder[a.releasePhase] ?? 3;
+    const pb = phaseOrder[b.releasePhase] ?? 3;
+    if (pa !== pb) return pa - pb;
+    return (b.roiScore ?? 0) - (a.roiScore ?? 0);
+  });
+
   return (
     <div className="space-y-4">
+      {/* Sequencer warnings (debug visibility — when the AI mis-estimated or had invalid deps) */}
+      {sequencerWarnings && sequencerWarnings.length > 0 && (
+        <GlassCard className="border-amber-500/20 bg-amber-500/[0.04] p-3">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-semibold text-amber-300">
+                {t("reports", "roadmapMeta.sequencerWarnings")} ({sequencerWarnings.length})
+              </p>
+              <ul className="mt-1 space-y-0.5">
+                {sequencerWarnings.slice(0, 5).map((w, i) => (
+                  <li key={i} className="text-[11px] text-amber-200/80">• {w}</li>
+                ))}
+                {sequencerWarnings.length > 5 && (
+                  <li className="text-[11px] text-amber-200/60">
+                    +{sequencerWarnings.length - 5} more…
+                  </li>
+                )}
+              </ul>
+            </div>
+          </div>
+        </GlassCard>
+      )}
+
+      {/* Executive Note — CTO-facing sequencing narrative */}
+      {executiveNote && (
+        <GlassCard className="border-violet-500/20 bg-gradient-to-br from-violet-500/[0.05] to-transparent p-4">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-violet-300" />
+            <h3 className="text-sm font-semibold">{t("reports", "roadmapMeta.executiveNote")}</h3>
+          </div>
+          <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{executiveNote}</p>
+        </GlassCard>
+      )}
+
       {/* AI Priorities — deep analysis (full width, shown above the roadmap grid) */}
       {aiPriorities && aiPriorities.length > 0 && (
         <GlassCard className="border-violet-500/20 bg-gradient-to-br from-violet-500/[0.05] to-transparent p-5">
@@ -984,7 +1620,7 @@ function RoadmapTab({ report }: { report: AnalysisReport }) {
             </span>
           </div>
           <div className="mt-3 space-y-2">
-            {aiPriorities.map((p: any, i: number) => (
+            {sortedPriorities.map((p: any, i: number) => (
               <motion.div
                 key={i}
                 initial={{ opacity: 0, y: 8 }}
@@ -994,7 +1630,62 @@ function RoadmapTab({ report }: { report: AnalysisReport }) {
               >
                 <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-violet-500/20 text-[10px] font-bold text-violet-300">{i + 1}</span>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium">{p.issue}</p>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <p className="text-sm font-medium">{p.issue}</p>
+                    {/* Release phase badge — P0 red / P1 amber / P2 cyan / P3 gray */}
+                    {p.releasePhase && (
+                      <span
+                        className={cn(
+                          "rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase",
+                          p.releasePhase === "P0"
+                            ? "bg-rose-500/20 text-rose-300"
+                            : p.releasePhase === "P1"
+                            ? "bg-amber-500/20 text-amber-300"
+                            : p.releasePhase === "P2"
+                            ? "bg-cyan-500/20 text-cyan-300"
+                            : "bg-white/10 text-muted-foreground"
+                        )}
+                        title={t("reports", `roadmapMeta.phase${p.releasePhase}` as any)}
+                      >
+                        {p.releasePhase}
+                      </span>
+                    )}
+                    {/* Effort badge — ⏱️ 4h */}
+                    {typeof p.effortHours === "number" && (
+                      <span className="flex items-center gap-0.5 rounded-md bg-white/5 px-1.5 py-0.5 text-[9px] font-medium text-foreground/80">
+                        <Clock className="h-2.5 w-2.5" />
+                        {t("reports", "roadmapMeta.effortHours")}: {p.effortHours}h
+                        {p.effortBand ? ` · ${p.effortBand}` : ""}
+                      </span>
+                    )}
+                    {/* ROI mini-bar — 0-100 colored */}
+                    {typeof p.roiScore === "number" && (
+                      <span
+                        className="flex items-center gap-1 rounded-md bg-white/5 px-1.5 py-0.5 text-[9px] font-medium"
+                        title={t("reports", "roadmapMeta.roi")}
+                      >
+                        <Target className="h-2.5 w-2.5 text-emerald-400" />
+                        <span className="text-foreground/70">{t("reports", "roadmapMeta.roi")}</span>
+                        <span
+                          className="inline-block h-1.5 w-8 overflow-hidden rounded-full bg-white/10"
+                        >
+                          <span
+                            className="block h-full rounded-full"
+                            style={{
+                              width: `${Math.max(0, Math.min(100, p.roiScore))}%`,
+                              background:
+                                p.roiScore >= 75
+                                  ? "#34d399"
+                                  : p.roiScore >= 50
+                                  ? "#fbbf24"
+                                  : "#fb7185",
+                            }}
+                          />
+                        </span>
+                        <span className="tabular-nums text-foreground/80">{Math.round(p.roiScore)}</span>
+                      </span>
+                    )}
+                  </div>
                   {p.businessImpact && (
                     <p className="mt-0.5 text-[11px] text-muted-foreground">
                       <span className="font-medium text-foreground/80">{t("reports", "aiInsights.businessImpact")}:</span> {p.businessImpact}
@@ -1005,8 +1696,170 @@ function RoadmapTab({ report }: { report: AnalysisReport }) {
                       <span className="font-medium text-foreground/80">{t("reports", "aiInsights.recommendation")}:</span> {p.recommendation}
                     </p>
                   )}
+                  {/* dependsOn chips — if non-empty, show "depends on: [title]" */}
+                  {Array.isArray(p.dependsOn) && p.dependsOn.length > 0 && (
+                    <div className="mt-1.5 flex flex-wrap items-center gap-1">
+                      <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
+                        <GitFork className="h-2.5 w-2.5" />
+                        {t("reports", "roadmapMeta.dependsOn")}:
+                      </span>
+                      {p.dependsOn.map((dep: string, j: number) => (
+                        <code
+                          key={j}
+                          className="rounded bg-violet-500/10 px-1.5 py-0.5 text-[10px] text-violet-200"
+                        >
+                          {dep}
+                        </code>
+                      ))}
+                    </div>
+                  )}
+                  {/* blocks chips — mirror of dependsOn, for discoverability */}
+                  {Array.isArray(p.blocks) && p.blocks.length > 0 && (
+                    <div className="mt-1 flex flex-wrap items-center gap-1">
+                      <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
+                        <GitFork className="h-2.5 w-2.5 rotate-180" />
+                        {t("reports", "roadmapMeta.blocks")}:
+                      </span>
+                      {p.blocks.map((blk: string, j: number) => (
+                        <code
+                          key={j}
+                          className="rounded bg-cyan-500/10 px-1.5 py-0.5 text-[10px] text-cyan-200"
+                        >
+                          {blk}
+                        </code>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </motion.div>
+            ))}
+          </div>
+        </GlassCard>
+      )}
+
+      {/* Phase 2 (P2.5) — Refactor Sequencing card.
+          Graph-validated phase ordering. Renders BELOW the AI Priorities card
+          so the user sees the AI's claimed deps first, then the graph-validated
+          version with confidence badges (high=graph, medium=AI-only, low=none).
+          Fetches /api/analysis/refactor-roadmap on mount. */}
+      {roadmapLoading && (
+        <GlassCard className="p-5">
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span className="text-xs">{t("reports", "refactorRoadmap.loading")}</span>
+          </div>
+        </GlassCard>
+      )}
+
+      {refactorRoadmap && !roadmapLoading && (
+        <GlassCard className="border-violet-500/20 bg-gradient-to-br from-violet-500/[0.04] to-transparent p-5">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Network className="h-5 w-5 text-violet-300" />
+              <h3 className="text-lg font-semibold">{t("reports", "refactorRoadmap.title")}</h3>
+              <span className="rounded-full bg-violet-500/15 px-2 py-0.5 text-[10px] text-violet-300">
+                ✨ {t("reports", "refactorRoadmap.graphValidated")}
+              </span>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-muted-foreground">{t("reports", "refactorRoadmap.totalEffort")}</p>
+              <p className="text-lg font-bold tabular-nums">{refactorRoadmap.totalEffortHours}h</p>
+            </div>
+          </div>
+
+          {refactorRoadmap.warnings.length > 0 && (
+            <div className="mb-3 rounded-lg border border-amber-500/15 bg-amber-500/[0.03] p-2">
+              {refactorRoadmap.warnings.map((w, i) => (
+                <p key={i} className="text-xs text-amber-300">⚠ {w}</p>
+              ))}
+            </div>
+          )}
+
+          <div className="flex items-center gap-2 mb-3 text-xs text-muted-foreground">
+            <span>
+              {t("reports", "refactorRoadmap.parallelSpeedup")}:{" "}
+              <strong className="text-cyan-300 tabular-nums">{refactorRoadmap.parallelSpeedupFactor}x</strong>
+            </span>
+          </div>
+
+          {/* Phase columns (P0 → P3) */}
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+            {refactorRoadmap.phases.map((phase) => (
+              <div
+                key={phase.phase}
+                className="rounded-lg border border-white/5 bg-white/[0.02] p-3"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span
+                    className={cn(
+                      "rounded-md px-1.5 py-0.5 text-[10px] font-bold",
+                      phase.phase === "P0"
+                        ? "bg-rose-400/15 text-rose-400"
+                        : phase.phase === "P1"
+                          ? "bg-amber-400/15 text-amber-400"
+                          : phase.phase === "P2"
+                            ? "bg-cyan-400/15 text-cyan-300"
+                            : "bg-white/10 text-muted-foreground",
+                    )}
+                  >
+                    {phase.phase}
+                  </span>
+                  {phase.canParallelize && (
+                    <span
+                      className="text-[9px] text-emerald-400"
+                      title={t("reports", "refactorRoadmap.canParallelize")}
+                    >
+                      ⚡ parallel
+                    </span>
+                  )}
+                </div>
+                <p className="text-[10px] text-muted-foreground mb-2">
+                  {phase.title} · {phase.totalEffortHours}h
+                </p>
+
+                {phase.issues.map((iss, i) => (
+                  <div
+                    key={i}
+                    className="mb-2 rounded border border-white/5 bg-black/20 p-2 text-xs"
+                  >
+                    <p className="font-medium leading-tight">{iss.issue}</p>
+                    <code className="block text-[10px] text-muted-foreground mt-0.5 truncate" title={iss.file}>
+                      {iss.file}
+                    </code>
+                    <div className="flex items-center gap-1 mt-1 flex-wrap">
+                      <span className="text-[10px] tabular-nums">⏱️ {iss.effortHours}h</span>
+                      <span
+                        className={cn(
+                          "rounded px-1 text-[9px] font-medium",
+                          iss.confidence === "high"
+                            ? "bg-emerald-500/15 text-emerald-300"
+                            : iss.confidence === "medium"
+                              ? "bg-amber-500/15 text-amber-300"
+                              : "bg-white/10 text-muted-foreground",
+                        )}
+                        title={t("reports", "refactorRoadmap.confidence")}
+                      >
+                        {iss.confidence}
+                      </span>
+                      {iss.graphValidatedDeps.length > 0 && (
+                        <span
+                          className="text-[9px] text-violet-300"
+                          title={iss.graphValidatedDeps
+                            .map((d) => `${d.from}→${d.to} (${d.edgeType})`)
+                            .join(", ")}
+                        >
+                          🔗 {iss.graphValidatedDeps.length}
+                        </span>
+                      )}
+                    </div>
+                    {iss.unblocks.length > 0 && (
+                      <p className="text-[9px] text-cyan-300 mt-1 leading-tight">
+                        {t("reports", "refactorRoadmap.unblocks")}: {iss.unblocks.join(", ")}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
             ))}
           </div>
         </GlassCard>
@@ -1032,16 +1885,68 @@ function RoadmapTab({ report }: { report: AnalysisReport }) {
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.05 }}
-                  className="rounded-xl border border-cyan-500/15 bg-cyan-500/[0.03] p-3"
+                  className={cn(
+                    "rounded-xl border p-3",
+                    phase.phase === "P0"
+                      ? "border-rose-500/20 bg-rose-500/[0.04]"
+                      : phase.phase === "P1"
+                      ? "border-amber-500/20 bg-amber-500/[0.04]"
+                      : phase.phase === "P2"
+                      ? "border-cyan-500/15 bg-cyan-500/[0.03]"
+                      : "border-white/5 bg-white/[0.02]"
+                  )}
                 >
-                  <p className="text-xs font-semibold text-cyan-200">{phase.phase}</p>
-                  <ul className="mt-1 space-y-0.5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span
+                      className={cn(
+                        "rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase",
+                        phase.phase === "P0"
+                          ? "bg-rose-500/20 text-rose-300"
+                          : phase.phase === "P1"
+                          ? "bg-amber-500/20 text-amber-300"
+                          : phase.phase === "P2"
+                          ? "bg-cyan-500/20 text-cyan-300"
+                          : "bg-white/10 text-muted-foreground"
+                      )}
+                      title={t("reports", `roadmapMeta.phase${phase.phase}` as any)}
+                    >
+                      {phase.phase}
+                    </span>
+                    {phase.title && (
+                      <p className="text-xs font-semibold text-foreground/90">{phase.title}</p>
+                    )}
+                    {/* Phase total effort */}
+                    {typeof phase.estimatedEffortHours === "number" && phase.estimatedEffortHours > 0 && (
+                      <span className="ml-auto flex items-center gap-0.5 rounded-md bg-white/5 px-1.5 py-0.5 text-[10px] font-medium text-foreground/80">
+                        <Clock className="h-2.5 w-2.5" />
+                        {t("reports", "roadmapMeta.phaseTotal")}: {phase.estimatedEffortHours}h
+                      </span>
+                    )}
+                  </div>
+                  <ul className="mt-1.5 space-y-0.5">
                     {phase.tasks?.map((task: string, j: number) => (
                       <li key={j} className="flex items-start gap-1 text-[11px] text-muted-foreground">
                         <span className="mt-0.5 text-cyan-300">→</span> {task}
                       </li>
                     ))}
                   </ul>
+                  {/* blockedBy chips — which phases must complete first */}
+                  {Array.isArray(phase.blockedBy) && phase.blockedBy.length > 0 && (
+                    <div className="mt-1.5 flex flex-wrap items-center gap-1">
+                      <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
+                        <AlertTriangle className="h-2.5 w-2.5 text-amber-400" />
+                        {t("reports", "roadmapMeta.blockedBy")}:
+                      </span>
+                      {phase.blockedBy.map((b: string, j: number) => (
+                        <code
+                          key={j}
+                          className="rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-200"
+                        >
+                          {b}
+                        </code>
+                      ))}
+                    </div>
+                  )}
                 </motion.div>
               ))}
             </div>
@@ -1133,6 +2038,531 @@ function Stat({ label, value, accent }: { label: string; value: string | number;
     <div className="rounded-lg border border-white/5 bg-white/[0.02] p-3">
       <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</p>
       <p className="mt-0.5 text-lg font-bold tabular-nums" style={{ color: accent }}>{value}</p>
+    </div>
+  );
+}
+
+/* ---------- AI helper components — shared across OverviewTab and IssuesTab ---------- */
+function EvidenceChips({ evidence }: { evidence: string[] }) {
+  if (!evidence || evidence.length === 0) return null;
+  return (
+    <div className="mt-2 flex flex-wrap gap-1">
+      {evidence.map((e, i) => (
+        <code key={i} className="rounded bg-white/5 px-1.5 py-0.5 text-[10px] text-muted-foreground">{e}</code>
+      ))}
+    </div>
+  );
+}
+
+function ConfidenceBadge({ confidence }: { confidence?: number }) {
+  if (confidence == null) return null;
+  const pct = Math.round(confidence * 100);
+  const color = pct >= 80 ? "#34d399" : pct >= 50 ? "#fbbf24" : "#fb7185";
+  return (
+    <span
+      className="rounded-full px-1.5 py-0.5 text-[9px] font-medium"
+      style={{ background: `${color}20`, color }}
+    >
+      {pct}% confidence
+    </span>
+  );
+}
+
+/* ---------- Timeline (Phase 2 — P2.2) ----------
+ * Two halves:
+ *  1. Score trajectory bar chart — every analysis of this repo (oldest→newest)
+ *     rendered as a vertical bar whose height = overall score. Click to set
+ *     the "to" comparison point.
+ *  2. Compare-from → compare-to dropdowns — fetches /api/analysis/diff and
+ *     renders score deltas (red/green), added/resolved issues, file changes,
+ *     tech-debt delta.
+ *
+ * Backward-compatible: if fewer than 2 analyses exist, the diff UI is hidden
+ * and an empty-state message ("No previous analyses…") is shown.
+ */
+interface TimelineEntry {
+  id: string;
+  createdAt: string;
+  scores: {
+    overall: number;
+    security: number;
+    performance: number;
+    architecture: number;
+    maintainability: number;
+    codeQuality: number;
+  };
+  aiStatus: string;
+}
+
+interface AISummary {
+  summary?: string;
+  trendAnalysis?: string;
+  concerns?: string[];
+  wins?: string[];
+  recommendation?: string;
+}
+
+function TimelineTab({ report }: { report: AnalysisReport }) {
+  const { t } = useT();
+  const [timeline, setTimeline] = useState<TimelineEntry[]>([]);
+  const [fromId, setFromId] = useState<string>("");
+  const [toId, setToId] = useState<string>("");
+  const [diff, setDiff] = useState<AnalysisDiffResult | null>(null);
+  const [loading, setLoading] = useState(false);
+  // AI Summary (P2.5) — lazy: only fetched when the user clicks the button.
+  // Cleared whenever from/to changes so a stale summary is never shown for a
+  // different comparison pair.
+  const [aiSummary, setAiSummary] = useState<AISummary | null>(null);
+  const [aiSummaryLoading, setAiSummaryLoading] = useState(false);
+  const [aiSummaryError, setAiSummaryError] = useState<string | null>(null);
+  // Lazy initial state — only show the loading spinner if we actually have a
+  // repo to fetch the timeline for. Avoids the "Loading..." flash when the
+  // report has no repoOwner/repoName (e.g. legacy data).
+  const [timelineLoading, setTimelineLoading] = useState(
+    () => !!report.repoOwner && !!report.repoName
+  );
+
+  // Load timeline on mount — fetch the chronological list of analyses for
+  // this repo (oldest → newest). Falls back to empty list on error.
+  useEffect(() => {
+    if (!report.repoOwner || !report.repoName) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(
+          `/api/analysis/timeline?repoOwner=${encodeURIComponent(report.repoOwner)}&repoName=${encodeURIComponent(report.repoName)}`
+        );
+        if (cancelled) return;
+        const data = await res.json();
+        if (cancelled) return;
+        const list: TimelineEntry[] = Array.isArray(data?.analyses) ? data.analyses : [];
+        setTimeline(list);
+        // Default: compare first (oldest) → last (newest)
+        if (list.length >= 2) {
+          setFromId(list[0].id);
+          setToId(list[list.length - 1].id);
+        }
+      } catch {
+        /* silent — empty state will render */
+      } finally {
+        if (!cancelled) setTimelineLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [report.repoOwner, report.repoName]);
+
+  // Load diff whenever from/to changes. If either is missing or they're the
+  // same analysis, we skip the fetch — the cleanup of the previous effect
+  // (run before this body) clears any stale diff.
+  useEffect(() => {
+    if (!fromId || !toId || fromId === toId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        setLoading(true);
+        const res = await fetch(`/api/analysis/diff?from=${fromId}&to=${toId}`);
+        if (cancelled) return;
+        const data = await res.json();
+        if (cancelled) return;
+        setDiff(data);
+      } catch {
+        /* silent — keeps previous diff */
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+      // Clear stale diff when deps change so the user never sees a diff for
+      // a from→to pair they're no longer looking at.
+      setDiff(null);
+      // P2.5: also clear any AI summary — it was for a different comparison.
+      setAiSummary(null);
+      setAiSummaryError(null);
+    };
+  }, [fromId, toId]);
+
+  // P2.5 — fetch the AI narrative for the current diff. Lazy: only called
+  // from the button onClick. Uses the current locale so the AI responds in
+  // the user's language (file paths + tech terms kept as-is by the prompt).
+  const fetchAiSummary = async () => {
+    if (!fromId || !toId || fromId === toId) return;
+    setAiSummaryLoading(true);
+    setAiSummaryError(null);
+    setAiSummary(null);
+    try {
+      const res = await fetch("/api/analysis/diff/ai-summary", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          from: fromId,
+          to: toId,
+          language: useI18nStore.getState().locale,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setAiSummaryError(data?.error || t("reports", "timeline.aiSummaryFailed"));
+      } else if (!data?.summary) {
+        // AI responded but JSON parse failed — surface a graceful error.
+        setAiSummaryError(t("reports", "timeline.aiSummaryFailed"));
+      } else {
+        setAiSummary(data.summary as AISummary);
+      }
+    } catch {
+      setAiSummaryError(t("reports", "timeline.aiSummaryFailed"));
+    } finally {
+      setAiSummaryLoading(false);
+    }
+  };
+
+  const scoreLabel = (key: string): string => {
+    if (key === "codeQuality") return "quality";
+    if (key === "performance") return "perf";
+    return key;
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Score trajectory chart */}
+      <GlassCard className="p-5">
+        <div className="mb-3 flex items-center gap-2">
+          <TrendingUp className="h-4 w-4 text-cyan-300" />
+          <h3 className="text-lg font-semibold">{t("reports", "timeline.scoreTrajectory")}</h3>
+        </div>
+        {timelineLoading ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-3 w-3 animate-spin" />
+            {t("reports", "timeline.loading")}
+          </div>
+        ) : timeline.length === 0 ? (
+          <p className="text-sm text-muted-foreground">{t("reports", "timeline.noHistory")}</p>
+        ) : (
+          <div className="flex items-end gap-2" style={{ height: "8rem" }}>
+            {timeline.map((a) => {
+              const score = Math.max(0, Math.min(100, a.scores.overall || 0));
+              const isSelected = a.id === fromId || a.id === toId;
+              return (
+                <button
+                  key={a.id}
+                  type="button"
+                  onClick={() => setToId(a.id)}
+                  className={cn(
+                    "flex h-full flex-1 flex-col items-center justify-end gap-1 rounded-t transition-opacity",
+                    isSelected ? "opacity-100" : "opacity-70 hover:opacity-100"
+                  )}
+                  title={`${new Date(a.createdAt).toLocaleString()}: ${score}/100 (click to set as compare target)`}
+                >
+                  <span className="text-xs font-medium tabular-nums">{score}</span>
+                  <div
+                    className="w-full rounded-t bg-gradient-to-t from-cyan-500 to-violet-500"
+                    style={{ height: `${Math.max(score, 4)}%` }}
+                  />
+                  <span className="text-[10px] text-muted-foreground tabular-nums">
+                    {new Date(a.createdAt).toLocaleDateString(undefined, {
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </GlassCard>
+
+      {/* Compare from → to */}
+      <GlassCard className="p-5">
+        <div className="mb-3 flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2">
+            <GitCompare className="h-4 w-4 text-cyan-300" />
+            <h3 className="text-lg font-semibold">{t("reports", "timeline.compare")}</h3>
+          </div>
+          {timeline.length >= 2 && (
+            <>
+              <select
+                value={fromId}
+                onChange={(e) => setFromId(e.target.value)}
+                className="rounded border border-white/10 bg-white/5 px-2 py-1 text-sm"
+              >
+                {timeline.map((a) => (
+                  <option key={a.id} value={a.id} className="bg-background">
+                    {new Date(a.createdAt).toLocaleDateString()} ({a.scores.overall})
+                  </option>
+                ))}
+              </select>
+              <span className="text-muted-foreground">→</span>
+              <select
+                value={toId}
+                onChange={(e) => setToId(e.target.value)}
+                className="rounded border border-white/10 bg-white/5 px-2 py-1 text-sm"
+              >
+                {timeline.map((a) => (
+                  <option key={a.id} value={a.id} className="bg-background">
+                    {new Date(a.createdAt).toLocaleDateString()} ({a.scores.overall})
+                  </option>
+                ))}
+              </select>
+            </>
+          )}
+        </div>
+
+        {timeline.length < 2 && !timelineLoading && (
+          <p className="text-sm text-muted-foreground">{t("reports", "timeline.noHistory")}</p>
+        )}
+
+        {loading && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-3 w-3 animate-spin" />
+            {t("reports", "timeline.loading")}
+          </div>
+        )}
+
+        {diff && !loading && (
+          <div className="space-y-3">
+            {/* Score deltas */}
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+              {Object.entries(diff.scores).map(([key, delta]) => (
+                <div
+                  key={key}
+                  className="rounded-lg border border-white/5 bg-white/[0.02] p-2 text-center"
+                >
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                    {scoreLabel(key)}
+                  </p>
+                  <p
+                    className={cn(
+                      "text-lg font-bold tabular-nums",
+                      delta > 0
+                        ? "text-emerald-400"
+                        : delta < 0
+                          ? "text-rose-400"
+                          : "text-muted-foreground"
+                    )}
+                  >
+                    {delta > 0 ? "+" : ""}
+                    {delta}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            {/* Summary */}
+            <div className="rounded-lg border border-cyan-500/15 bg-cyan-500/[0.03] p-3">
+              <p className="text-sm text-foreground/85">{diff.summary}</p>
+            </div>
+
+            {/* Added issues */}
+            {diff.issues.added.length > 0 && (
+              <div>
+                <h4 className="mb-2 text-xs uppercase tracking-wider text-rose-400">
+                  {t("reports", "timeline.newIssues")} ({diff.issues.added.length})
+                </h4>
+                <div className="space-y-1">
+                  {diff.issues.added.slice(0, 10).map((iss, i) => (
+                    <div key={i} className="text-xs">
+                      <SeverityBadge severity={iss.severity} />
+                      <span className="ml-2">{iss.title}</span>
+                      <code className="ml-2 text-[10px] text-muted-foreground">{iss.file}</code>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Resolved issues */}
+            {diff.issues.resolved.length > 0 && (
+              <div>
+                <h4 className="mb-2 text-xs uppercase tracking-wider text-emerald-400">
+                  {t("reports", "timeline.resolvedIssues")} ({diff.issues.resolved.length})
+                </h4>
+                <div className="space-y-1">
+                  {diff.issues.resolved.slice(0, 10).map((iss, i) => (
+                    <div key={i} className="text-xs opacity-60 line-through">
+                      <SeverityBadge severity={iss.severity} />
+                      <span className="ml-2">{iss.title}</span>
+                      <code className="ml-2 text-[10px] text-muted-foreground">{iss.file}</code>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Files changed */}
+            {(diff.files.added.length > 0 || diff.files.deleted.length > 0) && (
+              <div className="grid grid-cols-2 gap-3">
+                {diff.files.added.length > 0 && (
+                  <div>
+                    <h4 className="mb-1 text-xs uppercase tracking-wider text-emerald-400">
+                      {t("reports", "timeline.filesAdded")} ({diff.files.added.length})
+                    </h4>
+                    <div className="space-y-0.5">
+                      {diff.files.added.slice(0, 5).map((f) => (
+                        <code key={f} className="block truncate text-[10px] text-muted-foreground">
+                          {f}
+                        </code>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {diff.files.deleted.length > 0 && (
+                  <div>
+                    <h4 className="mb-1 text-xs uppercase tracking-wider text-rose-400">
+                      {t("reports", "timeline.filesDeleted")} ({diff.files.deleted.length})
+                    </h4>
+                    <div className="space-y-0.5">
+                      {diff.files.deleted.slice(0, 5).map((f) => (
+                        <code key={f} className="block truncate text-[10px] text-muted-foreground">
+                          {f}
+                        </code>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Tech debt */}
+            {diff.techDebt.scoreDelta !== 0 && (
+              <div className="rounded-lg border border-amber-500/15 bg-amber-500/[0.03] p-3">
+                <p className="text-xs">
+                  <span className="font-medium">{t("reports", "timeline.techDebtChange")}:</span>{" "}
+                  <span
+                    className={cn(
+                      "font-bold tabular-nums",
+                      diff.techDebt.scoreDelta < 0 ? "text-emerald-400" : "text-rose-400"
+                    )}
+                  >
+                    {diff.techDebt.scoreDelta > 0 ? "+" : ""}
+                    {diff.techDebt.scoreDelta}
+                  </span>
+                  <span className="text-muted-foreground">
+                    {" "}
+                    ({diff.techDebt.itemsAdded} new, {diff.techDebt.itemsResolved} resolved)
+                  </span>
+                </p>
+              </div>
+            )}
+
+            {/* P2.5 — AI Explain Changes button (lazy: only fires on click) */}
+            <div className="pt-1">
+              <Button
+                type="button"
+                onClick={fetchAiSummary}
+                disabled={aiSummaryLoading}
+                className="bg-gradient-to-r from-violet-500 to-cyan-500 text-white hover:opacity-90"
+              >
+                {aiSummaryLoading ? (
+                  <>
+                    <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                    {t("reports", "timeline.aiExplainLoading")}
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="mr-1.5 h-3.5 w-3.5" />
+                    {t("reports", "timeline.aiExplainButton")}
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        )}
+      </GlassCard>
+
+      {/* P2.5 — AI Summary card (only shown while loading, on error, or when
+          a summary is present). Sits below the diff card so the user can
+          reference both side-by-side. */}
+      {(aiSummaryLoading || aiSummaryError || aiSummary) && (
+        <GlassCard className="border-violet-500/20 bg-gradient-to-br from-violet-500/[0.05] to-transparent p-5">
+          <div className="mb-3 flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-violet-300" />
+            <h3 className="text-lg font-semibold">{t("reports", "timeline.aiSummary")}</h3>
+            <span className="flex items-center gap-1 rounded-full bg-violet-500/15 px-2 py-0.5 text-[10px] font-medium text-violet-300">
+              <Sparkles className="h-2.5 w-2.5" /> AI
+            </span>
+          </div>
+
+          {aiSummaryLoading && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              {t("reports", "timeline.aiExplainLoading")}
+            </div>
+          )}
+
+          {aiSummaryError && !aiSummaryLoading && (
+            <div className="rounded-lg border border-rose-500/20 bg-rose-500/[0.04] p-3 text-sm text-rose-300">
+              {t("reports", "timeline.aiSummaryFailed")}: {aiSummaryError}
+            </div>
+          )}
+
+          {aiSummary && !aiSummaryLoading && (
+            <div className="space-y-3">
+              {/* Executive summary */}
+              {aiSummary.summary && (
+                <div className="rounded-lg border border-cyan-500/15 bg-cyan-500/[0.03] p-3">
+                  <p className="text-sm text-foreground/90">{aiSummary.summary}</p>
+                </div>
+              )}
+
+              {/* Trend analysis */}
+              {aiSummary.trendAnalysis && (
+                <div>
+                  <h4 className="mb-1 text-xs uppercase tracking-wider text-cyan-300">
+                    {t("reports", "timeline.trendAnalysis")}
+                  </h4>
+                  <p className="text-sm text-foreground/80">{aiSummary.trendAnalysis}</p>
+                </div>
+              )}
+
+              {/* Concerns + Wins side-by-side on >= sm */}
+              <div className="grid gap-3 sm:grid-cols-2">
+                {aiSummary.concerns && aiSummary.concerns.length > 0 && (
+                  <div className="rounded-lg border border-rose-500/15 bg-rose-500/[0.03] p-3">
+                    <h4 className="mb-1.5 text-xs uppercase tracking-wider text-rose-400">
+                      {t("reports", "timeline.concerns")}
+                    </h4>
+                    <ul className="space-y-1">
+                      {aiSummary.concerns.map((c, i) => (
+                        <li key={i} className="flex items-start gap-1.5 text-xs text-foreground/80">
+                          <span className="mt-0.5 text-rose-400">⚠</span>
+                          <span>{c}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {aiSummary.wins && aiSummary.wins.length > 0 && (
+                  <div className="rounded-lg border border-emerald-500/15 bg-emerald-500/[0.03] p-3">
+                    <h4 className="mb-1.5 text-xs uppercase tracking-wider text-emerald-400">
+                      {t("reports", "timeline.wins")}
+                    </h4>
+                    <ul className="space-y-1">
+                      {aiSummary.wins.map((w, i) => (
+                        <li key={i} className="flex items-start gap-1.5 text-xs text-foreground/80">
+                          <span className="mt-0.5 text-emerald-400">✓</span>
+                          <span>{w}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+
+              {/* Recommendation — amber highlight */}
+              {aiSummary.recommendation && (
+                <div className="rounded-lg border border-amber-500/20 bg-amber-500/[0.05] p-3">
+                  <h4 className="mb-1 text-xs uppercase tracking-wider text-amber-300">
+                    {t("reports", "timeline.recommendation")}
+                  </h4>
+                  <p className="text-sm text-foreground/90">{aiSummary.recommendation}</p>
+                </div>
+              )}
+            </div>
+          )}
+        </GlassCard>
+      )}
     </div>
   );
 }

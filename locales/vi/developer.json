@@ -190,5 +190,11 @@
     "metricTotalTokens": "Tổng token",
     "valueEnabled": "Bật",
     "valueDisabled": "Tắt"
+  },
+  "codeBlock": {
+    "failedToCopy": "Sao chép thất bại",
+    "toggleWordWrap": "Bật/tắt word wrap",
+    "fullscreen": "Toàn màn hình",
+    "copy": "Sao chép"
   }
 }

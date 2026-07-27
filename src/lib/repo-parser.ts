@@ -4,6 +4,34 @@
 
 import type { AnalysisReport, FileInsight, DependencyNode, DependencyEdge } from "./types";
 
+export interface FunctionSignature {
+  name: string;
+  params: string[];
+  returnType?: string;
+  isAsync: boolean;
+  isExported: boolean;
+  startLine: number;
+  endLine: number;
+}
+
+export interface CallSite {
+  name: string;
+  line: number;
+  context: string;
+}
+
+export interface InheritanceInfo {
+  className: string;
+  extends?: string;
+  implements: string[];
+}
+
+export interface UsageSite {
+  symbol: string;
+  line: number;
+  kind: "reference" | "jsx" | "decorator";
+}
+
 export interface ParsedFile {
   path: string;
   language: string;
@@ -18,6 +46,11 @@ export interface ParsedFile {
   routes: string[];
   complexity: number;
   description: string;
+  // Phase 2 symbol-level fields (all optional — backward-compatible)
+  functionSignatures?: FunctionSignature[];
+  callSites?: CallSite[];
+  inheritance?: InheritanceInfo[];
+  usageSites?: UsageSite[];
 }
 
 export interface ParsedRepository {
@@ -153,7 +186,7 @@ export function parseFunctions(source: string, language: string): string[] {
     const goFunc = source.matchAll(/func\s+(?:\([^)]*\)\s+)?(\w+)\s*\(/g);
     for (const m of goFunc) funcs.push(m[1]);
   }
-  return [...new Set(funcs)].slice(0, 30); // limit
+  return [...new Set(funcs)].slice(0, 200); // cap raised for symbol-level graph (Phase 2)
 }
 
 // Parse class names
@@ -202,6 +235,328 @@ export function parseRoutes(source: string): string[] {
   const trpcRoute = source.matchAll(/\.query\s*\(\s*['"`]([^'"`]+)['"`]/g);
   for (const m of trpcRoute) routes.push(m[1]);
   return [...new Set(routes)];
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase 2: Symbol-level parsers (calls, uses, extends, implements edges)
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Language keywords filtered out of call-site scanning
+const CALL_KEYWORDS = new Set([
+  // JS/TS control flow
+  "if", "for", "while", "switch", "catch", "else", "return", "function", "class",
+  "const", "let", "var", "import", "export", "new", "delete", "typeof", "instanceof",
+  "void", "in", "of", "do", "try", "finally", "throw", "break", "continue",
+  "case", "default", "yield", "await", "async", "static", "extends", "implements",
+  "interface", "type", "enum", "namespace", "module", "declare", "abstract",
+  "public", "private", "protected", "readonly", "get", "set", "this", "super",
+  "true", "false", "null", "undefined", "from", "as", "is",
+  // Python
+  "def", "elif", "lambda", "pass", "with", "assert", "raise", "except", "global",
+  "nonlocal", "and", "or", "not", "None", "True", "False", "self", "cls",
+  // Go
+  "go", "chan", "select", "defer", "range", "make", "append", "len", "cap", "panic",
+  "recover", "package",
+  // Rust
+  "fn", "let", "mut", "match", "impl", "trait", "struct", "use", "where", "ref",
+  "move", "box", "Self", "Some", "None", "Ok", "Err",
+]);
+
+// Strip comments + string/template literals from source while preserving line
+// numbers (replaces stripped characters with spaces so offsets stay valid).
+// This is a heuristic — not a real lexer — but it dramatically reduces false
+// positives in call-site scanning.
+function stripNonCode(source: string): string {
+  // Block comments /* ... */ (preserve newlines inside)
+  let out = source.replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, " "));
+  // Line comments // ... and # ... (Python/Ruby/Shell) — only strip # when not inside a string
+  // Since strings are stripped below, do this in order: comments first, then strings.
+  out = out.replace(/\/\/[^\n]*/g, (m) => " ".repeat(m.length));
+  // # comments (Python/Ruby/Shell/YAML) — only when # is at start of token (no preceding char or whitespace)
+  out = out.replace(/(^|[^\\$:\w])#[^\n]*/g, (m) => m[0] === "#" ? " ".repeat(m.length) : m[0] + " ".repeat(m.length - 1));
+  // Template literals `...` (preserve newlines)
+  out = out.replace(/`(?:\\.|[^`\\])*`/g, (m) => m.replace(/[^\n]/g, " "));
+  // Double-quoted strings
+  out = out.replace(/"(?:\\.|[^"\\])*"/g, (m) => " ".repeat(m.length));
+  // Single-quoted strings
+  out = out.replace(/'(?:\\.|[^'\\])*'/g, (m) => " ".repeat(m.length));
+  return out;
+}
+
+// Extract parameter names from a params string like "a: T, b: U, c = 1"
+function parseParams(paramsStr: string): string[] {
+  if (!paramsStr || !paramsStr.trim()) return [];
+  const params: string[] = [];
+  let depth = 0;
+  let cur = "";
+  for (const ch of paramsStr) {
+    if (ch === "(" || ch === "<" || ch === "[" || ch === "{") depth++;
+    else if (ch === ")" || ch === ">" || ch === "]" || ch === "}") depth--;
+    if (ch === "," && depth === 0) {
+      params.push(cur.trim());
+      cur = "";
+    } else {
+      cur += ch;
+    }
+  }
+  if (cur.trim()) params.push(cur.trim());
+  // Extract just the parameter name (before colon / equals / whitespace)
+  return params.map((p) => {
+    let name = p;
+    const colon = name.indexOf(":");
+    if (colon > 0) name = name.substring(0, colon);
+    const eq = name.indexOf("=");
+    if (eq > 0) name = name.substring(0, eq);
+    // Strip modifiers like "readonly", "public", "*", "&", etc.
+    name = name.replace(/^(readonly|public|private|protected|static|final|var|val)\s+/, "");
+    name = name.replace(/^[&*]+\s*/, "");
+    // Handle destructuring: { a, b } → "destructured"
+    if (name.startsWith("{") || name.startsWith("[")) return "<destructured>";
+    const parts = name.trim().split(/\s+/);
+    return parts[parts.length - 1] || "<anon>";
+  }).filter((n) => n && n !== "<anon>");
+}
+
+// Compute line number of a character index in source
+function lineOf(source: string, idx: number): number {
+  return source.substring(0, idx).split("\n").length;
+}
+
+// Find the end line of a code block by counting braces starting from startIdx.
+// Returns startLine if no closing brace is found (single-expression bodies).
+function findBlockEnd(source: string, startIdx: number, startLine: number): number {
+  let depth = 0;
+  let foundOpen = false;
+  for (let i = startIdx; i < source.length; i++) {
+    const ch = source[i];
+    if (ch === "{") {
+      depth++;
+      foundOpen = true;
+    } else if (ch === "}") {
+      depth--;
+      if (foundOpen && depth === 0) {
+        return lineOf(source, i + 1);
+      }
+    }
+  }
+  return startLine;
+}
+
+// Parse function signatures with full metadata (params, returnType, isAsync,
+// isExported, startLine, endLine). Used by buildCodeGraph to populate function
+// node metadata and to resolve call-site → caller-function edges.
+export function parseFunctionSignatures(source: string, language: string): FunctionSignature[] {
+  const sigs: FunctionSignature[] = [];
+  const stripped = stripNonCode(source);
+  const seen = new Set<string>();
+
+  // JS/TS function declarations: [export] [async] function X(params): Ret {
+  const funcRegex = /\b((?:export\s+)?(?:async\s+)?)function\s+(\w+)\s*\(([^)]*)\)\s*(?::\s*([^{=]+?))?\s*[{=]/g;
+  let m: RegExpExecArray | null;
+  while ((m = funcRegex.exec(stripped)) !== null) {
+    const name = m[2];
+    if (seen.has(name)) continue;
+    seen.add(name);
+    const startLine = lineOf(stripped, m.index);
+    const endLine = findBlockEnd(stripped, m.index + m[0].length - 1, startLine);
+    sigs.push({
+      name,
+      params: parseParams(m[3]),
+      returnType: m[4]?.trim() || undefined,
+      isAsync: /async/.test(m[1]),
+      isExported: /export/.test(m[1]),
+      startLine,
+      endLine,
+    });
+  }
+
+  // JS/TS arrow functions: [export] const X = [async] (params): Ret => {
+  const arrowRegex = /\b((?:export\s+)?)const\s+(\w+)\s*=\s*(async\s*)?\(([^)]*)\)\s*(?::\s*([^=]+?))?\s*=>\s*\{/g;
+  while ((m = arrowRegex.exec(stripped)) !== null) {
+    const name = m[2];
+    if (seen.has(name)) continue;
+    seen.add(name);
+    const startLine = lineOf(stripped, m.index);
+    const endLine = findBlockEnd(stripped, m.index + m[0].length - 1, startLine);
+    sigs.push({
+      name,
+      params: parseParams(m[4]),
+      returnType: m[5]?.trim() || undefined,
+      isAsync: !!m[3],
+      isExported: /export/.test(m[1]),
+      startLine,
+      endLine,
+    });
+  }
+
+  // Python: def X(params) -> Ret:
+  if (language === "Python") {
+    const pyRegex = /^\s*(?:async\s+)?def\s+(\w+)\s*\(([^)]*)\)\s*(?:->\s*([^\n:]+?))?\s*:/gm;
+    while ((m = pyRegex.exec(stripped)) !== null) {
+      const name = m[1];
+      if (seen.has(name)) continue;
+      seen.add(name);
+      const startLine = lineOf(stripped, m.index);
+      const endLine = findPythonBlockEnd(stripped, startLine);
+      sigs.push({
+        name,
+        params: parseParams(m[2]),
+        returnType: m[3]?.trim() || undefined,
+        isAsync: /async\s+def/.test(stripped.substring(Math.max(0, m.index - 6), m.index + 10)),
+        isExported: true, // Python has no export keyword — assume public
+        startLine,
+        endLine,
+      });
+    }
+  }
+
+  // Go: func X(params) Ret {
+  if (language === "Go") {
+    const goRegex = /\bfunc\s+(?:\([^)]*\)\s+)?(\w+)\s*\(([^)]*)\)\s*(?:\([^)]*\))?\s*\{/g;
+    while ((m = goRegex.exec(stripped)) !== null) {
+      const name = m[1];
+      if (seen.has(name)) continue;
+      seen.add(name);
+      const startLine = lineOf(stripped, m.index);
+      const endLine = findBlockEnd(stripped, m.index + m[0].length - 1, startLine);
+      sigs.push({
+        name,
+        params: parseParams(m[2]),
+        returnType: undefined, // Go return types are in a separate group — skipped for simplicity
+        isAsync: false,
+        isExported: /^[A-Z]/.test(name), // Go convention: capitalized = exported
+        startLine,
+        endLine,
+      });
+    }
+  }
+
+  return sigs.slice(0, 200);
+}
+
+// Find the end of a Python block (indentation-based)
+function findPythonBlockEnd(source: string, startLine: number): number {
+  const lines = source.split("\n");
+  if (startLine < 1 || startLine > lines.length) return startLine;
+  const baseIndent = lines[startLine - 1].match(/^\s*/)?.[0].length ?? 0;
+  let endLine = startLine;
+  for (let i = startLine; i < lines.length; i++) {
+    const line = lines[i];
+    if (!line.trim()) continue; // blank lines don't end the block
+    const indent = line.match(/^\s*/)?.[0].length ?? 0;
+    if (indent <= baseIndent) {
+      endLine = i; // first outdented line — block ends at previous line
+      break;
+    }
+    endLine = i + 1;
+  }
+  return endLine;
+}
+
+// Parse call sites: every `identifier(` that isn't a language keyword.
+// Comments + string/template literals are stripped first to reduce noise.
+export function parseCallSites(source: string, _language: string): CallSite[] {
+  const sites: CallSite[] = [];
+  const stripped = stripNonCode(source);
+  const originalLines = source.split("\n");
+
+  const callRegex = /\b([a-zA-Z_$][\w$]*)\s*\(/g;
+  let m: RegExpExecArray | null;
+  while ((m = callRegex.exec(stripped)) !== null) {
+    const name = m[1];
+    if (CALL_KEYWORDS.has(name)) continue;
+    const line = lineOf(stripped, m.index);
+    const originalLine = originalLines[line - 1] || "";
+    const context = originalLine.trim().substring(0, 40);
+    sites.push({ name, line, context });
+  }
+
+  // Cap to keep payload sane — 1000 call sites/file is way more than enough
+  return sites.slice(0, 1000);
+}
+
+// Parse class inheritance: class X extends Y implements Z, W
+// Python: class X(Y, Z):
+export function parseClassInheritance(source: string, language: string): InheritanceInfo[] {
+  const result: InheritanceInfo[] = [];
+  const stripped = stripNonCode(source);
+
+  if (language === "Python") {
+    const pyRegex = /^\s*class\s+(\w+)\s*\(([^)]*)\)\s*:/gm;
+    let m: RegExpExecArray | null;
+    while ((m = pyRegex.exec(stripped)) !== null) {
+      const parents = m[2]
+        .split(",")
+        .map((s) => s.trim())
+        .filter((s) => s && s !== "object");
+      result.push({
+        className: m[1],
+        extends: parents[0] || undefined,
+        implements: parents.slice(1),
+      });
+    }
+  } else {
+    // TS/JS: class X extends Y implements Z, W
+    const tsRegex = /\b(?:export\s+)?(?:abstract\s+)?class\s+(\w+)(?:\s+extends\s+([\w.]+))?(?:\s+implements\s+([\w.,\s]+?))?\s*[{<]/g;
+    let m: RegExpExecArray | null;
+    while ((m = tsRegex.exec(stripped)) !== null) {
+      const implementsList = m[3]
+        ? m[3].split(",").map((s) => s.trim()).filter(Boolean)
+        : [];
+      result.push({
+        className: m[1],
+        extends: m[2]?.trim() || undefined,
+        implements: implementsList,
+      });
+    }
+  }
+
+  return result.slice(0, 100);
+}
+
+// Parse usage sites: references to identifiers that aren't call sites.
+// Three kinds:
+//   - reference: type annotations (`const x: MyType = ...`, `: MyType`, `as MyType`)
+//   - jsx:       JSX component usage (`<MyComponent .../>`)
+//   - decorator: decorator usage (`@Injectable()`)
+export function parseUsageSites(source: string, _language: string): UsageSite[] {
+  const sites: UsageSite[] = [];
+  const stripped = stripNonCode(source);
+  const seen = new Set<string>();
+
+  const add = (symbol: string, line: number, kind: UsageSite["kind"]) => {
+    const key = `${kind}:${symbol}:${line}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    sites.push({ symbol, line, kind });
+  };
+
+  // Decorators: @Injectable, @Component, etc.
+  const decoratorRegex = /@([A-Z]\w*)/g;
+  let m: RegExpExecArray | null;
+  while ((m = decoratorRegex.exec(stripped)) !== null) {
+    add(m[1], lineOf(stripped, m.index), "decorator");
+  }
+
+  // JSX: <MyComponent ...> (capitalized first letter — React convention)
+  const jsxRegex = /<([A-Z]\w*)/g;
+  while ((m = jsxRegex.exec(stripped)) !== null) {
+    add(m[1], lineOf(stripped, m.index), "jsx");
+  }
+
+  // Type annotations: `: MyType` (followed by non-paren to avoid catching function calls)
+  const refRegex = /:\s*([A-Z]\w*)(?![\w(\s]*\()/g;
+  while ((m = refRegex.exec(stripped)) !== null) {
+    add(m[1], lineOf(stripped, m.index), "reference");
+  }
+
+  // `as MyType` casts
+  const asRegex = /\bas\s+([A-Z]\w*)/g;
+  while ((m = asRegex.exec(stripped)) !== null) {
+    add(m[1], lineOf(stripped, m.index), "reference");
+  }
+
+  return sites.slice(0, 500);
 }
 
 // Calculate simple cyclomatic complexity
@@ -483,10 +838,18 @@ export function parseRepository(
     const complexity = calculateComplexity(content);
     const description = describeFile(path, langInfo.name, functions, classes);
 
+    // Phase 2: symbol-level parsers — only for real code files (skip configs, JSON, MD)
+    const isCodeFile = [".ts", ".tsx", ".js", ".jsx", ".py", ".go", ".rs", ".java", ".cs", ".cpp", ".c", ".php", ".vue", ".svelte", ".rb", ".swift", ".kt"].includes(ext);
+    const functionSignatures = isCodeFile ? parseFunctionSignatures(content, langInfo.name) : undefined;
+    const callSites = isCodeFile ? parseCallSites(content, langInfo.name) : undefined;
+    const inheritance = isCodeFile ? parseClassInheritance(content, langInfo.name) : undefined;
+    const usageSites = isCodeFile ? parseUsageSites(content, langInfo.name) : undefined;
+
     parsedFiles.push({
       path, language: langInfo.name, size: content.length, lines,
       imports, exports, functions, classes, interfaces, components, routes,
       complexity, description,
+      functionSignatures, callSites, inheritance, usageSites,
     });
   }
 

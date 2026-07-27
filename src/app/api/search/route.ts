@@ -1,4 +1,4 @@
-import { requireUserId } from "@/lib/auth";
+import { requireUserId, verifyAnalysisOwnership } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 
@@ -6,12 +6,29 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 // POST /api/search — semantic search over repository file summaries
-// Body: { analysisId, query }
+// Body: { analysisId, query, shareToken? }
+//
+// P3.7 (multi-tenant isolation): the analysisId MUST belong to the calling
+// user (or be shared via a valid share token) before we read its file
+// summaries. Without this check, user A could enumerate user B's file
+// structure by querying /api/search with a guessed analysisId.
 export async function POST(req: NextRequest) {
   const userId = await requireUserId(); if (!userId) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   try {
-    const { analysisId, query } = await req.json();
+    const { analysisId, query, shareToken } = await req.json();
     if (!analysisId || !query) return NextResponse.json({ error: "analysisId and query required" }, { status: 400 });
+
+    // P3.7: verify ownership (or valid share token) before reading analysis
+    // data. Returns 404 (not 403) to avoid leaking that the resource exists.
+    const analysis = await verifyAnalysisOwnership(
+      analysisId,
+      userId,
+      { select: { id: true, userId: true, parsedData: true } },
+      shareToken,
+    );
+    if (!analysis) {
+      return NextResponse.json({ error: "Analysis not found" }, { status: 404 });
+    }
 
     // Get file summaries from DB (structured memory)
     const summaries = await db.fileSummary.findMany({
@@ -24,9 +41,9 @@ export async function POST(req: NextRequest) {
     });
 
     if (summaries.length === 0) {
-      // Fallback: try parsedData from analysis
-      const analysis = await db.analysis.findUnique({ where: { id: analysisId } });
-      if (analysis?.parsedData) {
+      // Fallback: try parsedData from analysis (already loaded by the
+      // ownership check — avoids a second DB roundtrip).
+      if (analysis.parsedData) {
         try {
           const parsed = JSON.parse(analysis.parsedData);
           const { semanticSearch } = await import("@/lib/prompt-engine");

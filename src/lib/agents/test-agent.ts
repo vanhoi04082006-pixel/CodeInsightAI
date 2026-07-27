@@ -5,7 +5,6 @@
 import type { AgentId, AgentInfo, Task, TaskResult } from "./types";
 import { BaseAgent } from "./base-agent";
 import { callAI, type AIProviderConfig, type AIMessage } from "./ai-client";
-import { repositoryMemory } from "./repository-memory";
 import { commandRunner } from "@/lib/terminal";
 import { writeFile } from "@/lib/repo-editor";
 
@@ -151,18 +150,9 @@ export class TestAgent extends BaseAgent {
       validation.ok ? "Validation passed." : `Validation: ${validation.reason}`,
     );
 
-    if (repoUrl) {
-      try {
-        await repositoryMemory.remember(
-          repoUrl,
-          `tests:${task.id}:${filePath}`,
-          { testPath, framework, testType, exportsCovered: exportsList },
-          "decision",
-        );
-      } catch {
-        // best-effort
-      }
-    }
+    // repoUrl is accepted for backward compat with the existing API contract,
+    // but no longer persisted — direct-call memory was removed.
+    void repoUrl;
 
     this.log(
       "info",

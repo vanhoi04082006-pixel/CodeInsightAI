@@ -15,7 +15,6 @@ import {
   History,
   Settings,
   Plug,
-  Rocket,
   Home,
 } from "lucide-react";
 import {
@@ -40,7 +39,6 @@ const SHORTCUTS: Shortcut[] = [
   { keys: ["⌘", "A"], label: "New analysis", icon: ScanSearch, category: "navigation" },
   { keys: ["⌘", "P"], label: "Providers", icon: Plug, category: "navigation" },
   { keys: ["⌘", "H"], label: "History", icon: History, category: "navigation" },
-  { keys: ["⌘", "M"], label: "Mission Control", icon: Rocket, category: "navigation" },
   { keys: ["⌘", "C"], label: "Chat (when no text selected)", icon: MessagesSquare, category: "navigation" },
   { keys: ["⌘", ","], label: "Settings", icon: Settings, category: "navigation" },
   // Vim-style
@@ -50,7 +48,6 @@ const SHORTCUTS: Shortcut[] = [
   { keys: ["g", "c"], label: "Go to Chat (vim)", icon: MessagesSquare, category: "navigation" },
   { keys: ["g", "h"], label: "Go to History (vim)", icon: History, category: "navigation" },
   { keys: ["g", "s"], label: "Go to Settings (vim)", icon: Settings, category: "navigation" },
-  { keys: ["g", "m"], label: "Go to Mission (vim)", icon: Rocket, category: "navigation" },
   { keys: ["g", "l"], label: "Go to Landing (vim)", icon: Home, category: "navigation" },
   // Actions
   { keys: ["Esc"], label: "Back to landing / blur input", icon: X, category: "actions" },

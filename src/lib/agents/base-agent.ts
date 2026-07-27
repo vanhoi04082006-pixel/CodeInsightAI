@@ -1,68 +1,48 @@
 // CodeInsight AI — Base Agent abstract class
 // All specialized agents extend this.
+//
+// Simplified: no registry, no event bus, no shared context, no message bus.
+// Agents are called DIRECTLY via /api/agents/execute — no queue, no scheduler,
+// no direct-call infrastructure. The run() wrapper just handles progress
+// reporting + error catching; logs go to console.
 
-import type { AgentId, AgentInfo, Task, TaskResult, TaskKind } from "./types";
-import { agentRegistry } from "./agent-registry";
-import { contextRegistry } from "./shared-context";
-import { messageBus } from "./message-bus";
-import { eventBus } from "./event-bus";
+import type { AgentId, AgentInfo, Task, TaskResult } from "./types";
 
 export abstract class BaseAgent {
   abstract readonly id: AgentId;
   abstract readonly info: AgentInfo;
 
-  /** Register this agent with the registry. Call once at boot. */
-  register(handledKinds: TaskKind[] = []): void {
-    agentRegistry.register(this.info, (task, signal, onProgress) => this.run(task, signal, onProgress), handledKinds);
-    eventBus.emit({
-      type: "log",
-      level: "info",
-      message: `[agent] Registered ${this.info.name} (handles: ${handledKinds.join(", ") || "none"})`,
-      agent: this.id,
-    });
-  }
-
   /** Main execution entry — subclasses implement. */
   protected abstract execute(task: Task, signal: AbortSignal, onProgress: (p: number, msg: string) => void): Promise<TaskResult>;
 
-  /** Public run wrapper — records decisions, handles errors. */
+  /** Public run wrapper — handles progress + errors. */
   async run(task: Task, signal: AbortSignal, onProgress?: (p: number, msg: string) => void): Promise<TaskResult> {
     const progress = onProgress ?? (() => {});
-    contextRegistry.recordEvent(task.id, this.id, "agent-start", `${this.info.name} started task: ${task.title}`, "info");
     progress(5, `${this.info.name} starting`);
     try {
       const result = await this.execute(task, signal, progress);
-      contextRegistry.recordEvent(task.id, this.id, "agent-complete", `${this.info.name} completed: ${result.summary}`, result.success ? "info" : "warn");
+      console.log(`[agent] ${this.info.name} completed: ${result.summary}`);
       return result;
     } catch (err: any) {
       const errMsg = err?.message ?? String(err);
-      contextRegistry.recordEvent(task.id, this.id, "agent-error", `${this.info.name} failed: ${errMsg}`, "error");
+      console.error(`[agent] ${this.info.name} failed: ${errMsg}`);
       return {
         success: false,
-        data: null,
+        data: { error: errMsg },
         summary: `${this.info.name} failed: ${errMsg}`,
         artifacts: [],
       };
     }
   }
 
-  /** Send a message to another agent (or broadcast). */
-  protected send(to: AgentId | "broadcast", type: import("./types").AgentMessage["type"], payload: any): string {
-    return messageBus.send(this.id, to, type, payload);
-  }
-
-  /** Check inbox. */
-  protected receive(): import("./types").AgentMessage[] {
-    return messageBus.receive(this.id);
-  }
-
-  /** Emit a log event. */
+  /** Emit a log line (now just routes to console). */
   protected log(level: "info" | "warn" | "error" | "debug", message: string): void {
-    eventBus.emit({ type: "log", level, message: `[${this.info.name}] ${message}`, agent: this.id });
+    const fn = level === "error" ? console.error : level === "warn" ? console.warn : console.log;
+    fn(`[${this.info.name}] [${level}] ${message}`);
   }
 
-  /** Record a decision in shared context. */
-  protected recordDecision(taskId: string, decision: string, rationale: string): void {
-    contextRegistry.recordDecision(taskId, this.id, decision, rationale);
+  /** Record a decision — kept for backward compat with the 11 agent files; now a no-op (just console-logs). */
+  protected recordDecision(_taskId: string, decision: string, rationale: string): void {
+    console.log(`[${this.info.name}] decision: ${decision} — ${rationale}`);
   }
 }

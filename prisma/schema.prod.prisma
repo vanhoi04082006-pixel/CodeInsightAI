@@ -39,8 +39,11 @@ model User {
   analyses        Analysis[]
   credentials     ProviderCredential[]
   usageRecords    UsageRecord[]
+  tokenUsageRecords TokenUsageRecord[]
+  rateLimitBuckets  RateLimitBucket[]
   settings        UserSettings[]
   auditLogs       AuditLog[]
+  aiCallLogs      AICallLog[]
   shareTokens     ShareToken[]
 }
 
@@ -115,6 +118,7 @@ model Analysis {
   messages           ChatMessage[]
   fileSummaries      FileSummary[]
   shareTokens        ShareToken[]
+  codeGraph          CodeGraphSnapshot?
 
   @@index([userId])
   @@index([repoUrl])
@@ -155,6 +159,27 @@ model FileSummary {
 
   @@index([analysisId])
   @@index([path])
+}
+
+// ==========================================
+// CODE GRAPH SNAPSHOT (Phase 2 — symbol-level graph persistence)
+// ==========================================
+// One row per analysis. JSON-stringified CodeGraph (nodes + edges).
+// Persisted once after parseRepository() runs in /api/analyze POST, then read
+// by /api/codegraph/[analysisId] to avoid rebuilding on every request.
+
+model CodeGraphSnapshot {
+  id          String   @id @default(cuid())
+  analysisId  String   @unique
+  graph       String   // JSON-stringified CodeGraph
+  nodeCount   Int
+  edgeCount   Int
+  truncated   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  analysis    Analysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+
+  @@index([analysisId])
 }
 
 // ==========================================
@@ -219,62 +244,61 @@ model UsageRecord {
 }
 
 // ==========================================
-// AGENT MEMORY & EVENTS
+// TOKEN USAGE RECORD (P3.1 — real monthly token budget enforcement)
 // ==========================================
+// One row per (user, month) holding the cumulative real token count consumed
+// by ALL their AI calls (chat + analysis + agents + streaming). Incremented
+// atomically on each callAI()/streamAI() via Prisma's `increment` operator.
+// KEEP IN SYNC with prisma/schema.prisma — only the datasource provider differs.
 
-model MemoryEntry {
+model TokenUsageRecord {
   id          String   @id @default(cuid())
-  category    String
-  key         String
-  value       String   @default("{}")
-  tags        String   @default("[]")
-  repoUrl     String?
-  createdAt   DateTime @default(now())
+  userId      String
+  month       String   // "2026-07" — same format as UsageRecord
+  totalTokens Int      @default(0)
+  inputTokens Int      @default(0)
+  outputTokens Int     @default(0)
+  callCount   Int      @default(0)
   updatedAt   DateTime @updatedAt
-  accessCount Int      @default(0)
-
-  @@index([category])
-  @@index([repoUrl])
-  @@index([key])
-  @@unique([category, key, repoUrl])
-}
-
-model AgentTask {
-  id          String   @id @default(cuid())
-  taskId      String   @unique
-  kind        String
-  title       String
-  status      String
-  assignedAgent String?
-  priority    String   @default("medium")
-  input       String   @default("{}")
-  output      String?
-  error       String?
-  progress    Int      @default(0)
-  attempts    Int      @default(0)
-  parentTaskId String?
-  createdAt   DateTime @default(now())
-  startedAt   DateTime?
-  completedAt DateTime?
-
-  @@index([status])
-  @@index([kind])
-  @@index([createdAt])
-}
-
-model AgentEvent {
-  id          String   @id @default(cuid())
-  taskId      String?
-  agentId     String?
-  type        String
-  message     String
-  level       String   @default("info")
-  data        String?
   createdAt   DateTime @default(now())
 
-  @@index([taskId])
-  @@index([agentId])
-  @@index([createdAt])
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, month])
+  @@index([userId, month])
+}
+
+// ==========================================
+// RATE LIMIT BUCKET (P3.3 — per-user, per-endpoint hourly rate limits)
+// ==========================================
+// One row per (user, endpoint, hour) holding the count of requests made
+// against that endpoint within the given hour. Incremented atomically on
+// each protected request via Prisma's `increment` operator — no read-then-
+// write race, survives Vercel serverless cold-starts (in-memory limiters
+// do NOT work on serverless — each invocation may be a fresh instance).
+//
+// `hour` is a string bucket key formatted "YYYY-MM-DD-HH" (local time, see
+// getHourBucket() in src/lib/rate-limiter.ts). The bucket naturally rolls
+// over at the top of each hour — first request of the new hour creates a
+// fresh row with count=1. Old rows accumulate; a cleanup helper purges
+// rows older than 24h opportunistically (no cron needed on Vercel).
+//
+// KEEP IN SYNC with prisma/schema.prisma — only the datasource provider differs.
+
+model RateLimitBucket {
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String   // "analysis" | "chat" | "agent"
+  hour      String   // "2024-01-15-14" (hour-precision bucket key)
+  count     Int      @default(0)
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, endpoint, hour])
+  @@index([userId, endpoint])
+  @@index([hour])
 }
 
 // ==========================================
@@ -328,9 +352,72 @@ model PlatformAIConfig {
   baseUrl         String
   models          String   @default("[]") // JSON array of available models
   enabled         Boolean  @default(true)
+  // P3.2: Admin-configured fallback chain. JSON array of
+  //   [{ "providerId": "openai", "model": "gpt-4o-mini" }, ...]
+  // Loaded by getFallbackChain() and iterated by callAIWithFallback()
+  // when the primary provider returns 402/429/5xx/timeout. Optional.
+  fallbackChain   String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
   @@unique([providerId])  // one config per provider
   @@index([enabled])
+}
+
+// ==========================================
+// AI CALL LOG (every AI provider call — redaction + cost telemetry)
+// ==========================================
+// Captures one row per callAI()/streamAI() invocation: which provider/model,
+// how many tokens, latency, success/error, and how many secrets were redacted
+// before the prompt left the system. userId is nullable because callAI() is
+// the single chokepoint and doesn't always have user context (background jobs,
+// system passes). API routes can call logAICall() directly to attach userId.
+
+model AICallLog {
+  id              String   @id @default(cuid())
+  userId          String?  // null when called from background/system context
+  analysisId      String?
+  agent           String?  // "security" | "overview" | "chat" | "deep-analysis" | etc.
+  passType        String?  // analysis pass name (architecture | security | ...)
+  provider        String   // openai | anthropic | openrouter | gemini | azure | etc.
+  model           String
+  inputTokens     Int?
+  outputTokens    Int?
+  totalTokens     Int?
+  latencyMs       Int?
+  status          String   // "success" | "error" | "timeout"
+  error           String?  // truncated error message (max ~500 chars)
+  redactionCount  Int      @default(0)  // number of secrets stripped before send
+  redactedLabels  String   @default("[]") // JSON array of secret types redacted
+  createdAt       DateTime @default(now())
+
+  user            User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([analysisId])
+  @@index([provider, model])
+  @@index([createdAt])
+  @@index([status])
+}
+
+// ==========================================
+// POLICY (P3.5 — admin-configured rules governing AI usage + analysis)
+// ==========================================
+// Admin-configured rules evaluated at API checkpoints (pre-analyze,
+// pre-ai-call). Fixed catalog of 8 policy types — NO arbitrary eval
+// (security: prevents code injection from admin-configured strings).
+// `config` is a JSON blob whose schema depends on `type`; the evaluator
+// in src/lib/policies/evaluator.ts dispatches on `type` and reads the
+// expected keys. KEEP IN SYNC with prisma/schema.prisma — only the
+// datasource provider differs.
+
+model Policy {
+  id        String   @id @default(cuid())
+  type      String   // PolicyType enum — see POLICY_CATALOG in src/lib/policies/types.ts
+  enabled   Boolean  @default(true)
+  config    String   @default("{}")  // JSON, schema depends on `type`
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([type, enabled])
 }

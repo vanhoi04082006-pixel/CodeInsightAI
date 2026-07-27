@@ -9,7 +9,6 @@
   "codegraph": "CodeGraph",
   "code": "Code",
   "docs": "Docs",
-  "roadmap": "Roadmap",
   "healthScore": "Điểm sức khỏe",
   "aiSummary": "Tóm tắt",
   "keyFiles": "File chính",
@@ -117,6 +116,7 @@
     "codeQualityReview": "Đánh giá chất lượng code AI",
     "expected": "Kỳ vọng",
     "fixCode": "Mã sửa lỗi",
+    "fixPlan": "Kế hoạch sửa",
     "businessImpact": "Tác động kinh doanh",
     "bestPractices": "Kiểm tra best practices AI",
     "scoreMax": "/ 100",
@@ -129,6 +129,30 @@
     "estimatedLinesSaved": "Số dòng tiết kiệm ước tính",
     "staticOnly": "Chỉ phân tích tĩnh",
     "staticOnlyDesc": "Chưa có AI insights. Thêm AI provider hoặc bật Platform AI để phân tích sâu bằng AI."
+  },
+  "aiOverview": {
+    "title": "Tổng quan AI",
+    "topRisks": "Rủi ro hàng đầu",
+    "quickWins": "Thắng nhanh",
+    "fixFirst": "Sửa trước",
+    "fastestScoreGain": "Tăng điểm nhanh nhất",
+    "healthAssessment": "Đánh giá sức khỏe"
+  },
+  "action": {
+    "fixNow": "Sửa ngay",
+    "generateTest": "Tạo test",
+    "refactor": "Tái cấu trúc",
+    "agentStarted": "Agent đã khởi động — xem activity feed để theo dõi kết quả",
+    "agentFailed": "Agent khởi động thất bại",
+    "askAI": "Hỏi AI về file này",
+    "aiExplain": "Giải thích AI",
+    "confirmTitle": "Chạy AI Agent?",
+    "confirmDescFix": "Việc này sẽ khởi động Bug-Fixer agent để tạo patch cho issue này. Xem activity feed để theo dõi kết quả.",
+    "confirmDescTest": "Việc này sẽ khởi động Test agent để tạo test case cho issue này. Xem activity feed để theo dõi kết quả.",
+    "confirmDescRefactor": "Việc này sẽ khởi động Refactoring agent để đề xuất tái cấu trúc cho issue này. Xem activity feed để theo dõi kết quả.",
+    "confirmCancel": "Hủy",
+    "confirmRun": "Chạy Agent",
+    "targetIssue": "Issue mục tiêu"
   },
   "project": {
     "titleProject": "Dự án",
@@ -144,6 +168,10 @@
     "docTabFolderGuide": "Hướng dẫn thư mục",
     "docTabComponentGuide": "Hướng dẫn component",
     "docTabDeploymentGuide": "Hướng dẫn triển khai",
+    "enhanceWithAI": "✨ Nâng cấp bằng AI",
+    "aiEnhancing": "AI đang tạo...",
+    "backToStatic": "↩ Về bản tĩnh",
+    "enhanceFailed": "Nâng cấp AI thất bại",
     "cannotShareNotSaved": "Không thể chia sẻ — phân tích chưa được lưu vào DB.",
     "shareLinkCopied": "Đã sao chép link chia sẻ vào clipboard!",
     "shareLinkExpires": "Hết hạn sau 7 ngày. Ai có link đều có thể xem (read-only).",
@@ -151,6 +179,10 @@
     "shareError": "Chia sẻ thất bại — vui lòng thử lại",
     "downloadedMarkdown": "Đã tải báo cáo dưới dạng Markdown",
     "downloadedJson": "Đã tải báo cáo dưới dạng JSON",
+    "jsonExported": "Đã xuất JSON",
+    "generatingPDF": "Đang tạo PDF...",
+    "pdfExported": "Đã xuất PDF",
+    "pdfFailed": "Tạo PDF thất bại",
     "metricHintAvgCoupling": "import/file",
     "metricHintAvgCohesion": "trong thư mục",
     "metricHintInstability": "0=ổn định, 1=biến động",
@@ -162,5 +194,63 @@
     "metricHintDirCycles": "chuỗi dir→dir",
     "metricHintLayerViolations": "comp→DB",
     "metricHintGodModules": ">20 hàm"
-  }
+  },
+  "timeline": {
+    "title": "Dòng thời gian",
+    "scoreTrajectory": "Biểu đồ điểm",
+    "compare": "So sánh",
+    "loading": "Đang tải diff...",
+    "noHistory": "Chưa có phân tích trước đó. Scan lại repo này để xem thay đổi theo thời gian.",
+    "newIssues": "Vấn đề mới",
+    "resolvedIssues": "Đã giải quyết",
+    "filesAdded": "File thêm",
+    "filesDeleted": "File xóa",
+    "techDebtChange": "Thay đổi tech debt",
+    "aiExplainButton": "🤖 AI giải thích thay đổi",
+    "aiExplainLoading": "AI đang phân tích thay đổi...",
+    "aiSummary": "Tóm tắt AI",
+    "trendAnalysis": "Phân tích xu hướng",
+    "concerns": "Lo ngại",
+    "wins": "Thắng",
+    "recommendation": "Khuyến nghị",
+    "aiSummaryFailed": "Tóm tắt AI thất bại"
+  },
+  "regressions": {
+    "whatChanged": "Đã thay đổi gì từ lần scan trước",
+    "comparedTo": "So với",
+    "viewTimeline": "Xem dòng thời gian",
+    "verdict": {
+      "improved": "Cải thiện",
+      "regressed": "Thoái lui",
+      "neutral": "Trung tính"
+    },
+    "regressions": "Thoái lui",
+    "improvements": "Cải thiện"
+  },
+  "refactorRoadmap": {
+    "title": "Tuần tự tái cấu trúc",
+    "loading": "Đang xây dựng roadmap...",
+    "totalEffort": "Tổng nỗ lực",
+    "parallelSpeedup": "Tăng tốc song song",
+    "graphValidated": "Đã xác thực bằng graph",
+    "unblocks": "Mở khóa",
+    "confidence": "Độ tin cậy",
+    "canParallelize": "Có thể song song"
+  },
+  "roadmapMeta": {
+    "effortHours": "Nỗ lực",
+    "releasePhase": "Giai đoạn",
+    "phaseP0": "P0 — Ngay",
+    "phaseP1": "P1 — Sprint này",
+    "phaseP2": "P2 — Sprint tới",
+    "phaseP3": "P3 — Backlog",
+    "dependsOn": "Phụ thuộc vào",
+    "blocks": "Chặn",
+    "blockedBy": "Bị chặn bởi",
+    "phaseTotal": "Tổng giai đoạn",
+    "roi": "ROI",
+    "executiveNote": "Ghi chú điều hành",
+    "sequencerWarnings": "Cảnh báo sequencer"
+  },
+  "roadmap": "Lộ trình"
 }

@@ -3,14 +3,11 @@
 // the tracer caps storage at 100 traces × 50 spans each (LRU eviction).
 //
 // Supports parent/child span relationships, attributes, and span events.
-// Emits span lifecycle events to the event bus (as agent:event with type
-// "trace:span-started" / "trace:span-ended") so they can be persisted.
 //
 // Use `withTrace(traceId, fn)` to scope a logical operation, and
 // `tracer.startSpan(name)` to instrument sub-operations within it.
 
 import { randomUUID } from "node:crypto";
-import { eventBus } from "@/lib/agents/event-bus";
 
 // ────────────────────────────────────────────────────────────────────────────
 // Types
@@ -120,24 +117,6 @@ export class Tracer {
 
     this.storeSpan(span);
 
-    // Emit an event for observability (best-effort).
-    try {
-      eventBus.emit({
-        type: "agent:event",
-        event: {
-          id: spanId,
-          type: "trace:span-started",
-          agent: "orchestrator", // tracing is system-level; use orchestrator as the agent
-          message: `Span started: ${name}`,
-          level: "debug",
-          timestamp: span.startTime,
-          data: { traceId, spanId, parentSpanId: resolvedParent, name },
-        },
-      });
-    } catch {
-      // Never let tracing crash the app.
-    }
-
     return span;
   }
 
@@ -148,29 +127,6 @@ export class Tracer {
     span.status = status;
     if (attributes) {
       span.attributes = { ...span.attributes, ...attributes };
-    }
-
-    // Emit an event for observability.
-    try {
-      eventBus.emit({
-        type: "agent:event",
-        event: {
-          id: span.spanId,
-          type: "trace:span-ended",
-          agent: "orchestrator",
-          message: `Span ended: ${span.name} (${span.durationMs}ms, ${status})`,
-          level: status === "error" ? "error" : "debug",
-          timestamp: span.endTime,
-          data: {
-            traceId: span.traceId,
-            spanId: span.spanId,
-            durationMs: span.durationMs,
-            status,
-          },
-        },
-      });
-    } catch {
-      // Swallow.
     }
   }
 

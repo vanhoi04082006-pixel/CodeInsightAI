@@ -75,5 +75,15 @@
       "component": "UI component — presentation logic with minimal business rules.",
       "config": "Configuration — static settings, env loaders, and feature flags."
     }
+  },
+  "aiInsight": {
+    "title": "AI Graph Analysis",
+    "button": "🤖 AI Graph Analysis",
+    "loading": "AI analyzing graph...",
+    "centralNodes": "Central Nodes",
+    "fragileModules": "Fragile Modules",
+    "refactorSequence": "Refactor Sequence",
+    "overallAssessment": "Overall Assessment",
+    "failed": "AI analysis failed"
   }
 }

@@ -5,7 +5,6 @@
 import type { AgentId, AgentInfo, Task, TaskResult } from "./types";
 import { BaseAgent } from "./base-agent";
 import { callAIForJSON, type AIProviderConfig, type AIMessage } from "./ai-client";
-import { repositoryMemory } from "./repository-memory";
 import { analyzeSecurity } from "@/lib/analyzers/security";
 import type { Issue } from "@/lib/types";
 
@@ -96,13 +95,9 @@ export class SecurityAgent extends BaseAgent {
       report.summary,
     );
 
-    if (repoUrl) {
-      try {
-        await repositoryMemory.remember(repoUrl, `security:${task.id}`, report, "decision");
-      } catch {
-        // best-effort
-      }
-    }
+    // repoUrl is accepted for backward compat with the existing API contract,
+    // but no longer persisted — legacy memory was removed.
+    void repoUrl;
 
     this.log("info", `Security audit — risk ${report.overallRisk}, ${report.findings.length} finding(s).`);
 

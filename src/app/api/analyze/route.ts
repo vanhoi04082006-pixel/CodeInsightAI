@@ -8,6 +8,20 @@ import { db } from "@/lib/db";
 import { parseRepoUrl } from "@/lib/repo-utils";
 import type { AnalysisReport } from "@/lib/types";
 import { checkQuota, incrementUsage } from "@/lib/billing/usage";
+import { loadPolicies } from "@/lib/policies/policy-loader";
+import {
+  evaluatePolicies,
+  hasBlockingViolation,
+  blockingViolations,
+} from "@/lib/policies/evaluator";
+import { getUserPlanInfo } from "@/lib/billing/token-budget";
+import {
+  enforceRateLimit,
+  rateLimit429Body,
+  rateLimitHeaders,
+  retryAfterSeconds,
+  maybeCleanupOldBuckets,
+} from "@/lib/rate-limiter";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -63,6 +77,11 @@ async function resolveAIProvider(
     // 1. Pro user selected platform provider
     if (platformProvider) {
       const config = await getPlatformAIProvider(platformProvider, platformModel);
+      // Override maxTokens if user configured it in the mode toggle
+      if (config && body.platformMaxTokens !== undefined) {
+        const userMax = body.platformMaxTokens;
+        (config as any).maxTokens = (userMax && userMax > 0) ? userMax : 4096;
+      }
       if (config) return config;
     }
 
@@ -89,16 +108,16 @@ async function resolveAIProvider(
       } catch {}
     }
 
-    // 4. Client-provided key (local dev)
+    // 4. Client-provided key (local dev / BYOK from frontend)
     if (body.provider?.apiKey) {
       return {
         providerId: body.provider.providerId,
         apiKey: body.provider.apiKey,
         baseUrl: body.provider.baseUrl || "",
         model: body.provider.model || "",
-        temperature: 0.7,
-        maxTokens: 4096,
-        timeout: 60,
+        temperature: body.provider.temperature ?? 0.7,
+        maxTokens: body.provider.maxTokens ?? 4096,
+        timeout: body.provider.timeout ?? 60,
       };
     }
   } catch (e) {
@@ -133,6 +152,25 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Sign in with GitHub to analyze a repository" }, { status: 401 });
     }
 
+    // P3.3: per-user hourly rate limit (DB-backed — survives Vercel serverless
+    // cold-starts; the in-memory limiter in src/lib/production/rate-limiter.ts
+    // resets per invocation and is dead code in prod). Check happens BEFORE
+    // the expensive GitHub fetch + static analysis. Free: 10/h, Pro: 100/h,
+    // Team: 500/h, Enterprise: unlimited.
+    const planInfo = await getUserPlanInfo(userId);
+    const rl = await enforceRateLimit(userId, planInfo.plan, "analysis");
+    if (rl.blocked) {
+      return NextResponse.json(rateLimit429Body(rl.status!, "analysis"), {
+        status: 429,
+        headers: {
+          "Retry-After": String(retryAfterSeconds(rl.status)),
+          ...rateLimitHeaders(rl.status),
+        },
+      });
+    }
+    // Opportunistic cleanup of stale buckets (~1% of requests, fire-and-forget).
+    maybeCleanupOldBuckets();
+
     // Quota
     const quota = await checkQuota(userId, "analysis");
     if (!quota.allowed) {
@@ -165,15 +203,46 @@ export async function POST(req: NextRequest) {
     const ghToken = await getGithubAccessToken();
     let report: AnalysisReport;
     let parsedRepo: any;
+    let isPrivate = false;
     try {
       const result = await fetchAndAnalyzeFromGitHub(parsed.owner, parsed.name, ghToken, language);
       report = result.report;
       parsedRepo = result.parsedRepo;
+      isPrivate = result.isPrivate;
     } catch (fetchErr: any) {
       console.error("[/api/analyze] GitHub fetch/parse failed:", fetchErr);
       return NextResponse.json({
         error: fetchErr?.message || "Failed to fetch repository from GitHub. Check if the repo exists and is public (or sign in with GitHub for private repos).",
       }, { status: 500 });
+    }
+
+    // P3.5: Policy engine — evaluate all enabled policies against this
+    // analyze request. Runs AFTER the GitHub fetch (so we know the real
+    // file count + languages + visibility) but BEFORE the DB persist (so
+    // a blocked request doesn't waste a write). BLOCK-severity → 403 with
+    // violation details. WARN-severity policies don't apply at this
+    // checkpoint (max-tokens-per-call is enforced in /api/analyze/ai-pass).
+    //
+    // Fail-open: if loadPolicies() throws (DB error), `policies` is `[]`
+    // and evaluatePolicies returns no violations — the request continues.
+    const policies = await loadPolicies();
+    if (policies.length > 0) {
+      const violations = evaluatePolicies(policies, {
+        fileCount: report.totalFiles,
+        languages: report.languages?.map((l: { name: string }) => l.name),
+        isPrivateRepo: isPrivate,
+        userId,
+        plan: planInfo.plan,
+      });
+      if (hasBlockingViolation(violations)) {
+        return NextResponse.json(
+          {
+            error: "Policy violation",
+            violations: blockingViolations(violations),
+          },
+          { status: 403 },
+        );
+      }
     }
 
     // Persist to DB immediately (aiStatus = "pending" if AI enabled)
@@ -208,6 +277,25 @@ export async function POST(req: NextRequest) {
         },
       },
     });
+
+    // Persist CodeGraph snapshot (Phase 2) — best-effort, never block analysis on failure
+    if (parsedRepo) {
+      try {
+        const { buildCodeGraph } = await import("@/lib/codegraph/builder");
+        const graph = buildCodeGraph(parsedRepo);
+        await db.codeGraphSnapshot.create({
+          data: {
+            analysisId: created.id,
+            graph: JSON.stringify(graph),
+            nodeCount: graph.nodeCount,
+            edgeCount: graph.edgeCount,
+            truncated: (graph as any).truncated || false,
+          },
+        });
+      } catch (e) {
+        console.warn("[codegraph] snapshot persist failed:", e);
+      }
+    }
 
     incrementUsage(userId, "analysis").catch(() => {});
 
@@ -312,6 +400,9 @@ async function fetchAndAnalyzeFromGitHub(owner: string, repo: string, ghToken: s
   }
   const repoData = await repoRes.json();
   branch = repoData.default_branch || "main";
+  // P3.5: capture visibility for the `block-private-repos` policy check.
+  // GitHub's /repos/{owner}/{repo} response includes `private: true|false`.
+  const isPrivate = repoData.private === true;
 
   const treeRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`,
     { headers: githubHeaders(ghToken) });
@@ -350,7 +441,7 @@ async function fetchAndAnalyzeFromGitHub(owner: string, repo: string, ghToken: s
   const { analyzeParsedRepository } = await import("@/lib/analysis-engine-v2");
   const parsedRepo = parseRepository(`https://github.com/${owner}/${repo}`, owner, repo, branch, fileContents);
   const report = analyzeParsedRepository(parsedRepo, fileContents, language);
-  return { report, parsedRepo };
+  return { report, parsedRepo, isPrivate };
 }
 
 // ── GET: List user's analyses (SCOPED to userId — security fix) ──

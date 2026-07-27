@@ -1,9 +1,15 @@
-// GET /api/usage/tokens — Return token usage for current month
-// Returns: { used, limit, remaining, plan, model }
+// GET /api/usage/tokens — Return REAL token usage for current month (P3.1)
+//
+// Reads from `TokenUsageRecord` (cached counter incremented on each AI call)
+// instead of the old chat/analysis-count estimate. Returns:
+//   { plan, used, limit, remaining, exceeded, unlimited, resetsAt, breakdown }
+//
+// `exceeded: true` signals the UI to show a "budget exceeded — upgrade" banner.
+// `unlimited: true` (admin / enterprise) short-circuits to a green badge.
 import { NextResponse } from "next/server";
 import { requireUserId } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { PLAN_LIMITS } from "@/lib/billing/usage";
+import { getTokenUsage } from "@/lib/billing/token-budget";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,58 +28,63 @@ export async function GET() {
 
     const plan = user?.plan ?? "free";
     const isAdmin = user?.role === "admin";
-    const limits = PLAN_LIMITS[plan] ?? PLAN_LIMITS.free;
 
-    // Admin = unlimited
-    if (isAdmin) {
+    // Admin = unlimited (auth.ts auto-upgrades admin → enterprise plan, but
+    // belt-and-braces: explicit role check too).
+    if (isAdmin || plan === "enterprise") {
       return NextResponse.json({
-        plan: "admin",
+        plan: isAdmin ? "admin" : plan,
         used: 0,
         limit: -1, // unlimited
         remaining: -1,
+        exceeded: false,
         unlimited: true,
+        resetsAt: new Date(
+          new Date().getFullYear(),
+          new Date().getMonth() + 1,
+          1
+        ).toISOString(),
       });
     }
 
-    // Get token usage for this month
-    // We estimate tokens from chat messages + analyses
-    // (real token tracking would require a TokenUsage table)
-    const now = new Date();
-    const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    // P3.1: real token usage from the cached counter.
+    const status = await getTokenUsage(userId, plan);
 
-    // Estimate: 1 chat message ≈ 500 tokens (input + output avg)
-    // 1 analysis ≈ 5000 tokens (7-pass deep analysis)
-    const [chatCount, analysisCount] = await Promise.all([
+    // Optional breakdown for context (best-effort — falls back to 0 if no logs)
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const [chatCount, analysisCount, callCount] = await Promise.all([
       db.chatMessage.count({
-        where: {
-          createdAt: {
-            gte: new Date(now.getFullYear(), now.getMonth(), 1),
-          },
-        },
-      }),
+        where: { createdAt: { gte: monthStart } },
+      }).catch(() => 0),
       db.analysis.count({
         where: {
           userId,
-          createdAt: {
-            gte: new Date(now.getFullYear(), now.getMonth(), 1),
-          },
+          createdAt: { gte: monthStart },
         },
-      }),
+      }).catch(() => 0),
+      db.aICallLog.count({
+        where: {
+          userId,
+          createdAt: { gte: monthStart },
+        },
+      }).catch(() => 0),
     ]);
-
-    const estimatedTokens = (chatCount * 500) + (analysisCount * 5000);
-    const limit = limits.tokensPerMonth;
-    const remaining = limit === -1 ? -1 : Math.max(0, limit - estimatedTokens);
 
     return NextResponse.json({
       plan,
-      used: estimatedTokens,
-      limit,
-      remaining,
-      unlimited: limit === -1,
+      used: status.used,
+      limit: status.limit,
+      remaining: status.remaining,
+      exceeded: status.exceeded,
+      unlimited: status.unlimited,
+      resetsAt: status.resetsAt.toISOString(),
       breakdown: {
         chatMessages: chatCount,
         analyses: analysisCount,
+        aiCallCount: callCount,
+        // Keep the historical averages for context — but the `used` field is
+        // now REAL token counts from AICallLog, not these estimates.
         estimatedPerChat: 500,
         estimatedPerAnalysis: 5000,
       },

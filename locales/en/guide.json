@@ -36,7 +36,7 @@
     "keyboardShortcuts": {
       "title": "Keyboard Shortcuts",
       "icon": "⌨️",
-      "content": "## Keyboard Shortcuts\n\n### Navigation\n| Shortcut | Action |\n|----------|--------|\n| `⌘K` | Command palette |\n| `⌘D` | Dashboard |\n| `⌘A` | New analysis |\n| `⌘P` | Providers |\n| `⌘H` | History |\n| `⌘M` | Mission Control (Pro) |\n| `⌘C` | Chat (when no text selected) |\n| `⌘,` | Settings |\n| `Esc` | Back to landing |\n\n### Vim-style (no modifier)\n| Keys | Action |\n|------|--------|\n| `g` then `d` | Dashboard |\n| `g` then `a` | Analyze |\n| `g` then `p` | Project |\n| `g` then `c` | Chat |\n| `g` then `h` | History |\n| `g` then `s` | Settings |\n| `g` then `m` | Mission |\n| `g` then `l` | Landing |\n\n### Other\n| Key | Action |\n|-----|--------|\n| `?` | Show keyboard shortcuts help |\n| `Esc` | Blur input / close dialog |\n"
+      "content": "## Keyboard Shortcuts\n\n### Navigation\n| Shortcut | Action |\n|----------|--------|\n| `⌘K` | Command palette |\n| `⌘D` | Dashboard |\n| `⌘A` | New analysis |\n| `⌘P` | Providers |\n| `⌘H` | History |\n| `⌘C` | Chat (when no text selected) |\n| `⌘,` | Settings |\n| `Esc` | Back to landing |\n\n### Vim-style (no modifier)\n| Keys | Action |\n|------|--------|\n| `g` then `d` | Dashboard |\n| `g` then `a` | Analyze |\n| `g` then `p` | Project |\n| `g` then `c` | Chat |\n| `g` then `h` | History |\n| `g` then `s` | Settings |\n| `g` then `l` | Landing |\n\n### Other\n| Key | Action |\n|-----|--------|\n| `?` | Show keyboard shortcuts help |\n| `Esc` | Blur input / close dialog |\n"
     },
     "faq": {
       "title": "FAQ",

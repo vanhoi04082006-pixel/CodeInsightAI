@@ -6,7 +6,7 @@ import * as d3 from "d3-force";
 import {
   Search, ZoomIn, ZoomOut, Maximize, Network, Loader2, ChevronRight,
   Filter, GitBranch, FileCode, Zap, Database, Route as RouteIcon,
-  Package, Box,
+  Package, Box, Sparkles, AlertTriangle, GitMerge, ListOrdered, ShieldAlert,
 } from "lucide-react";
 import { GlassCard, GradientText } from "@/components/shared/ui";
 import { Button } from "@/components/ui/button";
@@ -94,9 +94,35 @@ export function CodeGraphView({ analysisId }: { analysisId: string | null }) {
   const drag = useRef<{ x: number; y: number; px: number; py: number } | null>(null);
   const [showFilters, setShowFilters] = useState(false);
 
+  // Lazy-loaded AI insight state — only fetched when the user clicks the
+  // "AI Graph Analysis" button (saves tokens vs. running on every page load).
+  const [aiInsight, setAiInsight] = useState<any>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiExpanded, setAiExpanded] = useState(false);
+
+  const runAiInsight = async () => {
+    if (!analysisId || aiLoading) return;
+    setAiLoading(true);
+    setAiError(null);
+    setAiExpanded(true);
+    try {
+      const res = await fetch(`/api/codegraph/${analysisId}/ai-insight`);
+      const data = await res.json();
+      if (!res.ok) {
+        setAiError(data?.error || t("codegraph", "aiInsight.failed"));
+      } else {
+        setAiInsight(data);
+      }
+    } catch (e: any) {
+      setAiError(e?.message || t("codegraph", "aiInsight.failed"));
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (!analysisId) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     fetch(`/api/codegraph/${analysisId}?q=full`)
       .then((r) => r.json())
@@ -257,7 +283,168 @@ export function CodeGraphView({ analysisId }: { analysisId: string | null }) {
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[1fr_300px]">
+    <div className="space-y-4">
+      {/* AI Graph Insight card — lazy-loaded on button click */}
+      <GlassCard className="overflow-hidden border-violet-400/20 bg-gradient-to-br from-violet-500/[0.04] to-cyan-500/[0.04] p-4">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span className="flex h-7 w-7 items-center justify-center rounded-md bg-violet-500/15 text-violet-300">
+              <Sparkles className="h-4 w-4" />
+            </span>
+            <h3 className="text-sm font-semibold">
+              <GradientText>{t("codegraph", "aiInsight.title")}</GradientText>
+            </h3>
+            <Badge variant="outline" className="border-violet-400/30 bg-violet-500/10 text-[10px] text-violet-200">
+              ✨ AI
+            </Badge>
+          </div>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={runAiInsight}
+            disabled={aiLoading || !analysisId}
+            className="h-8 gap-1.5 border border-violet-400/30 bg-violet-500/10 text-violet-200 hover:bg-violet-500/20 hover:text-violet-100"
+          >
+            {aiLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+            {t("codegraph", "aiInsight.button")}
+          </Button>
+        </div>
+
+        {aiExpanded && (aiLoading || aiError || aiInsight) && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            className="mt-3 overflow-hidden"
+          >
+            {aiLoading && (
+              <div className="flex items-center gap-2 rounded-md border border-white/5 bg-white/[0.02] p-3 text-xs text-muted-foreground">
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-violet-300" />
+                {t("codegraph", "aiInsight.loading")}
+              </div>
+            )}
+
+            {aiError && !aiLoading && (
+              <div className="flex items-center gap-2 rounded-md border border-red-500/20 bg-red-500/[0.06] p-3 text-xs text-red-300">
+                <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                <span className="break-all">{aiError}</span>
+              </div>
+            )}
+
+            {aiInsight?.insight && !aiLoading && !aiError && (
+              <div className="space-y-3">
+                {/* Graph stats summary */}
+                {aiInsight.stats && (
+                  <div className="grid grid-cols-2 gap-1.5 text-[10px] sm:grid-cols-4">
+                    <div className="rounded border border-white/5 bg-white/[0.02] p-1.5">
+                      <span className="text-muted-foreground">{t("codegraph", "totalNodes")}</span>
+                      <p className="font-semibold tabular-nums">{aiInsight.stats.totalNodes}</p>
+                    </div>
+                    <div className="rounded border border-white/5 bg-white/[0.02] p-1.5">
+                      <span className="text-muted-foreground">{t("codegraph", "totalEdges")}</span>
+                      <p className="font-semibold tabular-nums">{aiInsight.stats.totalEdges}</p>
+                    </div>
+                    <div className="rounded border border-white/5 bg-white/[0.02] p-1.5">
+                      <span className="text-muted-foreground">{t("codegraph", "depGraph.avgConnectivity")}</span>
+                      <p className="font-semibold tabular-nums">{(aiInsight.stats.avgConnectivity ?? 0).toFixed(1)}</p>
+                    </div>
+                    <div className="rounded border border-white/5 bg-white/[0.02] p-1.5">
+                      <span className="text-muted-foreground">{t("codegraph", "depGraph.circularDeps")}</span>
+                      <p className="font-semibold tabular-nums">{aiInsight.stats.circularDeps ?? 0}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Central Nodes */}
+                {Array.isArray(aiInsight.insight.centralNodes) && aiInsight.insight.centralNodes.length > 0 && (
+                  <div>
+                    <p className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold text-cyan-300">
+                      <Network className="h-3 w-3" /> {t("codegraph", "aiInsight.centralNodes")}
+                    </p>
+                    <div className="space-y-1.5">
+                      {aiInsight.insight.centralNodes.slice(0, 3).map((c: any, i: number) => (
+                        <div key={i} className="rounded border border-cyan-400/15 bg-cyan-400/[0.03] p-2 text-[11px]">
+                          <p className="font-mono font-semibold text-cyan-200">{c.node}</p>
+                          {c.why && <p className="mt-0.5 text-muted-foreground">{c.why}</p>}
+                          {c.risk && (
+                            <p className="mt-0.5 flex items-start gap-1 text-amber-300/90">
+                              <AlertTriangle className="mt-0.5 h-2.5 w-2.5 shrink-0" />
+                              <span>{c.risk}</span>
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Fragile Modules */}
+                {Array.isArray(aiInsight.insight.fragileModules) && aiInsight.insight.fragileModules.length > 0 && (
+                  <div>
+                    <p className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold text-amber-300">
+                      <ShieldAlert className="h-3 w-3" /> {t("codegraph", "aiInsight.fragileModules")}
+                    </p>
+                    <div className="space-y-1.5">
+                      {aiInsight.insight.fragileModules.slice(0, 3).map((c: any, i: number) => (
+                        <div key={i} className="rounded border border-amber-400/15 bg-amber-400/[0.03] p-2 text-[11px]">
+                          <p className="font-mono font-semibold text-amber-200">{c.node}</p>
+                          {c.why && <p className="mt-0.5 text-muted-foreground">{c.why}</p>}
+                          {c.cascadeRisk && (
+                            <p className="mt-0.5 flex items-start gap-1 text-red-300/90">
+                              <AlertTriangle className="mt-0.5 h-2.5 w-2.5 shrink-0" />
+                              <span>{c.cascadeRisk}</span>
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Refactor Sequence */}
+                {Array.isArray(aiInsight.insight.refactorSequence) && aiInsight.insight.refactorSequence.length > 0 && (
+                  <div>
+                    <p className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold text-violet-300">
+                      <ListOrdered className="h-3 w-3" /> {t("codegraph", "aiInsight.refactorSequence")}
+                    </p>
+                    <ol className="space-y-1.5">
+                      {aiInsight.insight.refactorSequence.map((s: any, i: number) => (
+                        <li key={i} className="flex gap-2 rounded border border-violet-400/15 bg-violet-400/[0.03] p-2 text-[11px]">
+                          <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-violet-500/20 text-[9px] font-bold text-violet-200">{i + 1}</span>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-baseline gap-1">
+                              <span className="font-semibold text-violet-200">{s.step}</span>
+                              {s.target && <span className="font-mono text-[10px] text-cyan-300">→ {s.target}</span>}
+                            </div>
+                            {s.reason && <p className="mt-0.5 text-muted-foreground">{s.reason}</p>}
+                          </div>
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                )}
+
+                {/* Overall Assessment */}
+                {aiInsight.insight.overallAssessment && (
+                  <div>
+                    <p className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold text-emerald-300">
+                      <GitMerge className="h-3 w-3" /> {t("codegraph", "aiInsight.overallAssessment")}
+                    </p>
+                    <p className="rounded border border-emerald-400/15 bg-emerald-400/[0.03] p-2 text-[11px] leading-relaxed text-muted-foreground">
+                      {aiInsight.insight.overallAssessment}
+                    </p>
+                  </div>
+                )}
+
+                {aiInsight.providerUsed && (
+                  <p className="text-right text-[9px] text-muted-foreground/70">via {aiInsight.providerUsed}</p>
+                )}
+              </div>
+            )}
+          </motion.div>
+        )}
+      </GlassCard>
+
+      <div className="grid gap-4 lg:grid-cols-[1fr_300px]">
       {/* Graph canvas */}
       <GlassCard className="relative overflow-hidden">
         {/* Top bar: search + stats + filter toggle */}
@@ -577,6 +764,7 @@ export function CodeGraphView({ analysisId }: { analysisId: string | null }) {
             </div>
           </GlassCard>
         )}
+      </div>
       </div>
     </div>
   );

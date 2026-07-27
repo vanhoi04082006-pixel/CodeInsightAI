@@ -10,7 +10,8 @@
     "platformAi": "Cấu hình AI",
     "subs": "Đăng ký",
     "audit": "Nhật ký",
-    "system": "Hệ thống"
+    "system": "Hệ thống",
+    "policies": "Chính sách"
   },
   "overview": {
     "totalUsers": "Tổng người dùng",
@@ -125,6 +126,17 @@
     "networkError": "Lỗi mạng",
     "keyLabel": "Khóa:",
     "confirmRemove": "Xóa {providerId} khỏi Platform AI?",
+    "fallbackChain": "Chuỗi dự phòng",
+    "fallbackChainDesc": "Các nhà cung cấp sẽ thử nếu nhà cung cấp chính thất bại (402 hết credit, 429 giới hạn tốc độ, 5xx, timeout). Mảng JSON của {providerId, model}. Chỉ dùng cho chế độ Platform AI (key của quản trị viên) — người dùng BYOK bỏ qua chuỗi này.",
+    "fallbackChainLabel": "Chuỗi (mảng JSON)",
+    "fallbackChainCount": "{count} trong chuỗi",
+    "fallbackQuickAdd": "Thêm nhanh nhà cung cấp đã cấu hình",
+    "fallbackNoProviders": "Cấu hình ít nhất một nhà cung cấp Platform AI ở trên trước khi đặt chuỗi dự phòng.",
+    "saveFallback": "Lưu chuỗi dự phòng",
+    "savingFallback": "Đang lưu…",
+    "clearFallback": "Xóa",
+    "addToFallback": "Dự phòng",
+    "titleAddToFallback": "Thêm nhà cung cấp+mô hình này vào chuỗi dự phòng",
     "toast": {
       "loadFailed": "Tải cấu hình Platform AI thất bại",
       "setDefaultSuccess": "Đã đặt {providerId} làm mặc định",
@@ -132,8 +144,20 @@
       "saved": "Đã lưu {providerId}",
       "saveFailed": "Lưu thất bại",
       "removed": "Đã xóa {providerId}",
-      "removeFailed": "Xóa thất bại"
-    }
+      "removeFailed": "Xóa thất bại",
+      "fallbackSaved": "Đã lưu chuỗi dự phòng",
+      "fallbackSaveFailed": "Lưu chuỗi dự phòng thất bại",
+      "fallbackInvalidJson": "JSON không hợp lệ — phải là mảng của {providerId, model}",
+      "fallbackAlreadyAdded": "Đã có trong chuỗi dự phòng"
+    },
+    "addProviderBelow": "Thêm nhà cung cấp bên dưới để bắt đầu",
+    "addProviderTitle": "Thêm nhà cung cấp mới",
+    "addProviderDesc": "Chọn nhà cung cấp AI để cấu hình. Bạn có thể thêm nhiều nhà cung cấp và người dùng Pro sẽ chọn nhà cung cấp nào để sử dụng.",
+    "availableEmpty": "Không có nhà cung cấp nào để thêm",
+    "availableEmptyDesc": "Tất cả nhà cung cấp đã được cấu hình, hoặc có lỗi khi tải danh sách. Tải lại trang để thử lại.",
+    "accessDenied": "Cần Quyền Quản Trị",
+    "accessDeniedDesc": "Bạn cần quyền quản trị để cấu hình nhà cung cấp Platform AI.",
+    "accessDeniedHint": "Đăng nhập bằng tài khoản quản trị (cấu hình qua biến môi trường ADMIN_EMAIL), hoặc yêu cầu quản trị viên cấu hình nhà cung cấp."
   },
   "subscriptions": {
     "totalSubscribers": "Tổng người đăng ký",
@@ -172,5 +196,33 @@
     "loading": "Đang tải…",
     "set": "đã đặt",
     "missing": "thiếu"
+  },
+  "policies": {
+    "title": "Chính sách",
+    "description": "Cấu hình các quy tắc chi phối việc sử dụng AI và phân tích. Danh mục cố định — không eval tùy ý.",
+    "enabled": "Đã bật",
+    "disabled": "Đã tắt",
+    "configured": "Đã cấu hình",
+    "notConfigured": "Chưa cấu hình",
+    "save": "Lưu chính sách",
+    "saving": "Đang lưu…",
+    "saved": "Đã lưu chính sách",
+    "saveFailed": "Không thể lưu chính sách",
+    "loadFailed": "Không thể tải danh sách chính sách",
+    "violation": "Vi phạm chính sách",
+    "noPolicies": "Chưa có chính sách nào được cấu hình",
+    "configure": "Cấu hình",
+    "cancel": "Hủy",
+    "delete": "Đặt lại",
+    "deleteConfirm": "Đặt lại chính sách này về chưa cấu hình? Mục danh mục vẫn còn — bạn có thể cấu hình lại sau.",
+    "deleteFailed": "Không thể đặt lại chính sách",
+    "deleted": "Đã đặt lại chính sách",
+    "blockSeverity": "Chặn",
+    "warnSeverity": "Cảnh báo",
+    "configLabel": "Cấu hình",
+    "checkpointAnalyze": "Kiểm tra tại: phân tích",
+    "checkpointAiPass": "Kiểm tra tại: lượt AI",
+    "checkpointBoth": "Kiểm tra tại: phân tích + lượt AI",
+    "noConfig": "Không cần cấu hình — bật để áp dụng."
   }
 }

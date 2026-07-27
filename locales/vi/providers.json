@@ -104,5 +104,6 @@
     "saving": "Đang lưu…",
     "save": "Lưu (đã mã hóa)"
   },
-  "productionLocalHidden": "Chế độ production: các nhà cung cấp local (Ollama, LM Studio) bị ẩn vì không thể truy cập từ trình duyệt trên tên miền này."
+  "productionLocalHidden": "Chế độ production: các nhà cung cấp local (Ollama, LM Studio) bị ẩn vì không thể truy cập từ trình duyệt trên tên miền này.",
+  "maxTokensHint": "Token tối đa mỗi lần gọi AI. -1 = không giới hạn (dùng mặc định model). Áp dụng cho cả Chat và Phân tích. Với Phân tích, các pass phức tạp (security/performance) tự động được x2."
 }

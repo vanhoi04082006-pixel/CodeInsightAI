@@ -19,7 +19,6 @@ import enHistory from "../../locales/en/history.json";
 import enChat from "../../locales/en/chat.json";
 import enNotifications from "../../locales/en/notifications.json";
 import enAgents from "../../locales/en/agents.json";
-import enMission from "../../locales/en/mission.json";
 import enCodegraph from "../../locales/en/codegraph.json";
 import enAdmin from "../../locales/en/admin.json";
 import enPro from "../../locales/en/pro.json";
@@ -42,7 +41,6 @@ import viHistory from "../../locales/vi/history.json";
 import viChat from "../../locales/vi/chat.json";
 import viNotifications from "../../locales/vi/notifications.json";
 import viAgents from "../../locales/vi/agents.json";
-import viMission from "../../locales/vi/mission.json";
 import viCodegraph from "../../locales/vi/codegraph.json";
 import viAdmin from "../../locales/vi/admin.json";
 import viPro from "../../locales/vi/pro.json";
@@ -59,7 +57,7 @@ export const DICTS: Record<Locale, Record<string, Dict>> = {
     analysis: enAnalysis, landing: enLanding, reports: enReports, errors: enErrors,
     providers: enProviders, personality: enPersonality, developer: enDeveloper,
     history: enHistory, chat: enChat, notifications: enNotifications, agents: enAgents,
-    mission: enMission, codegraph: enCodegraph, admin: enAdmin, pro: enPro, guide: enGuide,
+    codegraph: enCodegraph, admin: enAdmin, pro: enPro, guide: enGuide,
     issues: enIssues,
     static: enStatic,
     architecture: enArchitecture,
@@ -69,7 +67,7 @@ export const DICTS: Record<Locale, Record<string, Dict>> = {
     analysis: viAnalysis, landing: viLanding, reports: viReports, errors: viErrors,
     providers: viProviders, personality: viPersonality, developer: viDeveloper,
     history: viHistory, chat: viChat, notifications: viNotifications, agents: viAgents,
-    mission: viMission, codegraph: viCodegraph, admin: viAdmin, pro: viPro, guide: viGuide,
+    codegraph: viCodegraph, admin: viAdmin, pro: viPro, guide: viGuide,
     issues: viIssues,
     static: viStatic,
     architecture: viArchitecture,
@@ -79,7 +77,7 @@ export const DICTS: Record<Locale, Record<string, Dict>> = {
 export const NAMESPACES = [
   "common", "settings", "dashboard", "analysis", "landing", "reports", "errors",
   "providers", "personality", "developer", "history", "chat", "notifications", "agents",
-  "mission", "codegraph", "admin", "pro", "guide", "issues", "static", "architecture",
+  "codegraph", "admin", "pro", "guide", "issues", "static", "architecture",
 ] as const;
 
 export const COOKIE_NAME = "codeinsight-lang";

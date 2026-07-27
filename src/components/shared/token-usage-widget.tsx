@@ -13,9 +13,12 @@ type TokenUsage = {
   limit: number;
   remaining: number;
   unlimited: boolean;
+  exceeded?: boolean; // P3.1: when true, show explicit "budget exceeded" banner
+  resetsAt?: string;  // P3.1: ISO date for reset countdown
   breakdown?: {
     chatMessages: number;
     analyses: number;
+    aiCallCount?: number; // P3.1: real AICallLog count for this month
     estimatedPerChat: number;
     estimatedPerAnalysis: number;
   };
@@ -76,9 +79,11 @@ export function TokenUsageWidget({ compact = false }: { compact?: boolean }) {
   }
 
   const percent = usage.limit > 0 ? Math.min(100, (usage.used / usage.limit) * 100) : 0;
-  const isLow = percent > 80;
+  // P3.1: explicit `exceeded` flag from the API takes precedence over percent.
+  const isExceeded = usage.exceeded === true || usage.used >= usage.limit;
+  const isLow = isExceeded || percent > 80;
   const isMedium = percent > 50;
-  const color = isLow ? "#ff5470" : isMedium ? "#fbbf24" : "#10b981";
+  const color = isExceeded ? "#ff5470" : isLow ? "#ff5470" : isMedium ? "#fbbf24" : "#10b981";
 
   const formatNum = (n: number) => {
     if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
@@ -155,11 +160,15 @@ export function TokenUsageWidget({ compact = false }: { compact?: boolean }) {
         </div>
       )}
 
-      {isLow && (
+      {isExceeded ? (
+        <p className="mt-2 text-[10px] font-semibold text-rose-400">
+          {t("notifications", "tokenUsage.lowWarning")} — budget exceeded. AI calls are blocked until {usage.resetsAt ? new Date(usage.resetsAt).toLocaleDateString() : "next month"}.
+        </p>
+      ) : isLow ? (
         <p className="mt-2 text-[9px] text-rose-400">
           {t("notifications", "tokenUsage.lowWarning")}
         </p>
-      )}
+      ) : null}
     </GlassCard>
   );
 }

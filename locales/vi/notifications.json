@@ -35,10 +35,8 @@
   "analysisFailed": "Phân tích thất bại. Vui lòng thử lại.",
   "appShell": {
     "toggleSidebar": "Bật/tắt thanh bên",
-    "titleMission": "Hệ điều hành AI",
     "titleDefault": "Phân tích repository bằng AI",
     "lockHint": {
-      "pro": "(Pro)",
       "custom": "(chế độ Custom)"
     }
   },

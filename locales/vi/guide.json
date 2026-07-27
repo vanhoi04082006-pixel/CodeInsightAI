@@ -36,7 +36,7 @@
     "keyboardShortcuts": {
       "title": "Phím tắt",
       "icon": "⌨️",
-      "content": "## Phím tắt\n\n### Điều hướng\n| Phím tắt | Hành động |\n|----------|--------|\n| `⌘K` | Bảng lệnh |\n| `⌘D` | Dashboard |\n| `⌘A` | Phân tích mới |\n| `⌘P` | Providers |\n| `⌘H` | History |\n| `⌘M` | Mission Control (Pro) |\n| `⌘C` | Chat (khi không có text được chọn) |\n| `⌘,` | Cài đặt |\n| `Esc` | Về landing |\n\n### Kiểu Vim (không modifier)\n| Phím | Hành động |\n|------|--------|\n| `g` rồi `d` | Dashboard |\n| `g` rồi `a` | Analyze |\n| `g` rồi `p` | Project |\n| `g` rồi `c` | Chat |\n| `g` rồi `h` | History |\n| `g` rồi `s` | Settings |\n| `g` rồi `m` | Mission |\n| `g` rồi `l` | Landing |\n\n### Khác\n| Phím | Hành động |\n|-----|--------|\n| `?` | Hiện trợ giúp phím tắt |\n| `Esc` | Bỏ focus input / đóng dialog |\n"
+      "content": "## Phím tắt\n\n### Điều hướng\n| Phím tắt | Hành động |\n|----------|--------|\n| `⌘K` | Bảng lệnh |\n| `⌘D` | Dashboard |\n| `⌘A` | Phân tích mới |\n| `⌘P` | Providers |\n| `⌘H` | History |\n| `⌘C` | Chat (khi không có text được chọn) |\n| `⌘,` | Cài đặt |\n| `Esc` | Về landing |\n\n### Kiểu Vim (không modifier)\n| Phím | Hành động |\n|------|--------|\n| `g` rồi `d` | Dashboard |\n| `g` rồi `a` | Analyze |\n| `g` rồi `p` | Project |\n| `g` rồi `c` | Chat |\n| `g` rồi `h` | History |\n| `g` rồi `s` | Settings |\n| `g` rồi `l` | Landing |\n\n### Khác\n| Phím | Hành động |\n|-----|--------|\n| `?` | Hiện trợ giúp phím tắt |\n| `Esc` | Bỏ focus input / đóng dialog |\n"
     },
     "faq": {
       "title": "FAQ",

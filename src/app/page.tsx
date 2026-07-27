@@ -4,13 +4,12 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAppStore } from "@/lib/store";
 import { useProvidersStore } from "@/lib/providers-store";
-import { isProduction } from "@/lib/env";
 import { useT } from "@/lib/i18n";
 import { AnimatedBackground } from "@/components/shared/animated-background";
 import { CustomCursor } from "@/components/shared/custom-cursor";
 import { LoginScreen } from "@/components/shared/login-screen";
 import { AppSidebar, AppTopbar, MobileNav } from "@/components/shared/app-shell";
-import { useSession, signIn } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import dynamic from "next/dynamic";
 import { LandingView } from "@/components/views/landing-view";
 import { toast } from "sonner";
@@ -25,17 +24,15 @@ const HistoryView = dynamic(() => import("@/components/views/history-view").then
 const SettingsView = dynamic(() => import("@/components/views/settings-view").then(m => ({ default: m.SettingsView })), { ssr: false });
 const ProvidersView = dynamic(() => import("@/components/views/providers-view").then(m => ({ default: m.ProvidersView })), { ssr: false });
 const PersonalitiesView = dynamic(() => import("@/components/views/personalities-view").then(m => ({ default: m.PersonalitiesView })), { ssr: false });
-const MissionControlView = dynamic(() => import("@/components/views/mission-control-view").then(m => ({ default: m.MissionControlView })), { ssr: false });
 const AdminView = dynamic(() => import("@/components/views/admin-view").then(m => ({ default: m.AdminView })), { ssr: false });
 import { CommandPalette } from "@/components/shared/command-palette";
 import { LanguageSwitcher } from "@/components/shared/language-switcher";
 import { ThemeSwitcher } from "@/components/shared/theme-switcher";
 import { UserMenu } from "@/components/shared/user-menu";
-import { ProGate } from "@/components/shared/pro-gate";
 import { OnboardingOverlay } from "@/components/shared/onboarding-overlay";
 import { HydrationGuard } from "@/components/shared/hydration-guard";
 import { KeyboardShortcutsHelp } from "@/components/shared/keyboard-shortcuts-help";
-import { Heart, Sparkles, Github, Rocket } from "lucide-react";
+import { Heart, Sparkles, Github } from "lucide-react";
 
 export default function Home() {
   const view = useAppStore((s) => s.view);
@@ -129,12 +126,6 @@ export default function Home() {
             e.preventDefault(); setView("providers"); return;
           }
         }
-        // ⌘M — Mission Control (Pro-only in production)
-        if (e.key.toLowerCase() === "m") {
-          if (!isProduction || (session as any)?.plan !== "free") {
-            e.preventDefault(); setView("mission"); return;
-          }
-        }
         // ⌘C — Chat (only if not selecting text)
         if (e.key.toLowerCase() === "c" && !window.getSelection()?.toString()) {
           e.preventDefault(); setView("chat"); return;
@@ -148,10 +139,6 @@ export default function Home() {
               d: "dashboard", a: "analyze", p: "project", c: "chat",
               h: "history", s: "settings", l: "landing",
             };
-            // Only add mission if not locked
-            if (!isProduction || (session as any)?.plan !== "free") {
-              map.m = "mission";
-            }
             const target = map[e2.key.toLowerCase()];
             if (target) {
               e2.preventDefault();
@@ -324,11 +311,6 @@ export default function Home() {
                   {view === "settings" && <SettingsView />}
                   {view === "providers" && <ProvidersView />}
                   {view === "personalities" && <PersonalitiesView />}
-                  {view === "mission" && (
-                    <ProGate feature="Mission Control" icon={Rocket}>
-                      <MissionControlView />
-                    </ProGate>
-                  )}
                   {view === "admin" && <AdminView />}
                 </motion.div>
               </AnimatePresence>

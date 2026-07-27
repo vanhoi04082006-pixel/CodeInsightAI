@@ -2,7 +2,7 @@
 // Barrel re-export of all production-grade infrastructure modules.
 //
 // Submodules:
-//   - logger.ts           — structured leveled logging with ring buffer + event-bus integration
+//   - logger.ts           — structured leveled logging with ring buffer + console output
 //   - metrics.ts          — counters / gauges / timings / histograms with p50/p95/p99 summary
 //   - tracing.ts          — distributed tracer with span hierarchy and context propagation
 //   - rate-limiter.ts     — token-bucket rate limiter with named-registry and defaults
@@ -70,16 +70,8 @@ export {
   type CacheStats,
 } from "./cache";
 
-// Convenience: initialize everything (call once at app boot).
-// These imports bring the names into the local scope for use in
-// `initProduction()` below. The public re-exports above already expose them
-// to consumers; we don't need to re-export the locals again.
-import { initEventPersister } from "@/lib/agents/event-persister";
 import { initDefaultLimiters } from "./rate-limiter";
 import { initGracefulShutdown } from "./graceful-shutdown";
-
-// Re-export initEventPersister — it isn't covered by a section block above.
-export { initEventPersister };
 
 /**
  * One-shot initialization of all production hardening modules. Call once at
@@ -88,10 +80,8 @@ export { initEventPersister };
  * Wires up:
  *   - Default rate limiters (api/ai/terminal/git)
  *   - Graceful shutdown signal listeners + default cleanup handlers
- *   - Event persister (subscribes to event bus → AgentTask/AgentEvent tables)
  */
 export function initProduction(): void {
   initDefaultLimiters();
   initGracefulShutdown();
-  initEventPersister();
 }

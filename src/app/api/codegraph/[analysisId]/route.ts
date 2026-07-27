@@ -33,13 +33,25 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ anal
 
   // Load or build the graph
   let graph: CodeGraph | null = null;
+
+  // (Phase 2) Try the persisted snapshot first — avoids rebuilding on every request
   try {
-    const parsedData = analysis.parsedData ? JSON.parse(analysis.parsedData) : null;
-    if (parsedData?.files) {
-      const { buildCodeGraph } = await import("@/lib/codegraph/builder");
-      graph = buildCodeGraph(parsedData);
+    const snapshot = await db.codeGraphSnapshot.findUnique({ where: { analysisId } });
+    if (snapshot) {
+      graph = JSON.parse(snapshot.graph) as CodeGraph;
     }
-  } catch { /* ignore */ }
+  } catch { /* ignore — fall back to rebuild */ }
+
+  // Fallback: rebuild from parsedData (legacy analyses without a snapshot)
+  if (!graph) {
+    try {
+      const parsedData = analysis.parsedData ? JSON.parse(analysis.parsedData) : null;
+      if (parsedData?.files) {
+        const { buildCodeGraph } = await import("@/lib/codegraph/builder");
+        graph = buildCodeGraph(parsedData);
+      }
+    } catch { /* ignore */ }
+  }
 
   if (!graph) {
     return NextResponse.json({ error: "CodeGraph not available for this analysis" }, { status: 404 });

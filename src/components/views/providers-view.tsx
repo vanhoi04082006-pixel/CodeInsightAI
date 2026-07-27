@@ -469,6 +469,7 @@ function ProviderCard({ provider }: { provider: AIProvider }) {
                   onChange={(e) => update(provider.id, { maxTokens: Number(e.target.value) })}
                   className="bg-white/[0.03]"
                 />
+                <p className="text-[10px] text-muted-foreground">{t("providers", "maxTokensHint")}</p>
               </Field>
               <Field icon={Clock} label={`${t("providers", "timeout")} — ${provider.timeout}s`}>
                 <Slider

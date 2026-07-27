@@ -9,7 +9,6 @@
   "codegraph": "CodeGraph",
   "code": "Code",
   "docs": "Docs",
-  "roadmap": "Roadmap",
   "healthScore": "Health Score",
   "aiSummary": "Summary",
   "keyFiles": "Key Files",
@@ -117,6 +116,7 @@
     "codeQualityReview": "AI Code Quality Review",
     "expected": "Expected",
     "fixCode": "Fix code",
+    "fixPlan": "Fix plan",
     "businessImpact": "Business impact",
     "bestPractices": "AI Best Practices Audit",
     "scoreMax": "/ 100",
@@ -129,6 +129,30 @@
     "estimatedLinesSaved": "Est. lines saved",
     "staticOnly": "Static Analysis Only",
     "staticOnlyDesc": "No AI insights available. Add an AI provider or enable Platform AI for deep AI-powered insights."
+  },
+  "aiOverview": {
+    "title": "AI Overview",
+    "topRisks": "Top Risks",
+    "quickWins": "Quick Wins",
+    "fixFirst": "Fix First",
+    "fastestScoreGain": "Fastest Score Gain",
+    "healthAssessment": "Health Assessment"
+  },
+  "action": {
+    "fixNow": "Fix Now",
+    "generateTest": "Generate Test",
+    "refactor": "Refactor",
+    "agentStarted": "Agent started — check activity feed for results",
+    "agentFailed": "Agent failed to start",
+    "askAI": "Ask AI about this file",
+    "aiExplain": "AI Explanation",
+    "confirmTitle": "Run AI Agent?",
+    "confirmDescFix": "This will start the Bug-Fixer agent to generate a patch for this issue. Check the activity feed for results.",
+    "confirmDescTest": "This will start the Test agent to generate test cases for this issue. Check the activity feed for results.",
+    "confirmDescRefactor": "This will start the Refactoring agent to suggest a refactor for this issue. Check the activity feed for results.",
+    "confirmCancel": "Cancel",
+    "confirmRun": "Run Agent",
+    "targetIssue": "Target issue"
   },
   "project": {
     "titleProject": "Project",
@@ -144,6 +168,10 @@
     "docTabFolderGuide": "Folder Guide",
     "docTabComponentGuide": "Component Guide",
     "docTabDeploymentGuide": "Deployment Guide",
+    "enhanceWithAI": "✨ Enhance with AI",
+    "aiEnhancing": "AI generating...",
+    "backToStatic": "↩ Back to static",
+    "enhanceFailed": "AI enhance failed",
     "cannotShareNotSaved": "Cannot share — analysis not saved to DB yet.",
     "shareLinkCopied": "Share link copied to clipboard!",
     "shareLinkExpires": "Expires in 7 days. Anyone with the link can view (read-only).",
@@ -151,6 +179,10 @@
     "shareError": "Failed to share — please try again",
     "downloadedMarkdown": "Report downloaded as Markdown",
     "downloadedJson": "Report downloaded as JSON",
+    "jsonExported": "JSON exported",
+    "generatingPDF": "Generating PDF...",
+    "pdfExported": "PDF exported",
+    "pdfFailed": "PDF generation failed",
     "metricHintAvgCoupling": "imports/file",
     "metricHintAvgCohesion": "intra-dir",
     "metricHintInstability": "0=stable, 1=volatile",
@@ -162,5 +194,63 @@
     "metricHintDirCycles": "dir→dir chains",
     "metricHintLayerViolations": "comp→DB",
     "metricHintGodModules": ">20 funcs"
-  }
+  },
+  "timeline": {
+    "title": "Timeline",
+    "scoreTrajectory": "Score Trajectory",
+    "compare": "Compare",
+    "loading": "Loading diff...",
+    "noHistory": "No previous analyses. Scan this repo again to see changes over time.",
+    "newIssues": "New Issues",
+    "resolvedIssues": "Resolved Issues",
+    "filesAdded": "Files Added",
+    "filesDeleted": "Files Deleted",
+    "techDebtChange": "Tech Debt Change",
+    "aiExplainButton": "🤖 AI Explain Changes",
+    "aiExplainLoading": "AI analyzing changes...",
+    "aiSummary": "AI Summary",
+    "trendAnalysis": "Trend Analysis",
+    "concerns": "Concerns",
+    "wins": "Wins",
+    "recommendation": "Recommendation",
+    "aiSummaryFailed": "AI summary failed"
+  },
+  "regressions": {
+    "whatChanged": "What changed since last scan",
+    "comparedTo": "Compared to",
+    "viewTimeline": "View timeline",
+    "verdict": {
+      "improved": "Improved",
+      "regressed": "Regressed",
+      "neutral": "Neutral"
+    },
+    "regressions": "Regressions",
+    "improvements": "Improvements"
+  },
+  "refactorRoadmap": {
+    "title": "Refactor Sequencing",
+    "loading": "Building graph-validated roadmap...",
+    "totalEffort": "Total effort",
+    "parallelSpeedup": "Parallel speedup",
+    "graphValidated": "Graph-validated",
+    "unblocks": "Unblocks",
+    "confidence": "Confidence",
+    "canParallelize": "Can parallelize"
+  },
+  "roadmapMeta": {
+    "effortHours": "Effort",
+    "releasePhase": "Phase",
+    "phaseP0": "P0 — Now",
+    "phaseP1": "P1 — This Sprint",
+    "phaseP2": "P2 — Next Sprint",
+    "phaseP3": "P3 — Backlog",
+    "dependsOn": "Depends on",
+    "blocks": "Blocks",
+    "blockedBy": "Blocked by",
+    "phaseTotal": "Phase total",
+    "roi": "ROI",
+    "executiveNote": "Executive Note",
+    "sequencerWarnings": "Sequencer warnings"
+  },
+  "roadmap": "Roadmap"
 }

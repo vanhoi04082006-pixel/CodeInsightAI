@@ -133,8 +133,9 @@ export function AnalyzeView() {
     setAiStatus("pending");
     useAppStore.getState().setAiPending(true);
 
-    // Map AI pass types to feature routing keys
+    // Map AI pass types to feature routing keys (Wave 6 Phase 1: overview added)
     const PASS_TO_FEATURE: Record<string, string> = {
+      overview: "summary",         // NEW — routes to summary/default provider
       summary: "summary",
       priorities: "summary",
       security: "security",
@@ -146,7 +147,9 @@ export function AnalyzeView() {
     };
 
     const tAnalysis = useI18nStore.getState().t;
+    // Wave 6 Phase 1: overview runs FIRST so leadership gets a 30-second read early.
     const passes = [
+      { type: "overview", name: tAnalysis("analysis", "passes.overview") },
       { type: "summary", name: tAnalysis("analysis", "passes.summary") },
       { type: "priorities", name: tAnalysis("analysis", "passes.priorities") },
       { type: "security", name: tAnalysis("analysis", "passes.security") },
@@ -200,7 +203,14 @@ export function AnalyzeView() {
           }
         } else if (data.status === "failed") {
           console.warn(`[ai-pass] ${pass.type} failed:`, data.error);
+          // Show toast so user knows which pass failed + why
+          toast.error(`${pass.name}: ${data.error || "AI returned no valid result"}`, {
+            duration: 4000,
+          });
           completedCount++; // Count as attempted, continue
+        } else if (data.status === "skipped") {
+          console.warn(`[ai-pass] ${pass.type} skipped:`, data.error);
+          completedCount++;
         }
       } catch (e) {
         console.warn(`[ai-pass] ${pass.type} error:`, e);
@@ -258,7 +268,7 @@ export function AnalyzeView() {
       const aiBody: Record<string, any> = {};
 
       // Build feature routing map (BYOK Custom mode only)
-      // Maps feature → { providerId, apiKey, baseUrl, model }
+      // Maps feature → { providerId, apiKey, baseUrl, model, maxTokens }
       const featureRouting: Record<string, any> = {};
       if (aiMode === "byok" && Object.keys(routing).length > 0) {
         for (const [feature, providerId] of Object.entries(routing)) {
@@ -269,6 +279,9 @@ export function AnalyzeView() {
               apiKey: p.apiKey,
               baseUrl: p.baseUrl,
               model: p.model,
+              maxTokens: p.maxTokens,
+              temperature: p.temperature,
+              timeout: p.timeout,
             };
           }
         }
@@ -277,6 +290,7 @@ export function AnalyzeView() {
       if (platformSelection && (!byokProvider || aiMode === "platform")) {
         aiBody.platformProvider = platformSelection.providerId;
         aiBody.platformModel = platformSelection.model;
+        aiBody.platformMaxTokens = platformSelection.maxTokens ?? -1;
         aiBody.aiMode = "platform";
       } else if (byokProvider) {
         aiBody.provider = {
@@ -285,6 +299,9 @@ export function AnalyzeView() {
           baseUrl: byokProvider.baseUrl,
           model: byokProvider.model,
           label: byokProvider.label,
+          maxTokens: byokProvider.maxTokens,
+          temperature: byokProvider.temperature,
+          timeout: byokProvider.timeout,
         };
         aiBody.aiMode = "byok";
         // Send feature routing if user has set it

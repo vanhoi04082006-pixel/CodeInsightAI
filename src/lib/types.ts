@@ -11,7 +11,6 @@ export type View =
   | "settings"
   | "providers"
   | "personalities"
-  | "mission"
   | "admin";
 
 /* ---------- AI Providers (local-first, BYO keys) ---------- */
@@ -293,3 +292,98 @@ export interface AnalysisRecord {
   report: AnalysisReport | null;
   createdAt: string;
 }
+
+/* ---------- AI Deep Analysis — structured output (Wave 6 Phase 1) ----------
+ * Backward-compatible: every new field is OPTIONAL. Existing data without
+ * evidence / confidence / fixPlan / severity continues to render unchanged.
+ */
+
+/** A single AI finding — used by security, code-quality, and performance reviews. */
+export interface AIFinding {
+  // Legacy fields (kept for backward compatibility)
+  issue: string;
+  rootCause?: string;
+  fixCode?: string;
+  impact?: string;
+  expectedImprovement?: string;
+  // Wave 6 Phase 1 — structured enterprise output
+  evidence?: string[];      // exact "file:line" references, e.g. ["src/auth.ts:42"]
+  confidence?: number;      // 0.0–1.0 (how confident the AI is this is a real issue)
+  fixPlan?: string[];       // step-by-step fix instructions
+  severity?: "critical" | "high" | "medium" | "low";  // AI-assigned severity (may differ from static rule)
+}
+
+/** Top-level AI overview pass — executive-level decision intelligence. */
+export interface AIOverview {
+  topRisks: Array<{
+    title: string;
+    description: string;
+    severity: "critical" | "high" | "medium" | "low";
+    evidence?: string[];
+  }>;
+  quickWins: Array<{
+    title: string;
+    description: string;
+    effort: "small" | "medium" | "large";
+    evidence?: string[];
+  }>;
+  fixFirst: string;          // what to fix first and why
+  fastestScoreGain: string;  // what will improve the score fastest
+  healthAssessment: string;  // 2-3 sentence overall health narrative
+}
+
+/* ---------- Phase 2 (P2.3): Enhanced Roadmap Agent types ----------
+ * Backward-compatible: all new fields are OPTIONAL. Existing priorities
+ * without effortHours/releasePhase still render unchanged.
+ *
+ * A deterministic post-processor (`src/lib/roadmap-sequencer.ts`) validates
+ * the AI output: drops invalid dependsOn refs, breaks cycles, promotes
+ * releasePhase when dependencies require it, and re-sums effort per phase.
+ */
+
+/** Release phases — used by priorities AND roadmap phases. P0 = now, P3 = backlog. */
+export type ReleasePhase = "P0" | "P1" | "P2" | "P3";
+
+/** Effort band — coarse-grained companion to effortHours. */
+export type EffortBand = "trivial" | "small" | "medium" | "large" | "xl";
+
+/** Enhanced priority — superset of the legacy priorities[]. Fields are backward-compatible. */
+export interface EnhancedPriority {
+  // Existing (kept for backward compatibility)
+  issue: string;
+  businessImpact: string;
+  recommendation: string;
+  evidence?: string[];
+  confidence?: number;
+  severity?: "critical" | "high" | "medium" | "low";
+  fixPlan?: string[];
+  // NEW (Phase 2 — P2.3)
+  effortHours?: number;       // 0.5, 1, 2, 4, 8, 16, 40 — Fibonacci-ish
+  effortBand?: EffortBand;    // trivial | small | medium | large | xl (matches effortHours)
+  roiScore?: number;          // 0-100 (business impact / effort — higher = better ROI)
+  releasePhase?: ReleasePhase; // P0=now, P1=this sprint, P2=next, P3=backlog
+  dependsOn?: string[];       // titles of other priorities that MUST be done first
+  blocks?: string[];          // titles of priorities this unblocks
+}
+
+/** A roadmap phase — typed P0–P3 (was freeform string pre-P2.3). */
+export interface RoadmapPhase {
+  phase: ReleasePhase;
+  title?: string;                       // e.g. "Critical Security Fixes"
+  tasks: string[];
+  estimatedEffortHours?: number;        // sum of member priorities' effortHours
+  blockedBy?: ReleasePhase[];           // which phases must complete first (empty for P0)
+}
+
+/* ---------- Phase 2 (P2.2): Analysis Timeline + Diff ----------
+ * Result of diffAnalyses(fromReport, toReport) — used by:
+ *   - /api/analysis/diff        — explicit from/to comparison
+ *   - /api/analysis/regressions — auto-picks previous analysis, computes diff
+ *   - TimelineTab UI           — renders score trajectory + diff view
+ *
+ * Re-exported here from analysis-diff.ts so callers can `import type {
+ * AnalysisDiffResult } from "@/lib/types"` consistently with other domain
+ * types. The implementation (including jaccardSimilarity) lives in
+ * src/lib/analysis-diff.ts.
+ */
+export type { AnalysisDiffResult } from "./analysis-diff";
