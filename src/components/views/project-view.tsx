@@ -844,6 +844,7 @@ function DependenciesTab({ report }: { report: AnalysisReport }) {
 /* ---------- Code ---------- */
 function CodeTab({ report }: { report: AnalysisReport }) {
   const { t } = useT();
+  const activeAnalysisId = useAppStore((s) => s.activeAnalysisId);
   return (
     <div className="space-y-4">
       <GlassCard className="p-5">
@@ -855,7 +856,7 @@ function CodeTab({ report }: { report: AnalysisReport }) {
           {t("reports", "aiCodeExplorerDesc")}
         </p>
       </GlassCard>
-      <CodeViewer snippets={report.snippets} />
+      <CodeViewer snippets={report.snippets} analysisId={activeAnalysisId ?? undefined} />
     </div>
   );
 }

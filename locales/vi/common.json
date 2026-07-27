@@ -136,6 +136,10 @@
     "copy": "Sao chép",
     "copied": "Đã sao chép",
     "aiExplanation": "Giải thích AI",
-    "codeCopiedToast": "Đã sao chép code"
+    "codeCopiedToast": "Đã sao chép code",
+    "explanation": "Giải thích",
+    "askAI": "Hỏi AI về file này",
+    "aiAnalyzing": "AI đang phân tích...",
+    "aiFailed": "AI giải thích không khả dụng"
   }
 }

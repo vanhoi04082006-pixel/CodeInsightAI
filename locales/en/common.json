@@ -136,6 +136,10 @@
     "copy": "Copy",
     "copied": "Copied",
     "aiExplanation": "AI Explanation",
-    "codeCopiedToast": "Code copied"
+    "codeCopiedToast": "Code copied",
+    "explanation": "Explanation",
+    "askAI": "Ask AI about this file",
+    "aiAnalyzing": "AI analyzing...",
+    "aiFailed": "AI explanation unavailable"
   }
 }

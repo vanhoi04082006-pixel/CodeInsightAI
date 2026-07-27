@@ -4,16 +4,18 @@ import { useState } from "react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { motion, AnimatePresence } from "framer-motion";
-import { Copy, Check, FileCode, Sparkles, ChevronRight } from "lucide-react";
+import { Copy, Check, FileCode, Sparkles, ChevronRight, Loader2 } from "lucide-react";
 import type { CodeSnippet } from "@/lib/types";
-import { useT } from "@/lib/i18n";
+import { useT, useI18nStore } from "@/lib/i18n";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-export function CodeViewer({ snippets }: { snippets: CodeSnippet[] }) {
+export function CodeViewer({ snippets, analysisId }: { snippets: CodeSnippet[]; analysisId?: string }) {
   const { t } = useT();
   const [active, setActive] = useState(0);
   const [copied, setCopied] = useState(false);
+  const [aiExplain, setAiExplain] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
   const snippet = snippets[active];
 
   const copy = () => {
@@ -21,6 +23,28 @@ export function CodeViewer({ snippets }: { snippets: CodeSnippet[] }) {
     setCopied(true);
     toast.success(t("common", "codeViewer.codeCopiedToast"));
     setTimeout(() => setCopied(false), 1500);
+  };
+
+  const askAI = async (snippet: CodeSnippet) => {
+    setAiLoading(true);
+    setAiExplain(null);
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: `Analyze the file ${snippet.file}. Explain: 1) What this file does 2) Main risks 3) Patterns used 4) Refactor suggestions. Code:\n\`\`\`\n${snippet.code}\n\`\`\``,
+          language: useI18nStore.getState().locale,
+          ...(analysisId ? { analysisId } : {}),
+        }),
+      });
+      const data = await res.json();
+      setAiExplain(data.reply || data.message || t("common", "codeViewer.aiFailed"));
+    } catch {
+      setAiExplain(t("common", "codeViewer.aiFailed"));
+    } finally {
+      setAiLoading(false);
+    }
   };
 
   if (!snippet) return null;
@@ -90,12 +114,39 @@ export function CodeViewer({ snippets }: { snippets: CodeSnippet[] }) {
             {snippet.code}
           </SyntaxHighlighter>
         </div>
-        {/* AI explanation */}
+        {/* Static analysis explanation (honest — NOT AI, just rule-based) */}
         <div className="border-t border-white/10 bg-cyan-400/[0.03] p-4">
           <p className="flex items-center gap-1.5 text-xs font-semibold text-cyan-300">
-            <Sparkles className="h-3.5 w-3.5" /> {t("common", "codeViewer.aiExplanation")}
+            <FileCode className="h-3.5 w-3.5" /> {t("common", "codeViewer.explanation")}
           </p>
           <p className="mt-1.5 text-xs leading-relaxed text-foreground/85">{snippet.explanation}</p>
+          
+          {/* Ask AI button — calls AI on-demand for real AI analysis */}
+          <div className="mt-3 flex items-center gap-2">
+            <button
+              onClick={() => askAI(snippet)}
+              disabled={aiLoading}
+              className="flex items-center gap-1.5 rounded-md border border-violet-400/30 bg-violet-500/10 px-2.5 py-1 text-[11px] font-medium text-violet-300 transition hover:bg-violet-500/20 disabled:opacity-60"
+            >
+              {aiLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+              {aiLoading ? t("common", "codeViewer.aiAnalyzing") : t("common", "codeViewer.askAI")}
+            </button>
+          </div>
+          
+          {/* AI response (real AI — on-demand) */}
+          {(aiExplain || aiLoading) && (
+            <div className="mt-3 rounded-lg border border-violet-500/20 bg-violet-500/[0.05] p-3">
+              <p className="flex items-center gap-1.5 text-xs font-semibold text-violet-300">
+                <Sparkles className="h-3.5 w-3.5" /> {t("common", "codeViewer.aiExplanation")}
+                <span className="rounded-full bg-violet-500/15 px-1.5 py-0.5 text-[9px]">✨ AI</span>
+              </p>
+              {aiLoading ? (
+                <p className="mt-1.5 text-xs text-muted-foreground">{t("common", "codeViewer.aiAnalyzing")}</p>
+              ) : (
+                <pre className="mt-2 max-h-[300px] overflow-y-auto whitespace-pre-wrap rounded-lg bg-black/30 p-2 font-mono text-[11px] leading-relaxed text-foreground/85 scrollbar-thin">{aiExplain}</pre>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
