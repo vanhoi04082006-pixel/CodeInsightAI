@@ -110,10 +110,10 @@ export function CodeViewer({
             {snippet.code}
           </SyntaxHighlighter>
         </div>
-        {/* AI explanation */}
+        {/* Static analysis explanation (honest — NOT AI, just rule-based) */}
         <div className="border-t border-white/10 bg-cyan-400/[0.03] p-4">
           <p className="flex items-center gap-1.5 text-xs font-semibold text-cyan-300">
-            <Sparkles className="h-3.5 w-3.5" /> {t("common", "codeViewer.aiExplanation")}
+            <FileCode className="h-3.5 w-3.5" /> {t("common", "codeViewer.explanation")}
           </p>
           <p className="mt-1.5 text-xs leading-relaxed text-foreground/85">{snippet.explanation}</p>
         </div>

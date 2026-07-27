@@ -135,7 +135,8 @@
     "copy": "Copy",
     "copied": "Copied",
     "aiExplanation": "AI Explanation",
-    "codeCopiedToast": "Code copied"
+    "codeCopiedToast": "Code copied",
+    "explanation": "Explanation"
   },
   "rateLimit": {
     "exceeded": "Rate limit exceeded. Try again in {minutes} minute(s).",

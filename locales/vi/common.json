@@ -135,7 +135,8 @@
     "copy": "Sao chép",
     "copied": "Đã sao chép",
     "aiExplanation": "Giải thích AI",
-    "codeCopiedToast": "Đã sao chép code"
+    "codeCopiedToast": "Đã sao chép code",
+    "explanation": "Giải thích"
   },
   "rateLimit": {
     "exceeded": "Vượt giới hạn tốc độ. Thử lại sau {minutes} phút.",
