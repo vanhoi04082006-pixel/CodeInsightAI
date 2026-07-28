@@ -1,8 +1,8 @@
 // CodeInsight AI — AI Agents: Core Types
-// Simplified: agents are called DIRECTLY via /api/agents/execute — no Mission
+// Simplified: agents are called DIRECTLY via /api/agents/execute — 
 // Control, no task queue, no scheduler, no event bus, no shared context.
 // Only the types needed by the 11 specialized agent files + the execute route
-// remain. Mission-specific types (AgentMessage, SharedContext, AgentDecision,
+// 
 // AgentEvent, ExecutionGraph, RetryPolicy, EventBusEvent, ProgressUpdate)
 // have been REMOVED.
 

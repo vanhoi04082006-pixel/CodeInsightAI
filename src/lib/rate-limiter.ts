@@ -13,7 +13,7 @@
 // hour)). Atomic `upsert + increment` survives concurrent requests — no
 // read-then-write race (the DB applies the increment serially). This is the
 // ONLY rate-limit mechanism that works on Vercel serverless — the previous
-// in-memory `src/lib/production/rate-limiter.ts` resets on every cold-start
+// in-memory `deprecated in-memory limiter` resets on every cold-start
 // and was never wired to any route (dead code).
 //
 // Plan limits are defined in `PLAN_LIMITS` (`src/lib/billing/usage.ts`):

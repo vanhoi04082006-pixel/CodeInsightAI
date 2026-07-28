@@ -153,7 +153,7 @@ export async function POST(req: NextRequest) {
     }
 
     // P3.3: per-user hourly rate limit (DB-backed — survives Vercel serverless
-    // cold-starts; the in-memory limiter in src/lib/production/rate-limiter.ts
+    // cold-starts; the in-memory limiter in deprecated in-memory limiter
     // resets per invocation and is dead code in prod). Check happens BEFORE
     // the expensive GitHub fetch + static analysis. Free: 10/h, Pro: 100/h,
     // Team: 500/h, Enterprise: unlimited.
