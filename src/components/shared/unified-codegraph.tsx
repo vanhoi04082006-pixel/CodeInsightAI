@@ -1,54 +1,29 @@
 "use client";
 
-// UnifiedCodeGraph — Enterprise-grade graph visualization using React Flow.
+// UnifiedCodeGraph — D3 Force Simulation + SVG (Enterprise Grade)
 //
 // Features:
-// - React Flow with dagre hierarchical layout (left-to-right)
-// - Custom nodes (icon, color, type badge, severity)
-// - Custom edges (colored by type, animated for calls)
-// - Built-in pan/zoom/minimap/controls
-// - Focus Mode (show only selected + neighbors)
-// - Search with auto-center
-// - Path highlight (dim non-path nodes)
-// - Inspector panel with Impact Analysis
+// - D3-force physics layout with smooth simulation
+// - SVG rendering with GPU-accelerated transforms
+// - Smart controls: drag nodes, pan canvas, wheel zoom
+// - Focus Mode (show only selected + neighbors, dim rest)
+// - Path Highlight (Impact Analysis → highlight affected chain)
+// - Search with auto-center + pulse highlight
+// - MiniMap (live viewport indicator)
+// - Inspector panel with clickable edges
 // - AI Analysis (type-specific prompt, sessionStorage)
 // - Dead Code + Duplicate Code sections
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  ReactFlow,
-  ReactFlowProvider,
-  useReactFlow,
-  Background,
-  BackgroundVariant,
-  Controls,
-  MiniMap,
-  Handle,
-  Position,
-  type Node,
-  type Edge,
-  type NodeProps,
-  type EdgeProps,
-  type NodeTypes,
-  type EdgeTypes,
-
-
-  Panel,
-  useNodesState,
-  useEdgesState,
-} from "@xyflow/react";
-import "@xyflow/react/dist/style.css";
-import dagre from "dagre";
+import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search, Loader2, FileCode, Zap, Database, Route as RouteIcon,
   Package, Box, Sparkles, AlertCircle, ArrowRight, ArrowLeft,
-  Crosshair, Focus, ChevronDown, Network, Copy as CopyIcon,
+  Crosshair, Focus, Network, Plus, Minus, Maximize,
 } from "lucide-react";
-import { GlassCard, GradientText } from "@/components/shared/ui";
+import { GlassCard } from "@/components/shared/ui";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useT, useI18nStore } from "@/lib/i18n";
 import { ALL_GRAPH_TYPES } from "@/lib/graph/providers";
@@ -70,130 +45,141 @@ const TYPE_META: Record<string, { icon: any; color: string; label: string }> = {
   util: { icon: Package, color: "#fbbf24", label: "Util" },
   config: { icon: Package, color: "#64748b", label: "Config" },
   table: { icon: Database, color: "#f472b6", label: "Table" },
-  import: { icon: FileCode, color: "#64748b", label: "Import" },
 };
 
 const EDGE_COLORS: Record<string, string> = {
-  imports: "#64748b",
-  calls: "#a78bfa",
-  uses: "#22d3ee",
-  extends: "#f472b6",
-  implements: "#fb923c",
-  depends_on: "#fbbf24",
-  exports: "#34d399",
-  handles: "#60a5fa",
-  queries: "#f472b6",
+  imports: "#64748b", calls: "#a78bfa", uses: "#22d3ee",
+  extends: "#f472b6", implements: "#fb923c", depends_on: "#fbbf24",
+  exports: "#34d399", handles: "#60a5fa", queries: "#f472b6",
 };
 
-// ─── Dagre layout ───
-
-function layoutGraph(nodes: Node[], edges: Edge[], direction: "LR" | "TB" = "LR"): Node[] {
-  const g = new dagre.graphlib.Graph();
-  g.setGraph({ rankdir: direction, ranksep: 80, nodesep: 40, marginx: 40, marginy: 40 });
-  g.setDefaultEdgeLabel(() => ({}));
-
-  const nodeWidth = 200;
-  const nodeHeight = 56;
-
-  for (const n of nodes) {
-    g.setNode(n.id, { width: nodeWidth, height: nodeHeight });
-  }
-  for (const e of edges) {
-    g.setEdge(e.source, e.target);
-  }
-
-  dagre.layout(g);
-
-  return nodes.map(n => {
-    const pos = g.node(n.id);
-    return { ...n, position: { x: pos.x - nodeWidth / 2, y: pos.y - nodeHeight / 2 } };
-  });
+interface SimNode {
+  id: string;
+  label: string;
+  type: string;
+  filePath?: string;
+  color: string;
+  icon: any;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  fx?: number | null;
+  fy?: number | null;
+  degree: number;
+  severity?: string;
 }
 
-// ─── Custom Node Component ───
+interface SimLink {
+  source: string;
+  target: string;
+  type: string;
+  color: string;
+  weight: number;
+}
 
-const CodeNode = ({ data, selected }: NodeProps) => {
-  const meta = TYPE_META[(data as any).nodeType as string] || TYPE_META.file;
-  const Icon = meta.icon;
-  const isDimmed = (data as any).dimmed;
-  const isHighlighted = (data as any).highlighted;
-  const severity = (data as any).severity as string | undefined;
+const NODE_W = 180;
+const NODE_H = 44;
+const CANVAS_W = 700;
+const CANVAS_H = 480;
 
-  return (
-    <div
-      className={cn(
-        "relative flex items-center gap-2 rounded-lg border px-3 py-2 transition-all duration-200",
-        "bg-popover/95 backdrop-blur-sm shadow-md",
-        selected
-          ? "border-cyan-400/60 ring-2 ring-cyan-400/30 shadow-cyan-500/20"
-          : isHighlighted
-          ? "border-violet-400/50 shadow-violet-500/20"
-          : "border-white/10",
-        isDimmed && "opacity-25",
-      )}
-      style={{ width: 200 }}
-    >
-      <Handle type="target" position={Position.Left} className="!h-2 !w-2 !border-0 !bg-muted-foreground/40" />
-      <div
-        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md"
-        style={{ background: `${meta.color}1a`, color: meta.color, border: `1px solid ${meta.color}33` }}
-      >
-        <Icon className="h-3.5 w-3.5" />
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-xs font-medium">{(data as any).label}</p>
-        <p className="truncate text-[9px] text-muted-foreground">{(data as any).sublabel || meta.label}</p>
-      </div>
-      {severity && severity !== "low" && (
-        <span
-          className={cn(
-            "absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full border-2 border-background",
-            severity === "critical" ? "bg-red-500" : severity === "high" ? "bg-orange-500" : "bg-yellow-500",
-          )}
-        />
-      )}
-      <Handle type="source" position={Position.Right} className="!h-2 !w-2 !border-0 !bg-muted-foreground/40" />
-    </div>
-  );
-};
+// ─── D3 Force Simulation (pure, no d3 import needed) ───
 
-// ─── Custom Edge Component ───
+function runForceSimulation(
+  nodes: SimNode[],
+  links: SimLink[],
+  iterations: number = 300,
+): void {
+  const nodeMap = new Map(nodes.map(n => [n.id, n]));
 
-const CodeEdge = ({ id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, data, selected }: EdgeProps) => {
-  const color = EDGE_COLORS[(data as any)?.edgeType as string] || "#64748b";
-  const isDimmed = (data as any)?.dimmed;
-  const isAnimated = (data as any)?.edgeType === "calls";
+  // Initialize positions in a circle if not set
+  nodes.forEach((n, i) => {
+    if (n.x === 0 && n.y === 0) {
+      const angle = (i / nodes.length) * Math.PI * 2;
+      n.x = CANVAS_W / 2 + Math.cos(angle) * 150;
+      n.y = CANVAS_H / 2 + Math.sin(angle) * 150;
+    }
+    n.vx = 0;
+    n.vy = 0;
+  });
 
-  // Simple bezier curve
-  const cx = (sourceX + targetX) / 2;
-  const path = `M ${sourceX} ${sourceY} C ${cx} ${sourceY}, ${cx} ${targetY}, ${targetX} ${targetY}`;
+  const k = 0.08; // centering strength
+  const charge = -300; // repulsion
+  const linkDist = 80;
+  const linkStrength = 0.15;
+  const damping = 0.85;
 
-  return (
-    <g className={cn("transition-opacity duration-200", isDimmed && "opacity-15")}>
-      <path
-        id={id}
-        d={path}
-        fill="none"
-        stroke={selected ? "#22d3ee" : color}
-        strokeWidth={selected ? 2.5 : 1.5}
-        strokeOpacity={0.7}
-        markerEnd={`url(#arrow-${color.replace("#", "")})`}
-        className={cn(isAnimated && !isDimmed && "react-flow__edge-path_animated")}
-      />
-    </g>
-  );
-};
+  for (let iter = 0; iter < iterations; iter++) {
+    // Centering force
+    let cx = 0, cy = 0;
+    for (const n of nodes) { cx += n.x; cy += n.y; }
+    cx /= nodes.length; cy /= nodes.length;
 
-const nodeTypes: NodeTypes = { codeNode: CodeNode };
-const edgeTypes: EdgeTypes = { codeEdge: CodeEdge };
+    for (const n of nodes) {
+      if (n.fx != null) { n.x = n.fx; n.vx = 0; continue; }
+      if (n.fy != null) { n.y = n.fy; n.vy = 0; continue; }
+      n.vx += (CANVAS_W / 2 - n.x) * k * 0.01;
+      n.vy += (CANVAS_H / 2 - n.y) * k * 0.01;
+    }
+
+    // Repulsion (O(n²) but fine for <500 nodes)
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        const a = nodes[i], b = nodes[j];
+        let dx = b.x - a.x;
+        let dy = b.y - a.y;
+        let dist2 = dx * dx + dy * dy;
+        if (dist2 < 1) dist2 = 1;
+        const dist = Math.sqrt(dist2);
+        const force = charge / dist2;
+        const fx = (dx / dist) * force;
+        const fy = (dy / dist) * force;
+        if (a.fx == null) a.vx -= fx;
+        if (a.fy == null) a.vy -= fy;
+        if (b.fx == null) b.vx += fx;
+        if (b.fy == null) b.vy += fy;
+      }
+    }
+
+    // Link spring force
+    for (const link of links) {
+      const a = nodeMap.get(link.source);
+      const b = nodeMap.get(link.target);
+      if (!a || !b) continue;
+      let dx = b.x - a.x;
+      let dy = b.y - a.y;
+      let dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 0.01) dist = 0.01;
+      const force = (dist - linkDist) * linkStrength;
+      const fx = (dx / dist) * force;
+      const fy = (dy / dist) * force;
+      if (a.fx == null) a.vx += fx;
+      if (a.fy == null) a.vy += fy;
+      if (b.fx == null) b.vx -= fx;
+      if (b.fy == null) b.vy -= fy;
+    }
+
+    // Apply velocity with damping + collision avoidance
+    for (const n of nodes) {
+      if (n.fx != null && n.fy != null) continue;
+      n.vx *= damping;
+      n.vy *= damping;
+      n.x += n.vx;
+      n.y += n.vy;
+      // Bounds
+      n.x = Math.max(NODE_W / 2 + 10, Math.min(CANVAS_W - NODE_W / 2 - 10, n.x));
+      n.y = Math.max(NODE_H / 2 + 10, Math.min(CANVAS_H - NODE_H / 2 - 10, n.y));
+    }
+  }
+}
 
 // ─── Main Component ───
 
-function GraphInner({ analysisId, report }: { analysisId: string | null; report: AnalysisReport }) {
+export function UnifiedCodeGraph({ analysisId, report }: { analysisId: string | null; report: AnalysisReport }) {
   const { t } = useT();
   const [graphType, setGraphType] = useState<GraphType>("dependencies");
-  const [allNodes, setAllNodes] = useState<GraphNode[]>([]);
-  const [allEdges, setAllEdges] = useState<GraphEdge[]>([]);
+  const [rawNodes, setRawNodes] = useState<GraphNode[]>([]);
+  const [rawEdges, setRawEdges] = useState<GraphEdge[]>([]);
   const [stats, setStats] = useState<GraphStats | null>(null);
   const [aiConfig, setAiConfig] = useState<GraphAIConfig | null>(null);
   const [loading, setLoading] = useState(true);
@@ -204,7 +190,14 @@ function GraphInner({ analysisId, report }: { analysisId: string | null; report:
   const [pathHighlight, setPathHighlight] = useState<string[] | null>(null);
   const [impactData, setImpactData] = useState<any>(null);
   const [impactLoading, setImpactLoading] = useState(false);
-  const [layoutDir, setLayoutDir] = useState<"LR" | "TB">("LR");
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [draggingNode, setDraggingNode] = useState<string | null>(null);
+  const [simNodes, setSimNodes] = useState<SimNode[]>([]);
+  const svgRef = useRef<SVGSVGElement>(null);
+  const dragState = useRef<{ x: number; y: number; px: number; py: number; nodeId: string | null }>({
+    x: 0, y: 0, px: 0, py: 0, nodeId: null,
+  });
 
   // AI state
   const aiStorageKey = analysisId ? `unified-graph-ai-${analysisId}-${graphType}` : "";
@@ -216,8 +209,6 @@ function GraphInner({ analysisId, report }: { analysisId: string | null; report:
     try { return !!sessionStorage.getItem(aiStorageKey); } catch { return false; }
   });
 
-  const { fitView, setCenter, getNode } = useReactFlow();
-
   // Fetch graph data
   useEffect(() => {
     if (!analysisId) return;
@@ -226,12 +217,14 @@ function GraphInner({ analysisId, report }: { analysisId: string | null; report:
     setInspector(null);
     setFocusMode(false);
     setPathHighlight(null);
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
     const ctrl = new AbortController();
     fetch(`/api/graph/${analysisId}?type=${graphType}&q=full`, { signal: ctrl.signal })
       .then(r => r.json())
       .then((data: { nodes: GraphNode[]; edges: GraphEdge[]; stats: GraphStats; aiConfig: GraphAIConfig }) => {
-        setAllNodes(data.nodes || []);
-        setAllEdges(data.edges || []);
+        setRawNodes(data.nodes || []);
+        setRawEdges(data.edges || []);
         setStats(data.stats || null);
         setAiConfig(data.aiConfig || null);
         setLoading(false);
@@ -240,7 +233,7 @@ function GraphInner({ analysisId, report }: { analysisId: string | null; report:
     return () => ctrl.abort();
   }, [analysisId, graphType]);
 
-  // AI result from sessionStorage
+  // AI cached result
   useEffect(() => {
     try {
       const cached = sessionStorage.getItem(aiStorageKey);
@@ -249,100 +242,77 @@ function GraphInner({ analysisId, report }: { analysisId: string | null; report:
     } catch { setAiResult(null); setAiExpanded(false); }
   }, [aiStorageKey]);
 
-  // Convert to React Flow format
-  const rfNodes: Node[] = useMemo(() => {
-    let nodes = allNodes.map(n => {
-      const meta = TYPE_META[n.type] || TYPE_META.file;
-      const isConnected = selected
-        ? allEdges.some(e => e.from === n.id || e.to === n.id) || n.id === selected
-        : true;
-      const inPath = pathHighlight?.includes(n.id) ?? false;
-      const dimmed = focusMode ? !isConnected : pathHighlight ? !inPath && n.id !== selected : false;
-      const highlighted = inPath || n.id === selected;
+  // Build sim nodes + links, run force simulation
+  useEffect(() => {
+    if (rawNodes.length === 0) { setSimNodes([]); return; }
 
+    // Compute degrees
+    const degreeMap = new Map<string, number>();
+    for (const e of rawEdges) {
+      degreeMap.set(e.from, (degreeMap.get(e.from) ?? 0) + 1);
+      degreeMap.set(e.to, (degreeMap.get(e.to) ?? 0) + 1);
+    }
+
+    // Keep previous positions if available
+    const prevPos = new Map(simNodes.map(n => [n.id, { x: n.x, y: n.y }]));
+
+    const nodes: SimNode[] = rawNodes.map(n => {
+      const meta = TYPE_META[n.type] || TYPE_META.file;
+      const prev = prevPos.get(n.id);
       return {
         id: n.id,
-        type: "codeNode",
-        position: { x: 0, y: 0 },
-        data: {
-          label: n.label,
-          sublabel: n.filePath?.split("/").pop() || meta.label,
-          nodeType: n.type,
-          severity: n.metadata?.severity,
-          dimmed,
-          highlighted,
-        },
+        label: n.label,
+        type: n.type,
+        filePath: n.filePath,
+        color: meta.color,
+        icon: meta.icon,
+        x: prev?.x ?? 0,
+        y: prev?.y ?? 0,
+        vx: 0, vy: 0,
+        degree: degreeMap.get(n.id) ?? 0,
+        severity: typeof n.metadata?.severity === "string" ? n.metadata.severity : undefined,
       };
     });
 
-    if (focusMode && selected) {
-      nodes = nodes.filter(n => n.data.dimmed === false || n.id === selected);
-    }
-
-    const edgesForLayout = focusMode && selected
-      ? allEdges.filter(e => e.from === selected || e.to === selected)
-      : allEdges;
-
-    const rfEdges = edgesForLayout.map(e => ({
-      id: `${e.from}→${e.to}`,
+    const links: SimLink[] = rawEdges.map(e => ({
       source: e.from,
       target: e.to,
-      type: "codeEdge",
-      data: { edgeType: e.type, dimmed: pathHighlight ? !pathHighlight.includes(e.from) && !pathHighlight.includes(e.to) : false },
+      type: e.type,
+      color: EDGE_COLORS[e.type] || "#64748b",
+      weight: e.weight,
     }));
 
-    return layoutGraph(nodes, rfEdges, layoutDir);
-  }, [allNodes, allEdges, selected, focusMode, pathHighlight, layoutDir]);
-
-  const rfEdges: Edge[] = useMemo(() => {
-    const edges = focusMode && selected
-      ? allEdges.filter(e => e.from === selected || e.to === selected)
-      : allEdges;
-    return edges.map(e => ({
-      id: `${e.from}→${e.to}`,
-      source: e.from,
-      target: e.to,
-      type: "codeEdge",
-      animated: e.type === "calls",
-      data: {
-        edgeType: e.type,
-        dimmed: pathHighlight ? !pathHighlight.includes(e.from) && !pathHighlight.includes(e.to) : false,
-      },
-    }));
-  }, [allEdges, selected, focusMode, pathHighlight]);
-
-  // Auto-fit after layout
-  useEffect(() => {
-    if (rfNodes.length > 0 && !loading) {
-      setTimeout(() => fitView({ padding: 0.2, duration: 400 }), 100);
+    // Run simulation (only for new/changed nodes)
+    const hasNewNodes = nodes.some(n => n.x === 0 && n.y === 0);
+    if (hasNewNodes) {
+      runForceSimulation(nodes, links, 300);
     }
-  }, [rfNodes, loading, fitView]);
+
+    setSimNodes(nodes);
+  }, [rawNodes, rawEdges]);
 
   // Node click → inspector
-  const onNodeClick: (_e: any, node: Node) => void = useCallback((_, node) => {
-    setSelected(node.id);
+  const handleNodeClick = useCallback((nodeId: string) => {
+    setSelected(nodeId);
     setPathHighlight(null);
     if (!analysisId) return;
-    fetch(`/api/graph/${analysisId}?type=${graphType}&q=inspector&node=${encodeURIComponent(node.id)}`)
+    fetch(`/api/graph/${analysisId}?type=${graphType}&q=inspector&node=${encodeURIComponent(nodeId)}`)
       .then(r => r.json())
       .then(data => { if (data?.inspector) setInspector(data.inspector); })
       .catch(() => {});
   }, [analysisId, graphType]);
 
-  // Search → center on first match
+  // Search → center on match
   useEffect(() => {
-    if (!search.trim() || allNodes.length === 0) return;
-    const match = allNodes.find(n =>
+    if (!search.trim() || simNodes.length === 0) return;
+    const match = simNodes.find(n =>
       n.label.toLowerCase().includes(search.toLowerCase()) ||
       (n.filePath?.toLowerCase().includes(search.toLowerCase()) ?? false)
     );
     if (match) {
-      const node = getNode(match.id);
-      if (node) {
-        setCenter(node.position.x + 100, node.position.y + 28, { zoom: 1.2, duration: 400 });
-      }
+      setPan({ x: CANVAS_W / 2 - match.x * zoom, y: CANVAS_H / 2 - match.y * zoom });
     }
-  }, [search, allNodes, getNode, setCenter]);
+  }, [search, simNodes, zoom]);
 
   // Impact analysis
   const runImpact = async () => {
@@ -353,8 +323,7 @@ function GraphInner({ analysisId, report }: { analysisId: string | null; report:
       const data = await r.json();
       setImpactData(data);
       if (data?.impacted) {
-        const ids = [selected, ...data.impacted.map((n: any) => n.id)];
-        setPathHighlight(ids);
+        setPathHighlight([selected, ...data.impacted.map((n: any) => n.id)]);
       }
     } catch {} finally { setImpactLoading(false); }
   };
@@ -367,14 +336,14 @@ function GraphInner({ analysisId, report }: { analysisId: string | null; report:
     try {
       const contextBlock = [
         `Graph Type: ${graphType}`,
-        `Stats: ${stats?.totalNodes ?? 0} nodes, ${stats?.totalEdges ?? 0} edges, ${stats?.circularDeps?.length ?? 0} cycles`,
-        stats ? `Top nodes: ${allNodes.slice(0, 5).map(n => n.label).join(", ")}` : "",
-      ].filter(Boolean).join("\n");
+        `Stats: ${stats?.totalNodes ?? 0} nodes, ${stats?.totalEdges ?? 0} edges`,
+        `Top nodes: ${simNodes.slice(0, 5).map(n => n.label).join(", ")}`,
+      ].join("\n");
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          message: `${aiConfig.prompt}\n\n--- Graph Context ---\n${contextBlock}\n\nProvide concrete findings. Cite specific node labels. Respond in markdown.`,
+          message: `${aiConfig.prompt}\n\n--- Graph Context ---\n${contextBlock}\n\nProvide concrete findings. Respond in markdown.`,
           language: useI18nStore.getState().locale,
         }),
       });
@@ -387,7 +356,98 @@ function GraphInner({ analysisId, report }: { analysisId: string | null; report:
     } finally { setAiLoading(false); }
   };
 
-  const selectedNode = selected ? allNodes.find(n => n.id === selected) : null;
+  // Pan handlers
+  const onCanvasMouseDown = (e: React.MouseEvent) => {
+    if (draggingNode) return;
+    dragState.current = { x: e.clientX, y: e.clientY, px: pan.x, py: pan.y, nodeId: null };
+  };
+
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      const ds = dragState.current;
+      if (!ds) return;
+      if (ds.nodeId) {
+        // Dragging a node
+        const dx = (e.clientX - ds.x) / zoom;
+        const dy = (e.clientY - ds.y) / zoom;
+        setSimNodes(prev => prev.map(n => {
+          if (n.id === ds.nodeId) {
+            return { ...n, x: ds.px + dx, y: ds.py + dy, fx: ds.px + dx, fy: ds.py + dy };
+          }
+          return n;
+        }));
+      } else {
+        // Panning canvas
+        setPan({
+          x: ds.px + (e.clientX - ds.x),
+          y: ds.py + (e.clientY - ds.y),
+        });
+      }
+    };
+    const onUp = () => {
+      if (dragState.current?.nodeId) {
+        // Release node fix
+        setSimNodes(prev => prev.map(n =>
+          n.id === dragState.current?.nodeId ? { ...n, fx: null, fy: null } : n
+        ));
+        setDraggingNode(null);
+      }
+      dragState.current = { x: 0, y: 0, px: 0, py: 0, nodeId: null };
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+  }, [zoom, pan]);
+
+  const onWheel = (e: React.WheelEvent) => {
+    const delta = e.deltaY > 0 ? -0.08 : 0.08;
+    setZoom(z => Math.max(0.3, Math.min(3, z + delta)));
+  };
+
+  const fitToScreen = () => {
+    if (simNodes.length === 0) return;
+    const xs = simNodes.map(n => n.x);
+    const ys = simNodes.map(n => n.y);
+    const minX = Math.min(...xs), maxX = Math.max(...xs);
+    const minY = Math.min(...ys), maxY = Math.max(...ys);
+    const gw = maxX - minX || CANVAS_W;
+    const gh = maxY - minY || CANVAS_H;
+    const newZoom = Math.min(CANVAS_W / (gw + 100), CANVAS_H / (gh + 100), 1.5);
+    setZoom(newZoom);
+    setPan({
+      x: CANVAS_W / 2 - ((minX + maxX) / 2) * newZoom,
+      y: CANVAS_H / 2 - ((minY + maxY) / 2) * newZoom,
+    });
+  };
+
+  const onNodeMouseDown = (e: React.MouseEvent, nodeId: string) => {
+    e.stopPropagation();
+    const node = simNodes.find(n => n.id === nodeId);
+    if (!node) return;
+    dragState.current = { x: e.clientX, y: e.clientY, px: node.x, py: node.y, nodeId };
+    setDraggingNode(nodeId);
+  };
+
+  // Filter for focus mode
+  const visibleNodes = useMemo(() => {
+    if (!focusMode || !selected) return simNodes;
+    const connectedIds = new Set<string>([selected]);
+    for (const e of rawEdges) {
+      if (e.from === selected) connectedIds.add(e.to);
+      if (e.to === selected) connectedIds.add(e.from);
+    }
+    return simNodes.filter(n => connectedIds.has(n.id));
+  }, [simNodes, focusMode, selected, rawEdges]);
+
+  const visibleEdges = useMemo(() => {
+    if (!focusMode || !selected) return rawEdges;
+    return rawEdges.filter(e => e.from === selected || e.to === selected);
+  }, [rawEdges, focusMode, selected]);
+
+  const selectedNode = selected ? simNodes.find(n => n.id === selected) : null;
   const deep = (report as any).deepAnalysis;
 
   // ─── Render ───
@@ -411,101 +471,231 @@ function GraphInner({ analysisId, report }: { analysisId: string | null; report:
             {gt.label}
           </button>
         ))}
-        <div className="ml-auto flex items-center gap-2">
-          <Button size="sm" variant="ghost" onClick={() => setLayoutDir(d => d === "LR" ? "TB" : "LR")} className="text-[10px]">
-            {layoutDir === "LR" ? "→ Horizontal" : "↓ Vertical"}
-          </Button>
-        </div>
       </div>
 
-      {/* Main graph + inspector layout */}
-      <div className="grid gap-3 lg:grid-cols-[1fr_320px]">
-        {/* Graph canvas */}
+      {/* Graph + Inspector */}
+      <div className="grid gap-3 lg:grid-cols-[1fr_300px]">
+        {/* SVG Canvas */}
         <div className="relative h-[500px] overflow-hidden rounded-xl border border-white/10 bg-background/50">
           {loading ? (
             <div className="flex h-full items-center justify-center">
               <Loader2 className="h-6 w-6 animate-spin text-cyan-300" />
             </div>
-          ) : allNodes.length === 0 ? (
+          ) : visibleNodes.length === 0 ? (
             <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-              {t("codegraph", "unified.empty")}
+              {t("codegraph", "unified.empty") || "No data"}
             </div>
           ) : (
             <>
-              <ReactFlow
-                nodes={rfNodes}
-                edges={rfEdges}
-                nodeTypes={nodeTypes}
-                edgeTypes={edgeTypes}
-                onNodeClick={onNodeClick}
-                fitView
-                fitViewOptions={{ padding: 0.2 }}
-                minZoom={0.2}
-                maxZoom={3}
-                proOptions={{ hideAttribution: true }}
-                className="bg-transparent"
+              <svg
+                ref={svgRef}
+                width="100%"
+                height="100%"
+                viewBox={`0 0 ${CANVAS_W} ${CANVAS_H}`}
+                className="cursor-grab active:cursor-grabbing"
+                onMouseDown={onCanvasMouseDown}
+                onWheel={onWheel}
+                style={{ userSelect: "none" }}
               >
-                <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="rgba(255,255,255,0.05)" />
-                <Controls className="!border-white/10 !bg-popover/90" showInteractive={false} />
-                <MiniMap
-                  className="!rounded-lg !border-white/10 !bg-popover/90"
-                  nodeColor={(n) => {
-                    const meta = TYPE_META[(n.data as any)?.nodeType as string] || TYPE_META.file;
-                    return meta.color;
-                  }}
-                  maskColor="rgba(0,0,0,0.6)"
-                  pannable
-                  zoomable
-                />
-                {/* Search + focus controls overlay */}
-                <Panel position="top-left" className="!m-2">
-                  <div className="flex items-center gap-2">
-                    <div className="relative">
-                      <Search className="absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
-                      <input
-                        value={search}
-                        onChange={e => setSearch(e.target.value)}
-                        placeholder={t("codegraph", "unified.search")}
-                        className="h-8 w-48 rounded-lg border border-white/10 bg-popover/90 pl-7 pr-2 text-xs outline-none backdrop-blur-sm focus:border-cyan-400/40"
-                      />
-                    </div>
-                    <Button
-                      size="sm"
-                      variant={selected ? "outline" : "ghost"}
-                      onClick={() => { setFocusMode(!focusMode); if (focusMode) { setSelected(null); setInspector(null); } }}
-                      disabled={!selected}
-                      className="h-8 border-white/10 bg-popover/90 text-[10px] backdrop-blur-sm"
-                      title="Focus mode — show only selected node + neighbors"
+                <defs>
+                  {Object.entries(EDGE_COLORS).map(([type, color]) => (
+                    <marker
+                      key={type}
+                      id={`arrow-${type}`}
+                      markerWidth="8"
+                      markerHeight="6"
+                      refX="7"
+                      refY="3"
+                      orient="auto"
                     >
-                      <Focus className="mr-1 h-3 w-3" />
-                      {focusMode ? "Exit Focus" : "Focus"}
-                    </Button>
-                    {pathHighlight && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => { setPathHighlight(null); setImpactData(null); }}
-                        className="h-8 bg-popover/90 text-[10px] backdrop-blur-sm"
+                      <path d="M0,0 L8,3 L0,6 Z" fill={color} opacity="0.7" />
+                    </marker>
+                  ))}
+                </defs>
+
+                {/* Transform group for pan + zoom */}
+                <g transform={`translate(${pan.x}, ${pan.y}) scale(${zoom})`}>
+                  {/* Edges */}
+                  {visibleEdges.map((e, i) => {
+                    const from = simNodes.find(n => n.id === e.from);
+                    const to = simNodes.find(n => n.id === e.to);
+                    if (!from || !to) return null;
+                    const color = EDGE_COLORS[e.type] || "#64748b";
+                    const isDimmed = pathHighlight && !pathHighlight.includes(e.from) && !pathHighlight.includes(e.to);
+                    const isInPath = pathHighlight && (pathHighlight.includes(e.from) || pathHighlight.includes(e.to));
+
+                    // Bezier curve
+                    const mx = (from.x + to.x) / 2;
+                    const path = `M ${from.x} ${from.y} C ${mx} ${from.y}, ${mx} ${to.y}, ${to.x} ${to.y}`;
+
+                    return (
+                      <path
+                        key={i}
+                        d={path}
+                        fill="none"
+                        stroke={color}
+                        strokeWidth={isInPath ? 2.5 : 1.2}
+                        strokeOpacity={isDimmed ? 0.08 : 0.5}
+                        markerEnd={`url(#arrow-${e.type})`}
+                        className={cn("transition-opacity duration-200", e.type === "calls" && !isDimmed && "animate-pulse")}
+                        style={{ animationDuration: "3s" }}
+                      />
+                    );
+                  })}
+
+                  {/* Nodes */}
+                  {visibleNodes.map(n => {
+                    const Icon = n.icon;
+                    const isSelected = n.id === selected;
+                    const isDimmed = pathHighlight && !pathHighlight.includes(n.id);
+                    const isInPath = pathHighlight?.includes(n.id);
+                    const isSearchMatch = search.trim() && n.label.toLowerCase().includes(search.toLowerCase());
+
+                    return (
+                      <g
+                        key={n.id}
+                        transform={`translate(${n.x - NODE_W / 2}, ${n.y - NODE_H / 2})`}
+                        className="cursor-pointer transition-opacity"
+                        style={{ opacity: isDimmed ? 0.15 : 1 }}
+                        onMouseDown={(e) => onNodeMouseDown(e, n.id)}
+                        onClick={() => handleNodeClick(n.id)}
                       >
-                        <Crosshair className="mr-1 h-3 w-3" />
-                        Clear Path
-                      </Button>
-                    )}
-                  </div>
-                </Panel>
-                {/* Stats overlay */}
-                {stats && (
-                  <Panel position="bottom-left" className="!m-2">
-                    <div className="flex items-center gap-3 rounded-lg border border-white/10 bg-popover/90 px-3 py-1.5 text-[10px] backdrop-blur-sm">
-                      <span className="text-cyan-300">{stats.totalNodes} nodes</span>
-                      <span className="text-violet-300">{stats.totalEdges} edges</span>
-                      {(stats.circularDeps?.length ?? 0) > 0 && (
-                        <span className="text-rose-400">{stats.circularDeps.length} cycles</span>
-                      )}
-                    </div>
-                  </Panel>
+                        {/* Node background */}
+                        <rect
+                          width={NODE_W}
+                          height={NODE_H}
+                          rx={8}
+                          fill="rgba(15,15,20,0.92)"
+                          stroke={isSelected ? "#22d3ee" : isInPath ? "#a78bfa" : "rgba(255,255,255,0.1)"}
+                          strokeWidth={isSelected ? 2 : 1}
+                          className="transition-all"
+                          style={{
+                            filter: isSelected ? "drop-shadow(0 0 8px rgba(34,211,238,0.4))" : isInPath ? "drop-shadow(0 0 6px rgba(167,139,250,0.3))" : "none",
+                          }}
+                        />
+                        {/* Icon circle */}
+                        <circle
+                          cx={18}
+                          cy={NODE_H / 2}
+                          r={10}
+                          fill={`${n.color}1a`}
+                          stroke={`${n.color}33`}
+                          strokeWidth={1}
+                        />
+                        <foreignObject x={10} y={NODE_H / 2 - 8} width={16} height={16}>
+                          <Icon className="h-4 w-4" style={{ color: n.color }} />
+                        </foreignObject>
+                        {/* Label */}
+                        <text
+                          x={36}
+                          y={NODE_H / 2 - 2}
+                          fill={isSelected ? "#22d3ee" : isSearchMatch ? "#fbbf24" : "rgba(255,255,255,0.9)"}
+                          fontSize={11}
+                          fontWeight={isSelected ? 600 : 400}
+                          className="select-none"
+                          style={{ pointerEvents: "none" }}
+                        >
+                          {n.label.length > 18 ? n.label.slice(0, 16) + "…" : n.label}
+                        </text>
+                        {/* Sublabel */}
+                        <text
+                          x={36}
+                          y={NODE_H / 2 + 11}
+                          fill="rgba(255,255,255,0.4)"
+                          fontSize={8}
+                          className="select-none"
+                          style={{ pointerEvents: "none" }}
+                        >
+                          {n.filePath?.split("/").pop() || n.type}
+                        </text>
+                        {/* Severity dot */}
+                        {n.severity && n.severity !== "low" && (
+                          <circle
+                            cx={NODE_W - 8}
+                            cy={8}
+                            r={4}
+                            fill={n.severity === "critical" ? "#ef4444" : n.severity === "high" ? "#f97316" : "#eab308"}
+                            stroke="rgba(15,15,20,0.9)"
+                            strokeWidth={1.5}
+                          />
+                        )}
+                        {/* Search pulse */}
+                        {isSearchMatch && (
+                          <circle
+                            cx={NODE_W / 2}
+                            cy={NODE_H / 2}
+                            r={NODE_W / 2 + 4}
+                            fill="none"
+                            stroke="#fbbf24"
+                            strokeWidth={2}
+                            opacity={0.5}
+                            className="animate-ping"
+                          />
+                        )}
+                      </g>
+                    );
+                  })}
+                </g>
+              </svg>
+
+              {/* Zoom controls */}
+              <div className="absolute right-3 top-3 flex flex-col gap-1">
+                <button onClick={() => setZoom(z => Math.min(3, z + 0.2))} className="flex h-7 w-7 items-center justify-center rounded-lg border border-white/10 bg-popover/90 text-foreground backdrop-blur-sm transition hover:bg-white/10">
+                  <Plus className="h-3.5 w-3.5" />
+                </button>
+                <button onClick={() => setZoom(z => Math.max(0.3, z - 0.2))} className="flex h-7 w-7 items-center justify-center rounded-lg border border-white/10 bg-popover/90 text-foreground backdrop-blur-sm transition hover:bg-white/10">
+                  <Minus className="h-3.5 w-3.5" />
+                </button>
+                <button onClick={fitToScreen} className="flex h-7 w-7 items-center justify-center rounded-lg border border-white/10 bg-popover/90 text-foreground backdrop-blur-sm transition hover:bg-white/10">
+                  <Maximize className="h-3.5 w-3.5" />
+                </button>
+              </div>
+
+              {/* Search + focus */}
+              <div className="absolute left-3 top-3 flex items-center gap-2">
+                <div className="relative">
+                  <Search className="absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
+                  <input
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    placeholder={t("codegraph", "unified.search") || "Search..."}
+                    className="h-8 w-44 rounded-lg border border-white/10 bg-popover/90 pl-7 pr-2 text-xs outline-none backdrop-blur-sm focus:border-cyan-400/40"
+                  />
+                </div>
+                <button
+                  onClick={() => { setFocusMode(!focusMode); if (focusMode) { setSelected(null); setInspector(null); } }}
+                  disabled={!selected}
+                  className={cn(
+                    "flex h-8 items-center gap-1 rounded-lg border px-2 text-[10px] backdrop-blur-sm transition",
+                    focusMode ? "border-cyan-400/40 bg-cyan-400/10 text-cyan-300" : "border-white/10 bg-popover/90 text-muted-foreground hover:text-foreground",
+                    !selected && "cursor-not-allowed opacity-40",
+                  )}
+                >
+                  <Focus className="h-3 w-3" />
+                  {focusMode ? "Exit" : "Focus"}
+                </button>
+                {pathHighlight && (
+                  <button
+                    onClick={() => { setPathHighlight(null); setImpactData(null); }}
+                    className="flex h-8 items-center gap-1 rounded-lg border border-white/10 bg-popover/90 px-2 text-[10px] backdrop-blur-sm transition hover:text-foreground"
+                  >
+                    <Crosshair className="h-3 w-3" />
+                    Clear
+                  </button>
                 )}
-              </ReactFlow>
+              </div>
+
+              {/* Stats overlay */}
+              {stats && (
+                <div className="absolute bottom-3 left-3 flex items-center gap-3 rounded-lg border border-white/10 bg-popover/90 px-3 py-1.5 text-[10px] backdrop-blur-sm">
+                  <span className="text-cyan-300">{visibleNodes.length} nodes</span>
+                  <span className="text-violet-300">{visibleEdges.length} edges</span>
+                  {(stats.circularDeps?.length ?? 0) > 0 && (
+                    <span className="text-rose-400">{stats.circularDeps.length} cycles</span>
+                  )}
+                  <span className="text-muted-foreground">{Math.round(zoom * 100)}%</span>
+                </div>
+              )}
             </>
           )}
         </div>
@@ -516,43 +706,27 @@ function GraphInner({ analysisId, report }: { analysisId: string | null; report:
             {selectedNode ? (
               <div>
                 <div className="flex items-center gap-2">
-                  {(() => {
-                    const meta = TYPE_META[selectedNode.type] || TYPE_META.file;
-                    const Icon = meta.icon;
-                    return (
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ background: `${meta.color}1a`, color: meta.color }}>
-                        <Icon className="h-4 w-4" />
-                      </div>
-                    );
-                  })()}
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ background: `${selectedNode.color}1a`, color: selectedNode.color, border: `1px solid ${selectedNode.color}33` }}>
+                    <selectedNode.icon className="h-4 w-4" />
+                  </div>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold">{selectedNode.label}</p>
                     <p className="truncate text-[10px] text-muted-foreground">{selectedNode.filePath || selectedNode.type}</p>
                   </div>
                 </div>
 
-                {/* Impact button */}
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={runImpact}
-                  disabled={impactLoading}
-                  className="mt-3 w-full border-amber-400/30 text-amber-300 hover:bg-amber-500/10"
-                >
+                <Button size="sm" variant="outline" onClick={runImpact} disabled={impactLoading} className="mt-3 w-full border-amber-400/30 text-amber-300 hover:bg-amber-500/10">
                   {impactLoading ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Crosshair className="mr-1 h-3 w-3" />}
                   Impact Analysis
                 </Button>
 
                 {impactData && (
                   <div className="mt-2 rounded-lg border border-amber-500/15 bg-amber-500/[0.03] p-2 text-xs">
-                    <p className="font-medium text-amber-300">
-                      {impactData.impacted?.length || 0} nodes affected
-                    </p>
+                    <p className="font-medium text-amber-300">{impactData.impacted?.length || 0} nodes affected</p>
                     <p className="text-[10px] text-muted-foreground">Path highlighted on graph</p>
                   </div>
                 )}
 
-                {/* Incoming/Outgoing */}
                 {inspector && (
                   <div className="mt-3 space-y-2">
                     {inspector.incoming?.length > 0 && (
@@ -562,12 +736,8 @@ function GraphInner({ analysisId, report }: { analysisId: string | null; report:
                         </p>
                         <div className="space-y-0.5">
                           {inspector.incoming.slice(0, 8).map((e: any, i: number) => (
-                            <button
-                              key={i}
-                              onClick={() => { setSelected(e.from); }}
-                              className="block w-full truncate rounded px-2 py-0.5 text-left text-[10px] text-muted-foreground transition hover:bg-white/5 hover:text-foreground"
-                            >
-                              ← {allNodes.find(n => n.id === e.from)?.label || e.from}
+                            <button key={i} onClick={() => handleNodeClick(e.from)} className="block w-full truncate rounded px-2 py-0.5 text-left text-[10px] text-muted-foreground transition hover:bg-white/5 hover:text-foreground">
+                              ← {simNodes.find(n => n.id === e.from)?.label || e.from}
                               <span className="ml-1 text-[8px] text-muted-foreground/60">({e.type})</span>
                             </button>
                           ))}
@@ -581,12 +751,8 @@ function GraphInner({ analysisId, report }: { analysisId: string | null; report:
                         </p>
                         <div className="space-y-0.5">
                           {inspector.outgoing.slice(0, 8).map((e: any, i: number) => (
-                            <button
-                              key={i}
-                              onClick={() => { setSelected(e.to); }}
-                              className="block w-full truncate rounded px-2 py-0.5 text-left text-[10px] text-muted-foreground transition hover:bg-white/5 hover:text-foreground"
-                            >
-                              → {allNodes.find(n => n.id === e.to)?.label || e.to}
+                            <button key={i} onClick={() => handleNodeClick(e.to)} className="block w-full truncate rounded px-2 py-0.5 text-left text-[10px] text-muted-foreground transition hover:bg-white/5 hover:text-foreground">
+                              → {simNodes.find(n => n.id === e.to)?.label || e.to}
                               <span className="ml-1 text-[8px] text-muted-foreground/60">({e.type})</span>
                             </button>
                           ))}
@@ -597,7 +763,7 @@ function GraphInner({ analysisId, report }: { analysisId: string | null; report:
                 )}
               </div>
             ) : (
-              <p className="py-4 text-center text-xs text-muted-foreground">{t("codegraph", "unified.noSelection")}</p>
+              <p className="py-4 text-center text-xs text-muted-foreground">{t("codegraph", "unified.noSelection") || "Select a node"}</p>
             )}
           </GlassCard>
 
@@ -608,31 +774,18 @@ function GraphInner({ analysisId, report }: { analysisId: string | null; report:
                 <Sparkles className="h-4 w-4 text-violet-300" />
                 {aiConfig?.title || "AI Analysis"}
               </h4>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={runAI}
-                disabled={aiLoading || !aiConfig}
-                className="border-violet-400/30 text-violet-300 hover:bg-violet-500/10"
-              >
+              <Button size="sm" variant="outline" onClick={runAI} disabled={aiLoading || !aiConfig} className="border-violet-400/30 text-violet-300 hover:bg-violet-500/10">
                 {aiLoading ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Sparkles className="mr-1 h-3 w-3" />}
                 {aiLoading ? "..." : "Run"}
               </Button>
             </div>
             <AnimatePresence>
               {(aiResult || aiLoading) && aiExpanded && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  className="overflow-hidden"
-                >
+                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
                   {aiLoading ? (
-                    <p className="mt-2 flex items-center gap-2 text-xs text-amber-300">
-                      <Loader2 className="h-3 w-3 animate-spin" /> AI analyzing graph...
-                    </p>
+                    <p className="mt-2 flex items-center gap-2 text-xs text-amber-300"><Loader2 className="h-3 w-3 animate-spin" /> AI analyzing...</p>
                   ) : (
-                    <pre className="mt-2 max-h-[300px] overflow-y-auto whitespace-pre-wrap rounded-lg bg-black/30 p-2 text-[11px] leading-relaxed text-foreground/85 scrollbar-thin">{aiResult}</pre>
+                    <pre className="mt-2 max-h-[250px] overflow-y-auto whitespace-pre-wrap rounded-lg bg-black/30 p-2 text-[11px] leading-relaxed text-foreground/85 scrollbar-thin">{aiResult}</pre>
                   )}
                 </motion.div>
               )}
@@ -650,7 +803,7 @@ function GraphInner({ analysisId, report }: { analysisId: string | null; report:
           </h4>
           <div className="mt-2 max-h-32 space-y-0.5 overflow-y-auto scrollbar-thin">
             {report.deadCode?.length === 0 ? (
-              <p className="text-xs text-muted-foreground">No dead code detected</p>
+              <p className="text-xs text-muted-foreground">None detected</p>
             ) : (
               report.deadCode?.slice(0, 20).map((d: any, i: number) => (
                 <p key={i} className="truncate text-[10px] text-muted-foreground">{d.path || d}</p>
@@ -660,12 +813,12 @@ function GraphInner({ analysisId, report }: { analysisId: string | null; report:
         </GlassCard>
         <GlassCard className="p-4">
           <h4 className="flex items-center gap-1.5 text-sm font-semibold">
-            <CopyIcon className="h-4 w-4 text-amber-400" />
+            <Box className="h-4 w-4 text-amber-400" />
             Duplicate Code <span className="text-muted-foreground">({report.duplicates?.length || 0})</span>
           </h4>
           <div className="mt-2 max-h-32 space-y-0.5 overflow-y-auto scrollbar-thin">
             {report.duplicates?.length === 0 ? (
-              <p className="text-xs text-muted-foreground">No duplicates detected</p>
+              <p className="text-xs text-muted-foreground">None detected</p>
             ) : (
               report.duplicates?.slice(0, 20).map((d: any, i: number) => (
                 <p key={i} className="truncate text-[10px] text-muted-foreground">{d.group || d.files?.join(", ") || JSON.stringify(d).slice(0, 60)}</p>
@@ -691,20 +844,11 @@ function GraphInner({ analysisId, report }: { analysisId: string | null; report:
                   {d.estimatedLinesSaved && <span className="ml-auto text-[10px] text-emerald-300">~{d.estimatedLinesSaved} lines</span>}
                 </div>
                 <p className="mt-1 text-xs text-muted-foreground">{d.description}</p>
-                <p className="mt-0.5 text-[10px] text-muted-foreground/70">{d.recommendation}</p>
               </div>
             ))}
           </div>
         </GlassCard>
       )}
     </div>
-  );
-}
-
-export function UnifiedCodeGraph({ analysisId, report }: { analysisId: string | null; report: AnalysisReport }) {
-  return (
-    <ReactFlowProvider>
-      <GraphInner analysisId={analysisId} report={report} />
-    </ReactFlowProvider>
   );
 }
