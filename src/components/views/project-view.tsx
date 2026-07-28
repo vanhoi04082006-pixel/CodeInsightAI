@@ -333,6 +333,12 @@ function OverviewTab({ report, onJumpToTimeline }: { report: AnalysisReport; onJ
   const hasAiExec = !!aiExecSummary;
   const aiOverview = deep?.aiOverview;
 
+  // AI pass status for fallback UI
+  const aiPassesCompleted: string[] = (report as any)._aiPassesCompleted || [];
+  const aiStatus = (report as any).aiStatus;
+  const overviewPassFailed = (aiStatus === "done" || aiStatus === "pending") && !aiPassesCompleted.includes("overview") && !aiOverview;
+  const overviewPassPending = aiStatus === "pending" && !aiPassesCompleted.includes("overview");
+
   // Phase 2 (P2.2 + P2.4) — "What changed since last scan" banner.
   // Loads the previous-vs-current diff on mount and classifies it into a
   // RegressionReport (verdict + regressions[] + improvements[] + headline).
@@ -538,6 +544,27 @@ function OverviewTab({ report, onJumpToTimeline }: { report: AnalysisReport; onJ
         </GlassCard>
       )}
 
+      {/* Fallback: AI overview pass failed */}
+      {overviewPassFailed && (
+        <GlassCard className="border-amber-500/20 bg-amber-500/[0.03] p-4 lg:col-span-3">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="h-4 w-4 text-amber-400" />
+            <p className="text-sm font-medium text-amber-300">{t("reports", "aiFallback.title")}</p>
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">{t("reports", "aiFallback.desc", { pass: t("reports", "aiOverview.title") })}</p>
+        </GlassCard>
+      )}
+
+      {/* Fallback: AI overview still running */}
+      {overviewPassPending && (
+        <GlassCard className="border-cyan-500/20 bg-cyan-500/[0.03] p-4 lg:col-span-3">
+          <div className="flex items-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin text-cyan-300" />
+            <p className="text-sm font-medium text-cyan-300">{t("reports", "aiFallback.pending")}</p>
+          </div>
+        </GlassCard>
+      )}
+
       <GlassCard strong className="p-6 lg:col-span-1">
         <p className="text-xs uppercase tracking-wider text-muted-foreground">{t("reports", "healthScore")}</p>
         <div className="mt-3 flex justify-center">
@@ -621,6 +648,10 @@ function ArchitectureTab({ report }: { report: AnalysisReport }) {
   const deep = (report as any).deepAnalysis as any;
   const archReview = deep?.architectureReview;
   const bestPractices = deep?.bestPracticesAudit;
+  const aiPassesCompleted: string[] = (report as any)._aiPassesCompleted || [];
+  const aiStatus = (report as any).aiStatus;
+  const archPassFailed = (aiStatus === "done" || aiStatus === "pending") && !aiPassesCompleted.includes("architecture") && !archReview;
+  const archPassPending = aiStatus === "pending" && !aiPassesCompleted.includes("architecture");
   return (
     <div className="space-y-4">
       {/* AI Architecture Review — deep analysis (shown above static content when AI is available) */}
@@ -761,6 +792,27 @@ function ArchitectureTab({ report }: { report: AnalysisReport }) {
             <MetricCard label={t("reports", "metricDirCycles")} value={String(a.metrics.dirCircularDeps.length)} hint={t("reports", "project.metricHintDirCycles")} tone={a.metrics.dirCircularDeps.length > 0 ? "bad" : "good"} />
             <MetricCard label={t("reports", "metricLayerViolations")} value={String(a.metrics.layerViolations.length)} hint={t("reports", "project.metricHintLayerViolations")} tone={a.metrics.layerViolations.length > 0 ? "bad" : "good"} />
             <MetricCard label={t("reports", "metricGodModules")} value={String(a.metrics.godModules.length)} hint={t("reports", "project.metricHintGodModules")} tone={a.metrics.godModules.length > 0 ? "bad" : "good"} />
+          </div>
+        </GlassCard>
+      )}
+
+      {/* Fallback: AI architecture pass failed */}
+      {archPassFailed && (
+        <GlassCard className="border-amber-500/20 bg-amber-500/[0.03] p-4">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="h-4 w-4 text-amber-400" />
+            <p className="text-sm font-medium text-amber-300">{t("reports", "aiFallback.title")}</p>
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">{t("reports", "aiFallback.desc", { pass: t("reports", "aiInsights.archReview") })}</p>
+        </GlassCard>
+      )}
+
+      {/* Fallback: AI architecture still running */}
+      {archPassPending && (
+        <GlassCard className="border-cyan-500/20 bg-cyan-500/[0.03] p-4">
+          <div className="flex items-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin text-cyan-300" />
+            <p className="text-sm font-medium text-cyan-300">{t("reports", "aiFallback.pending")}</p>
           </div>
         </GlassCard>
       )}
@@ -1145,6 +1197,10 @@ function DependenciesTab({ report }: { report: AnalysisReport }) {
   const { t } = useT();
   const deep = (report as any).deepAnalysis as any;
   const aiDuplicates: any[] | undefined = deep?.duplicateAnalysis;
+  const aiPassesCompleted: string[] = (report as any)._aiPassesCompleted || [];
+  const aiStatus = (report as any).aiStatus;
+  const dupPassFailed = (aiStatus === "done" || aiStatus === "pending") && !aiPassesCompleted.includes("duplicates") && (!aiDuplicates || aiDuplicates.length === 0);
+  const dupPassPending = aiStatus === "pending" && !aiPassesCompleted.includes("duplicates");
   return (
     <div className="space-y-4">
       <GlassCard className="p-5">
@@ -1194,6 +1250,27 @@ function DependenciesTab({ report }: { report: AnalysisReport }) {
                 )}
               </div>
             ))}
+          </div>
+        </GlassCard>
+      )}
+
+      {/* Fallback: AI duplicates pass failed */}
+      {dupPassFailed && (
+        <GlassCard className="border-amber-500/20 bg-amber-500/[0.03] p-4">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="h-4 w-4 text-amber-400" />
+            <p className="text-sm font-medium text-amber-300">{t("reports", "aiFallback.title")}</p>
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">{t("reports", "aiFallback.desc", { pass: t("reports", "aiInsights.duplicateAnalysis") })}</p>
+        </GlassCard>
+      )}
+
+      {/* Fallback: AI duplicates still running */}
+      {dupPassPending && (
+        <GlassCard className="border-cyan-500/20 bg-cyan-500/[0.03] p-4">
+          <div className="flex items-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin text-cyan-300" />
+            <p className="text-sm font-medium text-cyan-300">{t("reports", "aiFallback.pending")}</p>
           </div>
         </GlassCard>
       )}
@@ -1552,6 +1629,10 @@ function RoadmapTab({ report }: { report: AnalysisReport }) {
   const executiveNote: string | undefined = deep?.executiveNote;
   const sequencerWarnings: string[] | undefined = (report as any)._sequencerWarnings;
   const hasAi = !!aiRoadmap || !!aiPriorities;
+  const aiPassesCompleted: string[] = (report as any)._aiPassesCompleted || [];
+  const aiStatus = (report as any).aiStatus;
+  const prioPassFailed = (aiStatus === "done" || aiStatus === "pending") && !aiPassesCompleted.includes("priorities") && !hasAi;
+  const prioPassPending = aiStatus === "pending" && !aiPassesCompleted.includes("priorities");
 
   // Phase 2 (P2.5) — graph-validated refactor sequencing.
   // Loads the RefactorRoadmap on mount when an active analysis exists; the
@@ -1893,6 +1974,27 @@ function RoadmapTab({ report }: { report: AnalysisReport }) {
                 ))}
               </div>
             ))}
+          </div>
+        </GlassCard>
+      )}
+
+      {/* Fallback: AI priorities pass failed */}
+      {prioPassFailed && (
+        <GlassCard className="border-amber-500/20 bg-amber-500/[0.03] p-4">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="h-4 w-4 text-amber-400" />
+            <p className="text-sm font-medium text-amber-300">{t("reports", "aiFallback.title")}</p>
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">{t("reports", "aiFallback.desc", { pass: t("reports", "aiInsights.priorities") })}</p>
+        </GlassCard>
+      )}
+
+      {/* Fallback: AI priorities still running */}
+      {prioPassPending && (
+        <GlassCard className="border-cyan-500/20 bg-cyan-500/[0.03] p-4">
+          <div className="flex items-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin text-cyan-300" />
+            <p className="text-sm font-medium text-cyan-300">{t("reports", "aiFallback.pending")}</p>
           </div>
         </GlassCard>
       )}
