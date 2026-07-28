@@ -4,7 +4,7 @@
 // its data source into. The `GraphService` (graph-engine.ts) operates on
 // `GraphData` exclusively, so all 6 graph types share the same query API:
 //   findNode / findNeighbors / getInspector / findImpact / findShortestPath /
-//   findCircularDependencies / search / getStats / getTopNodes / getAIConfig.
+//   findCircularDependencies / search / getStats / getTopNodes / getTopNodes (AI prompts moved to AIAnalysisService).
 //
 // Sources:
 //   - dependencies       → report.dependencies (static analyzer output)

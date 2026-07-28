@@ -30,6 +30,7 @@ import { db } from "@/lib/db";
 import { requireUserId } from "@/lib/auth";
 import { getProvider } from "@/lib/graph/providers";
 import { GraphService } from "@/lib/graph/graph-engine";
+import { AIAnalysisService } from "@/lib/graph/ai-analysis-service";
 import type { GraphType } from "@/lib/graph/types";
 
 export const runtime = "nodejs";
@@ -127,7 +128,7 @@ export async function GET(
     }
 
     case "ai-config":
-      return NextResponse.json({ aiConfig: service.getAIConfig() });
+      return NextResponse.json({ aiConfig: AIAnalysisService.getPrompt(service.data.type) });
 
     case "full":
     default:
@@ -138,7 +139,7 @@ export async function GET(
         edges: data.edges,
         type: data.type,
         stats: data.stats,
-        aiConfig: service.getAIConfig(),
+        aiConfig: AIAnalysisService.getPrompt(service.data.type),
       });
   }
 }
