@@ -252,5 +252,12 @@
     "executiveNote": "Ghi chú điều hành",
     "sequencerWarnings": "Cảnh báo sequencer"
   },
-  "roadmap": "Lộ trình"
+  "roadmap": "Lộ trình",
+  "aiFallback": {
+    "title": "Phân tích AI không khả dụng",
+    "desc": "Phân tích AI chuyên sâu cho {pass} không thể hoàn thành. Có thể do timeout, giới hạn token, hoặc lỗi parse JSON.",
+    "hint": "Phân tích tĩnh ở trên vẫn chính xác. Thử phân tích lại với model AI khác hoặc max tokens cao hơn.",
+    "pending": "AI đang phân tích",
+    "pendingDesc": "Phân tích AI chuyên sâu cho {pass} đang xử lý. Vui lòng chờ."
+  }
 }

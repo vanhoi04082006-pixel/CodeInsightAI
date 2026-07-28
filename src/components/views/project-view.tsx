@@ -28,6 +28,7 @@ import {
   Wrench,
   RefreshCw,
   Clock,
+  AlertCircle,
   Target,
   GitFork,
   AlertTriangle,
@@ -834,6 +835,14 @@ function IssuesTab({ issues, title, color, report, id }: { issues: Issue[]; titl
     id === "security" ? t("reports", "aiInsights.securityReview") :
     id === "performance" ? t("reports", "aiInsights.perfReview") :
     t("reports", "aiInsights.codeQualityReview");
+
+  // Check if AI was attempted but this specific pass failed
+  const aiPassesCompleted: string[] = (report as any)._aiPassesCompleted || [];
+  const passName = id === "security" ? "security" : id === "performance" ? "performance" : "quality";
+  const aiWasAttempted = (report as any).aiStatus === "done" || (report as any).aiStatus === "pending";
+  const aiPassFailed = aiWasAttempted && !aiPassesCompleted.includes(passName) && (!aiReviews || aiReviews.length === 0);
+  const aiPending = (report as any).aiStatus === "pending" && !aiPassesCompleted.includes(passName);
+
   const [actionLoading, setActionLoading] = useState(false);
   const handleAgentAction = async (kind: string, issue: Issue) => {
     setActionLoading(true);
@@ -947,6 +956,29 @@ function IssuesTab({ issues, title, color, report, id }: { issues: Issue[]; titl
               </div>
             ))}
           </div>
+        </GlassCard>
+      )}
+
+      {/* Fallback: AI was attempted but this pass failed — show honest message */}
+      {aiPassFailed && (
+        <GlassCard className="border-amber-500/20 bg-amber-500/[0.03] p-4">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="h-4 w-4 text-amber-400" />
+            <p className="text-sm font-medium text-amber-300">{t("reports", "aiFallback.title")}</p>
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">{t("reports", "aiFallback.desc", { pass: aiTitle })}</p>
+          <p className="mt-1 text-[10px] text-muted-foreground/70">{t("reports", "aiFallback.hint")}</p>
+        </GlassCard>
+      )}
+
+      {/* Fallback: AI is still running this pass */}
+      {aiPending && (
+        <GlassCard className="border-cyan-500/20 bg-cyan-500/[0.03] p-4">
+          <div className="flex items-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin text-cyan-300" />
+            <p className="text-sm font-medium text-cyan-300">{t("reports", "aiFallback.pending")}</p>
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">{t("reports", "aiFallback.pendingDesc", { pass: aiTitle })}</p>
         </GlassCard>
       )}
 

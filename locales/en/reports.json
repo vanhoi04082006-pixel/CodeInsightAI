@@ -252,5 +252,12 @@
     "executiveNote": "Executive Note",
     "sequencerWarnings": "Sequencer warnings"
   },
-  "roadmap": "Roadmap"
+  "roadmap": "Roadmap",
+  "aiFallback": {
+    "title": "AI Analysis Unavailable",
+    "desc": "AI deep review for {pass} could not be completed. This may be due to provider timeout, token limits, or JSON parsing issues.",
+    "hint": "The static analysis above is still accurate. Try re-analyzing with a different AI model or higher max tokens.",
+    "pending": "AI Analysis Running",
+    "pendingDesc": "AI deep review for {pass} is still processing. Check back in a moment."
+  }
 }

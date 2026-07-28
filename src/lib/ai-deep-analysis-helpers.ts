@@ -41,10 +41,16 @@ Frameworks: ${parsed.frameworks?.map((f: any) => f.name).join(", ") || "None"}
 Architecture: ${report.architecture.pattern}
 Scores — Overall: ${report.scores.overall}, Security: ${report.scores.security}, Performance: ${report.scores.performance}, Architecture: ${report.scores.architecture}`;
 
+  // Sort issues by severity (critical → high → medium → low) and limit to top 10
+  // Sending ALL issues (e.g., 173 performance) causes AI to fail (token limit + JSON too large)
+  const severityOrder = { critical: 0, high: 1, medium: 2, low: 3, info: 4 };
+  const topBySeverity = (issues: any[], max: number) =>
+    [...issues].sort((a, b) => (severityOrder[a.severity as keyof typeof severityOrder] ?? 9) - (severityOrder[b.severity as keyof typeof severityOrder] ?? 9)).slice(0, max);
+
   const topIssues = [
-    ...report.issues.security.slice(0, 5),
-    ...report.issues.bugs.slice(0, 5),
-    ...report.issues.performance.slice(0, 5),
+    ...topBySeverity(report.issues.security, 5),
+    ...topBySeverity(report.issues.bugs, 5),
+    ...topBySeverity(report.issues.performance, 5),
   ].map((i) => `- [${i.severity}] ${i.title} (${i.file}): ${i.recommendation?.slice(0, 100) ?? ""}`).join("\n");
 
   switch (passType) {
@@ -75,7 +81,7 @@ Generate a 2-3 sentence executive summary focused on business impact and overall
       return `${repoInfo}
 
 Security issues found:
-${report.issues.security.map((i) => `- [${i.severity}] ${i.title} (${i.file}): ${i.description}`).join("\n")}
+${topBySeverity(report.issues.security, 10).map((i) => `- [${i.severity}] ${i.title} (${i.file}): ${i.description}`).join("\n")}
 
 For each security issue, provide structured analysis. ${STRUCTURED_FINDING_INSTRUCTIONS}
 
@@ -98,7 +104,7 @@ Evaluate the architecture and suggest improvements. For EACH suggestion, include
       return `${repoInfo}
 
 Code quality issues:
-${report.issues.bugs.map((i) => `- [${i.severity}] ${i.title} (${i.file}): ${i.description}`).join("\n")}
+${topBySeverity(report.issues.bugs, 10).map((i) => `- [${i.severity}] ${i.title} (${i.file}): ${i.description}`).join("\n")}
 
 For each code quality issue, provide structured analysis. ${STRUCTURED_FINDING_INSTRUCTIONS}
 
@@ -139,7 +145,7 @@ Respond as JSON:
       return `${repoInfo}
 
 Performance issues:
-${report.issues.performance.map((i) => `- [${i.severity}] ${i.title} (${i.file}): ${i.description}`).join("\n")}
+${topBySeverity(report.issues.performance, 10).map((i) => `- [${i.severity}] ${i.title} (${i.file}): ${i.description}`).join("\n")}
 
 Positive findings: ${report.perfPositiveFindings?.join("; ") || "None"}
 
