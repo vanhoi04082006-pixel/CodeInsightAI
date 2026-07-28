@@ -137,6 +137,20 @@ export interface FileInsight {
   snippet?: string; // representative code snippet for the viewer
   duplicateGroup?: number; // >0 means part of a duplicate cluster
   isDeadCode?: boolean;
+  // IDE-grade Code Explorer fields (backward-compatible — all optional)
+  functions?: string[];
+  classes?: string[];
+  imports?: string[];
+  exports?: string[];
+  functionSignatures?: {
+    name: string;
+    params: string[];
+    returnType?: string;
+    isAsync: boolean;
+    isExported: boolean;
+    startLine: number;
+    endLine: number;
+  }[];
 }
 
 export interface CodeSnippet {
@@ -145,7 +159,22 @@ export interface CodeSnippet {
   code: string;
   title: string;
   explanation: string;
+  // IDE-grade Code Explorer fields (backward-compatible — all optional)
+  startLine?: number;     // 1-based first line shown in the snippet
+  endLine?: number;       // 1-based last line shown in the snippet
+  totalLines?: number;    // total lines in the file (for "Showing X-Y of Z")
+  rawContent?: string;    // entire file content (for "Open Full File")
+  issueId?: string;       // id of the primary issue this snippet points to (if any)
 }
+
+/** AI exploration modes available in the Code Explorer toolbar. */
+export type AIMode =
+  | "explain"
+  | "security"
+  | "performance"
+  | "refactor"
+  | "tests"
+  | "bugs";
 
 export interface DiagramSet {
   uml: string;

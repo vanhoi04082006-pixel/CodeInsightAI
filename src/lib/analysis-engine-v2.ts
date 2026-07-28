@@ -47,6 +47,12 @@ export function analyzeParsedRepository(
     maintainability: clamp(100 - f.complexity * 2, 20, 99),
     description: f.description,
     issues: countIssuesForFile(f.path, securityIssues, bugIssues, perfIssues),
+    // IDE-grade Code Explorer fields (backward-compatible)
+    functions: f.functions,
+    classes: f.classes,
+    imports: f.imports,
+    exports: f.exports,
+    functionSignatures: f.functionSignatures,
   }));
 
   const activity = genActivity();
@@ -118,28 +124,34 @@ export function analyzeParsedRepository(
 
       const lines = raw.content.split("\n");
       const issuesInFile = allIssues.filter(i => i.file === cf.path);
-      
+
       let codePreview = "";
       let exp = cf.description || translate(language, "static", "snippet.moduleFallback", { fileName: cf.path.split('/').pop() || "" });
+      let startLine = 1;
+      let endLine = Math.min(lines.length, 30);
+      let primaryIssueId: string | undefined;
 
       if (issuesInFile.length > 0) {
         const primaryIssue = issuesInFile.sort((a,b) => (a.severity === "critical" ? -1 : 1))[0];
+        primaryIssueId = primaryIssue.id;
         exp = translate(language, "static", "snippet.riskDetected", {
           severity: primaryIssue.severity.toUpperCase(),
           title: primaryIssue.title,
           recommendation: primaryIssue.recommendation,
         });
-        
+
         if (primaryIssue.line && primaryIssue.line > 0 && primaryIssue.line <= lines.length) {
           const lineIdx = primaryIssue.line - 1;
           const start = Math.max(0, lineIdx - 8);
           const end = Math.min(lines.length, lineIdx + 12);
-          
+          startLine = start + 1;
+          endLine = end;
+
           codePreview = lines.slice(start, end).map((l, i) => {
             const currentLine = start + i + 1;
             return currentLine === primaryIssue.line ? `${l} // 🔴 [${translate(language, "static", "snippet.aiWarningMarker")}]: ${primaryIssue.title}` : l;
           }).join("\n");
-          
+
           codePreview = translate(language, "static", "snippet.excerptAroundLine", { line: primaryIssue.line }) + "\n" + codePreview;
         } else {
           codePreview = lines.slice(0, 30).join("\n");
@@ -154,7 +166,12 @@ export function analyzeParsedRepository(
         language: cf.language.toLowerCase() === "typescript" ? "tsx" : cf.language.toLowerCase(),
         title: cf.path.split('/').pop() || "Code Snippet",
         code: codePreview + (lines.length > 30 && !issuesInFile[0]?.line ? "\n\n" + translate(language, "static", "snippet.truncatedNotice") : ""),
-        explanation: exp
+        explanation: exp,
+        startLine,
+        endLine,
+        totalLines: lines.length,
+        rawContent: raw.content,
+        issueId: primaryIssueId,
       });
     }
   }

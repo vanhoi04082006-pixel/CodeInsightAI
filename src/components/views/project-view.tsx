@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   LayoutGrid,
   Network,
@@ -52,7 +52,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useAppStore } from "@/lib/store";
-import type { AnalysisReport, AnalysisDiffResult, Issue, CodeSnippet } from "@/lib/types";
+import type { AnalysisReport, AnalysisDiffResult, Issue, CodeSnippet, AIMode } from "@/lib/types";
 import type { RegressionReport } from "@/lib/regression-detector";
 import type { RefactorRoadmap } from "@/lib/refactor-roadmap";
 import { toast } from "sonner";
@@ -1354,8 +1354,9 @@ function CodeTab({ report }: { report: AnalysisReport }) {
   const { t } = useT();
   const activeAnalysisId = useAppStore((s) => s.activeAnalysisId);
 
-  // AI explain per-file (keyed by file path) — persisted in sessionStorage
-  // so switching tabs preserves results, and each file keeps its own response.
+  // AI explain per-file per-mode (keyed by `${file}::${mode}`) — persisted in
+  // sessionStorage so switching tabs preserves results, and each file+mode
+  // combination keeps its own response.
   const storagePrefix = activeAnalysisId ? `code-ai-${activeAnalysisId}` : "code-ai-shared";
   const [aiExplainMap, setAiExplainMap] = useState<Record<string, string>>(() => {
     if (typeof window === "undefined") return {};
@@ -1364,43 +1365,99 @@ function CodeTab({ report }: { report: AnalysisReport }) {
       return saved ? JSON.parse(saved) : {};
     } catch { return {}; }
   });
-  const [explainLoadingFile, setExplainLoadingFile] = useState<string | null>(null);
+  const [explainLoadingKey, setExplainLoadingKey] = useState<string | null>(null);
   const [activeAiFile, setActiveAiFile] = useState<string | null>(null);
+  const [activeAiMode, setActiveAiMode] = useState<AIMode | null>(null);
 
-  const askAI = async (snippet: CodeSnippet) => {
-    setExplainLoadingFile(snippet.file);
+  // Flatten all issues for the CodeViewer (bugs + security + performance)
+  const allIssues: Issue[] = useMemo(
+    () => [...report.issues.bugs, ...report.issues.security, ...report.issues.performance],
+    [report.issues],
+  );
+
+  const persistMap = (next: Record<string, string>) => {
+    setAiExplainMap(next);
+    try { sessionStorage.setItem(storagePrefix, JSON.stringify(next)); } catch {}
+  };
+
+  const buildPrompt = (snippet: CodeSnippet, mode: AIMode, sendFullFile: boolean): string => {
+    const fileInsight = report.files.find((f) => f.path === snippet.file);
+    const issuesInFile = allIssues.filter((i) => i.file === snippet.file);
+    const primaryIssue = snippet.issueId
+      ? issuesInFile.find((i) => i.id === snippet.issueId) || issuesInFile[0]
+      : issuesInFile[0];
+
+    // Optimized context — saves ~80% tokens for large files
+    const contextBlock = sendFullFile
+      ? `--- FULL FILE (${snippet.totalLines ?? 0} lines) ---\n\`\`\`\n${snippet.rawContent ?? snippet.code}\n\`\`\``
+      : [
+          `--- FILE SUMMARY ---`,
+          `Path: ${snippet.file}`,
+          `Language: ${snippet.language}`,
+          `Lines: ${snippet.totalLines ?? "?"}`,
+          `Complexity: ${fileInsight?.complexity ?? "?"}`,
+          `Functions (${fileInsight?.functions?.length ?? 0}): ${(fileInsight?.functions ?? []).slice(0, 20).join(", ")}`,
+          `Classes (${fileInsight?.classes?.length ?? 0}): ${(fileInsight?.classes ?? []).slice(0, 10).join(", ")}`,
+          ``,
+          `--- IMPORTS (${fileInsight?.imports?.length ?? 0}) ---`,
+          (fileInsight?.imports ?? []).slice(0, 30).join("\n"),
+          ``,
+          `--- FUNCTION SIGNATURES ---`,
+          (fileInsight?.functionSignatures ?? []).slice(0, 20)
+            .map((fn) => `${fn.isAsync ? "async " : ""}${fn.name}(${fn.params.join(", ")})${fn.returnType ? ": " + fn.returnType : ""}`)
+            .join("\n") || "(none parsed)",
+          ``,
+          primaryIssue
+            ? `--- PRIMARY ISSUE ---\nTitle: ${primaryIssue.title}\nSeverity: ${primaryIssue.severity}\nLine: ${primaryIssue.line ?? "?"}\nDescription: ${primaryIssue.description}\nRecommendation: ${primaryIssue.recommendation}`
+            : `--- PRIMARY ISSUE ---\n(none detected)`,
+          ``,
+          `--- SNIPPET (lines ${snippet.startLine ?? 1}–${snippet.endLine ?? "?"}) ---`,
+          "```",
+          snippet.code,
+          "```",
+        ].join("\n");
+
+    const modePrompts: Record<AIMode, string> = {
+      explain: `You are an expert code reviewer. Explain what this file does, its main responsibilities, the patterns it uses, and any notable design decisions. Be concise (4-6 short paragraphs).`,
+      security: `You are a security expert. Identify security vulnerabilities in this code: injection, auth bypass, secret leaks, insecure crypto, SSRF, XSS, etc. For each finding, give: severity, location (file:line), explanation, and a concrete fix. Format as bullet list.`,
+      performance: `You are a performance expert. Identify performance issues: O(n²) loops, unnecessary re-renders, blocking I/O, memory leaks, N+1 queries, large bundle, etc. For each: severity, location, explanation, optimization suggestion.`,
+      refactor: `You are a senior software engineer. Suggest concrete refactorings to improve readability, modularity, and maintainability. List each as: what to change, why, and how (with code sketch if useful).`,
+      tests: `You are a test engineer. Generate test cases for the public functions/exports in this file. Output runnable test code (Jest/Vitest) covering happy path, edge cases, and error cases. Include brief comments.`,
+      bugs: `You are a bug hunter. Find logic bugs, off-by-one errors, null/undefined derefs, race conditions, unhandled promises, incorrect error handling, etc. For each: severity, location, explanation, suggested fix.`,
+    };
+
+    return `${modePrompts[mode]}\n\n${contextBlock}`;
+  };
+
+  const askAI = async (snippet: CodeSnippet, mode: AIMode, sendFullFile: boolean) => {
+    const key = `${snippet.file}::${mode}`;
+    setExplainLoadingKey(key);
     setActiveAiFile(snippet.file);
+    setActiveAiMode(mode);
     // Don't clear existing — just set loading
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          message: `Analyze the file ${snippet.file}. Explain: 1) What this file does 2) Main risks 3) Patterns used 4) Refactor suggestions. Code:\n\`\`\`\n${snippet.code}\n\`\`\``,
+          message: buildPrompt(snippet, mode, sendFullFile),
           language: useI18nStore.getState().locale,
         }),
       });
       const data = await res.json();
       const reply = data.reply || data.message?.content || "No response";
-      setAiExplainMap(prev => {
-        const updated = { ...prev, [snippet.file]: reply };
-        try { sessionStorage.setItem(storagePrefix, JSON.stringify(updated)); } catch {}
-        return updated;
-      });
+      persistMap({ ...aiExplainMap, [key]: reply });
     } catch {
-      setAiExplainMap(prev => {
-        const updated = { ...prev, [snippet.file]: "AI explanation unavailable" };
-        try { sessionStorage.setItem(storagePrefix, JSON.stringify(updated)); } catch {}
-        return updated;
-      });
+      persistMap({ ...aiExplainMap, [key]: "AI explanation unavailable" });
     } finally {
-      setExplainLoadingFile(null);
+      setExplainLoadingKey(null);
     }
   };
 
-  // Current displayed AI response = the file user last clicked "Ask AI" on
-  const aiExplain = activeAiFile ? aiExplainMap[activeAiFile] : null;
-  const explainLoading = !!explainLoadingFile;
+  // Current displayed AI response = the file+mode user last clicked
+  const currentKey = activeAiFile && activeAiMode ? `${activeAiFile}::${activeAiMode}` : null;
+  const aiExplain = currentKey ? aiExplainMap[currentKey] : null;
+  const explainLoading = !!explainLoadingKey;
 
   return (
     <div className="space-y-4">
@@ -1415,28 +1472,14 @@ function CodeTab({ report }: { report: AnalysisReport }) {
       </GlassCard>
       <CodeViewer
         snippets={report.snippets}
+        files={report.files}
+        issues={allIssues}
         onAskAI={askAI}
         aiLoading={explainLoading}
+        aiResponse={aiExplain ?? null}
+        activeAiMode={activeAiMode}
+        activeAiFile={activeAiFile}
       />
-      {(aiExplain || explainLoading) && activeAiFile && (
-        <GlassCard className="border-violet-500/20 bg-gradient-to-br from-violet-500/[0.05] to-transparent p-5">
-          <div className="flex flex-wrap items-center gap-2">
-            <Sparkles className="h-4 w-4 text-violet-300" />
-            <h4 className="text-sm font-semibold">{t("reports", "action.aiExplain")}</h4>
-            <span className="flex items-center gap-1 rounded-full bg-violet-500/15 px-2 py-0.5 text-[10px] font-medium text-violet-300">
-              <Sparkles className="h-3 w-3" /> AI
-            </span>
-            <code className="text-[10px] text-muted-foreground">{activeAiFile}</code>
-          </div>
-          {explainLoading ? (
-            <p className="mt-3 flex items-center gap-2 text-sm text-amber-300">
-              <Loader2 className="h-4 w-4 animate-spin" /> {t("reports", "project.aiAnalyzing")}
-            </p>
-          ) : (
-            <pre className="mt-3 max-h-[400px] overflow-y-auto whitespace-pre-wrap rounded-lg border border-white/5 bg-black/40 p-3 font-mono text-[11px] leading-relaxed text-foreground/85 scrollbar-thin">{aiExplain}</pre>
-          )}
-        </GlassCard>
-      )}
     </div>
   );
 }
