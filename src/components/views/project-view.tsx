@@ -1352,12 +1352,25 @@ function DependenciesTab({ report }: { report: AnalysisReport }) {
 /* ---------- Code ---------- */
 function CodeTab({ report }: { report: AnalysisReport }) {
   const { t } = useT();
-  const [aiExplain, setAiExplain] = useState<string | null>(null);
-  const [explainLoading, setExplainLoading] = useState(false);
+  const activeAnalysisId = useAppStore((s) => s.activeAnalysisId);
+
+  // AI explain per-file (keyed by file path) — persisted in sessionStorage
+  // so switching tabs preserves results, and each file keeps its own response.
+  const storagePrefix = activeAnalysisId ? `code-ai-${activeAnalysisId}` : "code-ai-shared";
+  const [aiExplainMap, setAiExplainMap] = useState<Record<string, string>>(() => {
+    if (typeof window === "undefined") return {};
+    try {
+      const saved = sessionStorage.getItem(storagePrefix);
+      return saved ? JSON.parse(saved) : {};
+    } catch { return {}; }
+  });
+  const [explainLoadingFile, setExplainLoadingFile] = useState<string | null>(null);
+  const [activeAiFile, setActiveAiFile] = useState<string | null>(null);
 
   const askAI = async (snippet: CodeSnippet) => {
-    setExplainLoading(true);
-    setAiExplain(null);
+    setExplainLoadingFile(snippet.file);
+    setActiveAiFile(snippet.file);
+    // Don't clear existing — just set loading
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
@@ -1368,13 +1381,26 @@ function CodeTab({ report }: { report: AnalysisReport }) {
         }),
       });
       const data = await res.json();
-      setAiExplain(data.reply || data.message?.content || "No response");
+      const reply = data.reply || data.message?.content || "No response";
+      setAiExplainMap(prev => {
+        const updated = { ...prev, [snippet.file]: reply };
+        try { sessionStorage.setItem(storagePrefix, JSON.stringify(updated)); } catch {}
+        return updated;
+      });
     } catch {
-      setAiExplain("AI explanation unavailable");
+      setAiExplainMap(prev => {
+        const updated = { ...prev, [snippet.file]: "AI explanation unavailable" };
+        try { sessionStorage.setItem(storagePrefix, JSON.stringify(updated)); } catch {}
+        return updated;
+      });
     } finally {
-      setExplainLoading(false);
+      setExplainLoadingFile(null);
     }
   };
+
+  // Current displayed AI response = the file user last clicked "Ask AI" on
+  const aiExplain = activeAiFile ? aiExplainMap[activeAiFile] : null;
+  const explainLoading = !!explainLoadingFile;
 
   return (
     <div className="space-y-4">
@@ -1392,7 +1418,7 @@ function CodeTab({ report }: { report: AnalysisReport }) {
         onAskAI={askAI}
         aiLoading={explainLoading}
       />
-      {(aiExplain || explainLoading) && (
+      {(aiExplain || explainLoading) && activeAiFile && (
         <GlassCard className="border-violet-500/20 bg-gradient-to-br from-violet-500/[0.05] to-transparent p-5">
           <div className="flex flex-wrap items-center gap-2">
             <Sparkles className="h-4 w-4 text-violet-300" />
@@ -1400,6 +1426,7 @@ function CodeTab({ report }: { report: AnalysisReport }) {
             <span className="flex items-center gap-1 rounded-full bg-violet-500/15 px-2 py-0.5 text-[10px] font-medium text-violet-300">
               <Sparkles className="h-3 w-3" /> AI
             </span>
+            <code className="text-[10px] text-muted-foreground">{activeAiFile}</code>
           </div>
           {explainLoading ? (
             <p className="mt-3 flex items-center gap-2 text-sm text-amber-300">

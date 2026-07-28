@@ -96,10 +96,21 @@ export function CodeGraphView({ analysisId }: { analysisId: string | null }) {
 
   // Lazy-loaded AI insight state — only fetched when the user clicks the
   // "AI Graph Analysis" button (saves tokens vs. running on every page load).
-  const [aiInsight, setAiInsight] = useState<any>(null);
+  // Persisted in sessionStorage so switching tabs doesn't lose the result.
+  const storageKey = analysisId ? `codegraph-ai-${analysisId}` : "";
+  const [aiInsight, setAiInsight] = useState<any>(() => {
+    if (!storageKey || typeof window === "undefined") return null;
+    try {
+      const saved = sessionStorage.getItem(storageKey);
+      return saved ? JSON.parse(saved) : null;
+    } catch { return null; }
+  });
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
-  const [aiExpanded, setAiExpanded] = useState(false);
+  const [aiExpanded, setAiExpanded] = useState(() => {
+    if (!storageKey || typeof window === "undefined") return false;
+    return !!sessionStorage.getItem(storageKey);
+  });
 
   const runAiInsight = async () => {
     if (!analysisId || aiLoading) return;
@@ -113,6 +124,10 @@ export function CodeGraphView({ analysisId }: { analysisId: string | null }) {
         setAiError(data?.error || t("codegraph", "aiInsight.failed"));
       } else {
         setAiInsight(data);
+        // Persist to sessionStorage so switching tabs preserves the result
+        if (storageKey) {
+          try { sessionStorage.setItem(storageKey, JSON.stringify(data)); } catch {}
+        }
       }
     } catch (e: any) {
       setAiError(e?.message || t("codegraph", "aiInsight.failed"));
