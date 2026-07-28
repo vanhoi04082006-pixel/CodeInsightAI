@@ -182,7 +182,38 @@ export function AnalyzeView() {
             ...(routedProvider ? { provider: routedProvider } : aiBody),
           }),
         });
-        const data = await res.json();
+        // Handle non-JSON responses (504 timeout, 500 error pages, HTML)
+        if (!res.ok) {
+          let errMsg = `HTTP ${res.status}`;
+          try {
+            const text = await res.text();
+            // Try to parse as JSON first
+            try {
+              const data = JSON.parse(text);
+              errMsg = data.error || data.message || errMsg;
+            } catch {
+              // Not JSON — likely HTML error page (504, 500)
+              if (text.includes("An error")) errMsg = "Server error (504/500)";
+              else if (text.length > 100) errMsg = `Server returned ${res.status}`;
+              else errMsg = text.slice(0, 100);
+            }
+          } catch {}
+          console.warn(`[ai-pass] ${pass.type} HTTP ${res.status}:`, errMsg);
+          toast.error(`${pass.name}: ${errMsg}`, { duration: 4000 });
+          completedCount++;
+          continue;
+        }
+
+        let data;
+        try {
+          data = await res.json();
+        } catch (jsonErr) {
+          // Response is not JSON (e.g., 504 HTML error page)
+          console.warn(`[ai-pass] ${pass.type} JSON parse error:`, jsonErr);
+          toast.error(`${pass.name}: Server returned non-JSON response (likely timeout)`, { duration: 4000 });
+          completedCount++;
+          continue;
+        }
 
         if (data.status === "done" && data.report) {
           // Update report with this pass result
