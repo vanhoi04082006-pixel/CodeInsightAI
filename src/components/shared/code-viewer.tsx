@@ -13,6 +13,7 @@ import {
   Expand,
   Maximize2,
   Minimize2,
+  RefreshCw,
 } from "lucide-react";
 import type { CodeSnippet, FileInsight, Issue, AIMode } from "@/lib/types";
 import { useT } from "@/lib/i18n";
@@ -59,6 +60,7 @@ interface CodeViewerProps {
   files: FileInsight[];
   issues: Issue[];
   onAskAI?: (snippet: CodeSnippet, mode: AIMode, sendFullFile: boolean) => void;
+  onRegenerate?: (snippet: CodeSnippet) => void;
   aiLoading?: boolean;
   aiResponse?: string | null;
   activeAiMode?: AIMode | null;
@@ -70,6 +72,7 @@ export function CodeViewer({
   files,
   issues,
   onAskAI,
+  onRegenerate,
   aiLoading,
   aiResponse,
   activeAiMode,
@@ -600,6 +603,17 @@ export function CodeViewer({
                 <Sparkles className="h-3 w-3" /> AI
               </span>
               <code className="text-[10px] text-muted-foreground">{snippet.file}</code>
+              {/* Regenerate button — only show when not loading and response exists */}
+              {onRegenerate && !aiLoading && (
+                <button
+                  onClick={() => onRegenerate(snippet)}
+                  className="ml-auto flex items-center gap-1 rounded-md border border-amber-400/30 bg-amber-500/10 px-2 py-1 text-[10px] text-amber-300 transition hover:bg-amber-500/20"
+                  title={t("common", "codeViewer.regenerate")}
+                >
+                  <RefreshCw className="h-3 w-3" />
+                  {t("common", "codeViewer.regenerate")}
+                </button>
+              )}
             </div>
             {aiLoading && activeAiFile === snippet.file ? (
               <p className="mt-3 flex items-center gap-2 text-sm text-amber-300">

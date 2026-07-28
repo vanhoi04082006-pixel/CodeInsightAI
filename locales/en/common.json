@@ -173,7 +173,8 @@
     "aiModePerformance": "AI Performance Review",
     "aiModeRefactor": "AI Refactor",
     "aiModeTests": "AI Generate Tests",
-    "aiModeBugs": "AI Find Bugs"
+    "aiModeBugs": "AI Find Bugs",
+    "regenerate": "Regenerate"
   },
   "rateLimit": {
     "exceeded": "Rate limit exceeded. Try again in {minutes} minute(s).",

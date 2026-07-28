@@ -1504,12 +1504,17 @@ function CodeTab({ report }: { report: AnalysisReport }) {
     return `${modePrompts[mode]}\n\n${contextBlock}`;
   };
 
-  const askAI = async (snippet: CodeSnippet, mode: AIMode, sendFullFile: boolean) => {
+  const askAI = async (snippet: CodeSnippet, mode: AIMode, sendFullFile: boolean, forceRegenerate: boolean = false) => {
     const key = `${snippet.file}::${mode}`;
-    setExplainLoadingKey(key);
     setActiveAiFile(snippet.file);
     setActiveAiMode(mode);
-    // Don't clear existing — just set loading
+
+    // If already cached and not forcing regenerate → just switch view, don't call AI
+    if (!forceRegenerate && aiExplainMap[key]) {
+      return; // Response already in map — UI will display it via currentKey
+    }
+
+    setExplainLoadingKey(key);
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
@@ -1527,6 +1532,12 @@ function CodeTab({ report }: { report: AnalysisReport }) {
     } finally {
       setExplainLoadingKey(null);
     }
+  };
+
+  // Regenerate: force AI call for current file+mode, overwriting cached response
+  const regenerateAI = async (snippet: CodeSnippet) => {
+    if (!activeAiMode) return;
+    await askAI(snippet, activeAiMode, false, true);
   };
 
   // Current displayed AI response = the file+mode user last clicked
@@ -1550,6 +1561,7 @@ function CodeTab({ report }: { report: AnalysisReport }) {
         files={report.files}
         issues={allIssues}
         onAskAI={askAI}
+        onRegenerate={regenerateAI}
         aiLoading={explainLoading}
         aiResponse={aiExplain ?? null}
         activeAiMode={activeAiMode}

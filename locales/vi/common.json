@@ -173,7 +173,8 @@
     "aiModePerformance": "AI Rà soát hiệu năng",
     "aiModeRefactor": "AI Refactor",
     "aiModeTests": "AI Tạo test",
-    "aiModeBugs": "AI Tìm bug"
+    "aiModeBugs": "AI Tìm bug",
+    "regenerate": "Tạo lại"
   },
   "rateLimit": {
     "exceeded": "Vượt giới hạn tốc độ. Thử lại sau {minutes} phút.",
