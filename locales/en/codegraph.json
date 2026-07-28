@@ -89,22 +89,6 @@
   "unified": {
     "toggleCycles": "Toggle circular-dependency highlight",
     "empty": "No nodes in this graph view.",
-    "nodeList": "Nodes",
-    "detail": "Details",
-    "incoming": "Incoming",
-    "outgoing": "Outgoing",
-    "noSelection": "Select a node from the list to view its details, connections, and impact analysis.",
-    "impactAnalysis": "Impact Analysis",
-    "impactLoading": "Computing impact…",
-    "impactResult": "If you change this, {count} nodes will be affected (max depth {depth}).",
-    "impactEmpty": "No downstream dependents — this node is a leaf. Changes here won't propagate.",
-    "fontSize": "Text size",
-    "fontSizeSmall": "S",
-    "fontSizeMedium": "M",
-    "fontSizeLarge": "L",
-    "showAll": "Show all ({count})",
-    "collapse": "Collapse",
-    "listHint": "{count} nodes · click to inspect",
     "types": {
       "dependencies": "Dependencies",
       "call-graph": "Call Graph",
@@ -120,7 +104,6 @@
       "module-imports": "File + directory import graph.",
       "api-flow": "Request flow centered on route handlers.",
       "database-flow": "DB access paths (query/db/sql/model/schema)."
-    },
-    "search": "Search nodes..."
+    }
   }
 }
