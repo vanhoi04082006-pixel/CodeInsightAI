@@ -24,11 +24,12 @@ export type PassType =
   | "duplicates";
 
 /** Shared structured-output preamble — included in every actionable pass. */
-const STRUCTURED_FINDING_INSTRUCTIONS = `For EACH finding, you MUST include:
-- evidence: array of exact "file:line" references (e.g. ["src/auth.ts:42", "src/utils.ts:88"]) — cite where you found the issue
-- confidence: 0.0-1.0 (how confident you are this is a real issue)
-- fixPlan: array of step-by-step fix instructions
-- severity: "critical" | "high" | "medium" | "low" (your assessment — may differ from the static rule)`;
+const STRUCTURED_FINDING_INSTRUCTIONS = `For EACH finding, include:
+- evidence: 1-2 "file:line" references
+- confidence: 0.0-1.0
+- fixPlan: 2-3 step fix instructions (concise)
+- severity: "critical" | "high" | "medium" | "low"
+Keep each review concise — avoid long code blocks. Max 3 sentences per field.`;
 
 export function buildPromptForPass(
   passType: PassType,
@@ -41,8 +42,10 @@ Frameworks: ${parsed.frameworks?.map((f: any) => f.name).join(", ") || "None"}
 Architecture: ${report.architecture.pattern}
 Scores — Overall: ${report.scores.overall}, Security: ${report.scores.security}, Performance: ${report.scores.performance}, Architecture: ${report.scores.architecture}`;
 
-  // Sort issues by severity (critical → high → medium → low) and limit to top 10
-  // Sending ALL issues (e.g., 173 performance) causes AI to fail (token limit + JSON too large)
+  // Sort issues by severity (critical → high → medium → low) and limit
+  // Sending too many issues causes AI to timeout (504) — large JSON output
+  // Top 5 for complex passes (security/quality/performance need detailed review per issue)
+  // Top 8 for overview/summary (shorter output per item)
   const severityOrder = { critical: 0, high: 1, medium: 2, low: 3, info: 4 };
   const topBySeverity = (issues: any[], max: number) =>
     [...issues].sort((a, b) => (severityOrder[a.severity as keyof typeof severityOrder] ?? 9) - (severityOrder[b.severity as keyof typeof severityOrder] ?? 9)).slice(0, max);
@@ -81,7 +84,7 @@ Generate a 2-3 sentence executive summary focused on business impact and overall
       return `${repoInfo}
 
 Security issues found:
-${topBySeverity(report.issues.security, 10).map((i) => `- [${i.severity}] ${i.title} (${i.file}): ${i.description}`).join("\n")}
+${topBySeverity(report.issues.security, 5).map((i) => `- [${i.severity}] ${i.title} (${i.file}): ${i.description}`).join("\n")}
 
 For each security issue, provide structured analysis. ${STRUCTURED_FINDING_INSTRUCTIONS}
 
@@ -104,7 +107,7 @@ Evaluate the architecture and suggest improvements. For EACH suggestion, include
       return `${repoInfo}
 
 Code quality issues:
-${topBySeverity(report.issues.bugs, 10).map((i) => `- [${i.severity}] ${i.title} (${i.file}): ${i.description}`).join("\n")}
+${topBySeverity(report.issues.bugs, 5).map((i) => `- [${i.severity}] ${i.title} (${i.file}): ${i.description}`).join("\n")}
 
 For each code quality issue, provide structured analysis. ${STRUCTURED_FINDING_INSTRUCTIONS}
 
@@ -145,7 +148,7 @@ Respond as JSON:
       return `${repoInfo}
 
 Performance issues:
-${topBySeverity(report.issues.performance, 10).map((i) => `- [${i.severity}] ${i.title} (${i.file}): ${i.description}`).join("\n")}
+${topBySeverity(report.issues.performance, 5).map((i) => `- [${i.severity}] ${i.title} (${i.file}): ${i.description}`).join("\n")}
 
 Positive findings: ${report.perfPositiveFindings?.join("; ") || "None"}
 

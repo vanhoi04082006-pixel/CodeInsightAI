@@ -35,13 +35,13 @@ const MODEL_MAX_TOKENS: Record<string, number> = {
   "deepseek-chat": 6000, "grok-4-fast-reasoning": 4000, "qwen3-coder-flash": 6000,
 };
 
-// Complex passes need more tokens (structured output with evidence +
-// confidence + fixPlan per item). Override per-passType.
+// Complex passes need more tokens but NOT too much (causes 504 timeout).
+// Reduced from 2.0 to 1.5 — AI responds faster, less likely to timeout.
 const PASS_TOKEN_BOOST: Record<string, number> = {
-  security: 2.0,      // 28 issues × structured fields = large output
-  quality: 2.0,       // bugs (73) × structured fields
-  performance: 2.0,   // 173 issues × structured fields
-  priorities: 1.5,    // enhanced roadmap with effort + deps + phases
+  security: 1.5,      // 5 issues × structured fields
+  quality: 1.5,       // 5 bugs × structured fields
+  performance: 1.5,   // 5 issues × structured fields
+  priorities: 1.5,    // enhanced roadmap
   architecture: 1.5,  // strengths/weaknesses/suggestions
   duplicates: 1.5,    // duplicate analysis
   bestPractices: 1.5, // passed/failed lists
