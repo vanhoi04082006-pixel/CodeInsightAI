@@ -120,6 +120,7 @@
       "module-imports": "Đồ thị import tệp + thư mục.",
       "api-flow": "Luồng yêu cầu xoay quanh route handler.",
       "database-flow": "Đường dẫn truy cập DB (query/db/sql/model/schema)."
-    }
+    },
+    "search": "Tìm node..."
   }
 }

@@ -120,6 +120,7 @@
       "module-imports": "File + directory import graph.",
       "api-flow": "Request flow centered on route handlers.",
       "database-flow": "DB access paths (query/db/sql/model/schema)."
-    }
+    },
+    "search": "Search nodes..."
   }
 }
