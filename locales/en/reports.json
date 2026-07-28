@@ -6,7 +6,7 @@
   "security": "Security",
   "performance": "Performance",
   "dependencies": "Dependencies",
-  "codegraph": "CodeGraph",
+  "codegraph": "Code Graph",
   "code": "Code",
   "docs": "Docs",
   "healthScore": "Health Score",

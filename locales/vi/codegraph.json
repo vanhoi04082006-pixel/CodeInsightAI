@@ -85,5 +85,25 @@
     "refactorSequence": "Trình tự tái cấu trúc",
     "overallAssessment": "Đánh giá tổng thể",
     "failed": "Phân tích AI thất bại"
+  },
+  "unified": {
+    "toggleCycles": "Bật/tắt tô sáng phụ thuộc vòng",
+    "empty": "Không có nút trong góc nhìn đồ thị này.",
+    "types": {
+      "dependencies": "Phụ thuộc",
+      "call-graph": "Đồ thị gọi",
+      "class-hierarchy": "Hệ cấp lớp",
+      "module-imports": "Import mô-đun",
+      "api-flow": "Luồng API",
+      "database-flow": "Luồng cơ sở dữ liệu"
+    },
+    "descriptions": {
+      "dependencies": "Đồ thị phụ thuộc cấp mô-đun từ phân tích tĩnh.",
+      "call-graph": "Ai-gọi-ai ở cấp hàm.",
+      "class-hierarchy": "Quan hệ kế thừa (extends/implements).",
+      "module-imports": "Đồ thị import tệp + thư mục.",
+      "api-flow": "Luồng yêu cầu xoay quanh route handler.",
+      "database-flow": "Đường dẫn truy cập DB (query/db/sql/model/schema)."
+    }
   }
 }

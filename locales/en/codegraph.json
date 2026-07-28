@@ -85,5 +85,25 @@
     "refactorSequence": "Refactor Sequence",
     "overallAssessment": "Overall Assessment",
     "failed": "AI analysis failed"
+  },
+  "unified": {
+    "toggleCycles": "Toggle circular-dependency highlight",
+    "empty": "No nodes in this graph view.",
+    "types": {
+      "dependencies": "Dependencies",
+      "call-graph": "Call Graph",
+      "class-hierarchy": "Class Hierarchy",
+      "module-imports": "Module Imports",
+      "api-flow": "API Flow",
+      "database-flow": "Database Flow"
+    },
+    "descriptions": {
+      "dependencies": "Module-level dependency graph from static analysis.",
+      "call-graph": "Who-calls-whom at the function level.",
+      "class-hierarchy": "Inheritance (extends/implements) relationships.",
+      "module-imports": "File + directory import graph.",
+      "api-flow": "Request flow centered on route handlers.",
+      "database-flow": "DB access paths (query/db/sql/model/schema)."
+    }
   }
 }

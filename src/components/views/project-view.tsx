@@ -8,7 +8,6 @@ import {
   Bug,
   ShieldCheck,
   Gauge,
-  Boxes,
   FileText,
   Rocket,
   Download,
@@ -35,9 +34,8 @@ import {
   GitCompare,
 } from "lucide-react";
 import { GlassCard, ScoreGauge, GradientText, NeonDivider, SeverityBadge } from "@/components/shared/ui";
-import { DependencyGraph } from "@/components/shared/dependency-graph";
-import { CodeGraphView } from "@/components/shared/codegraph-view";
 import { CodeViewer } from "@/components/shared/code-viewer";
+import { UnifiedCodeGraph } from "@/components/shared/unified-codegraph";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -59,7 +57,7 @@ import { toast } from "sonner";
 import { useT, useI18nStore } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
-type Tab = "overview" | "architecture" | "bugs" | "security" | "performance" | "dependencies" | "code" | "docs" | "roadmap" | "codegraph" | "timeline";
+type Tab = "overview" | "architecture" | "bugs" | "security" | "performance" | "code" | "docs" | "roadmap" | "codegraph" | "timeline";
 
 const TABS: { id: Tab; labelKey: string; icon: typeof LayoutGrid }[] = [
   { id: "overview", labelKey: "overview", icon: LayoutGrid },
@@ -67,7 +65,6 @@ const TABS: { id: Tab; labelKey: string; icon: typeof LayoutGrid }[] = [
   { id: "bugs", labelKey: "bugs", icon: Bug },
   { id: "security", labelKey: "security", icon: ShieldCheck },
   { id: "performance", labelKey: "performance", icon: Gauge },
-  { id: "dependencies", labelKey: "dependencies", icon: Boxes },
   { id: "codegraph", labelKey: "codegraph", icon: Network },
   { id: "code", labelKey: "code", icon: FileCode },
   { id: "docs", labelKey: "docs", icon: FileText },
@@ -298,11 +295,8 @@ export function ProjectView({ isShared = false }: { isShared?: boolean }) {
           <TabsContent value="performance" className="mt-4">
             <IssuesTab id="performance" issues={report.issues.performance} title={t("reports", "project.performanceAnalysis")} color="#34d399" report={report} />
           </TabsContent>
-          <TabsContent value="dependencies" className="mt-4">
-            <DependenciesTab report={report} />
-          </TabsContent>
           <TabsContent value="codegraph" className="mt-4">
-            <CodeGraphView analysisId={activeAnalysisId} />
+            <UnifiedCodeGraph analysisId={activeAnalysisId} report={report} />
           </TabsContent>
           <TabsContent value="code" className="mt-4">
             <CodeTab report={report} />
@@ -1263,163 +1257,6 @@ function IssuesTab({ issues, title, color, report, id }: { issues: Issue[]; titl
           );
         })}
       </div>
-    </div>
-  );
-}
-
-/* ---------- Dependencies ---------- */
-function DependenciesTab({ report }: { report: AnalysisReport }) {
-  const { t } = useT();
-  const deep = (report as any).deepAnalysis as any;
-  const aiDuplicates: any[] | undefined = deep?.duplicateAnalysis;
-  const aiPassesCompleted: string[] = (report as any)._aiPassesCompleted || [];
-  const aiStatus = (report as any).aiStatus;
-  const dupPassFailed = (aiStatus === "done" || aiStatus === "pending") && !aiPassesCompleted.includes("duplicates") && (!aiDuplicates || aiDuplicates.length === 0);
-  const dupPassPending = aiStatus === "pending" && !aiPassesCompleted.includes("duplicates");
-  return (
-    <div className="space-y-4">
-      <GlassCard className="p-5">
-        <div className="flex items-center gap-2">
-          <Boxes className="h-5 w-5 text-cyan-300" />
-          <h3 className="text-lg font-semibold">{t("reports", "interactiveDepGraph")}</h3>
-        </div>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {t("reports", "depGraphHint")}
-        </p>
-      </GlassCard>
-      <DependencyGraph report={report} />
-
-      {/* AI Duplicate Analysis — deep analysis (enriches the static duplicate detection) */}
-      {aiDuplicates && aiDuplicates.length > 0 && (
-        <GlassCard className="border-violet-500/20 bg-gradient-to-br from-violet-500/[0.05] to-transparent p-5">
-          <div className="flex flex-wrap items-center gap-2">
-            <Copy className="h-4 w-4 text-violet-300" />
-            <h4 className="text-sm font-semibold">{t("reports", "aiInsights.duplicateAnalysis")}</h4>
-            <span className="flex items-center gap-1 rounded-full bg-violet-500/15 px-2 py-0.5 text-[10px] font-medium text-violet-300">
-              <Sparkles className="h-3 w-3" /> {t("reports", "project.aiEnhanced")}
-            </span>
-          </div>
-          <div className="mt-3 space-y-2">
-            {aiDuplicates.map((d: any, i: number) => (
-              <div key={i} className="rounded-lg border border-violet-500/15 bg-violet-500/[0.03] p-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded bg-violet-500/15 px-1.5 py-0.5 text-[9px] font-bold uppercase text-violet-300">{d.type}</span>
-                  {d.estimatedLinesSaved ? (
-                    <span className="ml-auto text-[10px] text-emerald-300">{t("reports", "aiInsights.estimatedLinesSaved")}: {d.estimatedLinesSaved}</span>
-                  ) : null}
-                </div>
-                {d.files?.length > 0 && (
-                  <div className="mt-1.5 space-y-0.5">
-                    {d.files.map((f: string, j: number) => (
-                      <p key={j} className="truncate pl-3 font-mono text-[10px] text-muted-foreground">{f}</p>
-                    ))}
-                  </div>
-                )}
-                {d.description && (
-                  <p className="mt-1 text-xs text-muted-foreground">{d.description}</p>
-                )}
-                {d.recommendation && (
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    <span className="font-medium text-foreground/80">{t("reports", "aiInsights.recommendation")}:</span> {d.recommendation}
-                  </p>
-                )}
-              </div>
-            ))}
-          </div>
-        </GlassCard>
-      )}
-
-      {/* Fallback: AI duplicates pass failed */}
-      {dupPassFailed && (
-        <GlassCard className="border-amber-500/20 bg-amber-500/[0.03] p-4">
-          <div className="flex items-center gap-2">
-            <AlertCircle className="h-4 w-4 text-amber-400" />
-            <p className="text-sm font-medium text-amber-300">{t("reports", "aiFallback.title")}</p>
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground">{t("reports", "aiFallback.desc", { pass: t("reports", "aiInsights.duplicateAnalysis") })}</p>
-        </GlassCard>
-      )}
-
-      {/* Fallback: AI duplicates still running */}
-      {dupPassPending && (
-        <GlassCard className="border-cyan-500/20 bg-cyan-500/[0.03] p-4">
-          <div className="flex items-center gap-2">
-            <Loader2 className="h-4 w-4 animate-spin text-cyan-300" />
-            <p className="text-sm font-medium text-cyan-300">{t("reports", "aiFallback.pending")}</p>
-          </div>
-        </GlassCard>
-      )}
-
-      {/* Dead code + duplicates */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        <GlassCard className="p-5">
-          <div className="flex items-center gap-2">
-            <FileCode className="h-4 w-4 text-rose-400" />
-            <h4 className="text-sm font-semibold">{t("reports", "deadCode")} <span className="text-muted-foreground">({report.deadCode.length})</span></h4>
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground">{t("reports", "deadCodeDesc")}</p>
-          <div className="mt-3 space-y-1.5">
-            {report.deadCode.length === 0 ? (
-              <p className="rounded-lg border border-emerald-400/20 bg-emerald-400/[0.04] p-3 text-xs text-emerald-300">{t("reports", "noDeadCode")}</p>
-            ) : (
-              report.deadCode.map((d, i) => (
-                <div key={i} className="rounded-lg border border-white/5 bg-white/[0.02] p-2.5">
-                  <div className="flex items-center gap-2">
-                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-rose-400" />
-                    <p className="truncate font-mono text-[11px]">{d.path}</p>
-                    <span className="ml-auto shrink-0 text-[10px] text-muted-foreground">{d.lines}L</span>
-                  </div>
-                  <p className="mt-1 pl-3.5 text-[10px] text-muted-foreground">{d.reason}</p>
-                </div>
-              ))
-            )}
-          </div>
-        </GlassCard>
-
-        <GlassCard className="p-5">
-          <div className="flex items-center gap-2">
-            <Copy className="h-4 w-4 text-amber-400" />
-            <h4 className="text-sm font-semibold">{t("reports", "duplicateCode")} <span className="text-muted-foreground">({report.duplicates.length})</span></h4>
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground">{t("reports", "duplicateCodeDesc")}</p>
-          <div className="mt-3 space-y-1.5">
-            {report.duplicates.length === 0 ? (
-              <p className="rounded-lg border border-emerald-400/20 bg-emerald-400/[0.04] p-3 text-xs text-emerald-300">{t("reports", "noDuplicates")}</p>
-            ) : (
-              report.duplicates.map((d, i) => (
-                <div key={i} className="rounded-lg border border-white/5 bg-white/[0.02] p-2.5">
-                  <div className="flex items-center gap-2">
-                    <span className="rounded bg-amber-400/15 px-1.5 py-0.5 text-[9px] font-bold text-amber-400">{t("reports", "group")} {d.group}</span>
-                    <span className="ml-auto text-[10px] text-muted-foreground">{d.lines} {t("reports", "linesDuplicated")}</span>
-                  </div>
-                  <div className="mt-1.5 space-y-0.5">
-                    {d.files.map((f) => (
-                      <p key={f} className="truncate pl-3 font-mono text-[10px] text-muted-foreground">{f}</p>
-                    ))}
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </GlassCard>
-      </div>
-
-      <GlassCard className="p-5">
-        <h4 className="text-sm font-semibold">{t("reports", "allFiles")}</h4>
-        <div className="mt-3 max-h-80 space-y-1 overflow-y-auto scrollbar-thin">
-          {report.files.map((f) => (
-            <div key={f.path} className="flex items-center gap-2 rounded-lg border border-white/5 bg-white/[0.02] p-2.5">
-              <FileCode className="h-4 w-4 shrink-0 text-muted-foreground" />
-              <p className="truncate font-mono text-xs">{f.path}</p>
-              <div className="ml-auto flex shrink-0 gap-3 text-[10px] text-muted-foreground">
-                <span>{f.language}</span>
-                <span>{f.lines}L</span>
-                <span className={f.complexity > 15 ? "text-amber-400" : ""}>Cx{f.complexity}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </GlassCard>
     </div>
   );
 }

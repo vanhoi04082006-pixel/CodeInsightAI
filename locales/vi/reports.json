@@ -6,7 +6,7 @@
   "security": "Security",
   "performance": "Performance",
   "dependencies": "Dependencies",
-  "codegraph": "CodeGraph",
+  "codegraph": "Đồ thị mã",
   "code": "Code",
   "docs": "Docs",
   "healthScore": "Điểm sức khỏe",
