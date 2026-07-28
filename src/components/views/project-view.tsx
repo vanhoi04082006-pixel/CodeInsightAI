@@ -896,6 +896,50 @@ function IssuesTab({ issues, title, color, report, id }: { issues: Issue[]; titl
   const aiPending = (report as any).aiStatus === "pending" && !aiPassesCompleted.includes(passName);
 
   const [actionLoading, setActionLoading] = useState(false);
+  // Per-issue AI analysis (on-demand, persisted in sessionStorage)
+  const [issueAiMap, setIssueAiMap] = useState<Record<string, string>>(() => {
+    if (typeof window === "undefined") return {};
+    try {
+      const saved = sessionStorage.getItem(`issue-ai-${id}`);
+      return saved ? JSON.parse(saved) : {};
+    } catch { return {}; }
+  });
+  const [issueAiLoading, setIssueAiLoading] = useState<string | null>(null);
+
+  const persistIssueAi = (map: Record<string, string>) => {
+    try { sessionStorage.setItem(`issue-ai-${id}`, JSON.stringify(map)); } catch {}
+  };
+
+  const askAIAboutIssue = async (issue: Issue) => {
+    const key = issue.id;
+    setIssueAiLoading(key);
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: `Analyze this ${id} issue in detail:\n\nIssue: ${issue.title}\nFile: ${issue.file}${issue.line ? `:${issue.line}` : ""}\nSeverity: ${issue.severity}\nCategory: ${issue.category}\nDescription: ${issue.description}\n\nProvide: 1) Root cause analysis 2) Attack scenario / impact 3) Fix code example 4) Prevention recommendations. Be specific and actionable.`,
+          language: useI18nStore.getState().locale,
+        }),
+      });
+      const data = await res.json();
+      const reply = data.reply || data.message?.content || t("reports", "action.aiFailed");
+      setIssueAiMap(prev => {
+        const updated = { ...prev, [key]: reply };
+        persistIssueAi(updated);
+        return updated;
+      });
+    } catch {
+      setIssueAiMap(prev => {
+        const updated = { ...prev, [key]: t("reports", "action.aiFailed") };
+        persistIssueAi(updated);
+        return updated;
+      });
+    } finally {
+      setIssueAiLoading(null);
+    }
+  };
+
   const handleAgentAction = async (kind: string, issue: Issue) => {
     setActionLoading(true);
     try {
@@ -1178,7 +1222,38 @@ function IssuesTab({ issues, title, color, report, id }: { issues: Issue[]; titl
                               </AlertDialogFooter>
                             </AlertDialogContent>
                           </AlertDialog>
+
+                          {/* Ask AI about this issue — on-demand per-issue AI analysis */}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => askAIAboutIssue(iss)}
+                            disabled={issueAiLoading === iss.id}
+                            className="border-violet-400/30 text-violet-300 hover:bg-violet-500/10"
+                          >
+                            {issueAiLoading === iss.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                            {issueAiLoading === iss.id ? t("reports", "action.aiAnalyzing") : t("reports", "action.askAI")}
+                          </Button>
                         </div>
+
+                        {/* AI response for this issue (persisted per issue) */}
+                        {(issueAiMap[iss.id] || issueAiLoading === iss.id) && (
+                          <div className="mt-3 rounded-lg border border-violet-500/20 bg-violet-500/[0.05] p-3">
+                            <div className="flex items-center gap-1.5 mb-2">
+                              <Sparkles className="h-3.5 w-3.5 text-violet-300" />
+                              <span className="text-xs font-semibold text-violet-300">{t("reports", "action.aiAnalysis")}</span>
+                              <span className="rounded-full bg-violet-500/15 px-1.5 py-0.5 text-[9px] text-violet-300">✨ AI</span>
+                            </div>
+                            {issueAiLoading === iss.id ? (
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                                {t("reports", "action.aiAnalyzing")}
+                              </div>
+                            ) : (
+                              <pre className="max-h-[400px] overflow-y-auto whitespace-pre-wrap rounded-lg bg-black/30 p-2 font-mono text-[11px] leading-relaxed text-foreground/85 scrollbar-thin">{issueAiMap[iss.id]}</pre>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </motion.div>
                   )}

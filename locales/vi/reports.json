@@ -152,7 +152,10 @@
     "confirmDescRefactor": "Việc này sẽ khởi động Refactoring agent để đề xuất tái cấu trúc cho issue này. Xem activity feed để theo dõi kết quả.",
     "confirmCancel": "Hủy",
     "confirmRun": "Chạy Agent",
-    "targetIssue": "Issue mục tiêu"
+    "targetIssue": "Issue mục tiêu",
+    "aiAnalyzing": "AI đang phân tích...",
+    "aiAnalysis": "Phân tích AI",
+    "aiFailed": "Phân tích AI không khả dụng"
   },
   "project": {
     "titleProject": "Dự án",

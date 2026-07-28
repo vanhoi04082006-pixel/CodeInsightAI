@@ -152,7 +152,10 @@
     "confirmDescRefactor": "This will start the Refactoring agent to suggest a refactor for this issue. Check the activity feed for results.",
     "confirmCancel": "Cancel",
     "confirmRun": "Run Agent",
-    "targetIssue": "Target issue"
+    "targetIssue": "Target issue",
+    "aiAnalyzing": "AI analyzing...",
+    "aiAnalysis": "AI Analysis",
+    "aiFailed": "AI analysis unavailable"
   },
   "project": {
     "titleProject": "Project",
