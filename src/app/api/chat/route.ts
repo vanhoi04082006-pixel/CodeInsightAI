@@ -310,9 +310,9 @@ Use this graph knowledge to answer questions about function callers, callees, de
               ...provider,
               apiKey: realKey,
               baseUrl: cred.baseUrl || provider.baseUrl,
-              model: "gpt-5.5",
+              model: cred.model || provider.model,
               temperature: cred.temperature ?? provider.temperature,
-              maxTokens: -1,
+              maxTokens: cred.maxTokens ?? provider.maxTokens,
               streaming: cred.streaming ?? provider.streaming,
             };
           } catch {
@@ -331,9 +331,9 @@ Use this graph knowledge to answer questions about function callers, callees, de
         providerId: effectiveProvider.providerId,
         apiKey: effectiveProvider.apiKey,
         baseUrl: effectiveProvider.baseUrl,
-        model: "gpt-5.5",
+        model: effectiveProvider.model,
         temperature: effectiveProvider.temperature,
-        maxTokens: -1,
+        maxTokens: effectiveProvider.maxTokens,
       } : undefined,
       null,  // decryptedBYOK already handled above (effectiveProvider has the key)
       // Pro user's selected platform provider + model

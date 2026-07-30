@@ -100,9 +100,9 @@ async function resolveAIProvider(
           providerId: cred.providerId,
           apiKey: decrypt(cred.encryptedApiKey),
           baseUrl: cred.baseUrl,
-          model: "gpt-5.5",
+          model: cred.model,
           temperature: cred.temperature ?? 0.7,
-          maxTokens: -1,
+          maxTokens: cred.maxTokens ?? 4096,
           timeout: 60,
         };
       } catch {}
@@ -114,9 +114,9 @@ async function resolveAIProvider(
         providerId: body.provider.providerId,
         apiKey: body.provider.apiKey,
         baseUrl: body.provider.baseUrl || "",
-        model: "gpt-5.5",
-        temperature: 0.7,
-        maxTokens: -1,
+        model: body.provider.model || "",
+        temperature: body.provider.temperature ?? 0.7,
+        maxTokens: body.provider.maxTokens ?? 4096,
         timeout: body.provider.timeout ?? 60,
       };
     }

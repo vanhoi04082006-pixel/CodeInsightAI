@@ -118,9 +118,9 @@ export async function POST(req: NextRequest) {
             providerId: cred.providerId,
             apiKey,
             baseUrl: cred.baseUrl,
-            model: "gpt-5.5",
+            model: cred.model,
             temperature: cred.temperature ?? 0.5,
-            maxTokens: -1,
+            maxTokens: cred.maxTokens ?? 4000,
             timeout: 50,
           };
         }
@@ -211,7 +211,7 @@ Scores: Overall ${report.scores?.overall}/100, Security ${report.scores?.securit
   try {
     const result = await callAIWithFallback(aiConfig, fallbacks, messages, {
       temperature: 0.5,
-      maxTokens: -1,
+      maxTokens: 4000,
       timeout: 50,
       userId,
       plan: "enterprise",

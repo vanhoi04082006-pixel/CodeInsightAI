@@ -29,9 +29,25 @@ export const maxDuration = 55; // Under 60s Hobby limit
 // Wave 6 Phase 1: added "overview" pass (executive decision intelligence).
 type PassType = "overview" | "summary" | "security" | "architecture" | "quality" | "priorities" | "performance" | "bestPractices" | "duplicates";
 
-// Model is hardcoded to gpt-5.5 with unlimited tokens (no per-model limits).
-const FIXED_MODEL = "gpt-5.5";
-const FIXED_MAX_TOKENS = -1; // -1 = unlimited (no token cap)
+const MODEL_MAX_TOKENS: Record<string, number> = {
+  "gpt-5-nano": 2000, "gpt-4.1-nano": 3000, "gpt-4o-mini": 4000,
+  "gpt-5-mini": 6000, "gpt-4.1-mini": 8000, "claude-sonnet-4-5": 8000,
+  "deepseek-chat": 6000, "grok-4-fast-reasoning": 4000, "qwen3-coder-flash": 6000,
+};
+
+// Complex passes need more tokens but NOT too much (causes 504 timeout).
+// Reduced from 2.0 to 1.5 — AI responds faster, less likely to timeout.
+const PASS_TOKEN_BOOST: Record<string, number> = {
+  security: 1.5,      // 5 issues × structured fields
+  quality: 1.5,       // 5 bugs × structured fields
+  performance: 1.5,   // 5 issues × structured fields
+  priorities: 1.5,    // enhanced roadmap
+  architecture: 1.5,  // strengths/weaknesses/suggestions
+  duplicates: 1.5,    // duplicate analysis
+  bestPractices: 1.5, // passed/failed lists
+  overview: 1.0,      // executive summary
+  summary: 1.0,       // 2-3 sentence summary
+};
 
 export async function POST(req: NextRequest) {
   const userId = await requireUserId();
@@ -171,8 +187,19 @@ export async function POST(req: NextRequest) {
       })),
     }, report);
 
-    // ── maxTokens: fixed unlimited (no per-model limits, no boost) ──
-    const effectiveMaxTokens = FIXED_MAX_TOKENS;
+    // ── maxTokens resolution priority ──
+    // 1. User-configured maxTokens on the provider (BYOK) — respects what
+    //    user set in Providers view. -1 or 0 = unlimited → use model default.
+    // 2. Model-specific default from MODEL_MAX_TOKENS table.
+    // 3. Fallback 3000.
+    // Then apply PASS_TOKEN_BOOST multiplier (complex passes need more tokens).
+    const userMaxTokens = (provider as any)?.maxTokens || (aiConfig as any)?.maxTokens;
+    const modelDefault = (MODEL_MAX_TOKENS as any)[aiConfig?.model] ?? 3000;
+    const baseMaxTokens = (userMaxTokens && userMaxTokens > 0) ? userMaxTokens : modelDefault;
+    const boost = PASS_TOKEN_BOOST[passType ?? ""] ?? 1.0;
+    const maxTokens = Math.round(baseMaxTokens * boost);
+    // Cap at 8000 to avoid exceeding model context windows on small models
+    const cappedMaxTokens = Math.min(maxTokens, 8000);
 
     // P3.5: Policy engine — evaluate enabled policies against this AI call.
     // Runs AFTER provider resolution (so we know providerId/model) and AFTER
@@ -183,13 +210,13 @@ export async function POST(req: NextRequest) {
     //
     // Fail-open: if loadPolicies() throws (DB error), `policies` is `[]`
     // and evaluatePolicies returns no violations — the call proceeds.
-    
+    let effectiveMaxTokens = cappedMaxTokens;
     const policies = await loadPolicies();
     if (policies.length > 0) {
       const violations = evaluatePolicies(policies, {
         providerId: aiConfig.providerId,
         model: aiConfig.model,
-        maxTokens: FIXED_MAX_TOKENS,
+        maxTokens: cappedMaxTokens,
         userId,
         plan: planInfo.plan,
       });
@@ -211,10 +238,10 @@ export async function POST(req: NextRequest) {
       if (tokenWarn) {
         const policy = policies.find((p) => p.id === tokenWarn.policyId);
         const cap = policy?.config?.maxTokens ?? 4000;
-        effectiveMaxTokens = Math.min(FIXED_MAX_TOKENS, cap);
-        if (effectiveMaxTokens !== FIXED_MAX_TOKENS) {
+        effectiveMaxTokens = Math.min(cappedMaxTokens, cap);
+        if (effectiveMaxTokens !== cappedMaxTokens) {
           console.warn(
-            `[policies] ${passType} maxTokens capped ${FIXED_MAX_TOKENS} → ${effectiveMaxTokens}`,
+            `[policies] ${passType} maxTokens capped ${cappedMaxTokens} → ${effectiveMaxTokens}`,
           );
         }
       }

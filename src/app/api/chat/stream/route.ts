@@ -154,9 +154,9 @@ export async function POST(req: NextRequest) {
             ...provider,
             apiKey: realKey,
             baseUrl: cred.baseUrl || provider.baseUrl,
-            model: "gpt-5.5",
+            model: cred.model || provider.model,
             temperature: cred.temperature ?? provider.temperature,
-            maxTokens: -1,
+            maxTokens: cred.maxTokens ?? provider.maxTokens,
           };
         } catch { /* decryption failed */ }
       }
@@ -171,9 +171,9 @@ export async function POST(req: NextRequest) {
       providerId: effectiveProvider.providerId,
       apiKey: effectiveProvider.apiKey,
       baseUrl: effectiveProvider.baseUrl,
-      model: "gpt-5.5",
+      model: effectiveProvider.model,
       temperature: effectiveProvider.temperature,
-      maxTokens: -1,
+      maxTokens: effectiveProvider.maxTokens,
     } : undefined,
     null,
     // Pro user's selected platform provider + model

@@ -148,12 +148,68 @@ export function AIModeToggle({ compact = false }: { compact?: boolean }) {
   return (
     <TooltipProvider delayDuration={300}>
       <div className="flex items-center gap-1.5">
-        {/* Model badge (Default mode only — model is fixed gpt-5.5, no selector) */}
-        {isPlatform && (
+        {/* Provider + Model selector (Default mode + Pro users only) */}
+        {isPlatform && isPro && platformProviders.length > 0 && (
           <div className="hidden items-center gap-1 sm:flex">
-            <span className="rounded-md border border-violet-400/20 bg-violet-500/10 px-2 py-0.5 text-[10px] font-mono text-violet-300">
-              gpt-5.5
-            </span>
+            {/* Provider selector — only show if >1 provider configured */}
+            {platformProviders.length > 1 && (
+              <Select value={selectedProvider} onValueChange={(v) => {
+                setSelectedProvider(v);
+                const p = platformProviders.find(pr => pr.providerId === v);
+                if (p) setSelectedModel(p.models[0] || "");
+              }}>
+                <SelectTrigger className="h-7 w-32 border-white/10 bg-white/[0.03] text-[10px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {platformProviders.map((p) => (
+                    <SelectItem key={p.providerId} value={p.providerId} className="text-xs">
+                      <span className="font-mono">{p.name}</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            {/* Model selector — shows ONLY models from the SELECTED provider */}
+            <Select value={selectedModel} onValueChange={setSelectedModel}>
+              <SelectTrigger className="h-7 w-48 border-white/10 bg-white/[0.03] text-[10px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {/* Only models from the selected provider — not flatMap all providers */}
+                {(() => {
+                  const provider = platformProviders.find(p => p.providerId === selectedProvider);
+                  return (provider?.models || []).map((m) => {
+                    const info = getModelInfo(m);
+                    return (
+                      <SelectItem key={m} value={m} className="text-xs">
+                        <div className="flex flex-col">
+                          <span className="font-mono">{m}</span>
+                          {info && (
+                            <span className="text-[9px] text-muted-foreground">{info.badge}</span>
+                          )}
+                        </div>
+                      </SelectItem>
+                    );
+                  });
+                })()}
+              </SelectContent>
+            </Select>
+            {/* Max tokens input — -1 = unlimited */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <input
+                  type="number"
+                  value={maxTokens}
+                  onChange={(e) => setMaxTokens(Number(e.target.value))}
+                  className="h-7 w-16 rounded border border-white/10 bg-white/[0.03] text-center text-[10px] font-mono"
+                  title={t("providers", "maxTokensHint")}
+                />
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="max-w-xs">
+                <p className="text-xs">{t("providers", "maxTokensHint")}</p>
+              </TooltipContent>
+            </Tooltip>
           </div>
         )}
 

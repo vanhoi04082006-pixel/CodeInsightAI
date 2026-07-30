@@ -422,9 +422,15 @@ function ProviderCard({ provider }: { provider: AIProvider }) {
                 <Input value={provider.label} onChange={(e) => update(provider.id, { label: e.target.value })} className="bg-white/[0.03]" />
               </Field>
               <Field icon={Cpu} label={t("providers", "model")}>
-                <div className="flex h-9 items-center rounded-md border border-white/10 bg-white/[0.03] px-3 text-xs font-mono text-violet-300">
-                  gpt-5.5
-                </div>
+                <Select value={provider.model} onValueChange={(v) => update(provider.id, { model: v })}>
+                  <SelectTrigger className="bg-white/[0.03]"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {preset.models.map((m) => (
+                      <SelectItem key={m} value={m}>{m}</SelectItem>
+                    ))}
+                    <SelectItem value={provider.model}>{t("providers", "labels.customInline", { value: provider.model })}</SelectItem>
+                  </SelectContent>
+                </Select>
               </Field>
               <Field icon={KeyRound} label={t("providers", "apiKey")} hint={t("providers", "apiKeyHint")}>
                 <Input
@@ -457,9 +463,13 @@ function ProviderCard({ provider }: { provider: AIProvider }) {
                 />
               </Field>
               <Field icon={Hash} label={t("providers", "maxTokens")}>
-                <div className="flex h-9 items-center rounded-md border border-white/10 bg-white/[0.03] px-3 text-xs font-mono text-muted-foreground">
-                  Unlimited
-                </div>
+                <Input
+                  type="number"
+                  value={provider.maxTokens}
+                  onChange={(e) => update(provider.id, { maxTokens: Number(e.target.value) })}
+                  className="bg-white/[0.03]"
+                />
+                <p className="text-[10px] text-muted-foreground">{t("providers", "maxTokensHint")}</p>
               </Field>
               <Field icon={Clock} label={`${t("providers", "timeout")} — ${provider.timeout}s`}>
                 <Slider
