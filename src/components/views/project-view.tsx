@@ -1416,10 +1416,21 @@ function DocsTab({ report }: { report: AnalysisReport }) {
   const [diagram, setDiagram] = useState<"uml" | "sequence" | "erd">("uml");
   const [docTab, setDocTab] = useState<string>("readme");
   // AI-enhance state — keyed by docId so each tab tracks its own AI content.
-  // `aiDocs[docId]` holds the AI-generated markdown (replaces static when set).
-  // `aiLoading` is the docId currently being generated (null = idle).
-  const [aiDocs, setAiDocs] = useState<Record<string, string>>({});
+  // Persisted in sessionStorage so switching tabs preserves AI results.
+  const docStorageKey = activeAnalysisId ? `docs-ai-${activeAnalysisId}` : "docs-ai-shared";
+  const [aiDocs, setAiDocs] = useState<Record<string, string>>(() => {
+    if (typeof window === "undefined") return {};
+    try {
+      const saved = sessionStorage.getItem(docStorageKey);
+      return saved ? JSON.parse(saved) : {};
+    } catch { return {}; }
+  });
   const [aiLoading, setAiLoading] = useState<string | null>(null);
+
+  const persistAiDocs = (next: Record<string, string>) => {
+    setAiDocs(next);
+    try { sessionStorage.setItem(docStorageKey, JSON.stringify(next)); } catch {}
+  };
 
   const copy = (which: string, content: string) => {
     navigator.clipboard.writeText(content);
@@ -1455,7 +1466,11 @@ function DocsTab({ report }: { report: AnalysisReport }) {
       if (!data.content || !data.content.trim()) {
         throw new Error("AI returned an empty response");
       }
-      setAiDocs((prev) => ({ ...prev, [docId]: data.content }));
+      setAiDocs(prev => {
+        const next = { ...prev, [docId]: data.content };
+        persistAiDocs(next);
+        return next;
+      });
     } catch (e: any) {
       toast.error(`${t("reports", "project.enhanceFailed")}: ${e?.message ?? e}`);
     } finally {
@@ -1464,9 +1479,10 @@ function DocsTab({ report }: { report: AnalysisReport }) {
   };
 
   const handleBackToStatic = (docId: string) => {
-    setAiDocs((prev) => {
+    setAiDocs(prev => {
       const next = { ...prev };
       delete next[docId];
+      persistAiDocs(next);
       return next;
     });
   };
