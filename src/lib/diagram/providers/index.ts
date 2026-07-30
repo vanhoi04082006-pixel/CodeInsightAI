@@ -22,4 +22,12 @@ export function getProvider(type: DiagramType | null): DiagramProvider | null {
   return PROVIDERS[type] || null;
 }
 
+export function registerProvider(type: DiagramType, provider: DiagramProvider): void {
+  PROVIDERS[type] = provider;
+}
+
+export function getAvailableTypes(): DiagramType[] {
+  return Object.keys(PROVIDERS) as DiagramType[];
+}
+
 export { umlProvider, sequenceProvider, erdProvider, architectureProvider, moduleProvider, componentProvider };

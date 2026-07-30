@@ -52,6 +52,8 @@ export interface Diagram {
   edges: DiagramEdge[];
   // Pre-laid-out positions (filled by LayoutEngine)
   layout?: Map<string, { x: number; y: number; width: number; height: number }>;
+  // Optional metadata (viewBox, stats, etc.)
+  metadata?: Record<string, any>;
 }
 
 export interface DiagramProvider {

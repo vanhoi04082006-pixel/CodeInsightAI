@@ -1415,6 +1415,7 @@ function DocsTab({ report }: { report: AnalysisReport }) {
   const activeAnalysisId = useAppStore((s) => s.activeAnalysisId);
   const [copied, setCopied] = useState<string | null>(null);
   const [diagram, setDiagram] = useState<string>("uml");
+  const [diagramLayout, setDiagramLayout] = useState<string>("dagre-tb");
   const [diagramData, setDiagramData] = useState<any>(null);
   const [diagramLoading, setDiagramLoading] = useState(false);
   const [docTab, setDocTab] = useState<string>("readme");
@@ -1510,14 +1511,13 @@ function DocsTab({ report }: { report: AnalysisReport }) {
     { id: "component", label: "🧩 Component", show: true },
   ];
 
-  // Fetch diagram from API when type changes
+  // Fetch diagram from API when type or layout changes
   useEffect(() => {
     if (!activeAnalysisId) return;
     setDiagramLoading(true);
-    fetch(`/api/diagram/${activeAnalysisId}?type=${diagram}`)
+    fetch(`/api/diagram/${activeAnalysisId}?type=${diagram}&layout=${diagramLayout}`)
       .then(r => r.json())
       .then(data => {
-        // Convert layout array back to Map
         if (data.layout && Array.isArray(data.layout)) {
           data.layout = new Map(data.layout);
         }
@@ -1525,7 +1525,7 @@ function DocsTab({ report }: { report: AnalysisReport }) {
       })
       .catch(() => setDiagramData(null))
       .finally(() => setDiagramLoading(false));
-  }, [activeAnalysisId, diagram]);
+  }, [activeAnalysisId, diagram, diagramLayout]);
   const activeDoc = docs.find(d => d.id === docTab) || docs[0];
   const activeAiContent = activeDoc ? aiDocs[activeDoc.id] : undefined;
   const isActiveLoading = activeDoc ? aiLoading === activeDoc.id : false;
@@ -1536,19 +1536,57 @@ function DocsTab({ report }: { report: AnalysisReport }) {
       <GlassCard className="p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h4 className="flex items-center gap-2 text-sm font-semibold"><Network className="h-4 w-4 text-cyan-300" /> {t("reports", "generatedDiagrams")}</h4>
-          <div className="inline-flex flex-wrap gap-1 rounded-lg border border-white/10 bg-white/[0.03] p-1">
-            {ALL_DIAGRAM_TYPES.map((d) => (
-              <button
-                key={d.id}
-                onClick={() => setDiagram(d.id)}
-                className={cn(
-                  "rounded-md px-2.5 py-1 text-xs transition",
-                  diagram === d.id ? "bg-gradient-to-r from-cyan-500/30 to-violet-500/30 text-cyan-300" : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                {d.label}
-              </button>
-            ))}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Diagram type selector */}
+            <div className="inline-flex flex-wrap gap-1 rounded-lg border border-white/10 bg-white/[0.03] p-1">
+              {ALL_DIAGRAM_TYPES.map((d) => (
+                <button
+                  key={d.id}
+                  onClick={() => setDiagram(d.id)}
+                  className={cn(
+                    "rounded-md px-2.5 py-1 text-xs transition",
+                    diagram === d.id ? "bg-gradient-to-r from-cyan-500/30 to-violet-500/30 text-cyan-300" : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {d.label}
+                </button>
+              ))}
+            </div>
+            {/* Layout selector */}
+            <select
+              value={diagramLayout}
+              onChange={(e) => setDiagramLayout(e.target.value)}
+              className="h-7 rounded-lg border border-white/10 bg-white/[0.03] px-2 text-[10px] text-muted-foreground outline-none"
+            >
+              <option value="dagre-tb">↓ Hierarchy</option>
+              <option value="dagre-lr">→ Hierarchy</option>
+              <option value="circular">◯ Circular</option>
+              <option value="force">✦ Force</option>
+            </select>
+            {/* Export buttons */}
+            {diagramData && diagramData.nodes?.length > 0 && (
+              <div className="flex gap-1">
+                {["mermaid", "svg", "plantuml"].map(fmt => (
+                  <button
+                    key={fmt}
+                    onClick={async () => {
+                      if (!activeAnalysisId) return;
+                      try {
+                        const res = await fetch(`/api/diagram/${activeAnalysisId}?type=${diagram}&layout=${diagramLayout}&format=${fmt}`);
+                        const data = await res.json();
+                        if (data.content) {
+                          navigator.clipboard.writeText(data.content);
+                          toast.success(`${fmt.toUpperCase()} copied to clipboard`);
+                        }
+                      } catch { toast.error("Export failed"); }
+                    }}
+                    className="rounded-md border border-white/10 bg-white/[0.03] px-2 py-1 text-[9px] text-muted-foreground transition hover:text-foreground"
+                  >
+                    {fmt.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
         <div className="mt-3 overflow-x-auto scrollbar-thin rounded-lg border border-white/5 bg-black/30 p-3">
@@ -1564,7 +1602,16 @@ function DocsTab({ report }: { report: AnalysisReport }) {
             </div>
           )}
         </div>
-        <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{diagramData?.description}</p>
+        <div className="mt-2 flex items-center justify-between">
+          <p className="text-xs leading-relaxed text-muted-foreground">{diagramData?.description}</p>
+          {diagramData?.stats && (
+            <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
+              <span>{diagramData.stats.nodeCount} nodes</span>
+              <span>{diagramData.stats.edgeCount} edges</span>
+              {diagramData.stats.cycleCount > 0 && <span className="text-rose-400">{diagramData.stats.cycleCount} cycles</span>}
+            </div>
+          )}
+        </div>
       </GlassCard>
 
       {/* Documentation tabs */}
