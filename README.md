@@ -2,11 +2,9 @@
 
 # 🧠 CodeInsight AI
 
-### Production-Grade SaaS — AI Software Engineering Platform
+### AI-Powered Code Intelligence Platform
 
-**Paste a GitHub Repository. AI Understands Everything. Analyze, Chat, Plan, Fix, and Ship Code Autonomously.**
-
-12 collaborating AI agents · 66 static analysis rules · 15 AI providers · BYOK (free) + Platform AI (ShopAIKey default)
+**Paste a GitHub Repository. AI Understands Everything.**
 
 ![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)
 ![React](https://img.shields.io/badge/React-19-blue?logo=react)
@@ -14,78 +12,24 @@
 ![Tailwind](https://img.shields.io/badge/Tailwind-4-38bdf8?logo=tailwindcss)
 ![Prisma](https://img.shields.io/badge/Prisma-ORM-2d3748?logo=prisma)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Neon-336791?logo=postgresql)
-![Stripe](https://img.shields.io/badge/Stripe-Billing-635bff?logo=stripe)
-![Vercel](https://img.shields.io/badge/Deploy-Vercel-000?logo=vercel)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
 </div>
 
 ---
 
-## 📖 Table of Contents
+## 📖 Overview
 
-- [Overview](#-overview)
-- [SaaS Model](#-saas-model)
-- [Architecture](#-architecture)
-- [Quick Start (Local)](#-quick-start-local)
-- [Production Deployment](#-production-deployment)
-- [Environment Separation](#-environment-separation)
-- [Authentication Flow](#-authentication-flow)
-- [AI Provider System](#-ai-provider-system)
-- [Security Model](#-security-model)
-- [API Reference](#-api-reference)
-- [Page Audit Matrix](#-page-audit-matrix)
-- [Tech Stack](#-tech-stack)
-- [Troubleshooting](#-troubleshooting)
-- [License](#-license)
+CodeInsight AI is an enterprise-grade code intelligence platform that analyzes any GitHub repository using AI. It combines static analysis (66 rules) with 9 AI deep-analysis passes to produce structured, evidence-backed insights — security vulnerabilities, performance bottlenecks, architecture review, code quality, and actionable roadmaps.
 
----
+### Key Differentiators
 
-## 🎯 Overview
-
-**CodeInsight AI** is a production SaaS platform where 12 specialized AI agents collaborate to:
-
-1. **Analyze** any GitHub repository (public + private via OAuth)
-2. **Plan** implementation tasks with dependency graphs (ReAct loop)
-3. **Edit** code (file CRUD, import updates, refactoring)
-4. **Test** — generate tests, run them, read failures, fix, retry until pass
-5. **Fix bugs** — read stack traces, propose patches, verify with tsc + lint
-6. **Review code** like a Senior Engineer (score + comments)
-7. **Generate docs** — README, API, architecture, deployment guides
-8. **Commit + push** with AI-generated conventional commit messages
-9. **Generate PRs** with title, breaking changes, migration guide
-10. **Deploy** — Docker, K8s, CI/CD, Vercel/Railway configs
-
-### Two AI Modes (the SaaS hook)
-
-| Mode | How it works | Cost |
-|------|-------------|------|
-| **BYOK (Bring Your Own Key)** | User enters their own API key (encrypted server-side with AES-256-GCM) | **Free forever** |
-| **Platform AI** | Server uses our key (hidden from user) — Stripe-billed | **$9/month (Pro)** |
-
----
-
-## 💰 SaaS Model
-
-### Pricing
-
-| Plan | Price | AI Mode | Features |
-|------|-------|---------|----------|
-| **Free** | $0 | BYOK only | All features, 5 analyses/month, 50 chat messages/month, bring your own API key |
-| **Pro** | $9/mo | BYOK + Platform AI | No key needed (Claude 3.5 / GPT-4o), 100 analyses/month, 2000 chat messages/month, streaming + priority queue |
-| **Team** | $29/mo | Same + 5 users | Shared analyses, team providers, 500 analyses/month |
-| **Enterprise** | Contact | On-premise | SSO, audit logs, custom integrations, unlimited |
-
-### Flow
-
-```
-User opens app → Landing (public)
-  └─ Clicks "Sign in" → GitHub OAuth (required)
-      └─ Dashboard → Settings → AI tab
-          ├─ BYOK: enter own API key → FREE
-          └─ Platform AI: Stripe checkout ($9/mo) → use our AI key
-All features work the same in both modes.
-```
+- **AI-first architecture** — Static analysis provides facts; AI provides conclusions with evidence + confidence
+- **Structured AI output** — Every AI finding includes `evidence[]` (file:line), `confidence` (0-1), `fixPlan[]`, `severity`
+- **Graph Engine** — Symbol-level code graph (calls, uses, extends, implements) with O(1) query API for AI agents
+- **Diagram Engine** — 6 diagram types (UML, Sequence, ERD, Architecture, Module, Component) with 4 layouts + Mermaid/PlantUML/SVG export
+- **Enterprise hardening** — Secret redaction (17 patterns), token budget enforcement, rate limiting, policy engine, audit log, model fallback
+- **Full i18n** — Vietnamese + English (21 namespaces, 2,300+ keys, technical terms preserved)
 
 ---
 
@@ -93,452 +37,281 @@ All features work the same in both modes.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                     User Interface                            │
-│  Landing (public) · Dashboard · Analyze · Project Report     │
-│  Chat (SSE streaming) · History · AI Providers               │
-│  Personalities · Mission Control · Settings                   │
-│  Topbar: UserMenu (avatar, plan, logout w/ confirmation)     │
-└────────────────────────────┬────────────────────────────────┘
-                             │
-┌────────────────────────────▼────────────────────────────────┐
-│                  API Routes (26 — all auth-gated)             │
-│  /api/analyze · /api/chat · /api/chat/stream (SSE)            │
-│  /api/agents · /api/mission · /api/terminal · /api/git        │
-│  /api/billing · /api/providers (masked) · /api/usage          │
-│  /api/providers/credentials (encrypted) · /api/settings       │
-└────────────────────────────┬────────────────────────────────┘
-                             │
-┌────────────────────────────▼────────────────────────────────┐
-│              Autonomous Workflow (ReAct Loop)                 │
-│  Observe → Think → Act → Verify → Reflect → Repeat            │
-│  + Tool Selection + Agent Debate + Replanner + Rollback       │
-└────────────────────────────┬────────────────────────────────┘
-                             │
-┌────────────────────────────▼────────────────────────────────┐
-│               12 AI Agents + Shared Memory                    │
-│  Event Bus · Task Queue · Message Bus · Confidence            │
-└────────────────────────────┬────────────────────────────────┘
-                             │
-┌────────────────────────────▼────────────────────────────────┐
-│    Static Analyzers (66 rules) + Production Modules           │
-│  Security (13) · Bugs (11) · Performance (42) · Architecture  │
-│  Logger · Metrics · Tracing · Rate Limiter · Cache            │
-└────────────────────────────┬────────────────────────────────┘
-                             │
-┌────────────────────────────▼────────────────────────────────┐
-│         Neon PostgreSQL (11 models) + Stripe Billing          │
-│  Local dev: SQLite (zero setup)                              │
-└──────────────────────────────────────────────────────────────┘
+│                        User (GitHub OAuth)                   │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+┌──────────────────────────▼──────────────────────────────────┐
+│              UI (9 tabs + Code Explorer V2)                  │
+│  Overview │ Architecture │ Bugs │ Security │ Performance    │
+│  Code Graph │ Code │ Docs │ Roadmap │ Timeline              │
+│  + AI fallback UI (amber "unavailable" / cyan "running")     │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+┌──────────────────────────▼──────────────────────────────────┐
+│                    API Gateway (46 routes)                   │
+│  /api/analyze │ /api/chat │ /api/agents │ /api/analysis/*   │
+│  /api/graph │ /api/diagram │ /api/docs/enhance               │
+│  + Rate Limiting + Policy Engine + Ownership checks          │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+┌──────────────────────────▼──────────────────────────────────┐
+│                   AI Orchestrator (9 passes)                 │
+│  overview → summary → priorities → security → architecture  │
+│  → quality → performance → bestPractices → duplicates       │
+│  + Structured output (evidence + confidence + fixPlan)       │
+│  + Model Fallback chain + Secret Redaction (17 patterns)     │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+┌──────────────────────────▼──────────────────────────────────┐
+│                 Core Engines                                 │
+│  ┌─────────────┐  ┌──────────────┐  ┌───────────────────┐  │
+│  │ Graph Engine│  │Diagram Engine│  │  AI Agents (10)   │  │
+│  │  6 providers│  │  6 providers │  │  Direct-call API  │  │
+│  │  4 layouts  │  │  4 layouts   │  │  bug-fixer, test, │  │
+│  │  Query API  │  │  Export x3   │  │  refactor, etc.   │  │
+│  │  O(1) index │  │  Cache + AI  │  │                   │  │
+│  └─────────────┘  └──────────────┘  └───────────────────┘  │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+┌──────────────────────────▼──────────────────────────────────┐
+│              Enterprise Hardening Layer                      │
+│  Token Budget · Rate Limiting · Policy Engine (8 policies)  │
+│  Audit Log · Secret Redaction · Model Fallback · PDF Export │
+│  Multi-tenant Isolation · Ownership Verification            │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+┌──────────────────────────▼──────────────────────────────────┐
+│              Database (18 Prisma models)                     │
+│  SQLite (dev) / PostgreSQL on Neon (prod)                   │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 🚀 Quick Start (Local)
+## ✨ Features
+
+### AI Analysis (9 passes)
+
+| Pass | Tab | Output |
+|------|-----|--------|
+| Overview | Overview | Top risks, quick wins, fix first, fastest score gain, health assessment |
+| Summary | Overview | Executive summary (2-3 sentences) |
+| Security | Security | Root cause + fix code + impact + evidence per issue |
+| Architecture | Architecture | Strengths, weaknesses, suggestions + best practices audit |
+| Quality | Bugs | Root cause + fix code + impact per bug |
+| Performance | Performance | Root cause + fix code + expected improvement |
+| Priorities | Roadmap | Effort estimate, release phase (P0-P3), ROI, dependency ordering |
+| Best Practices | Architecture | Framework-specific audit (passed/failed, score) |
+| Duplicates | Code Graph | AI duplicate analysis (type, files, recommendation, lines saved) |
+
+### Code Explorer V2 (IDE-grade)
+
+- **Expand Context** — Progressive: snippet → 100 lines → full file
+- **File Summary** — Lines, functions, classes, complexity, severity stars
+- **Issue Highlighting** — Red border on issue lines (VSCode-style)
+- **AI Context Optimization** — Sends summary + imports + signatures (~80% token saving)
+- **Rich Static Explanation** — Issue / Evidence / Reason / Impact / Recommendation
+- **6 AI Modes** — Explain, Security, Performance, Refactor, Tests, Bugs
+- **Related Files** — Import-based navigation chips
+- **sessionStorage Persist** — Per-file-per-mode cache + Regenerate button
+
+### Code Graph (Unified)
+
+- **6 Graph Types** — Dependencies, Function Calls, Class Hierarchy, Module Imports, API Flow, Database Flow
+- **Graph Engine v2** — GraphService facade + GraphIndex (O(1)) + GraphQuery (semantic) + GraphImpact (structured) + AIAnalysisService
+- **D3 Force Simulation** — Physics-based layout with drag, pan, zoom, focus mode, path highlight, search
+- **AI Analysis** — Type-specific prompts, sessionStorage persistence
+
+### Diagram Engine v2
+
+- **6 Diagram Types** — UML, Sequence, ERD, Architecture, Module, Component
+- **4 Layouts** — Dagre TB, Dagre LR, Circular, Force
+- **3 Export Formats** — SVG, Mermaid, PlantUML
+- **Interactive Renderer** — Zoom, pan, hover, selected, focus mode, search highlight, MiniMap
+- **Query Engine** — findPath, findCycles, findImpact, search, getStats
+- **Plugin Architecture** — registerProvider, registerLayout, registerExporter
+
+### Enterprise Features
+
+| Feature | Description |
+|---------|-------------|
+| Secret Redaction | 17 patterns (OpenAI, Anthropic, GitHub, AWS, JWT, Stripe, etc.) — applied before every AI call |
+| Token Budget | Free 1M / Pro 10M / Team 50M per month — hard block when exceeded |
+| Rate Limiting | DB-backed, per-user, per-endpoint (10 analyses/hr for Free) |
+| Policy Engine | 8 policies (max-files, block-provider, block-language, etc.) — 2 checkpoints |
+| Model Fallback | Provider chain — auto-switch on 402/429/5xx/timeout |
+| Audit Log | Every AI call logged (provider, model, tokens, latency, status, redaction count) |
+| PDF + JSON Export | Analysis report export (scores, issues, AI overview, roadmap) |
+| Multi-tenant Isolation | Ownership checks on all endpoints — 4 leaks fixed |
+
+### i18n (Vietnamese + English)
+
+- 21 namespaces, 2,300+ keys
+- Full parity (EN = VI)
+- Technical terms preserved (GitHub, API, AST, BYOK, Platform AI, CodeGraph)
+- Honest naming (static = no "AI" label)
+
+---
+
+## 🚀 Quick Start
 
 ### Prerequisites
 
-- **Node.js** 18.18+ or **Bun** 1.0+
-- **Git**
+- Node.js 18+ / Bun
+- GitHub OAuth App (for authentication)
+- PostgreSQL (production) or SQLite (local dev)
 
 ### Installation
 
 ```bash
+# Clone
 git clone https://github.com/vanhoi04082006-pixel/CodeInsightAI.git
 cd CodeInsightAI
+
+# Install dependencies
 bun install
+
+# Set up environment variables
 cp .env.example .env
+# Edit .env with your values
+
+# Set up database
+bun run db:push
+
+# Start dev server
+bun run dev
 ```
 
-### Configure GitHub OAuth
+### Environment Variables
 
-1. Go to <https://github.com/settings/developers> → **New OAuth App**
-2. Fill in:
-   - **Application name**: CodeInsight AI (local)
-   - **Homepage URL**: `http://localhost:3000`
-   - **Authorization callback URL**: `http://localhost:3000/api/auth/callback/github`
-3. Copy **Client ID** → paste as `GITHUB_ID` in `.env`
-4. Click **Generate a new client secret** → paste as `GITHUB_SECRET` in `.env`
+```env
+# Database
+DATABASE_URL="postgresql://..."  # Neon PostgreSQL (prod)
+# DATABASE_URL="file:./dev.db"   # SQLite (dev)
 
-### Push Database Schema + Start
+# NextAuth
+NEXTAUTH_SECRET="your-secret"
+NEXTAUTH_URL="http://localhost:3000"
 
-```bash
-bun run db:push     # creates SQLite tables
-bun run dev         # starts Next.js on http://localhost:3000
+# GitHub OAuth
+GITHUB_ID="your-github-oauth-app-id"
+GITHUB_SECRET="your-github-oauth-app-secret"
+
+# Platform AI (optional — admin configures via UI)
+PLATFORM_AI_API_KEY="your-api-key"
+PLATFORM_AI_PROVIDER="shopaikey"
+PLATFORM_AI_BASE_URL="https://api.shopaikey.com/v1"
+
+# Admin (optional — first user auto-promoted)
+ADMIN_EMAIL="your-email@example.com"
 ```
 
-Open <http://localhost:3000> → click **Sign in** → GitHub OAuth → Dashboard.
-
-### Connect an AI Provider (BYOK)
-
-1. Go to **AI Providers** (sidebar)
-2. Click **Add AI Provider**
-3. Choose a provider (OpenRouter recommended — 1 key, 100+ models)
-4. Paste your API key
-5. Click **Save (encrypted)** — the key is AES-256-GCM encrypted server-side
-6. Click **Test** to verify connectivity
-
-In local dev only, your API key is also cached in `localStorage` for convenience. In production, only the masked key is in the browser — the raw key never leaves the server.
-
----
-
-## 🚢 Production Deployment
-
-See **[DEPLOY.md](DEPLOY.md)** for the complete step-by-step guide.
-
-### Quick summary
-
-1. **Neon** — Create PostgreSQL project → copy `DATABASE_URL`
-2. **GitHub OAuth App** — Update callback URL to `https://your-app.vercel.app/api/auth/callback/github`
-3. **Stripe** (optional) — Create products → copy `STRIPE_SECRET_KEY` + price IDs
-4. **OpenRouter** (optional) — Get API key for Platform AI mode
-5. **Vercel** — Import repo → set env vars (see below) → Deploy
-6. **Database** — `PRISMA_SCHEMA=prisma/schema.prod.prisma DATABASE_URL="..." bunx prisma db push`
-7. **Update** Stripe webhook URL + GitHub OAuth callback URL to the Vercel domain
-
-### Required Vercel Environment Variables
-
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `DATABASE_URL` | ✅ | Neon PostgreSQL connection string |
-| `NEXTAUTH_SECRET` | ✅ | `openssl rand -base64 32` |
-| `NEXTAUTH_URL` | ✅ | `https://your-app.vercel.app` |
-| `GITHUB_ID` | ✅ | GitHub OAuth Client ID |
-| `GITHUB_SECRET` | ✅ | GitHub OAuth Client Secret |
-| `APP_ENV` | ✅ | `production` |
-| `NEXT_PUBLIC_APP_ENV` | ✅ | `production` |
-| `PLATFORM_AI_API_KEY` | Optional | OpenRouter key for Platform AI mode |
-| `PLATFORM_AI_BASE_URL` | Optional | `https://openrouter.ai/api/v1` |
-| `PLATFORM_AI_MODEL` | Optional | `anthropic/claude-3.5-sonnet` |
-| `PLATFORM_AI_PROVIDER` | Optional | `openrouter` |
-| `STRIPE_SECRET_KEY` | Optional | Stripe secret key |
-| `STRIPE_WEBHOOK_SECRET` | Optional | Stripe webhook signing secret |
-| `STRIPE_PRICE_PRO` | Optional | Stripe Price ID for Pro plan |
-
----
-
-## 🌐 Environment Separation
-
-The app detects its environment via `APP_ENV` / `NEXT_PUBLIC_APP_ENV` (see `src/lib/env.ts`):
-
-### Local Mode (`APP_ENV=development`)
-
-- Database: **SQLite** (`file:./db/custom.db`)
-- Schema: `prisma/schema.prisma` (provider = sqlite)
-- AI providers shown: **all 14** (cloud + local: Ollama, LM Studio)
-- API keys: stored in `localStorage` for convenience (in addition to server-side encrypted)
-- Debug logs: enabled when `AUTH_DEBUG=1`
-- Vercel: not used
-
-### Production Mode (`APP_ENV=production`)
-
-- Database: **PostgreSQL** (Neon)
-- Schema: `prisma/schema.prod.prisma` (provider = postgresql, selected via `PRISMA_SCHEMA` env var in vercel.json)
-- AI providers shown: **cloud only** (Ollama, LM Studio hidden — can't be reached from a Vercel origin)
-- API keys: **never** stored in `localStorage` — only the masked key is in the browser; the raw key stays server-side (encrypted in DB)
-- Debug logs: disabled
-- Vercel: handles build + deploy
-
-### How it works
-
-```ts
-// src/lib/env.ts
-export const isProduction = APP_ENV === "production";
-export const isLocal = APP_ENV === "development";
-```
-
-In `providers-store.ts`, the `partialize` function strips `apiKey` before persisting to `localStorage` when `isProduction` is true. The Add Provider dialog filters out local-only presets in production via `getAvailablePresets()`.
-
----
-
-## 🔐 Authentication Flow
-
-### Sign-in
-
-```
-User clicks "Sign in with GitHub"
-  ↓ (toast: "Redirecting to GitHub…")
-signIn("github", { callbackUrl: "/" })
-  ↓
-Browser redirects to github.com/login/oauth/authorize?client_id=...
-  ↓
-User authorizes on GitHub
-  ↓
-GitHub redirects to /api/auth/callback/github?code=...
-  ↓
-NextAuth exchanges code for access_token
-  ↓
-NextAuth creates User + Account rows in DB
-  ↓
-NextAuth issues JWT (containing user.id, plan, accessToken)
-  ↓
-Browser redirects to callbackUrl ("/")
-  ↓
-AuthStateWatcher detects loading → authenticated
-  ↓ (toast: "Signed in as {name}")
-AppShell renders with UserMenu in topbar
-```
-
-### Session
-
-- **Strategy**: JWT (stateless — works on Vercel serverless without a session table)
-- **Token contents**: `user.id` (cuid), `user.email`, `user.name`, `user.image`, `plan`, `stripeCustomerId`, `accessToken`, `provider`
-- **All API routes** read `session.user.id` via the `requireUserId()` helper — never use email as the user identifier (email is for display only; `User.id` is the Prisma FK target)
-
-### Sign-out
-
-```
-User clicks UserMenu → "Sign out"
-  ↓
-AlertDialog: "Sign out of CodeInsight AI?"
-  ↓ (user confirms)
-signOut({ callbackUrl: "/", redirect: true })
-  ↓ (toast: "Signing out…")
-JWT cookie cleared
-  ↓
-Browser redirects to "/"
-  ↓
-Landing page shown (public)
-```
-
-### Errors
-
-OAuth errors (?error=… in URL — set by NextAuth) are surfaced as toasts by `AuthStateWatcher`:
-
-| Error | Toast message |
-|-------|---------------|
-| `OAuthSignin` | Could not start GitHub OAuth flow. Please try again. |
-| `OAuthCallback` | GitHub OAuth callback failed. Check that the GitHub OAuth App callback URL matches this domain exactly. |
-| `Configuration` | Server configuration error. The administrator must set NEXTAUTH_SECRET, GITHUB_ID, and GITHUB_SECRET. |
-| `AccessDenied` | You denied the GitHub authorization request. Please try again. |
-| (others) | Authentication failed: {error} |
-
----
-
-## 🤖 AI Provider System
-
-### Two storage tiers
-
-| Tier | Where | What's stored | When used |
-|------|-------|---------------|-----------|
-| **Server (encrypted)** | `ProviderCredential` table | AES-256-GCM encrypted API key | Always — the canonical source |
-| **Client (localStorage)** | `codeinsight-ai-providers` | Masked key + metadata | Local dev only (convenience) |
-
-### Backend API
-
-| Endpoint | Auth | Returns |
-|----------|------|---------|
-| `GET /api/providers` | Required | List of providers with **masked** keys (e.g. `sk-1••••••••••••abcd`) |
-| `POST /api/providers/credentials` | Required | Save provider config (encrypts API key server-side) |
-| `DELETE /api/providers/credentials?id=...` | Required | Delete a credential |
-| `POST /api/providers/test` | Required | Test connectivity (sends a `ping` to the provider) |
-
-### Chat request flow (production)
-
-```
-Client sends: { message, provider: { providerId, label, /* no apiKey */ }, aiMode: "byok" }
-  ↓
-/api/chat route:
-  1. requireUserId() → session.user.id
-  2. If no apiKey AND isProduction → look up encrypted credential from DB
-     - db.providerCredential.findFirst({ userId, providerId, label, enabled: true })
-     - decrypt(encryptedApiKey) → realKey
-  3. Build effectiveProvider with realKey
-  4. If still no key → fall back to Platform AI (if configured) OR return error
-  5. callProvider(effectiveProvider, messages)
-```
-
-### Local vs production provider list
-
-| Provider | Local | Production |
-|----------|-------|------------|
-| OpenRouter | ✅ | ✅ |
-| OpenAI | ✅ | ✅ |
-| Anthropic (Claude) | ✅ | ✅ |
-| Google Gemini | ✅ | ✅ |
-| DeepSeek | ✅ | ✅ |
-| Groq | ✅ | ✅ |
-| Azure OpenAI | ✅ | ✅ |
-| Together AI | ✅ | ✅ |
-| Fireworks AI | ✅ | ✅ |
-| Mistral | ✅ | ✅ |
-| xAI (Grok) | ✅ | ✅ |
-| Custom (OpenAI-compatible) | ✅ | ✅ |
-| **Ollama** | ✅ | ❌ (hidden — can't reach localhost from Vercel) |
-| **LM Studio** | ✅ | ❌ (hidden — can't reach localhost from Vercel) |
-
----
-
-## 🔒 Security Model
-
-### API keys
-
-- **AES-256-GCM** encryption (via `src/lib/crypto.ts`) using a key derived from `NEXTAUTH_SECRET` via `scryptSync`
-- Keys are encrypted **before** being written to the database
-- Keys are decrypted **only at request time** inside the chat route — never logged, never echoed back
-- Frontend receives only **masked** keys (e.g. `sk-1••••••••••••abcd`)
-- In production, the raw key is **never** stored in `localStorage` (stripped by the providers-store `partialize` function)
-
-### Authentication
-
-- GitHub OAuth only (no password auth)
-- JWT strategy (stateless, scales on Vercel serverless)
-- `session.user.id` is the canonical user identifier (cuid) — never use email as a FK
-- All API routes use `requireUserId()` helper for authentication
-- All multi-tenant queries are scoped by `userId` (analyses, settings, credentials, usage, history)
-
-### Multi-tenancy
-
-Every database query that returns user-owned data is scoped by `userId`:
-
-```ts
-// ✅ Correct — scoped to authenticated user
-db.analysis.findMany({ where: { userId } })
-db.analysis.findUnique({ where: { id } }) // + check row.userId === userId
-
-// ❌ Wrong — leaks other users' data
-db.analysis.findMany()
-db.analysis.findUnique({ where: { id } })
-```
-
-### Rate limiting + quotas
-
-- Plan-based quotas: `PLAN_LIMITS` in `src/lib/billing/usage.ts`
-- `checkQuota()` enforced on analysis, chat, and agent task creation
-- `incrementUsage()` tracks usage per user per month
-
-### Stripe
-
-- Webhook signature verification (`stripe.webhooks.constructEvent`)
-- `client_reference_id` = `userId` (cuid) — not email
-- Plan updates are idempotent (webhook can be replayed safely)
-
----
-
-## 🔌 API Reference
-
-### Core APIs
-
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `POST` | `/api/analyze` | ✅ | Analyze a repo (sync/async) |
-| `POST` | `/api/chat` | — | Chat with AI (supports BYOK + Platform AI) |
-| `POST` | `/api/chat/stream` | — | SSE streaming chat |
-| `GET` | `/api/agents/status` | — | 12 agents + queue stats |
-| `POST` | `/api/agents/execute` | — | Enqueue agent task |
-| `POST` | `/api/mission/start` | — | Start autonomous mission |
-| `GET` | `/api/mission/stream` | — | SSE mission events |
-| `POST` | `/api/terminal/run` | — | Sandboxed shell command |
-| `POST` | `/api/git/operation` | — | 20 git operations |
-| `POST` | `/api/workflow/autonomous` | — | Full workflow / pair-program |
-| `GET` | `/api/report?id=...` | ✅ | Full report (must belong to user) |
-| `POST` | `/api/parse` | ✅ | Parse + persist a repo from file contents |
-| `GET` | `/api/history` | ✅ | User's analysis history |
-| `GET/POST/DELETE` | `/api/settings` | ✅ | User settings (profile, etc.) |
-| `GET/POST/DELETE` | `/api/jobs/[id]` | ✅ | Job status + cancellation |
-
-### SaaS APIs
-
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `GET` | `/api/providers` | ✅ | User's providers (**masked** keys) |
-| `POST/DELETE` | `/api/providers/credentials` | ✅ | Encrypted API key CRUD |
-| `POST` | `/api/providers/test` | ✅ | Test provider connectivity |
-| `GET` | `/api/usage` | ✅ | Usage + limits + quotas |
-| `POST` | `/api/billing/checkout` | ✅ | Stripe checkout session |
-| `POST` | `/api/billing/portal` | ✅ | Stripe customer portal |
-| `POST` | `/api/billing/webhook` | Stripe sig | Stripe webhook handler |
-| `POST` | `/api/reset` | ✅ | Delete **current user's** data only |
-
----
-
-## 📋 Page Audit Matrix
-
-| Page | Local | Production | Auth Required | API Endpoint | Status |
-|------|-------|------------|---------------|--------------|--------|
-| Home (Landing) | ✅ | ✅ | No | — | ✅ Public |
-| Dashboard | ✅ | ✅ | Yes | `/api/history` (scoped) | ✅ Multi-tenant |
-| Analyze | ✅ | ✅ | Yes | `/api/analyze` (userId attached) | ✅ Multi-tenant |
-| Project Report | ✅ | ✅ | Yes | `/api/report?id=...` (ownership check) | ✅ Multi-tenant |
-| AI Chat | ✅ | ✅ | Yes (BYOK) or Pro | `/api/chat`, `/api/chat/stream` | ✅ Encrypted key lookup |
-| History | ✅ | ✅ | Yes | `/api/history` (scoped) | ✅ Multi-tenant |
-| AI Providers | ✅ (all 14) | ✅ (cloud only) | Yes | `/api/providers` (masked) | ✅ Local hidden in prod |
-| Personalities | ✅ | ✅ | Yes | localStorage only | ✅ No server data |
-| Mission Control | ✅ | ✅ | Yes | `/api/mission/*` | ✅ Auth on jobs |
-| Settings | ✅ | ✅ | Yes | `/api/settings` (scoped) | ✅ Multi-tenant |
+### Deploy to Vercel
+
+1. Push to GitHub
+2. Import project in Vercel
+3. Set environment variables
+4. Deploy — `vercel.json` auto-runs `prisma db push` before build
 
 ---
 
 ## 🛠 Tech Stack
 
-| Layer | Technology |
-|-------|-----------|
-| **Framework** | Next.js 16 (App Router) + React 19 |
-| **Language** | TypeScript 5 (strict) |
-| **Styling** | Tailwind CSS 4 + shadcn/ui (New York) |
-| **State** | Zustand (client) + TanStack Query (server) |
-| **Database** | Prisma ORM — SQLite (local) + PostgreSQL/Neon (prod) |
-| **Auth** | NextAuth.js v4 (GitHub OAuth, JWT strategy) |
-| **Billing** | Stripe (subscriptions + checkout + portal + webhooks) |
-| **AI** | 15 providers (ShopAIKey, OpenRouter, OpenAI, Anthropic, Gemini, DeepSeek, Groq, Together, Fireworks, Mistral, xAI, Azure, Ollama, LM Studio, Custom) |
-| **Encryption** | AES-256-GCM (via Node `crypto`) |
-| **Animation** | Framer Motion |
-| **Charts** | Recharts + d3-force |
-| **Icons** | Lucide React |
-| **Toasts** | Sonner |
-| **Deploy** | Vercel (Next.js framework preset) |
+| Category | Technology |
+|----------|-----------|
+| Framework | Next.js 16 (App Router) |
+| Language | TypeScript 5 |
+| Styling | Tailwind CSS 4 + shadcn/ui |
+| Database | Prisma ORM + PostgreSQL (Neon) / SQLite |
+| Auth | NextAuth.js v4 (GitHub OAuth, JWT strategy) |
+| AI | 15 providers via unified `callAI()` / `streamAI()` |
+| Graph | D3-force + dagre (Code Graph) + dagre (Diagram) |
+| i18n | Custom (Zustand store, cookie-based, 21 namespaces) |
+| Deployment | Vercel (Hobby tier compatible) |
 
 ---
 
-## 🐛 Troubleshooting
+## 📁 Project Structure
 
-### "Sign in with GitHub" does nothing
-
-- Check `GITHUB_ID` and `GITHUB_SECRET` are set in `.env` (local) or Vercel env vars (prod)
-- Check the GitHub OAuth App callback URL matches your domain exactly:
-  - Local: `http://localhost:3000/api/auth/callback/github`
-  - Prod: `https://your-app.vercel.app/api/auth/callback/github`
-- Check `NEXTAUTH_SECRET` is set (random 32+ char string)
-- Check `NEXTAUTH_URL` matches your domain
-- Open browser DevTools → Console for the toast error (e.g. `Configuration`, `OAuthCallback`)
-
-### Hydration mismatch
-
-If you see "A tree hydrated but some attributes of the server rendered HTML didn't match the client properties":
-
-- The FAQ accordion in the landing page is now a client-only component (`<LandingFAQ/>`) — it renders a skeleton during SSR and mounts the interactive accordion after hydration
-- The inline SSR script in `layout.tsx` sets `<html>` classes/dataset BEFORE React hydrates (intentional — for theme + i18n)
-- All components avoid `Math.random()`, `Date.now()`, and `useId()` in SSR paths
-
-### AI Provider doesn't work in production
-
-- Local providers (Ollama, LM Studio) are hidden in production — they can't be reached from a Vercel origin
-- If you saved a provider locally then deployed, the saved credential (encrypted) is in the local SQLite DB, not Neon. You need to re-add the provider in production.
-- In production, the raw API key is never in the browser — only the masked version. The server looks up the encrypted key from the DB at request time.
-
-### Database connection error
-
-- Local: ensure `DATABASE_URL="file:./db/custom.db"` and run `bun run db:push`
-- Production: ensure `DATABASE_URL` is the Neon PostgreSQL connection string and run `PRISMA_SCHEMA=prisma/schema.prod.prisma DATABASE_URL="..." bunx prisma db push`
-- The schema is `prisma/schema.prisma` (sqlite) for local and `prisma/schema.prod.prisma` (postgresql) for production. The Vercel build picks the prod schema via `PRISMA_SCHEMA` env var.
-
-### "A tree hydrated but some attributes of the server rendered HTML didn't match"
-
-This was caused by Radix Accordion's dynamic `useId()` IDs combined with the inline SSR script. Fixed by replacing the Radix Accordion in the landing FAQ with a custom controlled accordion (`src/components/shared/landing-faq.tsx`) that uses deterministic IDs and only mounts after hydration.
+```
+src/
+├── app/
+│   ├── api/                    # 46 API routes
+│   │   ├── analyze/            # Repository analysis + AI passes
+│   │   ├── chat/               # AI chat (streaming + non-streaming)
+│   │   ├── agents/             # Direct agent execution
+│   │   ├── graph/              # Unified Code Graph API
+│   │   ├── diagram/            # Diagram Engine API
+│   │   ├── docs/               # AI doc enhancement
+│   │   ├── analysis/           # Timeline, diff, regressions, refactor
+│   │   ├── admin/              # Admin: platform-ai, policies, users
+│   │   └── billing/            # Stripe checkout + webhook
+│   ├── guide/                  # User guide page
+│   └── page.tsx                # Main app (single route)
+├── components/
+│   ├── shared/                 # UnifiedCodeGraph, CodeViewer, etc.
+│   ├── views/                  # 11 view components
+│   ├── admin-tabs/             # Admin overview, policies, users
+│   └── ui/                     # shadcn/ui components
+├── lib/
+│   ├── graph/                  # Graph Engine v2 (6 providers + query + index)
+│   ├── diagram/                # Diagram Engine v2 (6 providers + query + export)
+│   ├── agents/                 # 10 AI agents (direct-call, no queue)
+│   ├── billing/                # Token budget + plan limits
+│   ├── policies/               # Policy engine (8 policies)
+│   ├── redaction.ts            # Secret redaction (17 patterns)
+│   ├── ownership.ts            # Multi-tenant isolation
+│   ├── rate-limiter.ts         # DB-backed rate limiting
+│   ├── ai-fallback.ts          # Model fallback chain
+│   ├── ai-deep-analysis.ts     # 9 AI passes orchestrator
+│   └── i18n.ts                 # i18n store (21 namespaces)
+├── locales/
+│   ├── en/                     # 21 JSON files
+│   └── vi/                     # 21 JSON files (parity)
+└── prisma/
+    ├── schema.prisma           # SQLite (dev)
+    └── schema.prod.prisma      # PostgreSQL (prod)
+```
 
 ---
 
-## 📄 License
+## 📊 Project Stats
 
-**MIT** © [vanhoi04082006-pixel](https://github.com/vanhoi04082006-pixel)
+| Metric | Value |
+|--------|-------|
+| Total LOC | ~59,000 |
+| Components | 92 |
+| API routes | 46 |
+| Prisma models | 18 |
+| AI passes | 9 |
+| AI agents | 10 |
+| Graph providers | 6 |
+| Diagram providers | 6 |
+| i18n keys | 2,300+ (EN = VI) |
+| Static analysis rules | 66 |
+
+---
+
+## 🤝 Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.
+
+## 📝 Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for version history.
+
+## 📜 License
+
+MIT — see [LICENSE](LICENSE)
+
+## 🔒 Security
+
+See [.github/SECURITY.md](.github/SECURITY.md) for security policy.
 
 ---
 
 <div align="center">
 
-**Built with ❤️ for developers who want AI that ships code, not just suggests it.**
-
-⭐ Star this repo if it's useful!
-
-[Report Bug](https://github.com/vanhoi04082006-pixel/CodeInsightAI/issues) · [Request Feature](https://github.com/vanhoi04082006-pixel/CodeInsightAI/issues) · [Discussions](https://github.com/vanhoi04082006-pixel/CodeInsightAI/discussions)
+**Built for developers, by developers.**
 
 </div>

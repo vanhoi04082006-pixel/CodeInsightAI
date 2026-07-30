@@ -2,53 +2,46 @@
 
 All notable changes to CodeInsight AI will be documented in this file.
 
-## [1.0.0] — 2026-07-24
+## [0.3.0] — 2025-01-30
 
 ### Added
-- **Hybrid Analyze**: Sync static analysis + async AI passes (8 passes, each <55s)
-- **AI Pass Progress**: Real-time "AI Pass 3/8 — Security Review" UI
-- **ShopAIKey**: 15th provider, default Platform AI (8 cost-effective models)
-- **Model badges**: Each model shows use-case (Best for Analyze, Code, Chat, etc.)
-- **Token tracking**: Free 1M/mo, Pro 10M/mo, widget in topbar + dashboard
-- **Developer Console**: 6-tab IDE-grade inspection panel
-- **Custom Cursor v3**: Exponential smoothing, ring buffer trail, adaptive quality
-- **System Status Indicator**: Live health in topbar (DB, jobs, latency)
-- **Keyboard Shortcuts Help**: Press `?` to see all shortcuts
-- **User Guide**: `/guide` page with 8 sections
-- **GitHub community**: SECURITY.md, CI, Dependabot, issue/PR templates
-- **Dark mode default**: Cyber aesthetic, no FOWT
+- **Diagram Engine v2** — 6 diagram types (UML, Sequence, ERD, Architecture, Module, Component) with unified Diagram Model, Provider Pattern, 4 layouts (dagre-TB/LR, circular, force), 3 export formats (SVG, Mermaid, PlantUML), interactive renderer (zoom/pan/focus/search/minimap), Query Engine (findPath/findCycles/findImpact), LRU cache, plugin architecture
+- **Graph Engine v2** — GraphIndex (O(1) symbol lookup), GraphQuery (semantic query API), GraphImpact (structured ImpactReport with risk level), AIAnalysisService (separated from engine)
+- **Code Explorer V2** — Expand Context, File Summary, Issue Highlighting, AI Context Optimization, Rich Static Explanation, 6 AI Modes (Explain/Security/Perf/Refactor/Tests/Bugs), Related Files, sessionStorage persist, Regenerate button
+- **Unified Code Graph** — Merged Dependencies + CodeGraph tabs into single tab with 6 graph types
+- **IssuesTab per-issue AI** — "Ask AI" button on each issue with sessionStorage persistence
+- **Docs AI persistence** — AI-enhanced docs saved to sessionStorage
+- **AI fallback UI** — 7 tabs show amber "AI Unavailable" when pass fails, cyan "AI Running" when pending
+- **First-user auto-admin** — No ADMIN_EMAIL config needed; first user to sign in becomes admin
 
 ### Changed
-- **Default mode**: New users start in Default (Platform AI), not Custom
-- **Providers nav**: Locked in Default mode, unlocked in Custom mode
-- **Landing page**: Replaced fake testimonials with real stats
-- **Auth flow**: Landing CTA now calls `signIn("github")` directly
-- **CSP**: Added ShopAIKey + Azure + raw.githubusercontent.com + WebSocket
-- **maxDuration**: 300s → 120s (Hobby compatible)
-- **reactStrictMode**: false → true
-- **TypeScript**: Removed `ignoreBuildErrors` — 0 errors
+- **i18n completion** — 21 namespaces, 2,300+ keys, full EN/VI parity, technical terms preserved
+- **Honest naming** — Removed misleading "AI" labels from static content ("AI Summary" → "Summary")
+- **AI prompt optimization** — Limited to top 5 issues by severity (was sending all 28-173 issues)
+- **504 timeout fix** — Robust error handling for non-JSON responses
 
 ### Removed
-- **Fake analysis engine**: `analysis-engine.ts` (1115 lines) deleted
-- **Google OAuth**: Removed completely (GitHub-only)
-- **Dead code**: `useEffectiveAIConfig`, `getActiveJobs`, `parsedToReport`, `Field` component
-- **In-memory repo cache**: Cross-user leak risk eliminated
+- **Mission Control** — 100% removed (UI + backend + DB models + i18n + agents infrastructure)
+- **Dead code** — Orphaned files, deprecated rate-limiter, unused imports
 
-### Fixed
-- Multi-tenant data leak (GET /api/analyze not scoped by userId)
-- Unauthenticated delete (DELETE /api/analyze no ownership check)
-- Share link cursor invisible (global `cursor: none` without CustomCursor)
-- AI Insights empty (model-specific maxTokens + 402 retry + JSON parser)
-- "Job not found" on Vercel (DB fallback + individual AI pass calls)
-- Analysis stuck at 0%/50%/85% (simulated progress + hybrid split)
-- Vietnamese AI (language param now passed to all 8 AI passes)
-- Dead code detection false positives (entry point whitelist + basename matching)
-- 154 missing VI i18n keys in mission.json
-- 18 TypeScript errors (surfaced after removing ignoreBuildErrors)
+---
 
-### Security
-- All API routes authenticated + scoped by userId
-- AES-256-GCM encryption for API keys
-- Rate limiting (60/min general, 20/min analyze/chat)
-- 7 security headers (CSP, HSTS, X-Frame-Options, etc.)
-- Audit logging for admin actions
+## [0.2.0] — 2025-01-15
+
+### Added
+- **Phase 1 (AI-first core)** — 9 AI passes, structured output (evidence/confidence/fixPlan), secret redaction (17 patterns), audit log (AICallLog), AI Overview card, action buttons (Fix Now/Test/Refactor with confirm dialog)
+- **Phase 2 (Decision Intelligence)** — Symbol-level CodeGraph (calls/uses/extends edges), Timeline + diff, regression detection, enhanced roadmap (effort/deps/phases/ROI), refactor sequencer (graph-validated)
+- **Phase 3 (Enterprise Hardening)** — Cost controls (token budget), rate limiting (DB-backed), model fallback (provider chain), policy engine (8 policies), PDF/JSON export, multi-tenant isolation
+
+---
+
+## [0.1.0] — 2024-12-01
+
+### Added
+- Initial release
+- Static analysis engine (66 rules)
+- 8 AI providers (BYOK)
+- GitHub OAuth authentication
+- Project report with 10 tabs
+- AI chat with streaming
+- i18n (Vietnamese + English)

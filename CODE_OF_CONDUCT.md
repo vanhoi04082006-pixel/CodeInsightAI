@@ -1,40 +1,27 @@
-# Contributor Covenant Code of Conduct
+# Code of Conduct
 
 ## Our Pledge
 
-We pledge to make participation in our community a harassment-free experience for everyone, regardless of age, body size, visible or invisible disability, ethnicity, sex characteristics, gender identity and expression, level of experience, education, socio-economic status, nationality, personal appearance, race, religion, or sexual identity and orientation.
+We are committed to providing a friendly, safe, and welcoming environment for all contributors, regardless of experience level, gender, gender identity, sexual orientation, disability, personal appearance, body size, race, ethnicity, religion, nationality, or political affiliation.
 
 ## Our Standards
 
-Examples of behavior that contributes to a positive environment:
+**Positive behavior:**
+- Using welcoming and inclusive language
+- Being respectful of differing viewpoints
+- Gracefully accepting constructive feedback
+- Focusing on what is best for the community
+- Showing empathy towards other community members
 
-* Using welcoming and inclusive language
-* Being respectful of differing viewpoints and experiences
-* Gracefully accepting constructive criticism
-* Focusing on what is best for the community
-* Showing empathy towards other community members
-
-Examples of unacceptable behavior:
-
-* The use of sexualized language or imagery
-* Trolling, insulting/derogatory comments, and personal or political attacks
-* Public or private harassment
-* Publishing others' private information without explicit permission
-* Other conduct which could reasonably be considered inappropriate
-
-## Enforcement Responsibilities
-
-Community leaders are responsible for clarifying and enforcing standards and will take appropriate and fair corrective action in response to any behavior they deem inappropriate, threatening, offensive, or harmful.
-
-## Scope
-
-This Code of Conduct applies within all community spaces, and also applies when an individual is officially representing the community in public spaces.
+**Unacceptable behavior:**
+- Trolling, insulting, or derogatory comments
+- Public or private harassment
+- Publishing others' private information without consent
+- Other conduct which could be considered inappropriate in a professional setting
 
 ## Enforcement
 
-Instances of abusive, harassing, or otherwise unacceptable behavior may be reported to: **vanhoi04082006@gmail.com**
-
-All complaints will be reviewed and investigated promptly and fairly.
+Instances of abusive, harassing, or otherwise unacceptable behavior may be reported to the project maintainers. All complaints will be reviewed and investigated promptly and fairly.
 
 ## Attribution
 
