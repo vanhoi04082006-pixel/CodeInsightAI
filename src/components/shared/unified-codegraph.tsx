@@ -74,10 +74,19 @@ const EDGE_COLORS: Record<string, string> = {
 };
 
 function nodeRadius(degree: number, type: string): number {
-  const base: Record<string, number> = { file: 6, function: 5, class: 6, module: 8, route: 5, component: 5, import: 4 };
-  const b = base[type] ?? 5;
-  return Math.max(4, Math.min(14, b + Math.sqrt(degree) * 0.8));
+  const base: Record<string, number> = { file: 8, function: 7, class: 8, module: 10, route: 7, component: 7, import: 6 };
+  const b = base[type] ?? 7;
+  return Math.max(6, Math.min(16, b + Math.sqrt(degree) * 0.8));
 }
+
+/** Maximum label width before truncation (in SVG units). */
+const MAX_LABEL_WIDTH = 60;
+/** Vertical gap between node circle bottom and label top. */
+const LABEL_GAP = 5;
+/** Label font size in SVG units (scales with zoom). */
+const LABEL_FONT_SIZE = 6;
+/** Label font size when zoomed in or hovered. */
+const LABEL_FONT_SIZE_LARGE = 8;
 
 /* ───────────────────────── Component ───────────────────────── */
 
@@ -230,7 +239,7 @@ export function UnifiedCodeGraph({
             .force("center", d3.forceCenter(300, 250))
             .force(
               "collide",
-              d3.forceCollide<SimNode>().radius((d) => nodeRadius(deg.get(d.id) || 0, d.type) + 4),
+              d3.forceCollide<SimNode>().radius((d) => nodeRadius(deg.get(d.id) || 0, d.type) + 8),
             )
             .alphaDecay(0.02);
 
@@ -714,6 +723,19 @@ export function UnifiedCodeGraph({
                     (n.filePath?.toLowerCase().includes(search.toLowerCase()) ?? false) ||
                     n.id.toLowerCase().includes(search.toLowerCase())
                   ));
+                  // Label visibility: always show for small graphs, hover/select for large
+                  const showLabel = isHover || isSel || isSearchMatch || zoom > 1.5 || visibleNodes.length <= 50;
+                  const fontSize = (isHover || isSel || zoom > 2) ? LABEL_FONT_SIZE_LARGE : LABEL_FONT_SIZE;
+                  // Truncate label if too long
+                  const maxChars = Math.floor(MAX_LABEL_WIDTH / (fontSize * 0.55));
+                  const displayLabel = n.label.length > maxChars ? n.label.slice(0, maxChars - 1) + "…" : n.label;
+                  // Label Y position: below the circle with a clear gap
+                  const labelY = pos.y + r + LABEL_GAP + fontSize;
+                  // Background rect for label (improves readability over edges)
+                  const labelBgWidth = displayLabel.length * fontSize * 0.6 + 4;
+                  const labelBgHeight = fontSize + 2;
+                  const labelBgX = pos.x - labelBgWidth / 2;
+                  const labelBgY = labelY - fontSize;
                   return (
                     <g key={n.id}
                       onMouseEnter={() => setHovered(n.id)}
@@ -721,34 +743,61 @@ export function UnifiedCodeGraph({
                       onClick={() => handleNodeClick(n)}
                       style={{ cursor: "pointer", opacity: dim ? 0.15 : 1, transition: "opacity 0.2s" }}
                     >
+                      {/* Glow halo for hover/select/search */}
                       {(isHover || isSel || isSearchMatch) && (
-                        <circle cx={pos.x} cy={pos.y} r={r + 6} fill={color} opacity={0.2} />
+                        <circle cx={pos.x} cy={pos.y} r={r + 5} fill={color} opacity={0.15} />
                       )}
+                      {/* Search match ring */}
                       {isSearchMatch && (
                         <circle cx={pos.x} cy={pos.y} r={r + 3} fill="none" stroke="#fbbf24" strokeWidth="1.5" strokeDasharray="2 1" />
                       )}
+                      {/* Cyclic dependency ring */}
                       {isCyclic && (
-                        <circle cx={pos.x} cy={pos.y} r={r + 4} fill="none" stroke="#ef4444" strokeWidth="1" strokeDasharray="1 1" />
+                        <circle cx={pos.x} cy={pos.y} r={r + 3} fill="none" stroke="#ef4444" strokeWidth="1" strokeDasharray="1 1" />
                       )}
+                      {/* Main node circle */}
                       <circle cx={pos.x} cy={pos.y} r={r}
                         fill={color}
                         fillOpacity={0.7}
-                        stroke={isCyclic ? "#ef4444" : color}
+                        stroke={isCyclic ? "#ef4444" : isSel ? "#ffffff" : color}
                         strokeWidth={isSel ? 2 : isCyclic ? 1 : 0.5}
                       />
-                      <circle cx={pos.x} cy={pos.y} r={r * 0.4} fill="white" opacity={isHover || isSel ? 0.9 : 0.5} className="pointer-events-none" />
-                      {(isHover || isSel || zoom > 1.8 || isSearchMatch) && (
-                        <text x={pos.x} y={pos.y - r - 3} textAnchor="middle" fontSize="7" fill="white"
-                          className="font-mono pointer-events-none font-semibold"
-                          style={{ paintOrder: "stroke", stroke: "rgba(0,0,0,0.7)", strokeWidth: 2 }}
-                        >
-                          {n.label.length > 20 ? n.label.slice(0, 18) + "…" : n.label}
-                        </text>
+                      {/* Inner dot (white center for visual depth) */}
+                      <circle cx={pos.x} cy={pos.y} r={r * 0.35} fill="white" opacity={isHover || isSel ? 0.9 : 0.4} className="pointer-events-none" />
+
+                      {/* Label — ALWAYS below the node with clear gap, never overlapping */}
+                      {showLabel && (
+                        <>
+                          {/* Label background for readability */}
+                          <rect
+                            x={labelBgX} y={labelBgY}
+                            width={labelBgWidth} height={labelBgHeight}
+                            rx={2}
+                            fill="rgba(0,0,0,0.75)"
+                            className="pointer-events-none"
+                          />
+                          <text
+                            x={pos.x}
+                            y={labelY}
+                            textAnchor="middle"
+                            fontSize={fontSize}
+                            fill={isSel ? "#22d3ee" : isSearchMatch ? "#fbbf24" : "#e2e8f0"}
+                            className="font-mono pointer-events-none font-medium"
+                            style={{ paintOrder: "stroke", stroke: "rgba(0,0,0,0.5)", strokeWidth: 0.5 }}
+                          >
+                            {displayLabel}
+                          </text>
+                        </>
                       )}
-                      {degree > 5 && !isHover && !isSel && (
-                        <text x={pos.x + r} y={pos.y - r} textAnchor="start" fontSize="5" fill={color} className="pointer-events-none font-bold">
-                          {degree}
-                        </text>
+
+                      {/* Degree badge — top-right of node, separate from label */}
+                      {degree > 5 && (isHover || isSel || zoom > 1.5) && (
+                        <g className="pointer-events-none">
+                          <circle cx={pos.x + r + 2} cy={pos.y - r - 2} r={3} fill="#1e293b" stroke={color} strokeWidth="0.5" />
+                          <text x={pos.x + r + 2} y={pos.y - r - 0.5} textAnchor="middle" fontSize="4" fill={color} className="font-bold">
+                            {degree}
+                          </text>
+                        </g>
                       )}
                     </g>
                   );
