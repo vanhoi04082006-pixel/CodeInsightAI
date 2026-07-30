@@ -36,6 +36,7 @@ import {
 import { GlassCard, ScoreGauge, GradientText, NeonDivider, SeverityBadge } from "@/components/shared/ui";
 import { CodeViewer } from "@/components/shared/code-viewer";
 import { UnifiedCodeGraph } from "@/components/shared/unified-codegraph";
+import { DiagramRenderer } from "@/lib/diagram/diagram-renderer";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -1413,7 +1414,9 @@ function DocsTab({ report }: { report: AnalysisReport }) {
   const { t, locale } = useT();
   const activeAnalysisId = useAppStore((s) => s.activeAnalysisId);
   const [copied, setCopied] = useState<string | null>(null);
-  const [diagram, setDiagram] = useState<"uml" | "sequence" | "erd">("uml");
+  const [diagram, setDiagram] = useState<string>("uml");
+  const [diagramData, setDiagramData] = useState<any>(null);
+  const [diagramLoading, setDiagramLoading] = useState(false);
   const [docTab, setDocTab] = useState<string>("readme");
   // AI-enhance state — keyed by docId so each tab tracks its own AI content.
   // Persisted in sessionStorage so switching tabs preserves AI results.
@@ -1497,28 +1500,44 @@ function DocsTab({ report }: { report: AnalysisReport }) {
   ].filter(d => d.content);
 
   const diagrams = report.diagrams;
-  // Build diagram tabs dynamically — hide empty ones
-  const allDiagrams = [
-    { id: "uml" as const, label: t("reports", "uml"), svg: diagrams.uml, desc: diagrams.umlExplanation, show: diagrams.hasUml !== false && !!diagrams.uml },
-    { id: "sequence" as const, label: t("reports", "sequence"), svg: diagrams.sequence, desc: diagrams.sequenceExplanation, show: diagrams.hasSequence !== false && !!diagrams.sequence },
-    { id: "erd" as const, label: t("reports", "erd"), svg: diagrams.erd, desc: diagrams.erdExplanation, show: diagrams.hasErd !== false && !!diagrams.erd },
-  ].filter(d => d.show);
+  // Diagram Engine v2 — 6 types
+  const ALL_DIAGRAM_TYPES = [
+    { id: "uml", label: "🏛 UML", show: diagrams.hasUml !== false },
+    { id: "sequence", label: "📐 Sequence", show: diagrams.hasSequence !== false },
+    { id: "erd", label: "🗄 ERD", show: diagrams.hasErd !== false },
+    { id: "architecture", label: "🏗 Architecture", show: true },
+    { id: "module", label: "📦 Module", show: true },
+    { id: "component", label: "🧩 Component", show: true },
+  ];
 
-  // If current diagram tab is hidden, switch to first available
-  const activeDiagram = allDiagrams.find(d => d.id === diagram) || allDiagrams[0];
+  // Fetch diagram from API when type changes
+  useEffect(() => {
+    if (!activeAnalysisId) return;
+    setDiagramLoading(true);
+    fetch(`/api/diagram/${activeAnalysisId}?type=${diagram}`)
+      .then(r => r.json())
+      .then(data => {
+        // Convert layout array back to Map
+        if (data.layout && Array.isArray(data.layout)) {
+          data.layout = new Map(data.layout);
+        }
+        setDiagramData(data);
+      })
+      .catch(() => setDiagramData(null))
+      .finally(() => setDiagramLoading(false));
+  }, [activeAnalysisId, diagram]);
   const activeDoc = docs.find(d => d.id === docTab) || docs[0];
   const activeAiContent = activeDoc ? aiDocs[activeDoc.id] : undefined;
   const isActiveLoading = activeDoc ? aiLoading === activeDoc.id : false;
 
   return (
     <div className="space-y-4">
-      {/* Diagrams — only show if at least one has content */}
-      {allDiagrams.length > 0 && (
+      {/* Diagrams — Diagram Engine v2 */}
       <GlassCard className="p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h4 className="flex items-center gap-2 text-sm font-semibold"><Network className="h-4 w-4 text-cyan-300" /> {t("reports", "generatedDiagrams")}</h4>
-          <div className="inline-flex gap-1 rounded-lg border border-white/10 bg-white/[0.03] p-1">
-            {allDiagrams.map((d) => (
+          <div className="inline-flex flex-wrap gap-1 rounded-lg border border-white/10 bg-white/[0.03] p-1">
+            {ALL_DIAGRAM_TYPES.map((d) => (
               <button
                 key={d.id}
                 onClick={() => setDiagram(d.id)}
@@ -1533,11 +1552,20 @@ function DocsTab({ report }: { report: AnalysisReport }) {
           </div>
         </div>
         <div className="mt-3 overflow-x-auto scrollbar-thin rounded-lg border border-white/5 bg-black/30 p-3">
-          {activeDiagram && <div className="mx-auto min-w-[480px]" dangerouslySetInnerHTML={{ __html: activeDiagram.svg }} />}
+          {diagramLoading ? (
+            <div className="flex h-40 items-center justify-center">
+              <Loader2 className="h-5 w-5 animate-spin text-cyan-300" />
+            </div>
+          ) : diagramData && diagramData.nodes?.length > 0 ? (
+            <DiagramRenderer diagram={diagramData} />
+          ) : (
+            <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">
+              {diagramData?.description || "No data for this diagram type"}
+            </div>
+          )}
         </div>
-        <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{activeDiagram?.desc}</p>
+        <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{diagramData?.description}</p>
       </GlassCard>
-      )}
 
       {/* Documentation tabs */}
       <GlassCard className="p-5">
