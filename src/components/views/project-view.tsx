@@ -1418,6 +1418,9 @@ function DocsTab({ report }: { report: AnalysisReport }) {
   const [diagramLayout, setDiagramLayout] = useState<string>("dagre-tb");
   const [diagramData, setDiagramData] = useState<any>(null);
   const [diagramLoading, setDiagramLoading] = useState(false);
+  const [diagramSelected, setDiagramSelected] = useState<string | null>(null);
+  const [diagramFocus, setDiagramFocus] = useState(false);
+  const [diagramSearch, setDiagramSearch] = useState("");
   const [docTab, setDocTab] = useState<string>("readme");
   // AI-enhance state — keyed by docId so each tab tracks its own AI content.
   // Persisted in sessionStorage so switching tabs preserves AI results.
@@ -1595,7 +1598,43 @@ function DocsTab({ report }: { report: AnalysisReport }) {
               <Loader2 className="h-5 w-5 animate-spin text-cyan-300" />
             </div>
           ) : diagramData && diagramData.nodes?.length > 0 ? (
-            <DiagramRenderer diagram={diagramData} />
+            <>
+              {/* Search + focus controls */}
+              <div className="mb-2 flex items-center gap-2">
+                <input
+                  value={diagramSearch}
+                  onChange={(e) => setDiagramSearch(e.target.value)}
+                  placeholder="Search nodes..."
+                  className="h-7 w-44 rounded-lg border border-white/10 bg-popover/90 px-2 text-[11px] outline-none focus:border-cyan-400/40"
+                />
+                <button
+                  onClick={() => setDiagramFocus(!diagramFocus)}
+                  disabled={!diagramSelected}
+                  className={cn(
+                    "flex h-7 items-center gap-1 rounded-lg border px-2 text-[10px] transition",
+                    diagramFocus ? "border-cyan-400/40 bg-cyan-400/10 text-cyan-300" : "border-white/10 bg-popover/90 text-muted-foreground hover:text-foreground",
+                    !diagramSelected && "cursor-not-allowed opacity-40",
+                  )}
+                >
+                  {diagramFocus ? "✕ Exit Focus" : "⌖ Focus"}
+                </button>
+                {diagramSelected && (
+                  <button
+                    onClick={() => { setDiagramSelected(null); setDiagramFocus(false); }}
+                    className="h-7 rounded-lg border border-white/10 bg-popover/90 px-2 text-[10px] text-muted-foreground transition hover:text-foreground"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+              <DiagramRenderer
+                diagram={diagramData}
+                selected={diagramSelected}
+                onSelect={setDiagramSelected}
+                searchQuery={diagramSearch}
+                focusMode={diagramFocus}
+              />
+            </>
           ) : (
             <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">
               {diagramData?.description || "No data for this diagram type"}
