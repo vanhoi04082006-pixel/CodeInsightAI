@@ -228,20 +228,31 @@ export function UnifiedCodeGraph({
               weight: e.weight,
             }));
 
-          const hasLayout = simNodes.some((n) => typeof n.metadata?.x === "number");
+          const hasLayout = simNodes.some((n) => typeof n.metadata?.x === "number" && (n.metadata?.x !== 0 || n.metadata?.y !== 0));
+
+          // Scatter initial positions in a circle so nodes don't all start at (0,0)
+          if (!hasLayout) {
+            const radius = Math.max(150, simNodes.length * 8);
+            simNodes.forEach((n, i) => {
+              const angle = (i / simNodes.length) * Math.PI * 2;
+              n.x = 300 + Math.cos(angle) * radius * (0.5 + Math.random() * 0.5);
+              n.y = 250 + Math.sin(angle) * radius * (0.5 + Math.random() * 0.5);
+            });
+          }
+
           const simulation = d3
             .forceSimulation<SimNode>(simNodes)
             .force(
               "link",
-              d3.forceLink<SimNode, any>(simLinks).id((d) => d.id).distance(60).strength(0.1),
+              d3.forceLink<SimNode, any>(simLinks).id((d) => d.id).distance(100).strength(0.3),
             )
-            .force("charge", d3.forceManyBody().strength(-80))
+            .force("charge", d3.forceManyBody().strength(-200))
             .force("center", d3.forceCenter(300, 250))
             .force(
               "collide",
-              d3.forceCollide<SimNode>().radius((d) => nodeRadius(deg.get(d.id) || 0, d.type) + 8),
+              d3.forceCollide<SimNode>().radius((d) => nodeRadius(deg.get(d.id) || 0, d.type) + 12),
             )
-            .alphaDecay(0.02);
+            .alphaDecay(0.015);
 
           if (hasLayout) {
             // Pin pre-laid-out nodes (dependency graph) — they already have x/y.
@@ -261,7 +272,7 @@ export function UnifiedCodeGraph({
             simNodes.forEach((n) => next.set(n.id, { x: n.x ?? 0, y: n.y ?? 0 }));
             setPositions(next);
           });
-          setTimeout(() => simulation.stop(), 1500);
+          setTimeout(() => simulation.stop(), 2500);
         }
       })
       .catch((e) => {
