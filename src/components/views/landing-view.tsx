@@ -40,6 +40,14 @@ import { parseRepoUrl } from "@/lib/repo-utils";
 import { PROVIDER_PRESETS } from "@/lib/providers";
 import { ANALYSIS_PASSES } from "@/lib/analysis-manifest";
 import { AGENT_COUNT } from "@/lib/agents/constants";
+import {
+  STATIC_RULES_TOTAL,
+  STATIC_RULES_SECURITY,
+  STATIC_RULES_BUGS,
+  STATIC_RULES_PERFORMANCE,
+  SUPPORTED_LANGUAGES,
+  AVG_ANALYSIS_SECONDS,
+} from "@/lib/static-analysis-stats";
 import { LandingFAQ } from "@/components/shared/landing-faq";
 import { useUpgrade } from "@/hooks/use-upgrade";
 import { signIn } from "next-auth/react";
@@ -244,9 +252,9 @@ export function LandingView() {
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
             {[
               { value: PROVIDER_PRESETS.length, suffix: "", label: t("landing", "statsProviders"), color: "#22d3ee" },
-              { value: 40, suffix: "+", label: t("landing", "statsLanguages"), color: "#a78bfa" },
+              { value: SUPPORTED_LANGUAGES, suffix: "+", label: t("landing", "statsLanguages"), color: "#a78bfa" },
               { value: ANALYSIS_PASSES.length, suffix: "", label: t("landing", "statsSubscriptions"), color: "#34d399" },
-              { value: 60, suffix: "s", label: t("landing", "statsAvg"), color: "#fbbf24" },
+              { value: AVG_ANALYSIS_SECONDS, suffix: "s", label: t("landing", "statsAvg"), color: "#fbbf24" },
             ].map((s, i) => (
               <motion.div
                 key={s.label}
@@ -648,9 +656,9 @@ export function LandingView() {
           />
           <div className="mt-14 grid gap-5 md:grid-cols-4">
             {[
-              { value: "66", label: t("landing", "numbers.staticRules"), color: "#22d3ee" },
+              { value: String(STATIC_RULES_TOTAL), label: t("landing", "numbers.staticRules"), color: "#22d3ee" },
               { value: String(ANALYSIS_PASSES.length), label: t("landing", "numbers.aiPasses"), color: "#a78bfa" },
-              { value: "15", label: t("landing", "numbers.aiProviders"), color: "#34d399" },
+              { value: String(PROVIDER_PRESETS.length), label: t("landing", "numbers.aiProviders"), color: "#34d399" },
               { value: "100", label: t("landing", "numbers.openSource"), color: "#fbbf24" },
             ].map((stat, i) => (
               <motion.div
@@ -727,9 +735,9 @@ export function LandingView() {
         <div className="mx-auto max-w-4xl">
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
             {[
-              { icon: ShieldCheck, label: t("landing", "statsGrid.securityRules"), value: "13", color: "#f472b6" },
-              { icon: Bug, label: t("landing", "statsGrid.bugPatterns"), value: "11", color: "#fbbf24" },
-              { icon: Gauge, label: t("landing", "statsGrid.perfRules"), value: "42", color: "#34d399" },
+              { icon: ShieldCheck, label: t("landing", "statsGrid.securityRules"), value: String(STATIC_RULES_SECURITY), color: "#f472b6" },
+              { icon: Bug, label: t("landing", "statsGrid.bugPatterns"), value: String(STATIC_RULES_BUGS), color: "#fbbf24" },
+              { icon: Gauge, label: t("landing", "statsGrid.perfRules"), value: String(STATIC_RULES_PERFORMANCE), color: "#34d399" },
               { icon: Bot, label: t("landing", "statsGrid.aiAgents"), value: String(AGENT_COUNT), color: "#22d3ee" },
             ].map((stat, i) => {
               const Icon = stat.icon;

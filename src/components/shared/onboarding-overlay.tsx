@@ -10,35 +10,19 @@ import { GlassCard, GradientText } from "@/components/shared/ui";
 import { Button } from "@/components/ui/button";
 import { useAppStore } from "@/lib/store";
 import { useSession } from "next-auth/react";
+import { STATIC_RULES_TOTAL } from "@/lib/static-analysis-stats";
+import { ANALYSIS_PASSES } from "@/lib/analysis-manifest";
+import { PROVIDER_PRESETS } from "@/lib/providers";
+import { useT } from "@/lib/i18n";
 
 const ONBOARDING_KEY = "codeinsight-onboarding-completed";
 
-const STEPS = [
-  {
-    icon: ScanSearch,
-    title: "Analyze Any Repository",
-    desc: "Paste a GitHub URL and get a comprehensive analysis with 66 static rules + 9-pass AI deep analysis.",
-    color: "#22d3ee",
-  },
-  {
-    icon: Plug,
-    title: "Connect Your AI",
-    desc: "Bring your own API key (free) or use Platform AI (Pro, $9/mo). 15 providers supported.",
-    color: "#a78bfa",
-  },
-  {
-    icon: MessagesSquare,
-    title: "Chat with AI CTO",
-    desc: "Ask questions about your codebase. AI uses CodeGraph to understand dependencies instantly.",
-    color: "#f472b6",
-  },
-  {
-    icon: Shield,
-    title: "You're Ready!",
-    desc: "Start by analyzing a repository or configuring your AI provider.",
-    color: "#fbbf24",
-  },
-];
+const STEP_KEYS = [
+  { icon: ScanSearch, titleKey: "step1Title", descKey: "step1Desc", color: "#22d3ee" },
+  { icon: Plug, titleKey: "step2Title", descKey: "step2Desc", color: "#a78bfa" },
+  { icon: MessagesSquare, titleKey: "step3Title", descKey: "step3Desc", color: "#f472b6" },
+  { icon: Shield, titleKey: "step4Title", descKey: "step4Desc", color: "#fbbf24" },
+] as const;
 
 /**
  * OnboardingOverlay — shows a 4-step welcome guide for first-time users.
@@ -47,6 +31,7 @@ const STEPS = [
 export function OnboardingOverlay() {
   const { data: session, status } = useSession();
   const setView = useAppStore((s) => s.setView);
+  const { t } = useT();
   const [show, setShow] = useState(false);
   const [step, setStep] = useState(0);
 
@@ -71,9 +56,9 @@ export function OnboardingOverlay() {
 
   if (!show) return null;
 
-  const currentStep = STEPS[step];
+  const currentStep = STEP_KEYS[step];
   const Icon = currentStep.icon;
-  const isLast = step === STEPS.length - 1;
+  const isLast = step === STEP_KEYS.length - 1;
 
   return (
     <AnimatePresence>
@@ -103,7 +88,7 @@ export function OnboardingOverlay() {
 
             {/* Step indicator */}
             <div className="mb-4 flex items-center justify-center gap-1.5">
-              {STEPS.map((_, i) => (
+              {STEP_KEYS.map((_, i) => (
                 <div
                   key={i}
                   className={`h-1.5 rounded-full transition-all ${
@@ -124,10 +109,14 @@ export function OnboardingOverlay() {
               </div>
 
               <h2 className="mt-5 text-xl font-bold">
-                <GradientText>{currentStep.title}</GradientText>
+                <GradientText>{t("common", `onboarding.${currentStep.titleKey}`)}</GradientText>
               </h2>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                {currentStep.desc}
+                {t("common", `onboarding.${currentStep.descKey}`, {
+                  rules: STATIC_RULES_TOTAL,
+                  passes: ANALYSIS_PASSES.length,
+                  providers: PROVIDER_PRESETS.length,
+                })}
               </p>
             </div>
 
@@ -137,14 +126,14 @@ export function OnboardingOverlay() {
                 onClick={() => dismiss()}
                 className="text-xs text-muted-foreground transition hover:text-foreground"
               >
-                Skip tour
+                {t("common", "onboarding.skipTour")}
               </button>
               {isLast ? (
                 <Button
                   onClick={() => dismiss("analyze")}
                   className="bg-gradient-to-r from-cyan-500 to-violet-500 text-white"
                 >
-                  <Sparkles className="mr-1.5 h-4 w-4" /> Start Analyzing
+                  <Sparkles className="mr-1.5 h-4 w-4" /> {t("common", "onboarding.startAnalyzing")}
                   <ArrowRight className="ml-1.5 h-4 w-4" />
                 </Button>
               ) : (
@@ -152,7 +141,7 @@ export function OnboardingOverlay() {
                   onClick={() => setStep((s) => s + 1)}
                   className="bg-gradient-to-r from-cyan-500 to-violet-500 text-white"
                 >
-                  Next <ArrowRight className="ml-1.5 h-4 w-4" />
+                  {t("common", "onboarding.next")} <ArrowRight className="ml-1.5 h-4 w-4" />
                 </Button>
               )}
             </div>

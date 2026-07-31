@@ -19,16 +19,17 @@ import { Button } from "@/components/ui/button";
 import { useSession } from "next-auth/react";
 import { useUpgrade } from "@/hooks/use-upgrade";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 
-const PRO_FEATURES = [
-  { icon: Sparkles, label: "Platform AI", desc: "No API key needed — 8 models included" },
-  { icon: InfinityIcon, label: "Unlimited Analyses", desc: "100/month instead of 5" },
-  { icon: Zap, label: "Streaming Chat", desc: "Real-time token streaming" },
-  { icon: Rocket, label: "Priority Queue", desc: "Faster agent task execution" },
-  { icon: FileText, label: "PDF / JSON Export", desc: "Export reports in multiple formats" },
-  { icon: BarChart3, label: "Usage Analytics", desc: "Detailed usage dashboard" },
-  { icon: Headphones, label: "Priority Support", desc: "Direct line to the team" },
-];
+const PRO_FEATURE_KEYS = [
+  { icon: Sparkles, labelKey: "platformAi", descKey: "platformAiDesc" },
+  { icon: InfinityIcon, labelKey: "unlimitedAnalyses", descKey: "unlimitedAnalysesDesc" },
+  { icon: Zap, labelKey: "streamingChat", descKey: "streamingChatDesc" },
+  { icon: Rocket, labelKey: "priorityQueue", descKey: "priorityQueueDesc" },
+  { icon: FileText, labelKey: "pdfExport", descKey: "pdfExportDesc" },
+  { icon: BarChart3, labelKey: "usageAnalytics", descKey: "usageAnalyticsDesc" },
+  { icon: Headphones, labelKey: "prioritySupport", descKey: "prioritySupportDesc" },
+] as const;
 
 /**
  * Pro Features card — shows locked features for free users, unlocked for Pro,
@@ -37,6 +38,7 @@ const PRO_FEATURES = [
 export function ProFeaturesCard() {
   const { data: session } = useSession();
   const { upgrade, loading } = useUpgrade();
+  const { t } = useT();
   const plan = (session as any)?.plan ?? "free";
   const role = (session as any)?.role ?? "user";
   const isPro = plan !== "free" || role === "admin";
@@ -72,11 +74,11 @@ export function ProFeaturesCard() {
             )}
             <h3 className="text-sm font-semibold">
               {isAdmin ? (
-                <GradientText>Admin — All Features Unlocked</GradientText>
+                <GradientText>{t("pro", "proFeatures.adminUnlocked")}</GradientText>
               ) : isPro ? (
-                <span className="text-emerald-300">Pro Active</span>
+                <span className="text-emerald-300">{t("pro", "proFeatures.proActive")}</span>
               ) : (
-                <span className="text-amber-300">Unlock Pro Features</span>
+                <span className="text-amber-300">{t("pro", "proFeatures.unlockTitle")}</span>
               )}
             </h3>
           </div>
@@ -87,24 +89,26 @@ export function ProFeaturesCard() {
           )}
           {isPro && !isAdmin && (
             <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold uppercase text-emerald-300">
-              Active
+              {t("pro", "proFeatures.proActive")}
             </span>
           )}
           {isAdmin && (
             <span className="rounded-full bg-cyan-500/20 px-2 py-0.5 text-[10px] font-bold uppercase text-cyan-300">
-              Admin
+              {t("pro", "usage.admin")}
             </span>
           )}
         </div>
 
         {/* Features grid */}
         <div className="mt-4 grid gap-2 sm:grid-cols-2">
-          {PRO_FEATURES.map((f, i) => {
+          {PRO_FEATURE_KEYS.map((f, i) => {
             const Icon = f.icon;
             const unlocked = isPro;
+            const label = t("pro", `proFeatures.features.${f.labelKey}`);
+            const desc = t("pro", `proFeatures.features.${f.descKey}`);
             return (
               <motion.div
-                key={f.label}
+                key={f.labelKey}
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05 }}
@@ -127,9 +131,9 @@ export function ProFeaturesCard() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className={cn("text-xs font-medium", unlocked && "text-emerald-200")}>
-                    {f.label}
+                    {label}
                   </p>
-                  <p className="text-[10px] text-muted-foreground">{f.desc}</p>
+                  <p className="text-[10px] text-muted-foreground">{desc}</p>
                 </div>
               </motion.div>
             );
@@ -145,18 +149,18 @@ export function ProFeaturesCard() {
           >
             {loading ? (
               <>
-                <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> Redirecting to checkout…
+                <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> {t("pro", "proFeatures.upgradeForMore")}
               </>
             ) : (
               <>
-                <Crown className="mr-1.5 h-4 w-4" /> Upgrade to Pro — $9/month
+                <Crown className="mr-1.5 h-4 w-4" /> {t("pro", "proFeatures.upgradeToPro")}
               </>
             )}
           </Button>
         )}
         {isPro && !isAdmin && (
           <p className="mt-3 text-center text-[11px] text-muted-foreground">
-            Need to cancel? Visit{" "}
+            {t("pro", "proFeatures.manageSubscription")}{" "}
             <button
               onClick={async () => {
                 try {
@@ -167,7 +171,7 @@ export function ProFeaturesCard() {
               }}
               className="text-cyan-300 hover:underline"
             >
-              Stripe customer portal
+              {t("pro", "proFeatures.stripePortal")}
             </button>
           </p>
         )}

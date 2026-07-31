@@ -24,34 +24,35 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useAppStore } from "@/lib/store";
+import { useT } from "@/lib/i18n";
 
 type Shortcut = {
   keys: string[];
-  label: string;
+  labelKey: string;
   icon: typeof Command;
   category: "navigation" | "actions";
 };
 
 const SHORTCUTS: Shortcut[] = [
   // Navigation
-  { keys: ["⌘", "K"], label: "Open command palette", icon: Search, category: "navigation" },
-  { keys: ["⌘", "D"], label: "Go to Dashboard", icon: LayoutDashboard, category: "navigation" },
-  { keys: ["⌘", "A"], label: "New analysis", icon: ScanSearch, category: "navigation" },
-  { keys: ["⌘", "P"], label: "Providers", icon: Plug, category: "navigation" },
-  { keys: ["⌘", "H"], label: "History", icon: History, category: "navigation" },
-  { keys: ["⌘", "C"], label: "Chat (when no text selected)", icon: MessagesSquare, category: "navigation" },
-  { keys: ["⌘", ","], label: "Settings", icon: Settings, category: "navigation" },
+  { keys: ["⌘", "K"], labelKey: "openCommandPalette", icon: Search, category: "navigation" },
+  { keys: ["⌘", "D"], labelKey: "goToDashboard", icon: LayoutDashboard, category: "navigation" },
+  { keys: ["⌘", "A"], labelKey: "newAnalysis", icon: ScanSearch, category: "navigation" },
+  { keys: ["⌘", "P"], labelKey: "providers", icon: Plug, category: "navigation" },
+  { keys: ["⌘", "H"], labelKey: "history", icon: History, category: "navigation" },
+  { keys: ["⌘", "C"], labelKey: "chat", icon: MessagesSquare, category: "navigation" },
+  { keys: ["⌘", ","], labelKey: "settings", icon: Settings, category: "navigation" },
   // Vim-style
-  { keys: ["g", "d"], label: "Go to Dashboard (vim)", icon: LayoutDashboard, category: "navigation" },
-  { keys: ["g", "a"], label: "Go to Analyze (vim)", icon: ScanSearch, category: "navigation" },
-  { keys: ["g", "p"], label: "Go to Project (vim)", icon: FolderGit2, category: "navigation" },
-  { keys: ["g", "c"], label: "Go to Chat (vim)", icon: MessagesSquare, category: "navigation" },
-  { keys: ["g", "h"], label: "Go to History (vim)", icon: History, category: "navigation" },
-  { keys: ["g", "s"], label: "Go to Settings (vim)", icon: Settings, category: "navigation" },
-  { keys: ["g", "l"], label: "Go to Landing (vim)", icon: Home, category: "navigation" },
+  { keys: ["g", "d"], labelKey: "goToDashboardVim", icon: LayoutDashboard, category: "navigation" },
+  { keys: ["g", "a"], labelKey: "goToAnalyzeVim", icon: ScanSearch, category: "navigation" },
+  { keys: ["g", "p"], labelKey: "goToProjectVim", icon: FolderGit2, category: "navigation" },
+  { keys: ["g", "c"], labelKey: "goToChatVim", icon: MessagesSquare, category: "navigation" },
+  { keys: ["g", "h"], labelKey: "goToHistoryVim", icon: History, category: "navigation" },
+  { keys: ["g", "s"], labelKey: "goToSettingsVim", icon: Settings, category: "navigation" },
+  { keys: ["g", "l"], labelKey: "goToLandingVim", icon: Home, category: "navigation" },
   // Actions
-  { keys: ["Esc"], label: "Back to landing / blur input", icon: X, category: "actions" },
-  { keys: ["?"], label: "Show this help", icon: Keyboard, category: "actions" },
+  { keys: ["Esc"], labelKey: "backToLanding", icon: X, category: "actions" },
+  { keys: ["?"], labelKey: "showHelp", icon: Keyboard, category: "actions" },
 ];
 
 /**
@@ -65,6 +66,7 @@ const SHORTCUTS: Shortcut[] = [
 export function KeyboardShortcutsHelp() {
   const [open, setOpen] = useState(false);
   const setView = useAppStore((s) => s.setView);
+  const { t } = useT();
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -99,7 +101,7 @@ export function KeyboardShortcutsHelp() {
         <DialogHeader className="border-b border-white/5 px-6 py-4">
           <DialogTitle className="flex items-center gap-2 text-base font-semibold">
             <Keyboard className="h-5 w-5 text-cyan-300" />
-            Keyboard Shortcuts
+            {t("common", "shortcuts.title")}
           </DialogTitle>
           <p className="text-xs text-muted-foreground">
             Press <kbd className="rounded bg-white/5 px-1.5 py-0.5 text-[10px]">?</kbd> anytime to toggle this panel.
@@ -113,18 +115,18 @@ export function KeyboardShortcutsHelp() {
           <section>
             <h3 className="mb-3 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               <ArrowRight className="h-3.5 w-3.5 text-cyan-300" />
-              Navigation
+              {t("common", "shortcuts.navigation")}
             </h3>
             <ul className="space-y-1.5">
               {navShortcuts.map((s) => {
                 const Icon = s.icon;
                 return (
                   <li
-                    key={s.label}
+                    key={s.labelKey}
                     className="flex items-center gap-3 rounded-lg border border-white/5 bg-white/[0.02] px-3 py-2 transition hover:border-cyan-400/20 hover:bg-white/[0.04]"
                   >
                     <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    <span className="flex-1 text-xs text-foreground/90">{s.label}</span>
+                    <span className="flex-1 text-xs text-foreground/90">{t("common", `shortcuts.${s.labelKey}`)}</span>
                     <span className="flex items-center gap-0.5">
                       {s.keys.map((k, i) => (
                         <kbd
@@ -145,18 +147,18 @@ export function KeyboardShortcutsHelp() {
           <section>
             <h3 className="mb-3 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               <Command className="h-3.5 w-3.5 text-violet-300" />
-              Actions
+              {t("common", "shortcuts.actions")}
             </h3>
             <ul className="space-y-1.5">
               {actionShortcuts.map((s) => {
                 const Icon = s.icon;
                 return (
                   <li
-                    key={s.label}
+                    key={s.labelKey}
                     className="flex items-center gap-3 rounded-lg border border-white/5 bg-white/[0.02] px-3 py-2 transition hover:border-violet-400/20 hover:bg-white/[0.04]"
                   >
                     <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    <span className="flex-1 text-xs text-foreground/90">{s.label}</span>
+                    <span className="flex-1 text-xs text-foreground/90">{t("common", `shortcuts.${s.labelKey}`)}</span>
                     <span className="flex items-center gap-0.5">
                       {s.keys.map((k, i) => (
                         <kbd
@@ -185,7 +187,7 @@ export function KeyboardShortcutsHelp() {
 
         <div className="flex items-center justify-between border-t border-white/5 px-6 py-3">
           <span className="text-[10px] text-muted-foreground">
-            {SHORTCUTS.length} shortcuts available
+            {SHORTCUTS.length} {t("common", "shortcuts.title").toLowerCase()}
           </span>
           <button
             onClick={() => {

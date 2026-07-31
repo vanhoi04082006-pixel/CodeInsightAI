@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useSession } from "next-auth/react";
 import { useUpgrade } from "@/hooks/use-upgrade";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 
 type UsageData = {
   plan: string;
@@ -19,9 +20,9 @@ type UsageData = {
 };
 
 const USAGE_TYPES = [
-  { key: "analysis" as const, label: "Analyses", icon: Activity, color: "#22d3ee" },
-  { key: "chat" as const, label: "Chat Messages", icon: MessageSquare, color: "#a78bfa" },
-  { key: "agentTask" as const, label: "Agent Tasks", icon: Bot, color: "#34d399" },
+  { key: "analysis" as const, labelKey: "analyses", icon: Activity, color: "#22d3ee" },
+  { key: "chat" as const, labelKey: "chatMessages", icon: MessageSquare, color: "#a78bfa" },
+  { key: "agentTask" as const, labelKey: "agentTasks", icon: Bot, color: "#34d399" },
 ];
 
 /**
@@ -30,6 +31,7 @@ const USAGE_TYPES = [
  */
 export function UsageWidget() {
   const { data: session } = useSession();
+  const { t } = useT();
   const role = (session as any)?.role ?? "user";
   const isAdmin = role === "admin";
   const { upgrade, loading: upgrading } = useUpgrade();
@@ -55,7 +57,7 @@ export function UsageWidget() {
   if (!data) {
     return (
       <GlassCard className="p-6">
-        <p className="text-sm text-muted-foreground">Usage data unavailable.</p>
+        <p className="text-sm text-muted-foreground">{t("errors", "fetchFailed")}</p>
       </GlassCard>
     );
   }
@@ -68,11 +70,11 @@ export function UsageWidget() {
         <div className="flex items-center gap-2">
           <BarChart3 className="h-4 w-4 text-cyan-300" />
           <h3 className="text-sm font-semibold">
-            <GradientText>Usage This Month</GradientText>
+            <GradientText>{t("pro", "usage.title")}</GradientText>
           </h3>
         </div>
         <span className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
-          {isAdmin ? "Admin" : data.plan}
+          {isAdmin ? t("pro", "usage.admin") : data.plan}
         </span>
       </div>
 
@@ -93,12 +95,12 @@ export function UsageWidget() {
               <div className="flex items-center justify-between text-xs">
                 <span className="flex items-center gap-1.5 text-muted-foreground">
                   <type.icon className="h-3.5 w-3.5" style={{ color: type.color }} />
-                  {type.label}
+                  {t("pro", `usage.${type.labelKey}`)}
                 </span>
                 <span className={cn("font-mono tabular-nums", nearLimit && "text-amber-300")}>
                   {unlimited ? (
                     <span className="flex items-center gap-1 text-emerald-300">
-                      <InfinityIcon className="h-3 w-3" /> Unlimited
+                      <InfinityIcon className="h-3 w-3" /> {t("pro", "usage.unlimited")}
                     </span>
                   ) : (
                     <span className={cn(pct >= 100 && "text-rose-300")}>
@@ -124,7 +126,7 @@ export function UsageWidget() {
               )}
               {nearLimit && !unlimited && (
                 <p className="mt-1 text-[10px] text-amber-300">
-                  {pct >= 100 ? "Limit reached — upgrade for more" : "Approaching limit"}
+                  {pct >= 100 ? t("pro", "usage.limitReached") : t("pro", "usage.approachingLimit")}
                 </p>
               )}
             </motion.div>
@@ -140,7 +142,7 @@ export function UsageWidget() {
           variant="outline"
           className="mt-4 w-full border-violet-400/40 text-violet-300 hover:bg-violet-400/10"
         >
-          <Crown className="mr-1.5 h-3.5 w-3.5" /> Upgrade to Pro for more
+          <Crown className="mr-1.5 h-3.5 w-3.5" /> {t("pro", "proFeatures.upgradeForMore")}
         </Button>
       )}
     </GlassCard>

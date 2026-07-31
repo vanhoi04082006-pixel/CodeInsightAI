@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useSession } from "next-auth/react";
 import { useUpgrade } from "@/hooks/use-upgrade";
 import { isProduction } from "@/lib/env";
+import { useT } from "@/lib/i18n";
 
 /**
  * ProGate — gates a feature behind Pro plan (production only).
@@ -29,6 +30,7 @@ export function ProGate({
   icon?: typeof Lock;
   children: React.ReactNode;
 }) {
+  const { t } = useT();
   const { data: session, status } = useSession();
   const { upgrade, loading } = useUpgrade();
 
@@ -74,29 +76,27 @@ export function ProGate({
             </div>
 
             <h1 className="mt-6 text-2xl font-bold">
-              <GradientText>{feature}</GradientText> is a Pro Feature
+              <GradientText>{feature}</GradientText> {t("pro", "proGate.isProFeature")}
             </h1>
             <p className="mt-2 text-sm text-muted-foreground">
-              Upgrade to Pro to unlock {feature} and all other premium features.
-              Pro members get unlimited access to AI agents, streaming chat,
-              priority queue, and more.
+              {t("pro", "proGate.upgradeDesc", { feature })}
             </p>
 
             {/* Features list */}
             <div className="mt-6 grid grid-cols-1 gap-2 text-left sm:grid-cols-2">
               {[
-                "Unlimited AI agents",
-                "Platform AI (no key needed)",
-                "Streaming chat (SSE)",
-                "Priority queue",
-                "100 analyses/month",
-                "2000 chat messages/month",
-                "PDF / JSON export",
-                "Priority support",
+                "unlimitedAgents",
+                "platformAiNoKey",
+                "streamingChatSse",
+                "priorityQueue",
+                "analyses100",
+                "chat2000",
+                "pdfJsonExport",
+                "prioritySupport",
               ].map((f) => (
                 <div key={f} className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Check className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
-                  {f}
+                  {t("pro", `proGate.features.${f}`)}
                 </div>
               ))}
             </div>
@@ -109,17 +109,17 @@ export function ProGate({
             >
               {loading ? (
                 <>
-                  <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> Redirecting…
+                  <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> {t("pro", "proFeatures.upgradeForMore")}
                 </>
               ) : (
                 <>
-                  <Crown className="mr-1.5 h-4 w-4" /> Upgrade to Pro — $9/month
+                  <Crown className="mr-1.5 h-4 w-4" /> {t("pro", "proFeatures.upgradeToPro")}
                 </>
               )}
             </Button>
 
             <p className="mt-3 text-[10px] text-muted-foreground">
-              Cancel anytime. Secure payment via Stripe.
+              {t("pro", "proFeatures.cancelAnytime")}
             </p>
           </div>
         </GlassCard>

@@ -5,6 +5,8 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { Toaster as HotToaster } from "@/components/ui/toaster";
 import { Providers } from "@/components/providers";
+import { STATIC_RULES_TOTAL } from "@/lib/static-analysis-stats";
+import { ANALYSIS_PASSES } from "@/lib/analysis-manifest";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -19,7 +21,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "CodeInsight AI — AI-Powered Code Intelligence Platform",
   description:
-    "AI-powered GitHub repository analysis platform. 66 static rules + 9-pass AI deep analysis. CodeGraph, AI Chat. BYOK free or Platform AI $9/mo.",
+    `AI-powered GitHub repository analysis platform. ${STATIC_RULES_TOTAL} static rules + ${ANALYSIS_PASSES.length}-pass AI deep analysis. CodeGraph, AI Chat. BYOK free or Platform AI $9/mo.`,
   keywords: [
     "CodeInsight AI",
     "GitHub analysis",
@@ -36,7 +38,7 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://code-insight-ai-six.vercel.app"),
   openGraph: {
     title: "CodeInsight AI — AI-Powered Code Intelligence",
-    description: "Analyze any GitHub repo with 66 static rules + 9-pass AI deep analysis. CodeGraph visualization, AI chat.",
+    description: `Analyze any GitHub repo with ${STATIC_RULES_TOTAL} static rules + ${ANALYSIS_PASSES.length}-pass AI deep analysis. CodeGraph visualization, AI chat.`,
     siteName: "CodeInsight AI",
     type: "website",
     url: "https://code-insight-ai-six.vercel.app",
