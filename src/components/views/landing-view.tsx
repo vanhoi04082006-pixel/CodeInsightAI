@@ -38,6 +38,7 @@ import { useAppStore } from "@/lib/store";
 import { useT } from "@/lib/i18n";
 import { parseRepoUrl } from "@/lib/repo-utils";
 import { PROVIDER_PRESETS } from "@/lib/providers";
+import { ANALYSIS_PASSES } from "@/lib/analysis-manifest";
 import { LandingFAQ } from "@/components/shared/landing-faq";
 import { useUpgrade } from "@/hooks/use-upgrade";
 import { signIn } from "next-auth/react";
@@ -647,7 +648,7 @@ export function LandingView() {
           <div className="mt-14 grid gap-5 md:grid-cols-4">
             {[
               { value: "66", label: t("landing", "numbers.staticRules"), color: "#22d3ee" },
-              { value: "8", label: t("landing", "numbers.aiPasses"), color: "#a78bfa" },
+              { value: String(ANALYSIS_PASSES.length), label: t("landing", "numbers.aiPasses"), color: "#a78bfa" },
               { value: "15", label: t("landing", "numbers.aiProviders"), color: "#34d399" },
               { value: "100", label: t("landing", "numbers.openSource"), color: "#fbbf24" },
             ].map((stat, i) => (

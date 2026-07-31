@@ -28,7 +28,8 @@ import { UsageWidget } from "@/components/shared/usage-widget";
 import { TokenUsageWidget } from "@/components/shared/token-usage-widget";
 import { TrendsCard } from "@/components/shared/trends-card";
 import { useAppStore } from "@/lib/store";
-import { useT } from "@/lib/i18n";
+import { useT, useI18nStore } from "@/lib/i18n";
+import { ANALYSIS_PASSES } from "@/lib/analysis-manifest";
 import { toast } from "sonner";
 import {
   ResponsiveContainer,
@@ -507,9 +508,9 @@ function EmptyDashboard() {
         // Resume AI passes if AI is still pending (e.g. after refresh)
         if (d.aiStatus === "pending") {
           useAppStore.getState().setAiPending(true);
-          // Check which passes are already done
-          const completedPasses = (d.report as any)?._aiPassesCompleted || [];
-          const allPasses = ["summary", "priorities", "security", "architecture", "quality", "performance", "bestPractices", "duplicates"];
+          // Check which passes are already done (derive from manifest — single source of truth)
+          const completedPasses: string[] = (d.report as any)?._aiPassesCompleted || [];
+          const allPasses = ANALYSIS_PASSES.map(p => p.type);
           const remainingPasses = allPasses.filter(p => !completedPasses.includes(p));
 
           if (remainingPasses.length === 0) {
@@ -523,7 +524,7 @@ function EmptyDashboard() {
                   const res = await fetch("/api/analyze/ai-pass", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ analysisId: id, passType, language: "en" }),
+                    body: JSON.stringify({ analysisId: id, passType, language: useI18nStore.getState().locale }),
                   });
                   const data = await res.json();
                   if (data.status === "done" && data.report) {

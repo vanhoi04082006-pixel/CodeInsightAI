@@ -207,5 +207,5 @@ export const ANALYSIS_TABS: TabDef[] = [
   { id: "code", labelKey: "code", passTypes: [], getCount: () => 0 },
   { id: "docs", labelKey: "docs", passTypes: [], getCount: () => 0 },
   { id: "roadmap", labelKey: "roadmap", passTypes: ["priorities"], getCount: () => 0 },
-  { id: "timeline", labelKey: "timeline", passTypes: [], getCount: () => 0 },
+  { id: "timeline", labelKey: "timeline.title", passTypes: [], getCount: () => 0 },
 ];

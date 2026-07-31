@@ -29,7 +29,7 @@
   "principleSecure": "Enterprise-grade security",
   "principleSecureDesc": "API keys are AES-256-GCM encrypted server-side. BYOK keys are never exposed to the frontend. Multi-tenant isolation with per-user quotas.",
   "principleFast": "Fast & scalable",
-  "principleFastDesc": "66 static analysis rules run instantly. 7-pass AI deep analysis completes in under 60 seconds. CodeGraph pre-indexes your codebase for instant AI navigation.",
+  "principleFastDesc": "66 static analysis rules run instantly. 9-pass AI deep analysis completes in under 60 seconds. CodeGraph pre-indexes your codebase for instant AI navigation.",
   "featuresEyebrow": "Capabilities",
   "featuresTitle": "Everything a Staff Engineer would tell you",
   "featuresDesc": "CodeInsight doesn't summarise your README. It reads your code, understands your architecture, and reports like a senior engineer doing a deep-dive review.",
@@ -238,7 +238,7 @@
       "desc": "Platform AI — no key needed",
       "features": {
         "f1": "Everything in Free",
-        "f2": "7-pass Deep AI Analysis",
+        "f2": "9-pass Deep AI Analysis",
         "f3": "Platform AI (admin-provided keys)",
         "f4": "100 analyses / month",
         "f5": "2000 chat messages / month",

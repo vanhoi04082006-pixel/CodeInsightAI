@@ -37,7 +37,8 @@ import { GlassCard, ScoreGauge, GradientText, NeonDivider, SeverityBadge } from 
 import { CodeViewer } from "@/components/shared/code-viewer";
 import { UnifiedCodeGraph } from "@/components/shared/unified-codegraph";
 import { DiagramRenderer } from "@/lib/diagram/diagram-renderer";
-import { ANALYSIS_TABS, buildManifest } from "@/lib/analysis-manifest";
+import { ANALYSIS_TABS, ANALYSIS_PASSES, buildManifest } from "@/lib/analysis-manifest";
+import { useAnalysisManifest } from "@/hooks/use-analysis-manifest";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -59,9 +60,11 @@ import { toast } from "sonner";
 import { useT, useI18nStore } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
-type Tab = "overview" | "architecture" | "bugs" | "security" | "performance" | "code" | "docs" | "roadmap" | "codegraph" | "timeline";
+// Tab type derived from the manifest (single source of truth) — no hardcoded union.
+type Tab = (typeof ANALYSIS_TABS)[number]["id"];
 
-// Tab icons mapped by tab id — used with ANALYSIS_TABS from manifest
+// Tab icons mapped by tab id — UI concern (icons are not in the manifest).
+// Falls back to LayoutGrid for any tab without an explicit icon.
 const TAB_ICONS: Record<string, typeof LayoutGrid> = {
   overview: LayoutGrid,
   architecture: Network,
@@ -356,11 +359,11 @@ function OverviewTab({ report, onJumpToTimeline }: { report: AnalysisReport; onJ
   const hasAiExec = !!aiExecSummary;
   const aiOverview = deep?.aiOverview;
 
-  // AI pass status for fallback UI
-  const aiPassesCompleted: string[] = (report as any)._aiPassesCompleted || [];
-  const aiStatus = (report as any).aiStatus;
-  const overviewPassFailed = (aiStatus === "done" || aiStatus === "pending") && !aiPassesCompleted.includes("overview") && !aiOverview;
-  const overviewPassPending = aiStatus === "pending" && !aiPassesCompleted.includes("overview");
+  // AI pass status from the manifest (single source of truth).
+  const manifest = useAnalysisManifest();
+  const overviewPass = manifest.passes.find(p => p.type === "overview");
+  const overviewPassFailed = overviewPass?.status === "failed" && !aiOverview;
+  const overviewPassPending = overviewPass?.status === "pending" || overviewPass?.status === "running";
 
   // Phase 2 (P2.2 + P2.4) — "What changed since last scan" banner.
   // Loads the previous-vs-current diff on mount and classifies it into a
@@ -671,10 +674,11 @@ function ArchitectureTab({ report }: { report: AnalysisReport }) {
   const deep = (report as any).deepAnalysis as any;
   const archReview = deep?.architectureReview;
   const bestPractices = deep?.bestPracticesAudit;
-  const aiPassesCompleted: string[] = (report as any)._aiPassesCompleted || [];
-  const aiStatus = (report as any).aiStatus;
-  const archPassFailed = (aiStatus === "done" || aiStatus === "pending") && !aiPassesCompleted.includes("architecture") && !archReview;
-  const archPassPending = aiStatus === "pending" && !aiPassesCompleted.includes("architecture");
+  // AI pass status from the manifest (single source of truth).
+  const manifest = useAnalysisManifest();
+  const archPass = manifest.passes.find(p => p.type === "architecture");
+  const archPassFailed = archPass?.status === "failed" && !archReview;
+  const archPassPending = archPass?.status === "pending" || archPass?.status === "running";
   return (
     <div className="space-y-4">
       {/* AI Architecture Review — deep analysis (shown above static content when AI is available) */}
@@ -911,12 +915,14 @@ function IssuesTab({ issues, title, color, report, id }: { issues: Issue[]; titl
     id === "performance" ? t("reports", "aiInsights.perfReview") :
     t("reports", "aiInsights.codeQualityReview");
 
-  // Check if AI was attempted but this specific pass failed
-  const aiPassesCompleted: string[] = (report as any)._aiPassesCompleted || [];
-  const passName = id === "security" ? "security" : id === "performance" ? "performance" : "quality";
-  const aiWasAttempted = (report as any).aiStatus === "done" || (report as any).aiStatus === "pending";
-  const aiPassFailed = aiWasAttempted && !aiPassesCompleted.includes(passName) && (!aiReviews || aiReviews.length === 0);
-  const aiPending = (report as any).aiStatus === "pending" && !aiPassesCompleted.includes(passName);
+  // Derive this tab's pass state from the manifest (single source of truth).
+  // Tab id → pass type is defined in ANALYSIS_TABS, not hardcoded here.
+  const manifest = useAnalysisManifest();
+  const tabDef = ANALYSIS_TABS.find(td => td.id === id);
+  const passType = tabDef?.passTypes[0];
+  const passState = passType ? manifest.passes.find(p => p.type === passType) : undefined;
+  const aiPassFailed = passState?.status === "failed";
+  const aiPending = passState?.status === "pending" || passState?.status === "running";
 
   const [actionLoading, setActionLoading] = useState(false);
   // Per-issue AI analysis (on-demand, persisted in sessionStorage)
@@ -1781,10 +1787,11 @@ function RoadmapTab({ report }: { report: AnalysisReport }) {
   const executiveNote: string | undefined = deep?.executiveNote;
   const sequencerWarnings: string[] | undefined = (report as any)._sequencerWarnings;
   const hasAi = !!aiRoadmap || !!aiPriorities;
-  const aiPassesCompleted: string[] = (report as any)._aiPassesCompleted || [];
-  const aiStatus = (report as any).aiStatus;
-  const prioPassFailed = (aiStatus === "done" || aiStatus === "pending") && !aiPassesCompleted.includes("priorities") && !hasAi;
-  const prioPassPending = aiStatus === "pending" && !aiPassesCompleted.includes("priorities");
+  // AI pass status from the manifest (single source of truth).
+  const manifest = useAnalysisManifest();
+  const prioPass = manifest.passes.find(p => p.type === "priorities");
+  const prioPassFailed = prioPass?.status === "failed" && !hasAi;
+  const prioPassPending = prioPass?.status === "pending" || prioPass?.status === "running";
 
   // Phase 2 (P2.5) — graph-validated refactor sequencing.
   // Loads the RefactorRoadmap on mount when an active analysis exists; the

@@ -102,7 +102,7 @@
   "metricGodModules": "God module",
   "metricsDesc": "Chỉ số sâu được tính từ import graph thực tế (nguyên lý component của Robert C. Martin).",
   "aiInsights": {
-    "deepAI": "Phân tích AI sâu (7-pass)",
+    "deepAI": "Phân tích AI sâu (9-pass)",
     "aiEnhanced": "AI-Enhanced",
     "execSummary": "Tóm tắt điều hành",
     "securityReview": "Đánh giá bảo mật AI",

@@ -40,6 +40,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useT, useI18nStore } from "@/lib/i18n";
+import { useAnalysisManifest } from "@/hooks/use-analysis-manifest";
 import { ALL_GRAPH_TYPES } from "@/lib/graph/providers";
 import type { GraphType, GraphNode, GraphEdge, GraphStats, InspectorData, GraphAIConfig } from "@/lib/graph/types";
 import type { AnalysisReport } from "@/lib/types";
@@ -444,13 +445,11 @@ export function UnifiedCodeGraph({
   /* ── Dead code / duplicate code (from report) ── */
   const deep = (report as any).deepAnalysis as any;
   const aiDuplicates: any[] | undefined = deep?.duplicateAnalysis;
-  const aiPassesCompleted: string[] = (report as any)._aiPassesCompleted || [];
-  const aiStatus = (report as any).aiStatus;
-  const dupPassFailed =
-    (aiStatus === "done" || aiStatus === "pending") &&
-    !aiPassesCompleted.includes("duplicates") &&
-    (!aiDuplicates || aiDuplicates.length === 0);
-  const dupPassPending = aiStatus === "pending" && !aiPassesCompleted.includes("duplicates");
+  // AI pass status from the manifest (single source of truth).
+  const manifest = useAnalysisManifest();
+  const dupPass = manifest.passes.find(p => p.type === "duplicates");
+  const dupPassFailed = dupPass?.status === "failed" && (!aiDuplicates || aiDuplicates.length === 0);
+  const dupPassPending = dupPass?.status === "pending" || dupPass?.status === "running";
 
   /* ── Render ── */
   if (loading) {

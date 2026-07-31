@@ -15,6 +15,7 @@ import {
   blockingViolations,
 } from "@/lib/policies/evaluator";
 import { getUserPlanInfo } from "@/lib/billing/token-budget";
+import { ANALYSIS_PASSES } from "@/lib/analysis-manifest";
 import {
   enforceRateLimit,
   rateLimit429Body,
@@ -343,7 +344,7 @@ async function runAIAnalysisInBackground(
     return;
   }
 
-  console.log(`[ai-bg] Running 7-pass AI for ${analysisId} with ${aiConfig.providerId}/${aiConfig.model}`);
+  console.log(`[ai-bg] Running ${ANALYSIS_PASSES.length}-pass AI for ${analysisId} with ${aiConfig.providerId}/${aiConfig.model}`);
 
   const { runDeepAnalysis } = await import("@/lib/ai-deep-analysis");
 

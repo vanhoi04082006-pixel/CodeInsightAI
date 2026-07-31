@@ -17,7 +17,7 @@ const STEPS = [
   {
     icon: ScanSearch,
     title: "Analyze Any Repository",
-    desc: "Paste a GitHub URL and get a comprehensive analysis with 66 static rules + 7-pass AI deep analysis.",
+    desc: "Paste a GitHub URL and get a comprehensive analysis with 66 static rules + 9-pass AI deep analysis.",
     color: "#22d3ee",
   },
   {
