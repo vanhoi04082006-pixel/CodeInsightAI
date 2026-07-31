@@ -97,7 +97,7 @@
     "scopePrefix": "We request",
     "scopeAnd": "and",
     "scopeSuffix": "scopes (so we can analyze your private repositories). You can revoke access anytime from your GitHub settings.",
-    "feature1": "Analyze any GitHub repository with 12 AI agents",
+    "feature1": "Analyze any GitHub repository with 10 AI agents",
     "feature2": "66 static analysis rules (security, bugs, performance)",
     "feature3": "Bring your own API key — or use Platform AI (Pro)",
     "backToLanding": "← Back to landing",

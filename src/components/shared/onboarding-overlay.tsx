@@ -23,7 +23,7 @@ const STEPS = [
   {
     icon: Plug,
     title: "Connect Your AI",
-    desc: "Bring your own API key (free) or use Platform AI (Pro, $9/mo). 14 providers supported.",
+    desc: "Bring your own API key (free) or use Platform AI (Pro, $9/mo). 15 providers supported.",
     color: "#a78bfa",
   },
   {

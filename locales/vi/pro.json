@@ -10,7 +10,7 @@
     "stripePortal": "Cổng khách hàng Stripe",
     "features": {
       "platformAi": "Platform AI",
-      "platformAiDesc": "Không cần API key — Claude 3.5 / GPT-4o",
+      "platformAiDesc": "Không cần API key — 8 model bao gồm",
       "unlimitedAnalyses": "Phân tích không giới hạn",
       "unlimitedAnalysesDesc": "100/tháng thay vì 5",
       "streamingChat": "Trò chuyện streaming",

@@ -21,7 +21,7 @@ import { useUpgrade } from "@/hooks/use-upgrade";
 import { cn } from "@/lib/utils";
 
 const PRO_FEATURES = [
-  { icon: Sparkles, label: "Platform AI", desc: "No API key needed — Claude 3.5 / GPT-4o" },
+  { icon: Sparkles, label: "Platform AI", desc: "No API key needed — 8 models included" },
   { icon: InfinityIcon, label: "Unlimited Analyses", desc: "100/month instead of 5" },
   { icon: Zap, label: "Streaming Chat", desc: "Real-time token streaming" },
   { icon: Rocket, label: "Priority Queue", desc: "Faster agent task execution" },

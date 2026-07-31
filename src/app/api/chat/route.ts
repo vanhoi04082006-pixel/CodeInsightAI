@@ -323,7 +323,7 @@ Use this graph knowledge to answer questions about function callers, callees, de
     }
 
     // Resolve effective provider using the unified platform-ai resolver.
-    // This supports ALL 14 providers (not just OpenRouter) and handles
+    // This supports ALL 15 providers (not just OpenRouter) and handles
     // Platform AI, BYOK (with encrypted DB lookup in production), and local providers.
     let finalProvider = await resolveEffectiveProvider(
       body.aiMode,
@@ -401,7 +401,7 @@ Use this graph knowledge to answer questions about function callers, callees, de
 
     try {
       if (finalProvider) {
-        // Use unified ai-client (supports all 14 providers)
+        // Use unified ai-client (supports all 15 providers)
         // RETRY: If first call returns empty, retry once (timing issue with cold start)
         for (let attempt = 0; attempt < 2; attempt++) {
           try {

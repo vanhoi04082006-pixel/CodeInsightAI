@@ -1,7 +1,7 @@
 {
   "title": "AI Agents",
   "subtitle": "Multi-Agent System",
-  "description": "11 specialized AI agents that plan, analyze, fix, and ship code autonomously.",
+  "description": "10 specialized AI agents that plan, analyze, fix, and ship code autonomously.",
 
   "tabs": {
     "dashboard": "Dashboard",
@@ -37,9 +37,9 @@
 
   "workflow": {
     "title": "Autonomous Workflow Runner",
-    "description": "Describe a goal in plain English. The 11-agent pipeline will plan, execute, build, test, fix, and commit autonomously.",
+    "description": "Describe a goal in plain English. The 10-agent pipeline will plan, execute, build, test, fix, and commit autonomously.",
     "goalLabel": "Goal",
-    "goalPlaceholder": "Add Google Login to this project",
+    "goalPlaceholder": "Add dark mode to this project",
     "repoLabel": "Repository (bound to active analysis)",
     "providerLabel": "AI Provider",
     "providerDefault": "Built-in (no provider)",

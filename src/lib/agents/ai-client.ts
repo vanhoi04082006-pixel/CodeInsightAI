@@ -1,6 +1,6 @@
 // CodeInsight AI — Shared AI Client for Agents
 //
-// DELEGATES to the unified lib/ai-client.ts (supports all 14 providers).
+// DELEGATES to the unified lib/ai-client.ts (supports all 15 providers).
 // This wrapper maintains backward compatibility with existing agent code
 // that imports from "@/lib/agents/ai-client".
 //
@@ -14,7 +14,7 @@ export type { AIProviderConfig, AIMessage };
 
 /**
  * Call an AI provider with messages. Returns the assistant's text reply.
- * Delegates to unified callAI() — supports all 14 providers.
+ * Delegates to unified callAI() — supports all 15 providers.
  */
 export async function callAI(
   provider: AIProviderConfig,
@@ -59,7 +59,7 @@ export async function callAIForJSON<T = any>(
 
 /**
  * Stream AI response chunk by chunk. Calls onChunk for each text delta.
- * Delegates to unified streamAI() — true SSE streaming for all 14 providers.
+ * Delegates to unified streamAI() — true SSE streaming for all 15 providers.
  */
 export async function streamAI(
   provider: AIProviderConfig,

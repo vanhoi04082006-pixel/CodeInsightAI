@@ -1,5 +1,5 @@
 // CodeInsight AI — Shared domain types
-// Local-first AI development platform. No SaaS, no billing.
+// AI-powered code intelligence SaaS platform (BYOK + Platform AI).
 
 export type View =
   | "landing"
@@ -13,7 +13,7 @@ export type View =
   | "personalities"
   | "admin";
 
-/* ---------- AI Providers (local-first, BYO keys) ---------- */
+/* ---------- AI Providers (BYOK + Platform AI, server-side encrypted) ---------- */
 export type ProviderId =
   | "openrouter"
   | "openai"

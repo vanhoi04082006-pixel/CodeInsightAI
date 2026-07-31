@@ -1,6 +1,6 @@
 {
   "title": "AI Providers",
-  "subtitle": "Connect unlimited AI providers. Switch models freely. No subscriptions, no billing — your keys, your data.",
+  "subtitle": "Connect unlimited AI providers. Switch models freely. Keys are encrypted server-side — your keys, your data.",
   "addProvider": "Add AI Provider",
   "statEnabled": "Enabled",
   "statConnected": "Connected",
@@ -18,7 +18,7 @@
   "displayLabel": "Display label",
   "model": "Model",
   "apiKey": "API Key",
-  "apiKeyHint": "stored locally only",
+  "apiKeyHint": "AES-256-GCM encrypted",
   "baseUrl": "Base URL",
   "temperature": "Temperature",
   "maxTokens": "Max tokens",

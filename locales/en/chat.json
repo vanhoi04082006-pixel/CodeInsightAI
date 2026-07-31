@@ -19,7 +19,7 @@
   "errorReply": "I ran into an issue processing that. Could you rephrase or try again?",
   "intro": "I've finished analysing **{owner}/{name}**.\n\nHere's the quick read:\n- Overall health: **{overall}/100**\n- Top risk: {topRisk}\n- Architecture: {arch}\n\nAsk me anything — security, performance, what to refactor, or what to build next.",
   "noRisk": "none critical",
-  "footerNote": "CodeInsight AI · GPT-4o + Claude · Answers are AI-generated and should be reviewed.",
+  "footerNote": "CodeInsight AI · Multi-model AI · Answers are AI-generated and should be reviewed.",
   "analyzeFirstToast": "Analyze a repository first",
   "chatFailedToast": "The AI couldn't respond. Please try again.",
   "personalityLabel": "Personality",

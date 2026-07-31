@@ -1,6 +1,6 @@
 // POST /api/chat/stream — Streaming chat via SSE
 // Returns text/event-stream with chunks as AI generates them.
-// Uses the unified streamAI() from lib/ai-client.ts — supports all 14 providers.
+// Uses the unified streamAI() from lib/ai-client.ts — supports all 15 providers.
 import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { requireUserId, verifyAnalysisOwnership } from "@/lib/auth";
@@ -163,7 +163,7 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Use the unified resolver (supports all 14 providers)
+  // Use the unified resolver (supports all 15 providers)
   // FIXED: Pass platformSelection (4th param) so Pro users get their selected provider
   let finalProvider = await resolveEffectiveProvider(
     body.aiMode,

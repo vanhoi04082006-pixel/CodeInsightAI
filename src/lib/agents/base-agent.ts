@@ -41,7 +41,7 @@ export abstract class BaseAgent {
     fn(`[${this.info.name}] [${level}] ${message}`);
   }
 
-  /** Record a decision — kept for backward compat with the 11 agent files; now a no-op (just console-logs). */
+  /** Record a decision — kept for backward compat with the 10 agent files; now a no-op (just console-logs). */
   protected recordDecision(_taskId: string, decision: string, rationale: string): void {
     console.log(`[${this.info.name}] decision: ${decision} — ${rationale}`);
   }

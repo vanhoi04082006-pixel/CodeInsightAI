@@ -10,7 +10,7 @@
     "stripePortal": "Stripe customer portal",
     "features": {
       "platformAi": "Platform AI",
-      "platformAiDesc": "No API key needed — Claude 3.5 / GPT-4o",
+      "platformAiDesc": "No API key needed — 8 models included",
       "unlimitedAnalyses": "Unlimited Analyses",
       "unlimitedAnalysesDesc": "100/month instead of 5",
       "streamingChat": "Streaming Chat",

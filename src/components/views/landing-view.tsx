@@ -39,6 +39,7 @@ import { useT } from "@/lib/i18n";
 import { parseRepoUrl } from "@/lib/repo-utils";
 import { PROVIDER_PRESETS } from "@/lib/providers";
 import { ANALYSIS_PASSES } from "@/lib/analysis-manifest";
+import { AGENT_COUNT } from "@/lib/agents/constants";
 import { LandingFAQ } from "@/components/shared/landing-faq";
 import { useUpgrade } from "@/hooks/use-upgrade";
 import { signIn } from "next-auth/react";
@@ -242,9 +243,9 @@ export function LandingView() {
         <div className="mx-auto max-w-5xl">
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
             {[
-              { value: 14, suffix: "", label: t("landing", "statsProviders"), color: "#22d3ee" },
+              { value: PROVIDER_PRESETS.length, suffix: "", label: t("landing", "statsProviders"), color: "#22d3ee" },
               { value: 40, suffix: "+", label: t("landing", "statsLanguages"), color: "#a78bfa" },
-              { value: 0, suffix: "", label: t("landing", "statsSubscriptions"), color: "#34d399" },
+              { value: ANALYSIS_PASSES.length, suffix: "", label: t("landing", "statsSubscriptions"), color: "#34d399" },
               { value: 60, suffix: "s", label: t("landing", "statsAvg"), color: "#fbbf24" },
             ].map((s, i) => (
               <motion.div
@@ -565,7 +566,7 @@ export function LandingView() {
                         // Pro plan → direct Stripe checkout
                         upgrade("pro");
                       } else if (plan.contact) {
-                        // Team/Enterprise → email contact (admin-managed plan)
+                        // Team → email contact (admin-managed plan)
                         window.location.href = "mailto:vanhoi04082006@gmail.com?subject=CodeInsight%20AI%20Team%20Plan&body=Hi,%20I'm%20interested%20in%20the%20Team%20plan%20for%20CodeInsight%20AI.";
                       } else {
                         // Free plan → GitHub sign-in
@@ -591,7 +592,7 @@ export function LandingView() {
           </div>
           <p className="mt-6 text-center text-xs text-muted-foreground">
             {t("landing", "pricing.teamNote")}{" "}
-            <a href="mailto:vanhoi04082006@gmail.com?subject=CodeInsight%20AI%20Enterprise" className="text-cyan-300 hover:underline">{t("landing", "pricing.emailUs")}</a>
+            <a href="mailto:vanhoi04082006@gmail.com?subject=CodeInsight%20AI%20Team%20Plan" className="text-cyan-300 hover:underline">{t("landing", "pricing.emailUs")}</a>
           </p>
         </div>
       </section>
@@ -729,7 +730,7 @@ export function LandingView() {
               { icon: ShieldCheck, label: t("landing", "statsGrid.securityRules"), value: "13", color: "#f472b6" },
               { icon: Bug, label: t("landing", "statsGrid.bugPatterns"), value: "11", color: "#fbbf24" },
               { icon: Gauge, label: t("landing", "statsGrid.perfRules"), value: "42", color: "#34d399" },
-              { icon: Bot, label: t("landing", "statsGrid.aiAgents"), value: "12", color: "#22d3ee" },
+              { icon: Bot, label: t("landing", "statsGrid.aiAgents"), value: String(AGENT_COUNT), color: "#22d3ee" },
             ].map((stat, i) => {
               const Icon = stat.icon;
               return (

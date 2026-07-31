@@ -1,7 +1,7 @@
 {
   "title": "AI Agents",
   "subtitle": "Hệ thống Multi-Agent",
-  "description": "11 AI agent chuyên biệt tự động lập kế hoạch, phân tích, sửa lỗi và ship code.",
+  "description": "10 AI agent chuyên biệt tự động lập kế hoạch, phân tích, sửa lỗi và ship code.",
 
   "tabs": {
     "dashboard": "Dashboard",
@@ -37,9 +37,9 @@
 
   "workflow": {
     "title": "Autonomous Workflow Runner",
-    "description": "Mô tả mục tiêu bằng tiếng Việt hoặc tiếng Anh. Pipeline 11-agent sẽ tự động lập kế hoạch, thực thi, build, test, sửa lỗi, và commit.",
+    "description": "Mô tả mục tiêu bằng tiếng Việt hoặc tiếng Anh. Pipeline 10-agent sẽ tự động lập kế hoạch, thực thi, build, test, sửa lỗi, và commit.",
     "goalLabel": "Mục tiêu",
-    "goalPlaceholder": "Thêm Google Login vào project này",
+    "goalPlaceholder": "Thêm dark mode vào project này",
     "repoLabel": "Repository (gắn với phân tích hiện tại)",
     "providerLabel": "AI Provider",
     "providerDefault": "Built-in (không dùng provider)",

@@ -73,7 +73,7 @@ export function SettingsView() {
   const prevStatus = useRef(status);
 
   useEffect(() => {
-    // Xử lý thông báo lỗi (Nếu user bấm hủy trên trang Github/Google)
+    // Handle error notifications (if user cancels on the GitHub OAuth page)
     const params = new URLSearchParams(window.location.search);
     const error = params.get("error");
     if (error) {
