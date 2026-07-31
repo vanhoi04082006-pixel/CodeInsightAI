@@ -107,6 +107,21 @@
     "noMessages": "Không có tin nhắn",
     "noActivity": "Không có hoạt động"
   },
+  "auth": {
+    "signedInAs": "Đã đăng nhập là {name}",
+    "errors": {
+      "OAuthSignin": "Không thể bắt đầu GitHub OAuth. Vui lòng thử lại.",
+      "OAuthCallback": "GitHub OAuth callback thất bại. Kiểm tra GitHub OAuth App callback URL khớp với domain này.",
+      "OAuthCreateAccount": "Không thể tạo tài khoản. Vui lòng liên hệ hỗ trợ.",
+      "EmailCreateAccount": "Không thể tạo tài khoản. Vui lòng liên hệ hỗ trợ.",
+      "Callback": "Lỗi OAuth callback. Đảm bảo NEXTAUTH_URL khớp với domain này.",
+      "AccessDenied": "Bạn đã từ chối yêu cầu GitHub OAuth. Vui lòng thử lại.",
+      "Configuration": "Lỗi cấu hình máy chủ. Quản trị viên phải đặt NEXTAUTH_SECRET, GITHUB_ID, và GITHUB_SECRET.",
+      "Verification": "Token xác minh hết hạn hoặc đã dùng. Vui lòng thử lại.",
+      "default": "Xác thực thất bại. Vui lòng thử lại.",
+      "prefix": "Xác thực thất bại: {error}"
+    }
+  },
   "userMenu": {
     "userFallback": "Người dùng",
     "ariaLabel": "Menu người dùng",

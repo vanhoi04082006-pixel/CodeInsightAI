@@ -278,7 +278,7 @@ export function UnifiedCodeGraph({
       })
       .catch((e) => {
         if (e?.name === "AbortError") return;
-        setLoadError(e?.message || "Failed to load graph");
+        setLoadError(e?.message || t("codegraph", "loadFailed"));
       })
       .finally(() => setLoading(false));
     return () => ctrl.abort();
@@ -413,7 +413,7 @@ export function UnifiedCodeGraph({
       stats ? `Stats: ${stats.totalNodes} nodes · ${stats.totalEdges} edges · avg connectivity ${stats.avgConnectivity}` : "",
       stats && stats.byNodeType ? `By node type: ${JSON.stringify(stats.byNodeType)}` : "",
       stats && stats.byEdgeType ? `By edge type: ${JSON.stringify(stats.byEdgeType)}` : "",
-      cycles.length > 0 ? `Circular dependencies (${cycles.length}): ${cycles.slice(0, 5).map((c) => c.join("→")).join(" | ")}` : "No circular dependencies detected.",
+      cycles.length > 0 ? `${t("codegraph", "cyclesFound", { count: cycles.length })}: ${cycles.slice(0, 5).map((c) => c.join("→")).join(" | ")}` : t("codegraph", "noCycles"),
       topNodesByDegree.length > 0
         ? `Top nodes by degree:\n${topNodesByDegree.map((n) => `- ${n.label} [${n.type}] — degree ${n.degree}`).join("\n")}`
         : "",
@@ -430,7 +430,7 @@ export function UnifiedCodeGraph({
         }),
       });
       const data = await res.json();
-      const reply: string = data.reply || data.message?.content || "No response";
+      const reply: string = data.reply || data.message?.content || t("codegraph", "aiNoResponse");
       setAiInsight(reply);
       if (aiStorageKey) {
         try { sessionStorage.setItem(aiStorageKey, reply); } catch { /* quota */ }

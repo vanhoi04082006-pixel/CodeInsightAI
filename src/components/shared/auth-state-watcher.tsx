@@ -4,17 +4,17 @@ import { useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import { useProvidersStore } from "@/lib/providers-store";
+import { useI18nStore } from "@/lib/i18n";
 
-const AUTH_ERROR_MESSAGES: Record<string, string> = {
-  OAuthSignin: "Could not start GitHub OAuth flow. Please try again.",
-  OAuthCallback: "GitHub OAuth callback failed. Check that the GitHub OAuth App callback URL matches this domain exactly.",
-  OAuthCreateAccount: "Could not create your account. Please contact support.",
-  EmailCreateAccount: "Could not create your account. Please contact support.",
-  Callback: "OAuth callback error. Make sure NEXTAUTH_URL matches this domain.",
-  AccessDenied: "You denied the GitHub authorization request. Please try again.",
-  Configuration: "Server configuration error. The administrator must set NEXTAUTH_SECRET, GITHUB_ID, and GITHUB_SECRET.",
-  Verification: "The verification token expired or was already used. Please try again.",
-  default: "Authentication failed. Please try again.",
+const AUTH_ERROR_KEYS: Record<string, string> = {
+  OAuthSignin: "OAuthSignin",
+  OAuthCallback: "OAuthCallback",
+  OAuthCreateAccount: "OAuthCreateAccount",
+  EmailCreateAccount: "EmailCreateAccount",
+  Callback: "Callback",
+  AccessDenied: "AccessDenied",
+  Configuration: "Configuration",
+  Verification: "Verification",
 };
 
 /**
@@ -30,6 +30,7 @@ export function AuthStateWatcher() {
   const prevStatus = useRef<string | null>(null);
   const errorHandledRef = useRef(false);
   const syncFromBackend = useProvidersStore((s) => s.syncFromBackend);
+  const t = useI18nStore((s) => s.t);
 
   // Surface OAuth redirect errors once on mount (e.g. ?error=OAuthCallback).
   // We use a small delay to ensure the Sonner <Toaster> has mounted first —
@@ -43,7 +44,10 @@ export function AuthStateWatcher() {
         const params = new URLSearchParams(window.location.search);
         const error = params.get("error");
         if (error) {
-          const message = AUTH_ERROR_MESSAGES[error] ?? `Authentication failed: ${error}`;
+          const errorKey = AUTH_ERROR_KEYS[error] ?? "default";
+          const message = t("common", `auth.errors.${errorKey}`) === `auth.errors.${errorKey}`
+            ? t("common", "auth.errors.prefix", { error })
+            : t("common", `auth.errors.${errorKey}`);
           toast.error(message, { duration: 8000 });
           // Clean the URL so the toast doesn't reappear on refresh / share
           window.history.replaceState({}, document.title, window.location.pathname);
@@ -63,8 +67,8 @@ export function AuthStateWatcher() {
       return;
     }
     if (prevStatus.current === "loading" && status === "authenticated" && session?.user) {
-      const name = session.user.name ?? session.user.email ?? "User";
-      toast.success(`Signed in as ${name}`);
+      const name = session.user.name ?? session.user.email ?? t("common", "userMenu.userFallback");
+      toast.success(t("common", "auth.signedInAs", { name }));
 
       // After sign-in, sync providers from the backend (encrypted credentials,
       // masked keys — no raw API key in browser localStorage).

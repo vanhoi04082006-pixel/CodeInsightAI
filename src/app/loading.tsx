@@ -2,8 +2,10 @@
 
 import { motion } from "framer-motion";
 import { GlassCard } from "@/components/shared/ui";
+import { useI18nStore } from "@/lib/i18n";
 
 export default function Loading() {
+  const t = useI18nStore((s) => s.t);
   return (
     <div className="flex min-h-screen items-center justify-center px-4">
       <motion.div
@@ -43,7 +45,7 @@ export default function Loading() {
           <span className="h-2 w-2 animate-pulse rounded-full bg-cyan-400" />
           <span className="h-2 w-2 animate-pulse rounded-full bg-cyan-400" style={{ animationDelay: "0.2s" }} />
           <span className="h-2 w-2 animate-pulse rounded-full bg-cyan-400" style={{ animationDelay: "0.4s" }} />
-          <span className="ml-2">Loading…</span>
+          <span className="ml-2">{t("common", "status.loading")}</span>
         </div>
       </motion.div>
     </div>

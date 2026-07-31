@@ -287,10 +287,9 @@ export interface AnalysisReport {
 
 export interface AnalysisStage {
   id: string;
-  label: string;
-  description: string;
+  /** Icon key from lucide-react (mapped in analyze-view ICONS record) */
   icon: string;
-  duration: number; // ms
+  duration: number; // ms (used for simulated progress timing)
 }
 
 export interface ChatMessage {

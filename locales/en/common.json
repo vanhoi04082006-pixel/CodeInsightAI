@@ -107,6 +107,21 @@
     "noMessages": "No messages",
     "noActivity": "No activity"
   },
+  "auth": {
+    "signedInAs": "Signed in as {name}",
+    "errors": {
+      "OAuthSignin": "Could not start GitHub OAuth flow. Please try again.",
+      "OAuthCallback": "GitHub OAuth callback failed. Check that the GitHub OAuth App callback URL matches this domain exactly.",
+      "OAuthCreateAccount": "Could not create your account. Please contact support.",
+      "EmailCreateAccount": "Could not create your account. Please contact support.",
+      "Callback": "OAuth callback error. Make sure NEXTAUTH_URL matches this domain.",
+      "AccessDenied": "You denied the GitHub authorization request. Please try again.",
+      "Configuration": "Server configuration error. The administrator must set NEXTAUTH_SECRET, GITHUB_ID, and GITHUB_SECRET.",
+      "Verification": "The verification token expired or was already used. Please try again.",
+      "default": "Authentication failed. Please try again.",
+      "prefix": "Authentication failed: {error}"
+    }
+  },
   "userMenu": {
     "userFallback": "User",
     "ariaLabel": "User menu",

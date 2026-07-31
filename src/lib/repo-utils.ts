@@ -42,61 +42,17 @@ export function parseRepoUrl(input: string): ParsedRepo {
 }
 
 /* ---------- Analysis stages (visual pipeline) ---------- */
+// Stage labels + descriptions are NOT hardcoded here — they come from i18n:
+//   t("analysis", `stages.${stage.id}`)  → stage label
+//   t("analysis", `${stage.id}Desc`)     → stage description
+// This keeps the visual pipeline in sync with the user's locale.
 export const ANALYSIS_STAGES: AnalysisStage[] = [
-  {
-    id: "clone",
-    label: "Cloning Repository",
-    description: "Fetching source tree & commit history",
-    icon: "git-branch",
-    duration: 1400,
-  },
-  {
-    id: "scan",
-    label: "Scanning File Tree",
-    description: "Indexing files, detecting languages",
-    icon: "scan",
-    duration: 1200,
-  },
-  {
-    id: "ast",
-    label: "Generating AST",
-    description: "Parsing source into abstract syntax trees",
-    icon: "binary",
-    duration: 1600,
-  },
-  {
-    id: "deps",
-    label: "Building Dependency Graph",
-    description: "Resolving imports & module relationships",
-    icon: "network",
-    duration: 1500,
-  },
-  {
-    id: "embed",
-    label: "Creating Embeddings",
-    description: "Vectorising code for semantic search",
-    icon: "brain",
-    duration: 1400,
-  },
-  {
-    id: "static",
-    label: "Static Analysis",
-    description: "Complexity, duplication, dead code",
-    icon: "search-code",
-    duration: 1500,
-  },
-  {
-    id: "ai",
-    label: "AI Analysis",
-    description: "Security, performance & architecture review",
-    icon: "sparkles",
-    duration: 1800,
-  },
-  {
-    id: "report",
-    label: "Generating Reports",
-    description: "Synthesising insights & diagrams",
-    icon: "file-text",
-    duration: 1300,
-  },
+  { id: "clone", icon: "git-branch", duration: 1400 },
+  { id: "scan", icon: "scan", duration: 1200 },
+  { id: "ast", icon: "binary", duration: 1600 },
+  { id: "deps", icon: "network", duration: 1500 },
+  { id: "embed", icon: "brain", duration: 1400 },
+  { id: "static", icon: "search-code", duration: 1500 },
+  { id: "ai", icon: "sparkles", duration: 1800 },
+  { id: "report", icon: "file-text", duration: 1300 },
 ];
