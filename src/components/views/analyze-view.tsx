@@ -23,6 +23,7 @@ import { Input } from "@/components/ui/input";
 import { useAppStore } from "@/lib/store";
 import { useProvidersStore } from "@/lib/providers-store";
 import { ANALYSIS_STAGES, parseRepoUrl } from "@/lib/repo-utils";
+import { ANALYSIS_PASSES } from "@/lib/analysis-manifest";
 import type { AnalysisReport } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -147,18 +148,11 @@ export function AnalyzeView() {
     };
 
     const tAnalysis = useI18nStore.getState().t;
-    // Wave 6 Phase 1: overview runs FIRST so leadership gets a 30-second read early.
-    const passes = [
-      { type: "overview", name: tAnalysis("analysis", "passes.overview") },
-      { type: "summary", name: tAnalysis("analysis", "passes.summary") },
-      { type: "priorities", name: tAnalysis("analysis", "passes.priorities") },
-      { type: "security", name: tAnalysis("analysis", "passes.security") },
-      { type: "architecture", name: tAnalysis("analysis", "passes.architecture") },
-      { type: "quality", name: tAnalysis("analysis", "passes.quality") },
-      { type: "performance", name: tAnalysis("analysis", "passes.performance") },
-      { type: "bestPractices", name: tAnalysis("analysis", "passes.bestPractices") },
-      { type: "duplicates", name: tAnalysis("analysis", "passes.duplicates") },
-    ];
+    // Use ANALYSIS_PASSES from manifest (single source of truth)
+    const passes = ANALYSIS_PASSES.map(p => ({
+      type: p.type,
+      name: tAnalysis("analysis", p.labelKey),
+    }));
 
     let completedCount = 0;
 

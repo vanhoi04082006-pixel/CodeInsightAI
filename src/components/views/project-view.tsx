@@ -37,6 +37,7 @@ import { GlassCard, ScoreGauge, GradientText, NeonDivider, SeverityBadge } from 
 import { CodeViewer } from "@/components/shared/code-viewer";
 import { UnifiedCodeGraph } from "@/components/shared/unified-codegraph";
 import { DiagramRenderer } from "@/lib/diagram/diagram-renderer";
+import { ANALYSIS_TABS, buildManifest } from "@/lib/analysis-manifest";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -60,18 +61,19 @@ import { cn } from "@/lib/utils";
 
 type Tab = "overview" | "architecture" | "bugs" | "security" | "performance" | "code" | "docs" | "roadmap" | "codegraph" | "timeline";
 
-const TABS: { id: Tab; labelKey: string; icon: typeof LayoutGrid }[] = [
-  { id: "overview", labelKey: "overview", icon: LayoutGrid },
-  { id: "architecture", labelKey: "architecture", icon: Network },
-  { id: "bugs", labelKey: "bugs", icon: Bug },
-  { id: "security", labelKey: "security", icon: ShieldCheck },
-  { id: "performance", labelKey: "performance", icon: Gauge },
-  { id: "codegraph", labelKey: "codegraph", icon: Network },
-  { id: "code", labelKey: "code", icon: FileCode },
-  { id: "docs", labelKey: "docs", icon: FileText },
-  { id: "roadmap", labelKey: "roadmap", icon: Rocket },
-  { id: "timeline", labelKey: "timeline.title", icon: GitCompare },
-];
+// Tab icons mapped by tab id — used with ANALYSIS_TABS from manifest
+const TAB_ICONS: Record<string, typeof LayoutGrid> = {
+  overview: LayoutGrid,
+  architecture: Network,
+  bugs: Bug,
+  security: ShieldCheck,
+  performance: Gauge,
+  codegraph: Network,
+  code: FileCode,
+  docs: FileText,
+  roadmap: Rocket,
+  timeline: GitCompare,
+};
 
 export function ProjectView({ isShared = false }: { isShared?: boolean }) {
   const { t } = useT();
@@ -81,10 +83,10 @@ export function ProjectView({ isShared = false }: { isShared?: boolean }) {
   const aiPending = useAppStore((s) => s.aiPending);
   const [tab, setTab] = useState<Tab>("overview");
   const [sharing, setSharing] = useState(false);
-  // P3.6 — Analysis Snapshots: PDF generation is async; track pending state
-  // for the button spinner. Declared here (before the early return) to
-  // satisfy React's rules-of-hooks (no conditional hook calls).
   const [pdfLoading, setPdfLoading] = useState(false);
+
+  // Build manifest from report (single source of truth)
+  const manifest = useMemo(() => buildManifest(report, activeAnalysisId), [report, activeAnalysisId]);
 
   if (!report) {
     return (
@@ -203,7 +205,8 @@ export function ProjectView({ isShared = false }: { isShared?: boolean }) {
               {report.repoOwner}/{report.repoName} <ExternalLink className="h-3 w-3" />
             </a>
             <span className="rounded-full bg-white/5 px-2 py-0.5 text-[10px]">{report.repoBranch}</span>
-            {(report as any).aiEnhancement?.aiBadge === "ai-enhanced" ? (
+            {/* AI badge from manifest */}
+            {manifest.aiEnabled && manifest.completedPassCount > 0 ? (
               <span className="flex items-center gap-1 rounded-full bg-violet-500/15 px-2 py-0.5 text-[10px] font-medium text-violet-300">
                 <Sparkles className="h-3 w-3" /> {t("reports", "project.aiEnhanced")}
               </span>
@@ -212,10 +215,16 @@ export function ProjectView({ isShared = false }: { isShared?: boolean }) {
                 <Activity className="h-3 w-3" /> {t("reports", "project.staticAnalysis")}
               </span>
             )}
-            {/* AI status indicator */}
-            {aiPending && (
+            {/* AI progress from manifest */}
+            {manifest.status === "running" && (
               <span className="flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium text-amber-300">
-                <Loader2 className="h-3 w-3 animate-spin" /> {t("reports", "project.aiAnalyzing")}
+                <Loader2 className="h-3 w-3 animate-spin" /> {manifest.completedPassCount}/{manifest.totalPassCount} {t("reports", "project.aiAnalyzing")}
+              </span>
+            )}
+            {/* Failed indicator from manifest */}
+            {manifest.passes.some(p => p.status === "failed") && (
+              <span className="flex items-center gap-1 rounded-full bg-rose-500/15 px-2 py-0.5 text-[10px] font-medium text-rose-300">
+                <AlertCircle className="h-3 w-3" /> {manifest.passes.filter(p => p.status === "failed").length} failed
               </span>
             )}
           </div>
@@ -261,19 +270,38 @@ export function ProjectView({ isShared = false }: { isShared?: boolean }) {
         <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)}>
           <div className="overflow-x-auto scrollbar-thin">
             <TabsList className="inline-flex h-auto gap-1 rounded-xl border border-white/10 bg-white/[0.02] p-1">
-              {TABS.map((tab) => {
-                const Icon = tab.icon;
-                const count = tab.id === "bugs" ? report.issues.bugs.length : tab.id === "security" ? report.issues.security.length : tab.id === "performance" ? report.issues.performance.length : 0;
+              {ANALYSIS_TABS.map((tabDef) => {
+                const Icon = TAB_ICONS[tabDef.id] || LayoutGrid;
+                // Count from manifest (not hardcoded)
+                const count = tabDef.getCount?.(report) ?? 0;
+                // AI status for this tab (from manifest)
+                const tabPasses = manifest.passes.filter(p => p.tab === tabDef.id);
+                const tabAiStatus = tabPasses.length > 0
+                  ? (tabPasses.every(p => p.status === "completed") ? "done"
+                    : tabPasses.some(p => p.status === "failed") ? "failed"
+                    : tabPasses.some(p => p.status === "pending") ? "pending"
+                    : "none")
+                  : "none";
                 return (
                   <TabsTrigger
-                    key={tab.id}
-                    value={tab.id}
+                    key={tabDef.id}
+                    value={tabDef.id}
                     className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-500/20 data-[state=active]:to-violet-500/20 data-[state=active]:text-cyan-300"
                   >
                     <Icon className="h-3.5 w-3.5" />
-                    {t("reports", tab.labelKey)}
+                    {t("reports", tabDef.labelKey)}
                     {count > 0 && (
                       <span className="ml-0.5 rounded-full bg-white/10 px-1.5 text-[10px] tabular-nums">{count}</span>
+                    )}
+                    {/* AI status dot from manifest */}
+                    {tabAiStatus === "pending" && (
+                      <span className="ml-0.5 h-1.5 w-1.5 animate-pulse rounded-full bg-amber-400" />
+                    )}
+                    {tabAiStatus === "done" && manifest.aiEnabled && (
+                      <span className="ml-0.5 h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                    )}
+                    {tabAiStatus === "failed" && (
+                      <span className="ml-0.5 h-1.5 w-1.5 rounded-full bg-rose-400" />
                     )}
                   </TabsTrigger>
                 );
