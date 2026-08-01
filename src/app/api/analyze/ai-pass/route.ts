@@ -27,6 +27,42 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 55; // Under 60s Hobby limit
 
+// ─── Per-pass wall-clock deadline ───
+// Vercel kills the function at maxDuration (55s). A single AI attempt can
+// otherwise burn the ENTIRE budget (per-attempt timeout 55s == function limit)
+// leaving zero headroom for the DB write + serialization — and the retry chain
+// (attempt 2 + fallback providers) multiplies that until Vercel returns a 504
+// HTML page (rendered by the client as "Server error (504/500)").
+//
+// Fix: bound ALL AI work per pass to PASS_DEADLINE_MS (well under 55s). Each
+// attempt races a withDeadline() timer; once the budget is spent we stop and
+// return a clean JSON "failed" (retryable via dashboard resume) instead of a 504.
+const PASS_DEADLINE_MS = 45_000;
+const MIN_ATTEMPT_SLACK_MS = 5_000;
+const DEADLINE_ERROR = "ai_pass_deadline";
+
+/** Milliseconds of AI budget still available (0 when expired). */
+function attemptBudgetMs(startedAt: number): number {
+  return PASS_DEADLINE_MS - (Date.now() - startedAt) - MIN_ATTEMPT_SLACK_MS;
+}
+
+/** Race an AI call against a hard deadline — rejects with DEADLINE_ERROR. */
+function withDeadline<T>(promise: Promise<T>, budgetMs: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(DEADLINE_ERROR)), budgetMs);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
+}
+
 // Single source of truth: pass types derive from ANALYSIS_PASSES
 // (src/lib/analysis-manifest.ts) so the backend can never drift from the UI.
 type PassType = (typeof ANALYSIS_PASSES)[number]["type"];
@@ -44,8 +80,8 @@ const PASS_TOKEN_BOOST: Record<string, number> = {
   security: 1.5,      // 5 issues × structured fields
   quality: 1.5,       // 5 bugs × structured fields
   performance: 1.5,   // 5 issues × structured fields
-  priorities: 1.5,    // enhanced roadmap
-  architecture: 1.5,  // strengths/weaknesses/suggestions
+  priorities: 1.0,    // output capped to 8 items — no boost needed (was 1.5)
+  architecture: 1.0,  // output capped to 8 suggestions — no boost needed (was 1.5)
   duplicates: 1.5,    // duplicate analysis
   bestPractices: 1.5, // passed/failed lists
   overview: 1.0,      // executive summary
@@ -53,6 +89,7 @@ const PASS_TOKEN_BOOST: Record<string, number> = {
 };
 
 export async function POST(req: NextRequest) {
+  const startedAt = Date.now();
   const userId = await requireUserId();
   if (!userId) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 
@@ -293,41 +330,62 @@ export async function POST(req: NextRequest) {
     let result: any = null;
     let providerUsed: string | undefined;
     let attemptedProviders: any[] | undefined;
+    let deadlineHit = false;
 
     // ── Attempt 1: json_object response format ──
-    try {
-      const aiResult = await callAIWithFallback(aiConfig, fallbacks, messages, {
-        temperature: 0.3, maxTokens: effectiveMaxTokens, timeout: 55,
-        responseFormat: "json_object",
-        userId,
-        plan: planInfo.plan,
-        audit: { userId, analysisId, passType },
-      });
-      if (aiResult.content) result = safeJsonParse(aiResult.content);
-      providerUsed = aiResult.providerUsed;
-      attemptedProviders = aiResult.attemptedProviders;
-    } catch (e: any) {
-      // P3.1: budget-exceeded propagates immediately — don't retry with half tokens.
-      if (e instanceof TokenBudgetExceededError) throw e;
-      // P3.2: legacy 402-half-token retry — only when no fallback chain is
-      // configured. With a chain, callAIWithFallback already exhausted the
-      // available providers, so retrying with half tokens on the SAME
-      // provider won't help (the provider is genuinely out of credits).
-      if (fallbacks.length === 0) {
-        const errMsg = e?.message || "";
-        if (errMsg.includes("402") || errMsg.includes("credits")) {
-          try {
-            const aiResult = await callAI(aiConfig, messages, {
-              temperature: 0.3, maxTokens: Math.min(1500, Math.floor(effectiveMaxTokens / 2)), timeout: 55,
+    {
+      const budgetMs = attemptBudgetMs(startedAt);
+      if (budgetMs > MIN_ATTEMPT_SLACK_MS) {
+        try {
+          const aiResult = await withDeadline(
+            callAIWithFallback(aiConfig, fallbacks, messages, {
+              temperature: 0.3, maxTokens: effectiveMaxTokens,
+              timeout: Math.max(5, Math.floor(budgetMs / 1000)),
               responseFormat: "json_object",
               userId,
               plan: planInfo.plan,
               audit: { userId, analysisId, passType },
-            });
-            if (aiResult.content) result = safeJsonParse(aiResult.content);
-            providerUsed = aiResult.providerId;
-          } catch (e2: any) {
-            if (e2 instanceof TokenBudgetExceededError) throw e2;
+            }),
+            budgetMs,
+          );
+          if (aiResult.content) result = safeJsonParse(aiResult.content);
+          providerUsed = aiResult.providerUsed;
+          attemptedProviders = aiResult.attemptedProviders;
+        } catch (e: any) {
+          // P3.1: budget-exceeded propagates immediately — don't retry with half tokens.
+          if (e instanceof TokenBudgetExceededError) throw e;
+          if (e?.message === DEADLINE_ERROR) {
+            deadlineHit = true;
+          }
+          // P3.2: legacy 402-half-token retry — only when no fallback chain is
+          // configured. With a chain, callAIWithFallback already exhausted the
+          // available providers, so retrying with half tokens on the SAME
+          // provider won't help (the provider is genuinely out of credits).
+          else if (fallbacks.length === 0) {
+            const errMsg = e?.message || "";
+            if (errMsg.includes("402") || errMsg.includes("credits")) {
+              const retryBudgetMs = attemptBudgetMs(startedAt);
+              if (retryBudgetMs > MIN_ATTEMPT_SLACK_MS) {
+                try {
+                  const aiResult = await withDeadline(
+                    callAI(aiConfig, messages, {
+                      temperature: 0.3, maxTokens: Math.min(1500, Math.floor(effectiveMaxTokens / 2)),
+                      timeout: Math.max(5, Math.floor(retryBudgetMs / 1000)),
+                      responseFormat: "json_object",
+                      userId,
+                      plan: planInfo.plan,
+                      audit: { userId, analysisId, passType },
+                    }),
+                    retryBudgetMs,
+                  );
+                  if (aiResult.content) result = safeJsonParse(aiResult.content);
+                  providerUsed = aiResult.providerId;
+                } catch (e2: any) {
+                  if (e2 instanceof TokenBudgetExceededError) throw e2;
+                  if (e2?.message === DEADLINE_ERROR) deadlineHit = true;
+                }
+              }
+            }
           }
         }
       }
@@ -335,39 +393,50 @@ export async function POST(req: NextRequest) {
 
     // ── Attempt 2: without response_format (some providers reject json_object) ──
     // Use a stronger system prompt that explicitly forbids markdown fences.
-    if (!result) {
-      try {
-        const fallbackMessages: AIMessage[] = [
-          { role: "system", content: "You are a Senior Staff Engineer. Output ONLY valid JSON — no markdown, no code fences, no explanation. Start with { and end with }. Do NOT wrap in ```json blocks." + langInstruction },
-          { role: "user", content: prompt },
-        ];
-        const aiResult = await callAIWithFallback(aiConfig, fallbacks, fallbackMessages, {
-          temperature: 0.2, maxTokens: effectiveMaxTokens, timeout: 55,
-          userId,
-          plan: planInfo.plan,
-          audit: { userId, analysisId, passType },
-        });
-        if (aiResult.content) {
-          // Aggressive cleaning: strip markdown fences, extract first {...} block
-          let cleaned = aiResult.content.trim();
-          cleaned = cleaned.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "");
-          // If still has fences in middle, extract first { to last }
-          const firstBrace = cleaned.indexOf("{");
-          const lastBrace = cleaned.lastIndexOf("}");
-          if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-            cleaned = cleaned.slice(firstBrace, lastBrace + 1);
+    // Skipped if the per-pass deadline is nearly spent — re-trying would only
+    // push past Vercel's function limit and produce a 504 instead of a clean
+    // JSON "failed" (which dashboard resume can retry).
+    if (!result && !deadlineHit) {
+      const budgetMs = attemptBudgetMs(startedAt);
+      if (budgetMs > MIN_ATTEMPT_SLACK_MS) {
+        try {
+          const fallbackMessages: AIMessage[] = [
+            { role: "system", content: "You are a Senior Staff Engineer. Output ONLY valid JSON — no markdown, no code fences, no explanation. Start with { and end with }. Do NOT wrap in ```json blocks." + langInstruction },
+            { role: "user", content: prompt },
+          ];
+          const aiResult = await withDeadline(
+            callAIWithFallback(aiConfig, fallbacks, fallbackMessages, {
+              temperature: 0.2, maxTokens: effectiveMaxTokens,
+              timeout: Math.max(5, Math.floor(budgetMs / 1000)),
+              userId,
+              plan: planInfo.plan,
+              audit: { userId, analysisId, passType },
+            }),
+            budgetMs,
+          );
+          if (aiResult.content) {
+            // Aggressive cleaning: strip markdown fences, extract first {...} block
+            let cleaned = aiResult.content.trim();
+            cleaned = cleaned.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "");
+            // If still has fences in middle, extract first { to last }
+            const firstBrace = cleaned.indexOf("{");
+            const lastBrace = cleaned.lastIndexOf("}");
+            if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+              cleaned = cleaned.slice(firstBrace, lastBrace + 1);
+            }
+            result = safeJsonParse(cleaned);
+            // Try one more: fix trailing commas
+            if (!result) {
+              result = safeJsonParse(cleaned.replace(/,(\s*[}\]])/g, "$1"));
+            }
           }
-          result = safeJsonParse(cleaned);
-          // Try one more: fix trailing commas
-          if (!result) {
-            result = safeJsonParse(cleaned.replace(/,(\s*[}\]])/g, "$1"));
-          }
+          providerUsed = aiResult.providerUsed;
+          attemptedProviders = aiResult.attemptedProviders;
+        } catch (e: any) {
+          if (e instanceof TokenBudgetExceededError) throw e;
+          if (e?.message === DEADLINE_ERROR) deadlineHit = true;
+          console.warn(`[ai-pass] ${passType} attempt 2 failed:`, e?.message?.slice(0, 200));
         }
-        providerUsed = aiResult.providerUsed;
-        attemptedProviders = aiResult.attemptedProviders;
-      } catch (e: any) {
-        if (e instanceof TokenBudgetExceededError) throw e;
-        console.warn(`[ai-pass] ${passType} attempt 2 failed:`, e?.message?.slice(0, 200));
       }
     }
 
@@ -404,8 +473,12 @@ export async function POST(req: NextRequest) {
         report, // return updated report so frontend can update
       });
     } else {
-      // Include attempted providers + last error for debugging
-      const lastError = attemptedProviders?.find(p => p.error)?.error;
+      // Include attempted providers + last error for debugging.
+      // A deadline hit surfaces as a clean JSON "failed" (retryable via resume)
+      // instead of a 504 HTML page from Vercel's function timeout.
+      const lastError = deadlineHit
+        ? `AI pass timed out after ${Math.round((Date.now() - startedAt) / 1000)}s (${PASS_DEADLINE_MS / 1000}s budget) — will retry on resume`
+        : attemptedProviders?.find(p => p.error)?.error;
       return NextResponse.json({
         passType, status: "failed",
         error: lastError || "AI returned no valid JSON after 2 attempts",

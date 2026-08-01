@@ -96,11 +96,11 @@ Respond as JSON:
 
 Architecture:
 - Pattern: ${report.architecture.pattern}
-- Strengths: ${report.architecture.strengths.join("; ")}
-- Weaknesses: ${report.architecture.weaknesses.join("; ")}
-- Layers: ${report.architecture.layers.map((l) => `${l.name} (${l.files} files)`).join(", ")}
+- Strengths: ${report.architecture.strengths.slice(0, 4).join("; ")}
+- Weaknesses: ${report.architecture.weaknesses.slice(0, 4).join("; ")}
+- Layers: ${report.architecture.layers.slice(0, 8).map((l) => `${l.name} (${l.files} files)`).join(", ")}
 
-Evaluate the architecture and suggest improvements. For EACH suggestion, include evidence (file:line refs), confidence (0.0-1.0), and severity. Respond as JSON:
+Evaluate the architecture and suggest improvements. Be concise: return AT MOST 8 suggestions, 4 strengths, and 4 weaknesses. For EACH suggestion, include evidence (file:line refs), confidence (0.0-1.0), and severity. Keep every text field to 1-2 sentences. Respond as JSON:
 {"strengths": ["string"], "weaknesses": ["string"], "suggestions": [{"title": "string", "description": "string", "effort": "small|medium|large", "evidence": ["file:line"], "confidence": 0.8, "severity": "high"}]}`;
 
     case "quality":
@@ -123,7 +123,7 @@ Respond as JSON:
 All issues summary:
 ${topIssues}
 
-Prioritize the top issues by business impact. For EACH priority, you MUST include:
+Prioritize the top issues by business impact. Be concise: return AT MOST 8 priorities, AT MOST 4 roadmap phases, and AT MOST 3 tasks per phase — pick the highest-ROI work only. Keep every text field to 1-2 sentences. For EACH priority, you MUST include:
 - effortHours: estimated effort in hours (use Fibonacci-ish: 0.5, 1, 2, 4, 8, 16, 40). Calibration: trivial=0.5h, small=2h, medium=4h, large=8h, xl=16h+
 - effortBand: "trivial" | "small" | "medium" | "large" | "xl" (matching the hours)
 - roiScore: 0-100 (business impact / effort — higher = better ROI)
