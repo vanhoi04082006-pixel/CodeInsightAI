@@ -15,7 +15,6 @@ import {
   blockingViolations,
 } from "@/lib/policies/evaluator";
 import { getUserPlanInfo } from "@/lib/billing/token-budget";
-import { ANALYSIS_PASSES } from "@/lib/analysis-manifest";
 import {
   enforceRateLimit,
   rateLimit429Body,
@@ -63,69 +62,6 @@ const IGNORE_DIRS = ["node_modules", "dist", "build", "coverage", "vendor", ".ca
 const FETCH_EXTS = [".ts", ".tsx", ".js", ".jsx", ".py", ".go", ".rs", ".java", ".cs", ".cpp", ".c", ".php", ".vue", ".svelte", ".css", ".scss", ".html", ".json", ".yml", ".yaml", ".md", ".sh", ".sql", ".rb", ".swift", ".kt", ".toml", ".env", ".config"];
 const MAX_FILES = 200;
 const CACHE_TTL_MS = 60 * 60 * 1000;
-
-// ── Resolve AI provider (shared helper — eliminates duplication) ──
-async function resolveAIProvider(
-  userId: string,
-  body: any,
-  platformProvider?: string,
-  platformModel?: string
-): Promise<any | null> {
-  try {
-    const { getPlatformAIProvider, getPlatformAIConfig } = await import("@/lib/platform-ai");
-    const { decrypt } = await import("@/lib/crypto");
-
-    // 1. Pro user selected platform provider
-    if (platformProvider) {
-      const config = await getPlatformAIProvider(platformProvider, platformModel);
-      // Override maxTokens if user configured it in the mode toggle
-      if (config && body.platformMaxTokens !== undefined) {
-        const userMax = body.platformMaxTokens;
-        (config as any).maxTokens = (userMax && userMax > 0) ? userMax : 4096;
-      }
-      if (config) return config;
-    }
-
-    // 2. First available Platform AI (DB or env)
-    const platformConfig = await getPlatformAIConfig();
-    if (platformConfig) return platformConfig;
-
-    // 3. BYOK credential from DB
-    const cred = await db.providerCredential.findFirst({
-      where: { userId, enabled: true },
-      orderBy: { updatedAt: "desc" },
-    });
-    if (cred) {
-      try {
-        return {
-          providerId: cred.providerId,
-          apiKey: decrypt(cred.encryptedApiKey),
-          baseUrl: cred.baseUrl,
-          model: cred.model,
-          temperature: cred.temperature ?? 0.7,
-          maxTokens: cred.maxTokens ?? 4096,
-          timeout: 60,
-        };
-      } catch {}
-    }
-
-    // 4. Client-provided key (local dev / BYOK from frontend)
-    if (body.provider?.apiKey) {
-      return {
-        providerId: body.provider.providerId,
-        apiKey: body.provider.apiKey,
-        baseUrl: body.provider.baseUrl || "",
-        model: body.provider.model || "",
-        temperature: body.provider.temperature ?? 0.7,
-        maxTokens: body.provider.maxTokens ?? 4096,
-        timeout: body.provider.timeout ?? 60,
-      };
-    }
-  } catch (e) {
-    console.warn("[resolveAIProvider] Error:", e);
-  }
-  return null;
-}
 
 // ── POST: Hybrid analyze (sync static + async AI) ──
 export async function POST(req: NextRequest) {
@@ -249,6 +185,8 @@ export async function POST(req: NextRequest) {
     // Persist to DB immediately (aiStatus = "pending" if AI enabled)
     const enableAi = body.aiEnhance !== false;
     const getParsedFile = (path: string) => parsedRepo?.files?.find((f: any) => f.path === path);
+    // Initialize the AI-pass completion tracker so readers never see undefined.
+    (report as any)._aiPassesCompleted = [];
 
     const created = await db.analysis.create({
       data: {
@@ -321,64 +259,6 @@ export async function POST(req: NextRequest) {
       error: errMsg,
       errorType: e?.code || "unknown",
     }, { status: 500 });
-  }
-}
-
-// ── Background AI analysis (updates DB when done) ──
-async function runAIAnalysisInBackground(
-  analysisId: string,
-  userId: string,
-  parsed: { owner: string; name: string; url: string },
-  report: AnalysisReport,
-  parsedRepo: any,
-  body: any,
-  platformProvider?: string,
-  platformModel?: string,
-  language: string = "en"
-) {
-  const aiConfig = await resolveAIProvider(userId, body, platformProvider, platformModel);
-
-  if (!aiConfig) {
-    console.warn(`[ai-bg] No AI provider — marking ${analysisId} as none`);
-    await db.analysis.update({ where: { id: analysisId }, data: { aiStatus: "none" } });
-    return;
-  }
-
-  console.log(`[ai-bg] Running ${ANALYSIS_PASSES.length}-pass AI for ${analysisId} with ${aiConfig.providerId}/${aiConfig.model}`);
-
-  const { runDeepAnalysis } = await import("@/lib/ai-deep-analysis");
-
-  const analysisContext = parsedRepo || {
-    owner: parsed.owner, name: parsed.name, url: parsed.url,
-    totalFiles: report.totalFiles, totalLines: report.totalLines,
-    languages: report.languages, frameworks: report.frameworks,
-    files: report.files.map(f => ({
-      path: f.path, language: f.language, lines: f.lines,
-      complexity: f.complexity, description: f.description,
-      imports: [], exports: [], functions: [], classes: [], components: [], routes: [],
-    })),
-  };
-
-  const deepResult = await runDeepAnalysis(analysisContext as any, report, aiConfig, language);
-
-  if (deepResult) {
-    (report as any).deepAnalysis = deepResult;
-    (report as any).aiEnhancement = {
-      aiSummary: deepResult.executiveSummary,
-      aiBadge: "ai-enhanced",
-    };
-
-    await db.analysis.update({
-      where: { id: analysisId },
-      data: {
-        report: JSON.stringify(report),
-        aiStatus: "done",
-      },
-    });
-    console.log(`[ai-bg] AI complete for ${analysisId}`);
-  } else {
-    await db.analysis.update({ where: { id: analysisId }, data: { aiStatus: "failed" } });
-    console.warn(`[ai-bg] AI returned null for ${analysisId}`);
   }
 }
 

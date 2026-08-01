@@ -30,6 +30,7 @@ import { TrendsCard } from "@/components/shared/trends-card";
 import { useAppStore } from "@/lib/store";
 import { useT, useI18nStore } from "@/lib/i18n";
 import { ANALYSIS_PASSES } from "@/lib/analysis-manifest";
+import { acquireAnalysisRunGuard, releaseAnalysisRunGuard } from "@/lib/analysis-run-guard";
 import { toast } from "sonner";
 import {
   ResponsiveContainer,
@@ -519,22 +520,33 @@ function EmptyDashboard() {
           } else {
             // Run remaining passes
             const runRemaining = async () => {
-              for (const passType of remainingPasses) {
-                try {
-                  const res = await fetch("/api/analyze/ai-pass", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ analysisId: id, passType, language: useI18nStore.getState().locale }),
-                  });
-                  const data = await res.json();
-                  if (data.status === "done" && data.report) {
-                    setActiveReport(data.report);
-                  }
-                } catch {}
-                await new Promise(r => setTimeout(r, 500));
+              // Guard: if analyze-view is already running passes for this
+              // analysis, don't start a second loop (double-spend + clobber).
+              if (!acquireAnalysisRunGuard(id)) {
+                console.warn("[ai-pass] resume skipped — analysis already running");
+                useAppStore.getState().setAiPending(false);
+                return;
               }
-              useAppStore.getState().setAiPending(false);
-              toast.success(t("dashboard", "toast.aiDeepComplete"));
+              try {
+                for (const passType of remainingPasses) {
+                  try {
+                    const res = await fetch("/api/analyze/ai-pass", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ analysisId: id, passType, language: useI18nStore.getState().locale }),
+                    });
+                    const data = await res.json();
+                    if (data.status === "done" && data.report) {
+                      setActiveReport(data.report);
+                    }
+                  } catch {}
+                  await new Promise(r => setTimeout(r, 500));
+                }
+                useAppStore.getState().setAiPending(false);
+                toast.success(t("dashboard", "toast.aiDeepComplete"));
+              } finally {
+                releaseAnalysisRunGuard(id);
+              }
             };
             setTimeout(runRemaining, 2000);
           }

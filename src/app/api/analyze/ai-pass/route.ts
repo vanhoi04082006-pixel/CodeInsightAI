@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireUserId } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { ANALYSIS_PASSES } from "@/lib/analysis-manifest";
 import { callAI, type AIMessage, TokenBudgetExceededError } from "@/lib/ai-client";
 import { callAIWithFallback, getFallbackChain } from "@/lib/ai-fallback";
 import { getUserPlanInfo } from "@/lib/billing/token-budget";
@@ -26,8 +27,9 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 55; // Under 60s Hobby limit
 
-// Wave 6 Phase 1: added "overview" pass (executive decision intelligence).
-type PassType = "overview" | "summary" | "security" | "architecture" | "quality" | "priorities" | "performance" | "bestPractices" | "duplicates";
+// Single source of truth: pass types derive from ANALYSIS_PASSES
+// (src/lib/analysis-manifest.ts) so the backend can never drift from the UI.
+type PassType = (typeof ANALYSIS_PASSES)[number]["type"];
 
 const MODEL_MAX_TOKENS: Record<string, number> = {
   "gpt-5-nano": 2000, "gpt-4.1-nano": 3000, "gpt-4o-mini": 4000,
@@ -37,6 +39,7 @@ const MODEL_MAX_TOKENS: Record<string, number> = {
 
 // Complex passes need more tokens but NOT too much (causes 504 timeout).
 // Reduced from 2.0 to 1.5 — AI responds faster, less likely to timeout.
+// NOTE: keys must stay in sync with ANALYSIS_PASSES; missing keys degrade to 1.0.
 const PASS_TOKEN_BOOST: Record<string, number> = {
   security: 1.5,      // 5 issues × structured fields
   quality: 1.5,       // 5 bugs × structured fields
@@ -107,6 +110,21 @@ export async function POST(req: NextRequest) {
     const report = JSON.parse(analysis.report);
     const parsedRepo = analysis.parsedData ? JSON.parse(analysis.parsedData) : null;
     const lang = language || "en";
+
+    // Idempotency guard — skip re-running a pass that already completed.
+    // Prevents wasted tokens and last-writer-wins data loss when the client
+    // (analyze-view + dashboard resume) double-invokes the same pass.
+    const completedPasses: string[] = (report as any)._aiPassesCompleted || [];
+    if (completedPasses.includes(passType)) {
+      const allPasses = ANALYSIS_PASSES.map((p) => p.type as PassType);
+      const allDone = allPasses.every((p) => completedPasses.includes(p));
+      return NextResponse.json({
+        passType, status: "done",
+        completedPasses, totalPasses: allPasses.length,
+        allDone,
+        report,
+      });
+    }
 
     // Resolve AI provider — priority: BYOK (client) → Platform → DB credential
     const { getPlatformAIProvider, getPlatformAIConfig } = await import("@/lib/platform-ai");
@@ -357,8 +375,9 @@ export async function POST(req: NextRequest) {
     if (result) {
       updateReportWithPassResult(report, passType, result);
 
-      // Check if all passes are done (Wave 6 Phase 1: 9 passes — overview added)
-      const allPasses: PassType[] = ["overview", "summary", "security", "architecture", "quality", "priorities", "performance", "bestPractices", "duplicates"];
+      // Check if all passes are done — derived from ANALYSIS_PASSES so the
+      // "is this analysis finished?" decision can never drift from the manifest.
+      const allPasses = ANALYSIS_PASSES.map((p) => p.type as PassType);
       const completedPasses = (report as any)._aiPassesCompleted || [];
       if (!completedPasses.includes(passType)) completedPasses.push(passType);
       (report as any)._aiPassesCompleted = completedPasses;

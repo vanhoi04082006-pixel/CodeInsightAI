@@ -6,8 +6,20 @@ import type { AnalysisReport } from "./types";
 
 // ─── Pipeline Definition (backend authoritative) ───
 
+/** The canonical set of AI pass types — single source of truth. */
+export type PassType =
+  | "overview"
+  | "summary"
+  | "security"
+  | "architecture"
+  | "quality"
+  | "priorities"
+  | "performance"
+  | "bestPractices"
+  | "duplicates";
+
 export interface AnalysisPassDef {
-  type: string;
+  type: PassType;
   /** i18n key suffix: t("analysis", `passes.${type}`) */
   labelKey: string;
   /** Which tab this pass enriches */

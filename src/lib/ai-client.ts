@@ -1,7 +1,7 @@
 // CodeInsight AI — Unified AI Client
 //
 // A single module for calling ANY of the 15 supported AI providers.
-// Used by: /api/chat, /api/chat/stream, /lib/ai-enhance, /lib/ai-deep-analysis,
+// Used by: /api/chat, /api/chat/stream, /lib/ai-enhance,
 // /api/agents/execute.
 //
 // Supports:

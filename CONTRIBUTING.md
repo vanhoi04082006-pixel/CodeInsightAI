@@ -34,10 +34,10 @@ Both must pass before submitting a PR.
 ## Architecture Guidelines
 
 ### Adding a new AI pass
-1. Add case in `src/lib/ai-deep-analysis-helpers.ts` (`buildPromptForPass`)
-2. Add to `PassType` type in `ai-deep-analysis.ts`
-3. Add to `allPasses` array in `api/analyze/ai-pass/route.ts`
-4. Add to `passes` array in `analyze-view.tsx`
+1. Add case in `src/lib/analysis-manifest.ts` (`ANALYSIS_PASSES` — single source of truth)
+2. Add to `PassType` type in `src/lib/analysis-manifest.ts`
+3. Add case in `src/lib/ai-deep-analysis-helpers.ts` (`buildPromptForPass`)
+4. Add to `updateReportWithPassResult` in `api/analyze/ai-pass/route.ts`
 5. Add i18n key for pass name
 
 ### Adding a new Graph provider

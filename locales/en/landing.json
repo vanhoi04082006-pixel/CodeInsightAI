@@ -29,7 +29,7 @@
   "principleSecure": "Enterprise-grade security",
   "principleSecureDesc": "API keys are AES-256-GCM encrypted server-side. BYOK keys are never exposed to the frontend. Multi-tenant isolation with per-user quotas.",
   "principleFast": "Fast & scalable",
-  "principleFastDesc": "66 static analysis rules run instantly. 9-pass AI deep analysis completes in under 60 seconds. CodeGraph pre-indexes your codebase for instant AI navigation.",
+  "principleFastDesc": "66 static analysis rules run instantly. {count}-pass AI deep analysis completes in under 60 seconds. CodeGraph pre-indexes your codebase for instant AI navigation.",
   "featuresEyebrow": "Capabilities",
   "featuresTitle": "Everything a Staff Engineer would tell you",
   "featuresDesc": "CodeInsight doesn't summarise your README. It reads your code, understands your architecture, and reports like a senior engineer doing a deep-dive review.",
@@ -99,11 +99,11 @@
   "hero": {
     "badge": "AI Operating System",
     "headline": "Paste a GitHub Repo. AI Understands Everything.",
-    "description": "10 AI agents analyze, fix, test, and ship code autonomously. Your keys. Your data. Your models.",
+    "description": "9 AI agents analyze, fix, test, and ship code autonomously. Your keys. Your data. Your models.",
     "inputPlaceholder": "https://github.com/vercel/next.js",
     "ctaAnalyze": "Analyze Repo",
     "ctaDemo": "Watch Demo",
-    "statusReady": "10 agents ready",
+    "statusReady": "9 agents ready",
     "badgeKeys": "BYO AI Keys",
     "badgeLocal": "BYOK",
     "badgeNoSubs": "Free to start",
@@ -121,11 +121,11 @@
   "feature": {
     "multiagent": {
       "title": "Multi-Agent System",
-      "desc": "Eleven specialized AI agents — Repository Analyst, Security, Performance, Bug-Fixer, Test, Docs, DevOps, Refactoring, PR, Code Reviewer, and an Executive — collaborate like a real engineering team. Each agent owns its domain and reports to a shared context.",
+      "desc": "Nine specialized AI agents — Repository Analyst, Security, Performance, Bug-Fixer, Test, Docs, DevOps, Refactoring, and Code Reviewer — collaborate like a real engineering team. Each agent owns its domain.",
       "bullet1": "Parallel analysis across security, perf, bugs, architecture",
-      "bullet2": "Shared memory: every agent reads what others learned",
-      "bullet3": "Executive agent plans, replans, and gates quality",
-      "bullet4": "Real-time agent activity feed with consensus voting"
+      "bullet2": "Specialized agents operate directly on real files",
+      "bullet3": "Structured results returned as artifacts (diffs, tests, reports)",
+      "bullet4": "Real-time activity feed for each agent task"
     },
     "workflow": {
       "title": "Autonomous Workflow",
@@ -135,11 +135,11 @@
       "build": "Build",
       "test": "Test",
       "ship": "Ship",
-      "planDesc": "Executive agent decomposes the goal into a dependency graph of tasks.",
+      "planDesc": "The goal is decomposed into a clear sequence of tasks.",
       "executeDesc": "Specialized agents pick up tasks and operate on real files.",
       "buildDesc": "Code is written, imports updated, diffs validated.",
       "testDesc": "Test agent runs suites, fails fast, and feeds results back.",
-      "shipDesc": "PR agent opens a reviewable change with full context."
+      "shipDesc": "Changes are packaged as structured diffs ready for review."
     },
     "deep": {
       "title": "Deep Analysis",
@@ -161,7 +161,7 @@
     },
     "step2": {
       "title": "AI Agents Collaborate",
-      "desc": "Eleven specialized agents analyze security, performance, bugs, and architecture in parallel — sharing context in real time."
+      "desc": "Nine specialized agents analyze security, performance, bugs, and architecture — each focused on its domain."
     },
     "step3": {
       "title": "Get Full Report + Ship",
@@ -238,7 +238,7 @@
       "desc": "Platform AI — no key needed",
       "features": {
         "f1": "Everything in Free",
-        "f2": "9-pass Deep AI Analysis",
+        "f2": "{count}-pass Deep AI Analysis",
         "f3": "Platform AI (admin-provided keys)",
         "f4": "100 analyses / month",
         "f5": "2000 chat messages / month",

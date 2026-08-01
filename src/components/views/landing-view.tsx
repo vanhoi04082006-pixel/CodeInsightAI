@@ -329,7 +329,7 @@ export function LandingView() {
                       <Icon className="h-6 w-6" style={{ color: p.color }} />
                     </div>
                     <h3 className="text-base font-semibold">{t("landing", p.titleKey)}</h3>
-                    <p className="mt-2 text-sm text-muted-foreground">{t("landing", p.descKey)}</p>
+                    <p className="mt-2 text-sm text-muted-foreground">{t("landing", p.descKey, p.descKey === "principleFastDesc" ? { count: ANALYSIS_PASSES.length } : undefined)}</p>
                   </GlassCard>
                 </motion.div>
               );
@@ -532,7 +532,7 @@ export function LandingView() {
               const planDesc = t("landing", `pricing.${plan.id}.desc`);
               const planCta = t("landing", `pricing.${plan.id}.cta`);
               const planFeatures = [1, 2, 3, 4, 5, 6].map((n) =>
-                t("landing", `pricing.${plan.id}.features.f${n}`)
+                t("landing", `pricing.${plan.id}.features.f${n}`, { count: ANALYSIS_PASSES.length })
               );
               return (
               <motion.div

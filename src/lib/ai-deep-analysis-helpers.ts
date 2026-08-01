@@ -1,5 +1,5 @@
 // Helper: build prompt for a single AI pass
-// Extracted from ai-deep-analysis.ts so it can be used by ai-pass endpoint
+// Used by the /api/analyze/ai-pass endpoint (one pass per request).
 //
 // Wave 6 Phase 1 (AI-first): all prompts now request ENTERPRISE-GRADE STRUCTURED OUTPUT:
 //   - evidence: array of "file:line" references (where the AI found the issue)

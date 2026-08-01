@@ -102,7 +102,6 @@
   "metricGodModules": "God modules",
   "metricsDesc": "Deep metrics computed from the real import graph (Robert C. Martin's component principles).",
   "aiInsights": {
-    "deepAI": "Deep AI Analysis (9-pass)",
     "aiEnhanced": "AI-Enhanced",
     "execSummary": "Executive Summary",
     "securityReview": "AI Security Review",

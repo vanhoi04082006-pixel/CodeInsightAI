@@ -7,4 +7,4 @@
 // When adding/removing an agent file in src/lib/agents/, update this number
 // AND add/remove the export in src/lib/agents/index.ts.
 
-export const AGENT_COUNT = 10;
+export const AGENT_COUNT = 9;

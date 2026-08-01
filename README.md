@@ -41,7 +41,7 @@ CodeInsight AI is an enterprise-grade code intelligence platform that analyzes a
 └──────────────────────────┬──────────────────────────────────┘
                            │
 ┌──────────────────────────▼──────────────────────────────────┐
-│              UI (9 tabs + Code Explorer V2)                  │
+│              UI (10 tabs + Code Explorer V2)                  │
 │  Overview │ Architecture │ Bugs │ Security │ Performance    │
 │  Code Graph │ Code │ Docs │ Roadmap │ Timeline              │
 │  + AI fallback UI (amber "unavailable" / cyan "running")     │
@@ -250,20 +250,20 @@ src/
 │   └── page.tsx                # Main app (single route)
 ├── components/
 │   ├── shared/                 # UnifiedCodeGraph, CodeViewer, etc.
-│   ├── views/                  # 11 view components
+│   ├── views/                  # 10 view components
 │   ├── admin-tabs/             # Admin overview, policies, users
 │   └── ui/                     # shadcn/ui components
 ├── lib/
 │   ├── graph/                  # Graph Engine v2 (6 providers + query + index)
 │   ├── diagram/                # Diagram Engine v2 (6 providers + query + export)
-│   ├── agents/                 # 10 AI agents (direct-call, no queue)
+│   ├── agents/                 # 9 AI agents (direct-call, no queue)
 │   ├── billing/                # Token budget + plan limits
 │   ├── policies/               # Policy engine (8 policies)
 │   ├── redaction.ts            # Secret redaction (17 patterns)
 │   ├── ownership.ts            # Multi-tenant isolation
 │   ├── rate-limiter.ts         # DB-backed rate limiting
 │   ├── ai-fallback.ts          # Model fallback chain
-│   ├── ai-deep-analysis.ts     # 9 AI passes orchestrator
+│   ├── analysis-manifest.ts    # AI passes + tabs (single source of truth)
 │   └── i18n.ts                 # i18n store (21 namespaces)
 ├── locales/
 │   ├── en/                     # 21 JSON files
@@ -284,7 +284,7 @@ src/
 | API routes | 46 |
 | Prisma models | 18 |
 | AI passes | 9 |
-| AI agents | 10 |
+| AI agents | 9 |
 | Graph providers | 6 |
 | Diagram providers | 6 |
 | i18n keys | 2,300+ (EN = VI) |

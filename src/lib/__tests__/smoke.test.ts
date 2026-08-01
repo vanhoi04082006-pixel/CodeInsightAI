@@ -77,6 +77,7 @@ describe("CodeGraph Builder", () => {
           functions: ["main"],
           classes: [],
           components: [],
+          interfaces: [],
           routes: [],
         },
         {
@@ -90,6 +91,7 @@ describe("CodeGraph Builder", () => {
           functions: ["helper"],
           classes: [],
           components: [],
+          interfaces: [],
           routes: [],
         },
       ],

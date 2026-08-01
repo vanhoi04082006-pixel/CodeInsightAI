@@ -66,18 +66,18 @@
   },
   "toast": {
     "aiDeepComplete": "AI deep analysis complete!",
-    "aiDeepCompleteDesc": "All 9 AI passes finished. Check AI Insights tab.",
+    "aiDeepCompleteDesc": "All {count} AI passes finished. Check AI Insights tab.",
     "aiAnalysisComplete": "AI analysis complete!",
-    "aiAnalyzingDeep": "AI is performing deep analysis (9-pass)...",
+    "aiAnalyzingDeep": "AI is performing deep analysis ({count}-pass)...",
     "aiAnalyzingDeepDesc": "This process may take 2-5 minutes depending on repo size",
     "staticComplete": "Static analysis complete — {score}/100",
-    "staticCompleteDesc": "AI deep analysis (9-pass) is running in background...",
+    "staticCompleteDesc": "AI deep analysis ({count}-pass) is running in background...",
     "analysisComplete": "Analysis complete — {score}/100",
     "analysisFailed": "Analysis failed",
     "analysisFailedRetry": "Analysis failed. Please try again."
   },
   "aiToggle": {
-    "deep": "🧠 Deep AI Analysis (9-pass)",
+    "deep": "🧠 Deep AI Analysis ({count}-pass)",
     "static": "⚡ Static Analysis Only",
     "deepDesc": "Uses AI for executive summary, security review, architecture, performance + best practices audit",
     "staticDesc": "Faster — 66 static rules only, no AI tokens used"

@@ -24,6 +24,7 @@ import { useAppStore } from "@/lib/store";
 import { useProvidersStore } from "@/lib/providers-store";
 import { ANALYSIS_STAGES, parseRepoUrl } from "@/lib/repo-utils";
 import { ANALYSIS_PASSES } from "@/lib/analysis-manifest";
+import { acquireAnalysisRunGuard, releaseAnalysisRunGuard } from "@/lib/analysis-run-guard";
 import type { AnalysisReport } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -131,6 +132,14 @@ export function AnalyzeView() {
 
   // Run AI passes one by one (each pass = 1 API call, <60s, Hobby-compatible)
   const runAIPasses = useCallback(async (analysisId: string, language: string, aiBody: Record<string, any>) => {
+    // Guard: never run two AI-pass loops on the same analysis concurrently
+    // (double-click, or analyze-view + dashboard resume racing).
+    if (!acquireAnalysisRunGuard(analysisId)) {
+      console.warn("[ai-pass] run already in progress — skipping duplicate");
+      return;
+    }
+
+    try {
     setAiStatus("pending");
     useAppStore.getState().setAiPending(true);
 
@@ -221,7 +230,7 @@ export function AnalyzeView() {
             setAiPassProgress(null);
             useAppStore.getState().setAiPending(false);
             toast.success(tAnalysis("analysis", "toast.aiDeepComplete"), {
-              description: tAnalysis("analysis", "toast.aiDeepCompleteDesc"),
+              description: tAnalysis("analysis", "toast.aiDeepCompleteDesc", { count: ANALYSIS_PASSES.length }),
               duration: 6000,
             });
             return;
@@ -262,6 +271,9 @@ export function AnalyzeView() {
     } catch {}
 
     toast.success(tAnalysis("analysis", "toast.aiAnalysisComplete"), { duration: 5000 });
+    } finally {
+      releaseAnalysisRunGuard(analysisId);
+    }
   }, []);
 
   const start = async () => {
@@ -362,7 +374,7 @@ export function AnalyzeView() {
       // Show "AI is performing deep analysis..." toast after 15s to reassure user
       timers.current.push(setTimeout(() => {
         if (phase === "running") {
-          toast.info(t("analysis", "toast.aiAnalyzingDeep"), {
+          toast.info(t("analysis", "toast.aiAnalyzingDeep", { count: ANALYSIS_PASSES.length }), {
             description: t("analysis", "toast.aiAnalyzingDeepDesc"),
             duration: 5000,
           });
@@ -406,7 +418,7 @@ export function AnalyzeView() {
           const score = startData.report.scores?.overall ?? 0;
           if (startData.aiStatus === "pending") {
             toast.success(t("analysis", "toast.staticComplete", { score }), {
-              description: t("analysis", "toast.staticCompleteDesc"),
+              description: t("analysis", "toast.staticCompleteDesc", { count: ANALYSIS_PASSES.length }),
               duration: 6000,
             });
           } else {
@@ -501,7 +513,7 @@ export function AnalyzeView() {
                 />
                 <Brain className="h-4 w-4 text-violet-300" />
                 <span className="text-sm font-medium">
-                  {useAI ? t("analysis", "aiToggle.deep") : t("analysis", "aiToggle.static")}
+                  {useAI ? t("analysis", "aiToggle.deep", { count: ANALYSIS_PASSES.length }) : t("analysis", "aiToggle.static")}
                 </span>
               </label>
               <span className="text-xs text-muted-foreground">

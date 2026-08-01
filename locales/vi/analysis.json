@@ -66,18 +66,18 @@
   },
   "toast": {
     "aiDeepComplete": "Phân tích AI chuyên sâu hoàn tất!",
-    "aiDeepCompleteDesc": "Tất cả 9 lượt AI đã hoàn thành. Xem tab AI Insights.",
+    "aiDeepCompleteDesc": "Tất cả {count} lượt AI đã hoàn thành. Xem tab AI Insights.",
     "aiAnalysisComplete": "Phân tích AI hoàn tất!",
-    "aiAnalyzingDeep": "AI đang phân tích sâu (9-pass)...",
+    "aiAnalyzingDeep": "AI đang phân tích sâu ({count}-pass)...",
     "aiAnalyzingDeepDesc": "Quá trình này có thể mất 2-5 phút tùy kích thước repo",
     "staticComplete": "Phân tích tĩnh hoàn tất — {score}/100",
-    "staticCompleteDesc": "Phân tích AI chuyên sâu (9-pass) đang chạy ngầm...",
+    "staticCompleteDesc": "Phân tích AI chuyên sâu ({count}-pass) đang chạy ngầm...",
     "analysisComplete": "Phân tích hoàn tất — {score}/100",
     "analysisFailed": "Phân tích thất bại",
     "analysisFailedRetry": "Phân tích thất bại. Vui lòng thử lại."
   },
   "aiToggle": {
-    "deep": "🧠 Phân tích AI chuyên sâu (9-pass)",
+    "deep": "🧠 Phân tích AI chuyên sâu ({count}-pass)",
     "static": "⚡ Chỉ phân tích tĩnh",
     "deepDesc": "Dùng AI cho tóm tắt điều hành, đánh giá bảo mật, kiến trúc, hiệu năng + kiểm toán best practices",
     "staticDesc": "Nhanh hơn — chỉ 66 quy tắc tĩnh, không tiêu tốn token AI"
