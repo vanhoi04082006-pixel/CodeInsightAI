@@ -89,6 +89,391 @@
       "title": "Wildcard CORS origin",
       "description": "CORS allows all origins.",
       "recommendation": "Restrict to specific trusted origins."
+    },
+    "hardcodedStripeKey": {
+      "title": "Hardcoded Stripe live key",
+      "description": "Stripe live secret key {sk_live_*} found in source.",
+      "recommendation": "Move to env var and rotate immediately."
+    },
+    "hardcodedSlackToken": {
+      "title": "Hardcoded Slack token",
+      "description": "Slack bot/user token exposed in code.",
+      "recommendation": "Move to env var and rotate."
+    },
+    "hardcodedTwilioSid": {
+      "title": "Hardcoded Twilio SID",
+      "description": "Twilio account SID (AC*) committed to source.",
+      "recommendation": "Move to env var and rotate."
+    },
+    "hardcodedTelegramToken": {
+      "title": "Hardcoded Telegram bot token",
+      "description": "Telegram bot token exposed in source.",
+      "recommendation": "Move to env var and revoke the bot token."
+    },
+    "hardcodedDiscordToken": {
+      "title": "Hardcoded Discord token",
+      "description": "Discord bot token committed to source.",
+      "recommendation": "Move to env var and rotate the token."
+    },
+    "hardcodedNpmToken": {
+      "title": "Hardcoded npm token",
+      "description": "npm publish token exposed in source.",
+      "recommendation": "Move to env var and revoke/rotate."
+    },
+    "hardcodedSendGridKey": {
+      "title": "Hardcoded SendGrid key",
+      "description": "SendGrid API key exposed in source.",
+      "recommendation": "Move to env var and rotate."
+    },
+    "hardcodedAzureStorageKey": {
+      "title": "Hardcoded Azure storage key",
+      "description": "Azure storage account key committed to source.",
+      "recommendation": "Move to env var and regenerate."
+    },
+    "gcpServiceAccountKey": {
+      "title": "GCP service account key file",
+      "description": "GCP service_account JSON key file committed to source.",
+      "recommendation": "Remove from repo, load from secret manager."
+    },
+    "postgresUrlWithCreds": {
+      "title": "PostgreSQL URL with embedded credentials",
+      "description": "Postgres connection string contains a username/password.",
+      "recommendation": "Use env vars and secret manager; never commit DSNs."
+    },
+    "mongoUrlWithCreds": {
+      "title": "MongoDB URL with embedded credentials",
+      "description": "Mongo connection string contains credentials.",
+      "recommendation": "Use env vars and secret manager."
+    },
+    "redisUrlWithCreds": {
+      "title": "Redis URL with embedded credentials",
+      "description": "Redis connection string contains credentials.",
+      "recommendation": "Use env vars and secret manager."
+    },
+    "mysqlUrlWithCreds": {
+      "title": "MySQL URL with embedded credentials",
+      "description": "MySQL connection string contains credentials.",
+      "recommendation": "Use env vars and secret manager."
+    },
+    "sessionSecretAssignment": {
+      "title": "Session secret hardcoded",
+      "description": "Session/JWT/COOKIE secret assigned as a literal.",
+      "recommendation": "Use process.env for session secrets."
+    },
+    "basicAuthHeader": {
+      "title": "Basic auth header with credentials",
+      "description": "Hardcoded Basic Authorization header exposes credentials.",
+      "recommendation": "Use a token/credential store; never commit Basic auth."
+    },
+    "credsInGitUrl": {
+      "title": "Credentials in git remote URL",
+      "description": "Git URL embeds a username/password or token.",
+      "recommendation": "Remove creds from URL; use SSH keys or credential helpers."
+    },
+    "pythonFStringSql": {
+      "title": "SQL built with Python f-string",
+      "description": "f-string interpolates values into SQL query.",
+      "recommendation": "Use parameterized queries / ORM."
+    },
+    "phpSqlConcat": {
+      "title": "SQL built with PHP string concatenation",
+      "description": "SQL query assembled with '.' concatenation.",
+      "recommendation": "Use prepared statements / PDO."
+    },
+    "javaSqlConcat": {
+      "title": "SQL built with Java string concatenation",
+      "description": "SQL query assembled with '+' concatenation.",
+      "recommendation": "Use PreparedStatement with parameters."
+    },
+    "goSprintfSql": {
+      "title": "SQL built with fmt.Sprintf",
+      "description": "SQL query assembled via fmt.Sprintf — injection risk.",
+      "recommendation": "Use database/sql placeholders (?) or an ORM."
+    },
+    "pythonOsSystem": {
+      "title": "os.system() used",
+      "description": "os.system runs a shell — command injection risk.",
+      "recommendation": "Use subprocess.run with a list of args."
+    },
+    "pythonSubprocessShell": {
+      "title": "subprocess with shell=True",
+      "description": "shell=True passes the command to a shell.",
+      "recommendation": "Avoid shell=True; pass args as a list."
+    },
+    "javaRuntimeExec": {
+      "title": "Runtime.exec() used",
+      "description": "Runtime.exec runs a system command — injection risk.",
+      "recommendation": "Use ProcessBuilder with an argument list."
+    },
+    "phpShellExec": {
+      "title": "Shell command execution in PHP",
+      "description": "shell_exec/passthru/system execute shell commands.",
+      "recommendation": "Validate input; use escapeshellarg or avoid shell calls."
+    },
+    "nodeChildProcessExec": {
+      "title": "child_process exec/spawn",
+      "description": "child_process exec/spawn can run shell commands.",
+      "recommendation": "Use execFile with an argument array."
+    },
+    "goExecCommand": {
+      "title": "exec.Command() used",
+      "description": "exec.Command can invoke system binaries.",
+      "recommendation": "Validate input and avoid shell interpolation."
+    },
+    "templateInjectionPy": {
+      "title": "Server-side template injection risk",
+      "description": "render_template_string evaluates template code from input.",
+      "recommendation": "Never pass user input into template strings."
+    },
+    "domInnerHtmlXss": {
+      "title": "Unsafe innerHTML assignment",
+      "description": "Setting innerHTML with dynamic data enables DOM XSS.",
+      "recommendation": "Use textContent or escape/sanitize the value."
+    },
+    "domOuterHtmlXss": {
+      "title": "Unsafe outerHTML assignment",
+      "description": "Setting outerHTML with dynamic data enables DOM XSS.",
+      "recommendation": "Avoid outerHTML; use DOM APIs or sanitize."
+    },
+    "insertAdjacentHtmlXss": {
+      "title": "Unsafe insertAdjacentHTML",
+      "description": "insertAdjacentHTML parses HTML from dynamic data.",
+      "recommendation": "Sanitize input with DOMPurify before insertion."
+    },
+    "documentWriteXss": {
+      "title": "document.write() used",
+      "description": "document.write can inject arbitrary HTML/scripts.",
+      "recommendation": "Avoid document.write; use safe DOM APIs."
+    },
+    "vueVHtmlXss": {
+      "title": "v-html directive used",
+      "description": "v-html renders raw HTML — XSS risk with user data.",
+      "recommendation": "Use template interpolation or sanitize with a library."
+    },
+    "angularInnerHtmlXss": {
+      "title": "Angular [innerHTML] binding",
+      "description": "[innerHTML] renders raw HTML — XSS risk.",
+      "recommendation": "Use interpolation or sanitize with DomSanitizer."
+    },
+    "javascriptHrefXss": {
+      "title": "javascript: URL in href",
+      "description": "javascript: URLs execute code — XSS vector.",
+      "recommendation": "Remove javascript: URLs; validate scheme."
+    },
+    "weakSha1": {
+      "title": "Weak SHA-1 hashing",
+      "description": "SHA-1 is cryptographically broken for security use.",
+      "recommendation": "Migrate to SHA-256+ or bcrypt/argon2."
+    },
+    "weakDes": {
+      "title": "Weak DES encryption",
+      "description": "DES/3DES are deprecated and weak.",
+      "recommendation": "Use AES-256-GCM."
+    },
+    "weakRc4": {
+      "title": "Weak RC4 cipher",
+      "description": "RC4/ARC4 is broken — allows stream cipher attacks.",
+      "recommendation": "Use AES-GCM instead."
+    },
+    "weakEcbMode": {
+      "title": "ECB encryption mode",
+      "description": "ECB mode leaks patterns in plaintext.",
+      "recommendation": "Use AES-GCM or CBC with random IV."
+    },
+    "hardcodedSalt": {
+      "title": "Hardcoded salt",
+      "description": "Reusing a fixed salt weakens password hashing.",
+      "recommendation": "Generate a unique random salt per password."
+    },
+    "hardcodedIv": {
+      "title": "Hardcoded IV",
+      "description": "Reusing a fixed IV weakens encryption.",
+      "recommendation": "Use a random IV per encryption."
+    },
+    "weakRandomForSecret": {
+      "title": "Weak RNG for security",
+      "description": "Math.random() is not cryptographically secure for tokens/OTPs.",
+      "recommendation": "Use crypto.getRandomValues() or crypto.randomBytes()."
+    },
+    "pythonWeakRandomForSecret": {
+      "title": "Weak RNG for security (Python)",
+      "description": "random module is not cryptographically secure for secrets.",
+      "recommendation": "Use secrets.token_* or os.urandom."
+    },
+    "jwtWeakSecret": {
+      "title": "Weak JWT signing secret",
+      "description": "JWT signed with a very short literal secret.",
+      "recommendation": "Use a long random secret from env."
+    },
+    "cookieNoHttpOnly": {
+      "title": "Cookie without HttpOnly",
+      "description": "httpOnly:false lets JavaScript read the cookie — XSS risk.",
+      "recommendation": "Set HttpOnly: true for session cookies."
+    },
+    "cookieNoSecure": {
+      "title": "Cookie without Secure flag",
+      "description": "secure:false sends the cookie over HTTP.",
+      "recommendation": "Set Secure: true (HTTPS only)."
+    },
+    "cookieSameSiteNone": {
+      "title": "Cookie SameSite=None",
+      "description": "SameSite=None allows cross-site sending.",
+      "recommendation": "Prefer SameSite=Lax/Strict unless truly needed."
+    },
+    "rejectUnauthorizedFalse": {
+      "title": "TLS verification disabled",
+      "description": "rejectUnauthorized:false disables certificate validation.",
+      "recommendation": "Keep rejectUnauthorized true."
+    },
+    "sslVerifyDisabled": {
+      "title": "SSL verification disabled",
+      "description": "verify=False / ssl=False disables certificate checks.",
+      "recommendation": "Enable certificate verification."
+    },
+    "timingUnsafeCompare": {
+      "title": "Non-constant-time comparison",
+      "description": "Comparing hashes/signatures with == leaks timing info.",
+      "recommendation": "Use a constant-time compare (crypto.timingSafeEqual, hmac.compare_digest)."
+    },
+    "pickleLoads": {
+      "title": "Unsafe pickle.loads()",
+      "description": "pickle.loads can execute arbitrary code on untrusted data.",
+      "recommendation": "Use JSON or a safe serialization format."
+    },
+    "yamlLoadUnsafe": {
+      "title": "yaml.load without safe_load",
+      "description": "yaml.load can instantiate arbitrary objects.",
+      "recommendation": "Use yaml.safe_load."
+    },
+    "phpUnserialize": {
+      "title": "Unsafe unserialize()",
+      "description": "unserialize on untrusted data leads to object injection.",
+      "recommendation": "Use JSON or whitelist allowed classes."
+    },
+    "javaObjectInputStream": {
+      "title": "Unsafe Java deserialization",
+      "description": "ObjectInputStream.readObject on untrusted data — RCE risk.",
+      "recommendation": "Use safe formats or validate with a filter."
+    },
+    "dotnetBinaryFormatter": {
+      "title": "Unsafe BinaryFormatter",
+      "description": "BinaryFormatter deserialization is dangerous on untrusted data.",
+      "recommendation": "Use JSON or System.Text.Json."
+    },
+    "xxeResolveEntities": {
+      "title": "XXE — entity resolution enabled",
+      "description": "resolve_entities=True allows external entity injection.",
+      "recommendation": "Disable DTD/entity loading."
+    },
+    "xxeDtdProcessing": {
+      "title": "XXE — unsafe DTD processing",
+      "description": "Parser is configured to process DTD/external entities.",
+      "recommendation": "Disable DTD and external entities."
+    },
+    "prototypePollution": {
+      "title": "Prototype pollution risk",
+      "description": "__proto__ / constructor.prototype assignment can poison globals.",
+      "recommendation": "Freeze prototypes or validate keys."
+    },
+    "sqlNoParameterized": {
+      "title": "SQL without parameters (Python)",
+      "description": "execute/query with %s / %() formatting — injection risk.",
+      "recommendation": "Use parameter placeholders in the DB driver."
+    },
+    "pathTraversalJoin": {
+      "title": "Path traversal in path.join",
+      "description": "path.join with request input can escape the base dir.",
+      "recommendation": "Resolve and verify the path stays inside the allowed root."
+    },
+    "openRedirectGeneric": {
+      "title": "Potential open redirect",
+      "description": "res.redirect uses request-controlled input.",
+      "recommendation": "Validate the target against an allowlist."
+    },
+    "uploadNoSizeLimit": {
+      "title": "File upload without size limit",
+      "description": "Upload handler lacks a size limit — DoS risk.",
+      "recommendation": "Set file size/type limits on uploads."
+    },
+    "newFunctionEval": {
+      "title": "new Function() used",
+      "description": "new Function compiles and runs arbitrary code.",
+      "recommendation": "Replace with a safe parser or JSON.parse."
+    },
+    "curlInsecure": {
+      "title": "Insecure curl options",
+      "description": "curl -k / CURLOPT_SSL_VERIFYPEER false disables TLS checks.",
+      "recommendation": "Keep certificate verification enabled."
+    },
+    "secretInLogs": {
+      "title": "Secret logged to console",
+      "description": "console.log/console.debug outputs tokens or passwords.",
+      "recommendation": "Never log secrets; redact sensitive fields."
+    },
+    "hardcodedAdminCreds": {
+      "title": "Hardcoded admin credentials",
+      "description": "Default admin username/password committed to source.",
+      "recommendation": "Generate credentials at runtime or via env."
+    },
+    "dockerPrivileged": {
+      "title": "Docker privileged mode",
+      "description": "--privileged / privileged:true grants full host access.",
+      "recommendation": "Avoid privileged mode; drop capabilities."
+    },
+    "chmod777": {
+      "title": "chmod 777 permissions",
+      "description": "World-writable permissions are a security risk.",
+      "recommendation": "Use the least privileges needed (e.g., 644/700)."
+    },
+    "oldTlsProtocol": {
+      "title": "Legacy TLS/SSL protocol",
+      "description": "TLSv1/SSLv3 are deprecated and insecure.",
+      "recommendation": "Require TLS 1.2+."
+    },
+    "sshPrivateKey": {
+      "title": "Embedded SSH private key",
+      "description": "OpenSSH private key committed to source.",
+      "recommendation": "Remove the key; use a secrets manager."
+    },
+    "mongoNoSQLInjection": {
+      "title": "NoSQL injection risk",
+      "description": "$where/$regex with user input enables NoSQL injection.",
+      "recommendation": "Sanitize operators and validate input types."
+    },
+    "jwtNoExpiry": {
+      "title": "JWT without expiry",
+      "description": "jwt.sign without expiresIn creates never-expiring tokens.",
+      "recommendation": "Always set expiresIn for JWTs."
+    },
+    "headerInjection": {
+      "title": "Header injection risk",
+      "description": "setHeader/writeHead with \\r\\n can inject headers.",
+      "recommendation": "Sanitize header values and remove CR/LF."
+    },
+    "phpFileInclusion": {
+      "title": "Local/Remote file inclusion",
+      "description": "include/require with user input allows file inclusion.",
+      "recommendation": "Validate paths against an allowlist."
+    },
+    "execSyncTemplate": {
+      "title": "execSync with template string",
+      "description": "execSync with a template literal runs shell commands.",
+      "recommendation": "Use execFile with an argument array."
+    },
+    "xmlExternalEntity": {
+      "title": "XML external entity (XXE)",
+      "description": "<!DOCTYPE ... SYSTEM loads external entities.",
+      "recommendation": "Disable DTD/entity expansion."
+    },
+    "sessionCookieNoSecureFlag": {
+      "title": "Session cookie insecure flags",
+      "description": "session.cookie httpOnly/secure set to false.",
+      "recommendation": "Enable httpOnly and secure flags."
+    },
+    "sqlRawConcatJs": {
+      "title": "SQL built with JS concatenation",
+      "description": "db.query/db.execute with string concatenation — injection risk.",
+      "recommendation": "Use parameterized queries."
     }
   },
   "bugs": {
@@ -146,6 +531,351 @@
       "title": "Unused variable: {name}",
       "description": "'{name}' is declared but never used.",
       "recommendation": "Remove the unused variable or prefix with _ if intentional."
+    },
+    "goNilDeref": {
+      "title": "Potential nil dereference",
+      "description": "Chained field access on a possibly nil value.",
+      "recommendation": "Check for nil before dereferencing."
+    },
+    "javaNullDeref": {
+      "title": "Potential null dereference",
+      "description": "Chained method call may hit a null object.",
+      "recommendation": "Add null checks or use Optional."
+    },
+    "pyDictBareIndex": {
+      "title": "Bare dict indexing",
+      "description": "dict['key'] raises KeyError if missing.",
+      "recommendation": "Use .get() with a default."
+    },
+    "pyAttrUnchecked": {
+      "title": "Unchecked attribute chain",
+      "description": "Chained attribute access may raise AttributeError.",
+      "recommendation": "Guard with getattr/hasattr or optional chaining."
+    },
+    "phpUndefinedIndex": {
+      "title": "Undefined array index",
+      "description": "Accessing $_GET/$_POST keys without isset.",
+      "recommendation": "Check isset()/array_key_exists first."
+    },
+    "jsMaybeUndefined": {
+      "title": "Result may be undefined",
+      "description": ".find() result dereferenced without a fallback.",
+      "recommendation": "Add a fallback: result ?? defaultValue."
+    },
+    "promiseNoCatch": {
+      "title": "Promise without catch",
+      "description": "Promise chain ends without .catch() — unhandled rejection.",
+      "recommendation": "Append .catch() or use try/await/catch."
+    },
+    "asyncFuncNoAwait": {
+      "title": "Async function without await",
+      "description": "async keyword adds a promise without benefit.",
+      "recommendation": "Remove async or add await."
+    },
+    "callbackErrIgnored": {
+      "title": "Error argument ignored",
+      "description": "Callback swallows the error parameter.",
+      "recommendation": "Handle or propagate the error."
+    },
+    "pyExceptPass": {
+      "title": "except: pass swallows errors",
+      "description": "Exceptions are silently ignored.",
+      "recommendation": "Log or re-raise the exception."
+    },
+    "pyBareExcept": {
+      "title": "Bare except clause",
+      "description": "except: catches everything, including KeyboardInterrupt.",
+      "recommendation": "Catch specific exceptions."
+    },
+    "phpErrorSuppression": {
+      "title": "PHP error suppression operator",
+      "description": "@ suppresses errors — hides real failures.",
+      "recommendation": "Handle errors explicitly; avoid @."
+    },
+    "pyIsComparison": {
+      "title": "'is' used for value comparison",
+      "description": "is compares identity, not value.",
+      "recommendation": "Use == for value comparison."
+    },
+    "phpLooseInt": {
+      "title": "Loose comparison with 0",
+      "description": "== 0 matches empty strings and 'false' in PHP.",
+      "recommendation": "Use === with explicit type."
+    },
+    "javaStringEq": {
+      "title": "String compared with ==",
+      "description": "== compares references, not String content.",
+      "recommendation": "Use .equals() for string comparison."
+    },
+    "goStringConcatByte": {
+      "title": "Inefficient []byte conversion",
+      "description": "Converting to []byte for concatenation is wasteful.",
+      "recommendation": "Use strings.Builder or byte slice methods."
+    },
+    "parseIntNoRadix": {
+      "title": "parseInt without radix",
+      "description": "parseInt without radix can parse as octal/hex unexpectedly.",
+      "recommendation": "Use parseInt(value, 10)."
+    },
+    "floatEquality": {
+      "title": "Float equality comparison",
+      "description": "Comparing floats with === is unreliable due to precision.",
+      "recommendation": "Compare with an epsilon tolerance."
+    },
+    "typeofObjectNull": {
+      "title": "typeof object without null check",
+      "description": "typeof x === 'object' is true for null.",
+      "recommendation": "Add x !== null to the condition."
+    },
+    "jsIsNaN": {
+      "title": "NaN comparison",
+      "description": "value === NaN is always false.",
+      "recommendation": "Use Number.isNaN(value)."
+    },
+    "cStrcpy": {
+      "title": "Unsafe strcpy()",
+      "description": "strcpy can overflow the destination buffer.",
+      "recommendation": "Use strncpy/strlcpy with bounds."
+    },
+    "cGets": {
+      "title": "Unsafe gets()",
+      "description": "gets() has no bounds checking — classic overflow.",
+      "recommendation": "Use fgets() with a size limit."
+    },
+    "cSprintf": {
+      "title": "Unsafe sprintf()",
+      "description": "sprintf can overflow the destination buffer.",
+      "recommendation": "Use snprintf() with a size limit."
+    },
+    "cUnsafeConcat": {
+      "title": "Unsafe strcat()",
+      "description": "strcat can overflow the destination buffer.",
+      "recommendation": "Use strncat/strlcat with bounds."
+    },
+    "pyMutableDefault": {
+      "title": "Mutable default argument",
+      "description": "Default [] / {} is shared across calls.",
+      "recommendation": "Use None and create inside the function."
+    },
+    "pySwitchMissing": {
+      "title": "Long if/elif chain",
+      "description": "Multiple if/elif on one value — consider a dict/map.",
+      "recommendation": "Use a dict lookup or match statement."
+    },
+    "jsVarInBlock": {
+      "title": "var inside block scope",
+      "description": "var leaks out of block scope.",
+      "recommendation": "Use let or const."
+    },
+    "phpOldStyleArray": {
+      "title": "Old-style array() syntax",
+      "description": "array() is deprecated in PHP 8.2+.",
+      "recommendation": "Use [] array syntax."
+    },
+    "goDeferInLoop": {
+      "title": "defer inside a loop",
+      "description": "deferred calls accumulate until the function returns.",
+      "recommendation": "Move defer outside the loop or inline cleanup."
+    },
+    "goSliceOutOfRange": {
+      "title": "Potential slice index panic",
+      "description": "Slice indexing with computed index may panic.",
+      "recommendation": "Check bounds before indexing."
+    },
+    "offByOne": {
+      "title": "Potential off-by-one error",
+      "description": "<= .length or < .length - 1 boundary is suspicious.",
+      "recommendation": "Review the boundary condition."
+    },
+    "assignmentInCondition": {
+      "title": "Assignment inside condition",
+      "description": "if (x = y) assigns instead of comparing.",
+      "recommendation": "Use == or === in conditions."
+    },
+    "switchFallthrough": {
+      "title": "Switch case fallthrough",
+      "description": "Case falls through without break/return.",
+      "recommendation": "Add break/return to each case."
+    },
+    "emptyCatchMulti": {
+      "title": "Empty catch block",
+      "description": "Error is swallowed without handling.",
+      "recommendation": "Log or rethrow the error."
+    },
+    "unusedPromise": {
+      "title": "Unused promise result",
+      "description": "Promise assigned but never awaited/returned.",
+      "recommendation": "Await it or add .catch()."
+    },
+    "resourceNotClosed": {
+      "title": "Resource may not be closed",
+      "description": "File/stream opened without visible close.",
+      "recommendation": "Close the resource in finally or use with/try."
+    },
+    "infiniteRecursion": {
+      "title": "Potential infinite recursion",
+      "description": "Function calls itself without a guard.",
+      "recommendation": "Add a base case or recursion limit."
+    },
+    "sqlNoWhere": {
+      "title": "Destructive query without WHERE",
+      "description": "DELETE/TRUNCATE without WHERE removes all rows.",
+      "recommendation": "Add a WHERE clause or a transaction guard."
+    },
+    "goIgnoredError": {
+      "title": "Ignored error return",
+      "description": "err from a call is ignored.",
+      "recommendation": "Check the error explicitly."
+    },
+    "staleClosure": {
+      "title": "Stale closure in effect",
+      "description": "useEffect captures an outdated value.",
+      "recommendation": "Include the dependency or use a ref."
+    },
+    "keyIndexInList": {
+      "title": "Array index used as key",
+      "description": "Using index as key breaks reconciliation on reorder.",
+      "recommendation": "Use a stable unique id."
+    },
+    "dangerousSetState": {
+      "title": "setState inside render path",
+      "description": "setState(this.state) may loop or corrupt state.",
+      "recommendation": "Compute values outside render."
+    },
+    "onClickInvoke": {
+      "title": "Handler invoked immediately",
+      "description": "onClick={fn()} calls fn at render time.",
+      "recommendation": "Pass the function reference: onClick={fn}."
+    },
+    "mutatingProps": {
+      "title": "Mutating props",
+      "description": "Assigning to props is an anti-pattern.",
+      "recommendation": "Use state or a copy instead."
+    },
+    "getDerivedState": {
+      "title": "State updated during render",
+      "description": "setState during render can cause re-render loops.",
+      "recommendation": "Derive values or move to useEffect."
+    },
+    "promiseAllMissing": {
+      "title": "Sequential async in map",
+      "description": ".map(async ...) without Promise.all runs sequentially.",
+      "recommendation": "Use Promise.all(...)."
+    },
+    "awaitInMap": {
+      "title": "await inside map callback",
+      "description": "await in map is sequential; results also lose ordering.",
+      "recommendation": "Use Promise.all with .map."
+    },
+    "subscriptionNoCleanup": {
+      "title": "Subscription without cleanup",
+      "description": "Subscription leaks across unmounts.",
+      "recommendation": "Unsubscribe in useEffect cleanup."
+    },
+    "setTimeoutNoClear": {
+      "title": "setTimeout without clear",
+      "description": "Timer may fire after unmount.",
+      "recommendation": "Clear the timer in cleanup."
+    },
+    "consoleInProd": {
+      "title": "console.log in production",
+      "description": "Debug logging left in production code.",
+      "recommendation": "Remove or use a logger."
+    },
+    "hardcodedLocale": {
+      "title": "Hardcoded locale in formatting",
+      "description": "Hardcoded locale bypasses i18n settings.",
+      "recommendation": "Use the app locale or t() helper."
+    },
+    "goMapNoCommaOk": {
+      "title": "Map lookup without comma-ok",
+      "description": "Map indexing without the comma-ok idiom can return zero value.",
+      "recommendation": "Use v, ok := m[k] and check ok."
+    },
+    "pyReturnNoneAttr": {
+      "title": "Returning possibly-None attribute",
+      "description": "Chained access on a returned attribute may be None.",
+      "recommendation": "Guard with an explicit None check."
+    },
+    "javaBoxedUnbox": {
+      "title": "Boxed type == comparison",
+      "description": "Comparing boxed Integer/Long with == compares references.",
+      "recommendation": "Use .equals() or unbox to primitives."
+    },
+    "floatingPromise": {
+      "title": "Floating promise",
+      "description": "Async call made without await/return — errors unhandled.",
+      "recommendation": "Await or return the promise."
+    },
+    "setIntervalCallbackSync": {
+      "title": "setInterval without cleanup",
+      "description": "Recurring timer may leak and keep running.",
+      "recommendation": "Store the id and clear it when done."
+    },
+    "nonAwaitAsyncCall": {
+      "title": "Async call without await",
+      "description": "Async handler invoked without awaiting its promise.",
+      "recommendation": "Await the call or handle the promise."
+    },
+    "cUncheckedBuffer": {
+      "title": "Fixed-size stack buffer",
+      "description": "Fixed char array may overflow on untrusted input.",
+      "recommendation": "Use dynamic allocation or bounded writes."
+    },
+    "cIntOverflow": {
+      "title": "Potential integer overflow",
+      "description": "int arithmetic may overflow on large values.",
+      "recommendation": "Use larger types or check bounds."
+    },
+    "pyExceptOnException": {
+      "title": "Broad except Exception",
+      "description": "Catching generic Exception hides real failures.",
+      "recommendation": "Catch specific exception types."
+    },
+    "pyGlobalMutation": {
+      "title": "Global variable mutation",
+      "description": "global keyword mutates module state implicitly.",
+      "recommendation": "Pass values via arguments/return."
+    },
+    "phpComparisonLoose": {
+      "title": "Loose value comparison",
+      "description": "== coerces types and can give unexpected matches.",
+      "recommendation": "Use === for strict comparison."
+    },
+    "goStringCompareBytes": {
+      "title": "Bytes vs string comparison",
+      "description": "Comparing []byte and string mixes types — use string(x) explicitly.",
+      "recommendation": "Convert explicitly before comparing."
+    },
+    "divideByZero": {
+      "title": "Potential division by zero",
+      "description": "Expression may divide by a zero-valued operand.",
+      "recommendation": "Guard the divisor before dividing."
+    },
+    "duplicateCase": {
+      "title": "Duplicate switch case",
+      "description": "Two cases match the same value.",
+      "recommendation": "Merge or rename duplicate cases."
+    },
+    "infiniteWhile": {
+      "title": "while(true) loop",
+      "description": "Loop without an exit condition hangs forever.",
+      "recommendation": "Add a break/return or bounded iteration."
+    },
+    "missingBreak": {
+      "title": "Missing break in switch",
+      "description": "Switch case likely falls through without break.",
+      "recommendation": "Add break/return to every case."
+    },
+    "stringConcatPitfall": {
+      "title": "String/number concat pitfall",
+      "description": "Mixing strings and numbers with + coerces implicitly.",
+      "recommendation": "Use template literals or explicit conversion."
+    },
+    "comparingThis": {
+      "title": "Comparing this to another value",
+      "description": "this is never equal to an arbitrary value.",
+      "recommendation": "Remove the comparison; it is always false."
     }
   },
   "performance": {
@@ -358,6 +1088,196 @@
       "title": "DOM query in render",
       "description": "document.querySelector in render is slow and breaks SSR. Use useRef.",
       "recommendation": "Use useRef to access DOM nodes."
+    },
+    "oN2IndexOf": {
+      "title": "indexOf inside loop (O(n²))",
+      "description": "indexOf in a loop is quadratic.",
+      "recommendation": "Use a Set or Map for lookups."
+    },
+    "oN2Includes": {
+      "title": "includes inside loop (O(n²))",
+      "description": "includes in a loop is quadratic.",
+      "recommendation": "Use a Set or Map for lookups."
+    },
+    "nestedLoop": {
+      "title": "Nested loops",
+      "description": "Nested loops may be O(n²) or worse.",
+      "recommendation": "Use indexes/maps or flatten the iteration."
+    },
+    "deepCloneJson": {
+      "title": "Deep clone via JSON",
+      "description": "JSON.parse(JSON.stringify()) is slow and drops functions/undefined.",
+      "recommendation": "Use structuredClone() or a library."
+    },
+    "filterThenMap": {
+      "title": "filter then map traversal",
+      "description": "Two passes over the array.",
+      "recommendation": "Combine with a flatMap or a single loop."
+    },
+    "regexInLoop": {
+      "title": "RegExp constructed in loop",
+      "description": "Creating RegExp each iteration is wasteful.",
+      "recommendation": "Hoist the RegExp outside the loop."
+    },
+    "concatInLoop": {
+      "title": "String concat in loop",
+      "description": "+= in a loop is O(n²).",
+      "recommendation": "Collect into an array and join()."
+    },
+    "arrayCopyInLoop": {
+      "title": "Array mutation in loop",
+      "description": "push/unshift/splice in a loop rebuilds the array.",
+      "recommendation": "Preallocate or use a single pass."
+    },
+    "requestsNoTimeout": {
+      "title": "HTTP request without timeout",
+      "description": "requests.get without timeout can hang forever.",
+      "recommendation": "Add timeout=... to every request."
+    },
+    "fetchNoTimeout": {
+      "title": "fetch without timeout",
+      "description": "fetch without AbortController can hang.",
+      "recommendation": "Wire up AbortController or a timeout."
+    },
+    "fetchNoRevalidate": {
+      "title": "fetch without revalidation",
+      "description": "Server fetch caches nothing by default.",
+      "recommendation": "Set revalidate/cache options."
+    },
+    "sleepInHandler": {
+      "title": "time.sleep in handler",
+      "description": "Sleeping blocks the request/worker.",
+      "recommendation": "Use async scheduling or a queue."
+    },
+    "sequentialAsync": {
+      "title": "Sequential awaits",
+      "description": "Awaits run one after another.",
+      "recommendation": "Run independent calls with Promise.all."
+    },
+    "callbackInLoop": {
+      "title": "Async callback in loop",
+      "description": "async forEach callbacks overlap and can't be awaited.",
+      "recommendation": "Use a for...of with await or Promise.all."
+    },
+    "importD3": {
+      "title": "Full d3 import",
+      "description": "Bundling all of d3 is heavy.",
+      "recommendation": "Import only needed modules (d3-selection...)."
+    },
+    "importThree": {
+      "title": "Full three.js import",
+      "description": "three.js is a large dependency.",
+      "recommendation": "Use tree-shaken imports or dynamic import."
+    },
+    "importChartJs": {
+      "title": "Full chart.js import",
+      "description": "chart.js adds significant weight.",
+      "recommendation": "Import only used chart types or use a lighter lib."
+    },
+    "importJquery": {
+      "title": "jQuery imported",
+      "description": "jQuery is large and mostly unnecessary in modern JS.",
+      "recommendation": "Use native DOM APIs or a small lib."
+    },
+    "importBootstrap": {
+      "title": "Bootstrap imported",
+      "description": "Full Bootstrap ships a large CSS/JS bundle.",
+      "recommendation": "Import only used components or use CSS variables."
+    },
+    "importAxios": {
+      "title": "axios dependency",
+      "description": "axios adds overhead vs native fetch.",
+      "recommendation": "Use the built-in fetch API."
+    },
+    "inlineFunctionRender": {
+      "title": "Inline function in render",
+      "description": "Inline handlers recreate functions each render.",
+      "recommendation": "Use useCallback or hoist the function."
+    },
+    "objectLiteralProp": {
+      "title": "Object literal prop",
+      "description": "Inline object props break memoization.",
+      "recommendation": "Memoize or hoist the object."
+    },
+    "nPlusOneForLoop": {
+      "title": "N+1 query in for loop",
+      "description": "DB query per loop iteration.",
+      "recommendation": "Batch with IN / include / Promise.all."
+    },
+    "selectStar": {
+      "title": "SELECT * used",
+      "description": "SELECT * fetches unneeded columns.",
+      "recommendation": "List only required columns."
+    },
+    "findAllNoPagination": {
+      "title": "findAll without pagination",
+      "description": "findAll() loads the entire table.",
+      "recommendation": "Add limit/offset."
+    },
+    "dbQueryInLoop": {
+      "title": "DB query inside loop",
+      "description": "Query executed repeatedly in a loop.",
+      "recommendation": "Batch queries or use JOIN."
+    },
+    "reactiveQueryNoCache": {
+      "title": "Query without staleTime",
+      "description": "useQuery without staleTime refetches too often.",
+      "recommendation": "Set staleTime to reduce refetches."
+    },
+    "globalVariableAccumulate": {
+      "title": "Global array accumulates",
+      "description": "Module-level array grows without bound.",
+      "recommendation": "Use a bounded cache or cleanup."
+    },
+    "setIntervalNoCleanup": {
+      "title": "setInterval without cleanup",
+      "description": "Timer keeps running after unmount.",
+      "recommendation": "Clear interval in useEffect cleanup."
+    },
+    "domQueryInLoop": {
+      "title": "DOM query in loop",
+      "description": "document.querySelector in a loop is slow.",
+      "recommendation": "Query once outside the loop."
+    },
+    "layoutThrashInLoop": {
+      "title": "Layout thrash in loop",
+      "description": "Reading layout in a loop forces reflow.",
+      "recommendation": "Read layout values first, then mutate."
+    },
+    "imageNoLazy": {
+      "title": "Image without lazy loading",
+      "description": "<img> without loading=lazy loads eagerly.",
+      "recommendation": "Add loading='lazy' or use next/image."
+    },
+    "fontBlocking": {
+      "title": "Blocking font load",
+      "description": "@font-face without display:swap blocks text render.",
+      "recommendation": "Add font-display: swap."
+    },
+    "largeArrayLiteral": {
+      "title": "Large inline array literal",
+      "description": "Big literal arrays bloat the bundle.",
+      "recommendation": "Move to a separate lazy-loaded module."
+    },
+    "unboundedCache": {
+      "title": "Unbounded cache growth",
+      "description": "Map/object cache never evicts entries.",
+      "recommendation": "Add eviction (LRU) or a size limit."
+    },
+    "syncXhr": {
+      "title": "Synchronous XHR",
+      "description": "Synchronous requests block the UI thread.",
+      "recommendation": "Use async fetch with await."
+    },
+    "heavyImportDynamic": {
+      "title": "Heavy import not dynamic",
+      "description": "Large module imported eagerly.",
+      "recommendation": "Use dynamic import() for code-splitting."
+    },
+    "localStorageInRender": {
+      "title": "localStorage access in render",
+      "description": "localStorage is synchronous and slow in render.",
+      "recommendation": "Move to useEffect or a state store."
     }
   },
   "positiveFindings": {

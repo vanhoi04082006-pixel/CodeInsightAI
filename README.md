@@ -1,4 +1,4 @@
-<div align="center">
+﻿<div align="center">
 
 # 🧠 CodeInsight AI
 
@@ -20,7 +20,7 @@
 
 ## 📖 Overview
 
-CodeInsight AI is an enterprise-grade code intelligence platform that analyzes any GitHub repository using AI. It combines static analysis (66 rules) with 9 AI deep-analysis passes to produce structured, evidence-backed insights — security vulnerabilities, performance bottlenecks, architecture review, code quality, and actionable roadmaps.
+CodeInsight AI is an enterprise-grade code intelligence platform that analyzes any GitHub repository using AI. It combines static analysis (250 rules) with 9 AI deep-analysis passes to produce structured, evidence-backed insights — security vulnerabilities, performance bottlenecks, architecture review, code quality, and actionable roadmaps.
 
 ### Key Differentiators
 
@@ -288,7 +288,7 @@ src/
 | Graph providers | 6 |
 | Diagram providers | 6 |
 | i18n keys | 2,300+ (EN = VI) |
-| Static analysis rules | 66 |
+| Static analysis rules | 250 |
 
 ---
 

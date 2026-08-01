@@ -80,7 +80,7 @@
     "deep": "🧠 Phân tích AI chuyên sâu ({count}-pass)",
     "static": "⚡ Chỉ phân tích tĩnh",
     "deepDesc": "Dùng AI cho tóm tắt điều hành, đánh giá bảo mật, kiến trúc, hiệu năng + kiểm toán best practices",
-    "staticDesc": "Nhanh hơn — chỉ 66 quy tắc tĩnh, không tiêu tốn token AI"
+    "staticDesc": "Nhanh hơn — chỉ 250 quy tắc tĩnh, không tiêu tốn token AI"
   },
   "repositoryFallback": "repository",
   "logOk": "OK",

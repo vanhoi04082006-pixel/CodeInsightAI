@@ -1,4 +1,4 @@
-# Changelog
+﻿# Changelog
 
 All notable changes to CodeInsight AI will be documented in this file.
 
@@ -39,7 +39,7 @@ All notable changes to CodeInsight AI will be documented in this file.
 
 ### Added
 - Initial release
-- Static analysis engine (66 rules)
+- Static analysis engine (250 rules)
 - 8 AI providers (BYOK)
 - GitHub OAuth authentication
 - Project report with 10 tabs

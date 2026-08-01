@@ -89,6 +89,391 @@
       "title": "Wildcard CORS origin",
       "description": "CORS cho phép tất cả origins.",
       "recommendation": "Restrict theo các trusted origins cụ thể."
+    },
+    "hardcodedStripeKey": {
+      "title": "Khoá Stripe live nhúng cứng",
+      "description": "Phát hiện khoá bí mật Stripe {sk_live_*} trong mã nguồn.",
+      "recommendation": "Chuyển vào biến môi trường và xoay khoá ngay."
+    },
+    "hardcodedSlackToken": {
+      "title": "Token Slack nhúng cứng",
+      "description": "Token Slack lộ trong mã nguồn.",
+      "recommendation": "Chuyển vào biến môi trường và cấp lại token."
+    },
+    "hardcodedTwilioSid": {
+      "title": "Twilio SID nhúng cứng",
+      "description": "SID tài khoản Twilio (AC*) bị commit vào mã nguồn.",
+      "recommendation": "Chuyển vào biến môi trường."
+    },
+    "hardcodedTelegramToken": {
+      "title": "Token Telegram bot nhúng cứng",
+      "description": "Token bot Telegram lộ trong mã nguồn.",
+      "recommendation": "Chuyển vào biến môi trường và thu hồi token."
+    },
+    "hardcodedDiscordToken": {
+      "title": "Token Discord nhúng cứng",
+      "description": "Token Discord bot bị commit vào mã nguồn.",
+      "recommendation": "Chuyển vào biến môi trường và cấp lại."
+    },
+    "hardcodedNpmToken": {
+      "title": "Token npm nhúng cứng",
+      "description": "Token publish npm lộ trong mã nguồn.",
+      "recommendation": "Chuyển vào biến môi trường và thu hồi."
+    },
+    "hardcodedSendGridKey": {
+      "title": "Khoá SendGrid nhúng cứng",
+      "description": "API key SendGrid lộ trong mã nguồn.",
+      "recommendation": "Chuyển vào biến môi trường và xoay khoá."
+    },
+    "hardcodedAzureStorageKey": {
+      "title": "Khoá Azure Storage nhúng cứng",
+      "description": "Khoá tài khoản Azure Storage bị commit vào mã nguồn.",
+      "recommendation": "Chuyển vào biến môi trường và tạo lại."
+    },
+    "gcpServiceAccountKey": {
+      "title": "File khoá GCP service account",
+      "description": "File JSON khoá service_account của GCP bị commit vào mã nguồn.",
+      "recommendation": "Xoá khỏi repo, nạp từ secret manager."
+    },
+    "postgresUrlWithCreds": {
+      "title": "URL PostgreSQL chứa thông tin đăng nhập",
+      "description": "Chuỗi kết nối Postgres chứa tên người dùng/mật khẩu.",
+      "recommendation": "Dùng biến môi trường; không commit DSN."
+    },
+    "mongoUrlWithCreds": {
+      "title": "URL MongoDB chứa thông tin đăng nhập",
+      "description": "Chuỗi kết nối Mongo chứa thông tin đăng nhập.",
+      "recommendation": "Dùng biến môi trường."
+    },
+    "redisUrlWithCreds": {
+      "title": "URL Redis chứa thông tin đăng nhập",
+      "description": "Chuỗi kết nối Redis chứa thông tin đăng nhập.",
+      "recommendation": "Dùng biến môi trường."
+    },
+    "mysqlUrlWithCreds": {
+      "title": "URL MySQL chứa thông tin đăng nhập",
+      "description": "Chuỗi kết nối MySQL chứa thông tin đăng nhập.",
+      "recommendation": "Dùng biến môi trường."
+    },
+    "sessionSecretAssignment": {
+      "title": "Session secret nhúng cứng",
+      "description": "Session/JWT/COOKIE secret được gán giá trị literal.",
+      "recommendation": "Dùng process.env cho session secret."
+    },
+    "basicAuthHeader": {
+      "title": "Header Basic auth chứa thông tin đăng nhập",
+      "description": "Header Authorization Basic nhúng cứng làm lộ thông tin đăng nhập.",
+      "recommendation": "Dùng nơi lưu credential; không commit Basic auth."
+    },
+    "credsInGitUrl": {
+      "title": "Thông tin đăng nhập trong URL git",
+      "description": "URL git nhúng tên người dùng/mật khẩu hoặc token.",
+      "recommendation": "Xoá creds khỏi URL; dùng SSH key."
+    },
+    "pythonFStringSql": {
+      "title": "SQL nối chuỗi bằng f-string Python",
+      "description": "f-string chèn giá trị trực tiếp vào câu SQL.",
+      "recommendation": "Dùng truy vấn tham số hoá."
+    },
+    "phpSqlConcat": {
+      "title": "SQL nối chuỗi PHP",
+      "description": "Câu SQL được ghép bằng phép nối '.'.",
+      "recommendation": "Dùng prepared statement / PDO."
+    },
+    "javaSqlConcat": {
+      "title": "SQL nối chuỗi Java",
+      "description": "Câu SQL được ghép bằng '+'.",
+      "recommendation": "Dùng PreparedStatement có tham số."
+    },
+    "goSprintfSql": {
+      "title": "SQL tạo bằng fmt.Sprintf",
+      "description": "Câu SQL được ghép qua fmt.Sprintf — nguy cơ injection.",
+      "recommendation": "Dùng placeholder của database/sql (?) hoặc ORM."
+    },
+    "pythonOsSystem": {
+      "title": "Sử dụng os.system()",
+      "description": "os.system chạy shell — nguy cơ command injection.",
+      "recommendation": "Dùng subprocess.run với danh sách tham số."
+    },
+    "pythonSubprocessShell": {
+      "title": "subprocess với shell=True",
+      "description": "shell=True đưa lệnh vào shell.",
+      "recommendation": "Tránh shell=True; truyền tham số dạng list."
+    },
+    "javaRuntimeExec": {
+      "title": "Sử dụng Runtime.exec()",
+      "description": "Runtime.exec chạy lệnh hệ thống — nguy cơ injection.",
+      "recommendation": "Dùng ProcessBuilder với danh sách tham số."
+    },
+    "phpShellExec": {
+      "title": "Thực thi lệnh shell trong PHP",
+      "description": "shell_exec/passthru/system thực thi lệnh shell.",
+      "recommendation": "Kiểm tra input; dùng escapeshellarg hoặc tránh gọi shell."
+    },
+    "nodeChildProcessExec": {
+      "title": "child_process exec/spawn",
+      "description": "child_process exec/spawn có thể chạy lệnh shell.",
+      "recommendation": "Dùng execFile với mảng tham số."
+    },
+    "goExecCommand": {
+      "title": "Sử dụng exec.Command()",
+      "description": "exec.Command có thể gọi chương trình hệ thống.",
+      "recommendation": "Kiểm tra input, tránh chèn shell."
+    },
+    "templateInjectionPy": {
+      "title": "Nguy cơ template injection",
+      "description": "render_template_string đánh giá mã template từ input.",
+      "recommendation": "Không đưa input người dùng vào template string."
+    },
+    "domInnerHtmlXss": {
+      "title": "Gán innerHTML không an toàn",
+      "description": "Gán innerHTML với dữ liệu động dễ bị DOM XSS.",
+      "recommendation": "Dùng textContent hoặc escape/sanitize giá trị."
+    },
+    "domOuterHtmlXss": {
+      "title": "Gán outerHTML không an toàn",
+      "description": "Gán outerHTML với dữ liệu động dễ bị DOM XSS.",
+      "recommendation": "Tránh outerHTML; dùng DOM API hoặc sanitize."
+    },
+    "insertAdjacentHtmlXss": {
+      "title": "insertAdjacentHTML không an toàn",
+      "description": "insertAdjacentHTML phân tích HTML từ dữ liệu động.",
+      "recommendation": "Sanitize input bằng DOMPurify trước khi chèn."
+    },
+    "documentWriteXss": {
+      "title": "Sử dụng document.write()",
+      "description": "document.write có thể chèn HTML/script tuỳ ý.",
+      "recommendation": "Tránh document.write; dùng DOM API an toàn."
+    },
+    "vueVHtmlXss": {
+      "title": "Dùng directive v-html",
+      "description": "v-html render HTML thô — nguy cơ XSS với dữ liệu người dùng.",
+      "recommendation": "Dùng template interpolation hoặc sanitize."
+    },
+    "angularInnerHtmlXss": {
+      "title": "Binding [innerHTML] Angular",
+      "description": "[innerHTML] render HTML thô — nguy cơ XSS.",
+      "recommendation": "Dùng interpolation hoặc sanitize bằng DomSanitizer."
+    },
+    "javascriptHrefXss": {
+      "title": "URL javascript: trong href",
+      "description": "URL javascript: thực thi mã — vector XSS.",
+      "recommendation": "Loại bỏ URL javascript:; kiểm tra scheme."
+    },
+    "weakSha1": {
+      "title": "Băm SHA-1 yếu",
+      "description": "SHA-1 không còn an toàn cho mục đích bảo mật.",
+      "recommendation": "Chuyển sang SHA-256+ hoặc bcrypt/argon2."
+    },
+    "weakDes": {
+      "title": "Mã hoá DES yếu",
+      "description": "DES/3DES đã lỗi thời và yếu.",
+      "recommendation": "Dùng AES-256-GCM."
+    },
+    "weakRc4": {
+      "title": "Thuật toán RC4 yếu",
+      "description": "RC4/ARC4 đã bị bẻ khoá.",
+      "recommendation": "Dùng AES-GCM."
+    },
+    "weakEcbMode": {
+      "title": "Chế độ mã hoá ECB",
+      "description": "Chế độ ECB làm lộ cấu trúc bản rõ.",
+      "recommendation": "Dùng AES-GCM hoặc CBC với IV ngẫu nhiên."
+    },
+    "hardcodedSalt": {
+      "title": "Salt nhúng cứng",
+      "description": "Salt cố định làm yếu việc băm mật khẩu.",
+      "recommendation": "Tạo salt ngẫu nhiên duy nhất cho mỗi mật khẩu."
+    },
+    "hardcodedIv": {
+      "title": "IV nhúng cứng",
+      "description": "IV cố định làm yếu mã hoá.",
+      "recommendation": "Dùng IV ngẫu nhiên cho mỗi lần mã hoá."
+    },
+    "weakRandomForSecret": {
+      "title": "Sinh ngẫu nhiên yếu cho bảo mật",
+      "description": "Math.random() không an toàn cho token/OTP.",
+      "recommendation": "Dùng crypto.getRandomValues() hoặc crypto.randomBytes()."
+    },
+    "pythonWeakRandomForSecret": {
+      "title": "Sinh ngẫu nhiên yếu (Python)",
+      "description": "Module random không an toàn cho bí mật.",
+      "recommendation": "Dùng secrets.token_* hoặc os.urandom."
+    },
+    "jwtWeakSecret": {
+      "title": "JWT secret yếu",
+      "description": "JWT được ký bằng secret literal quá ngắn.",
+      "recommendation": "Dùng secret ngẫu nhiên dài từ env."
+    },
+    "cookieNoHttpOnly": {
+      "title": "Cookie thiếu HttpOnly",
+      "description": "httpOnly:false cho phép JavaScript đọc cookie.",
+      "recommendation": "Đặt HttpOnly: true cho cookie phiên."
+    },
+    "cookieNoSecure": {
+      "title": "Cookie thiếu cờ Secure",
+      "description": "secure:false gửi cookie qua HTTP.",
+      "recommendation": "Đặt Secure: true (chỉ HTTPS)."
+    },
+    "cookieSameSiteNone": {
+      "title": "Cookie SameSite=None",
+      "description": "SameSite=None cho phép gửi cookie xuyên site.",
+      "recommendation": "Ưu tiên SameSite=Lax/Strict trừ khi thực sự cần."
+    },
+    "rejectUnauthorizedFalse": {
+      "title": "Vô hiệu hoá kiểm tra TLS",
+      "description": "rejectUnauthorized:false tắt xác thực chứng chỉ.",
+      "recommendation": "Giữ rejectUnauthorized true."
+    },
+    "sslVerifyDisabled": {
+      "title": "Tắt xác thực SSL",
+      "description": "verify=False / ssl=False tắt kiểm tra chứng chỉ.",
+      "recommendation": "Bật xác thực chứng chỉ."
+    },
+    "timingUnsafeCompare": {
+      "title": "So sánh không hằng số thời gian",
+      "description": "So sánh hash/chữ ký bằng == làm lộ thông tin thời gian.",
+      "recommendation": "Dùng so sánh hằng số thời gian (timingSafeEqual, compare_digest)."
+    },
+    "pickleLoads": {
+      "title": "pickle.loads() không an toàn",
+      "description": "pickle.loads có thể chạy mã tuỳ ý trên dữ liệu không tin cậy.",
+      "recommendation": "Dùng JSON hoặc định dạng an toàn."
+    },
+    "yamlLoadUnsafe": {
+      "title": "yaml.load không an toàn",
+      "description": "yaml.load có thể tạo đối tượng tuỳ ý.",
+      "recommendation": "Dùng yaml.safe_load."
+    },
+    "phpUnserialize": {
+      "title": "unserialize() không an toàn",
+      "description": "unserialize trên dữ liệu không tin cậy dẫn tới object injection.",
+      "recommendation": "Dùng JSON hoặc giới hạn class cho phép."
+    },
+    "javaObjectInputStream": {
+      "title": "Deserialization Java không an toàn",
+      "description": "ObjectInputStream.readObject trên dữ liệu không tin cậy — nguy cơ RCE.",
+      "recommendation": "Dùng định dạng an toàn hoặc filter."
+    },
+    "dotnetBinaryFormatter": {
+      "title": "BinaryFormatter không an toàn",
+      "description": "BinaryFormatter nguy hiểm với dữ liệu không tin cậy.",
+      "recommendation": "Dùng JSON hoặc System.Text.Json."
+    },
+    "xxeResolveEntities": {
+      "title": "XXE — bật phân giải entity",
+      "description": "resolve_entities=True cho phép chèn external entity.",
+      "recommendation": "Tắt tải DTD/entity."
+    },
+    "xxeDtdProcessing": {
+      "title": "XXE — DTD processing không an toàn",
+      "description": "Parser được cấu hình xử lý DTD/external entity.",
+      "recommendation": "Tắt DTD và external entity."
+    },
+    "prototypePollution": {
+      "title": "Nguy cơ prototype pollution",
+      "description": "Gán __proto__ / constructor.prototype có thể làm ô nhiễm global.",
+      "recommendation": "Freeze prototype hoặc kiểm tra key."
+    },
+    "sqlNoParameterized": {
+      "title": "SQL không tham số hoá (Python)",
+      "description": "execute/query dùng %s / %() — nguy cơ injection.",
+      "recommendation": "Dùng placeholder tham số của driver."
+    },
+    "pathTraversalJoin": {
+      "title": "Path traversal trong path.join",
+      "description": "path.join với input từ request có thể thoát khỏi thư mục gốc.",
+      "recommendation": "Resolve và kiểm tra đường dẫn nằm trong thư mục cho phép."
+    },
+    "openRedirectGeneric": {
+      "title": "Nguy cơ open redirect",
+      "description": "res.redirect dùng input từ request.",
+      "recommendation": "Kiểm tra đích đến theo allowlist."
+    },
+    "uploadNoSizeLimit": {
+      "title": "Upload không giới hạn kích thước",
+      "description": "Handler upload không giới hạn kích thước — nguy cơ DoS.",
+      "recommendation": "Đặt giới hạn kích thước/loại file."
+    },
+    "newFunctionEval": {
+      "title": "Sử dụng new Function()",
+      "description": "new Function biên dịch và chạy mã tuỳ ý.",
+      "recommendation": "Thay bằng parser an toàn hoặc JSON.parse."
+    },
+    "curlInsecure": {
+      "title": "Tuỳ chọn curl không an toàn",
+      "description": "curl -k / tắt CURLOPT_SSL_VERIFYPEER bỏ qua kiểm tra TLS.",
+      "recommendation": "Giữ xác thực chứng chỉ."
+    },
+    "secretInLogs": {
+      "title": "Secret bị ghi vào log",
+      "description": "console.log/debug xuất token hoặc mật khẩu.",
+      "recommendation": "Không bao giờ log secret; che dữ liệu nhạy cảm."
+    },
+    "hardcodedAdminCreds": {
+      "title": "Thông tin admin nhúng cứng",
+      "description": "Tên/mật khẩu admin mặc định bị commit.",
+      "recommendation": "Sinh thông tin đăng nhập lúc chạy hoặc qua env."
+    },
+    "dockerPrivileged": {
+      "title": "Docker privileged mode",
+      "description": "--privileged / privileged:true cấp toàn quyền host.",
+      "recommendation": "Tránh privileged mode; giảm capabilities."
+    },
+    "chmod777": {
+      "title": "Quyền chmod 777",
+      "description": "Quyền ghi cho mọi người là rủi ro bảo mật.",
+      "recommendation": "Dùng quyền tối thiểu (vd: 644/700)."
+    },
+    "oldTlsProtocol": {
+      "title": "Giao thức TLS/SSL cũ",
+      "description": "TLSv1/SSLv3 đã lỗi thời và không an toàn.",
+      "recommendation": "Yêu cầu TLS 1.2+."
+    },
+    "sshPrivateKey": {
+      "title": "SSH private key nhúng cứng",
+      "description": "OpenSSH private key bị commit vào mã nguồn.",
+      "recommendation": "Xoá key; dùng secrets manager."
+    },
+    "mongoNoSQLInjection": {
+      "title": "Nguy cơ NoSQL injection",
+      "description": "$where/$regex với input người dùng gây NoSQL injection.",
+      "recommendation": "Sanitize toán tử và kiểm tra kiểu dữ liệu."
+    },
+    "jwtNoExpiry": {
+      "title": "JWT không có thời hạn",
+      "description": "jwt.sign không có expiresIn tạo token vĩnh viễn.",
+      "recommendation": "Luôn đặt expiresIn cho JWT."
+    },
+    "headerInjection": {
+      "title": "Nguy cơ header injection",
+      "description": "setHeader/writeHead với \\r\\n có thể chèn header.",
+      "recommendation": "Sanitize giá trị header, bỏ CR/LF."
+    },
+    "phpFileInclusion": {
+      "title": "File inclusion nguy hiểm",
+      "description": "include/require với input người dùng cho phép file inclusion.",
+      "recommendation": "Kiểm tra đường dẫn theo allowlist."
+    },
+    "execSyncTemplate": {
+      "title": "execSync với template string",
+      "description": "execSync với template literal chạy lệnh shell.",
+      "recommendation": "Dùng execFile với mảng tham số."
+    },
+    "xmlExternalEntity": {
+      "title": "External entity XML (XXE)",
+      "description": "<!DOCTYPE ... SYSTEM tải external entity.",
+      "recommendation": "Tắt DTD/giãn nở entity."
+    },
+    "sessionCookieNoSecureFlag": {
+      "title": "Cookie phiên thiếu cờ an toàn",
+      "description": "session.cookie httpOnly/secure bị đặt false.",
+      "recommendation": "Bật cờ httpOnly và secure."
+    },
+    "sqlRawConcatJs": {
+      "title": "SQL nối chuỗi trong JS",
+      "description": "db.query/db.execute nối chuỗi — nguy cơ injection.",
+      "recommendation": "Dùng truy vấn tham số hoá."
     }
   },
   "bugs": {
@@ -146,6 +531,351 @@
       "title": "Unused variable: {name}",
       "description": "'{name}' được khai báo nhưng không bao giờ dùng.",
       "recommendation": "Xóa biến không dùng hoặc thêm tiền tố _ nếu cố ý."
+    },
+    "goNilDeref": {
+      "title": "Nguy cơ nil dereference",
+      "description": "Truy cập trường liên tiếp trên giá trị có thể nil.",
+      "recommendation": "Kiểm tra nil trước khi truy cập."
+    },
+    "javaNullDeref": {
+      "title": "Nguy cơ null dereference",
+      "description": "Chuỗi gọi phương thức có thể gặp đối tượng null.",
+      "recommendation": "Thêm kiểm tra null hoặc dùng Optional."
+    },
+    "pyDictBareIndex": {
+      "title": "Index dict trực tiếp",
+      "description": "dict['key'] ném KeyError nếu thiếu.",
+      "recommendation": "Dùng .get() với giá trị mặc định."
+    },
+    "pyAttrUnchecked": {
+      "title": "Chuỗi thuộc tính không kiểm tra",
+      "description": "Truy cập thuộc tính liên tiếp có thể ném AttributeError.",
+      "recommendation": "Dùng getattr/hasattr."
+    },
+    "phpUndefinedIndex": {
+      "title": "Index mảng không xác định",
+      "description": "Truy cập key $_GET/$_POST không có isset.",
+      "recommendation": "Kiểm tra isset()/array_key_exists."
+    },
+    "jsMaybeUndefined": {
+      "title": "Kết quả có thể undefined",
+      "description": "Kết quả .find() được truy cập mà không có fallback.",
+      "recommendation": "Thêm fallback: result ?? defaultValue."
+    },
+    "promiseNoCatch": {
+      "title": "Promise không có catch",
+      "description": "Chuỗi Promise kết thúc không có .catch() — rejection không xử lý.",
+      "recommendation": "Thêm .catch() hoặc dùng try/await/catch."
+    },
+    "asyncFuncNoAwait": {
+      "title": "Hàm async không có await",
+      "description": "async thêm promise mà không cần thiết.",
+      "recommendation": "Bỏ async hoặc thêm await."
+    },
+    "callbackErrIgnored": {
+      "title": "Tham số lỗi bị bỏ qua",
+      "description": "Callback nuốt tham số lỗi.",
+      "recommendation": "Xử lý hoặc truyền tiếp lỗi."
+    },
+    "pyExceptPass": {
+      "title": "except: pass nuốt lỗi",
+      "description": "Ngoại lệ bị bỏ qua im lặng.",
+      "recommendation": "Log hoặc ném lại ngoại lệ."
+    },
+    "pyBareExcept": {
+      "title": "except không chỉ định loại lỗi",
+      "description": "except: bắt mọi thứ, kể cả KeyboardInterrupt.",
+      "recommendation": "Bắt các ngoại lệ cụ thể."
+    },
+    "phpErrorSuppression": {
+      "title": "Toán tử che lỗi PHP",
+      "description": "@ che lỗi — ẩn lỗi thật.",
+      "recommendation": "Xử lý lỗi tường minh; tránh @."
+    },
+    "pyIsComparison": {
+      "title": "Dùng 'is' để so sánh giá trị",
+      "description": "is so sánh danh tính, không phải giá trị.",
+      "recommendation": "Dùng == để so sánh giá trị."
+    },
+    "phpLooseInt": {
+      "title": "So sánh lỏng với 0",
+      "description": "== 0 khớp cả chuỗi rỗng và 'false' trong PHP.",
+      "recommendation": "Dùng === kèm kiểu tường minh."
+    },
+    "javaStringEq": {
+      "title": "So sánh String bằng ==",
+      "description": "== so sánh tham chiếu, không phải nội dung String.",
+      "recommendation": "Dùng .equals() cho chuỗi."
+    },
+    "goStringConcatByte": {
+      "title": "Chuyển []byte không cần thiết",
+      "description": "Chuyển sang []byte để nối là lãng phí.",
+      "recommendation": "Dùng strings.Builder hoặc phương thức slice byte."
+    },
+    "parseIntNoRadix": {
+      "title": "parseInt thiếu cơ số",
+      "description": "parseInt thiếu radix có thể đọc nhầm hệ cơ số.",
+      "recommendation": "Dùng parseInt(value, 10)."
+    },
+    "floatEquality": {
+      "title": "So sánh bằng số thực",
+      "description": "So sánh float bằng === không đáng tin cậy.",
+      "recommendation": "So sánh với sai số epsilon."
+    },
+    "typeofObjectNull": {
+      "title": "typeof object không kiểm tra null",
+      "description": "typeof x === 'object' đúng cả với null.",
+      "recommendation": "Thêm x !== null vào điều kiện."
+    },
+    "jsIsNaN": {
+      "title": "So sánh NaN",
+      "description": "value === NaN luôn trả về false.",
+      "recommendation": "Dùng Number.isNaN(value)."
+    },
+    "cStrcpy": {
+      "title": "strcpy() không an toàn",
+      "description": "strcpy có thể tràn bộ đệm đích.",
+      "recommendation": "Dùng strncpy/strlcpy có giới hạn."
+    },
+    "cGets": {
+      "title": "gets() không an toàn",
+      "description": "gets() không kiểm tra giới hạn — tràn bộ đệm kinh điển.",
+      "recommendation": "Dùng fgets() kèm giới hạn."
+    },
+    "cSprintf": {
+      "title": "sprintf() không an toàn",
+      "description": "sprintf có thể tràn bộ đệm đích.",
+      "recommendation": "Dùng snprintf() kèm giới hạn."
+    },
+    "cUnsafeConcat": {
+      "title": "strcat() không an toàn",
+      "description": "strcat có thể tràn bộ đệm đích.",
+      "recommendation": "Dùng strncat/strlcat có giới hạn."
+    },
+    "pyMutableDefault": {
+      "title": "Đối số mặc định mutable",
+      "description": "Default [] / {} được chia sẻ giữa các lần gọi.",
+      "recommendation": "Dùng None và tạo bên trong hàm."
+    },
+    "pySwitchMissing": {
+      "title": "Chuỗi if/elif dài",
+      "description": "Nhiều if/elif trên một giá trị.",
+      "recommendation": "Dùng dict lookup hoặc match."
+    },
+    "jsVarInBlock": {
+      "title": "var trong block scope",
+      "description": "var thoát ra ngoài block scope.",
+      "recommendation": "Dùng let hoặc const."
+    },
+    "phpOldStyleArray": {
+      "title": "Cú pháp array() cũ",
+      "description": "array() bị khuyến cáo bỏ từ PHP 8.2+.",
+      "recommendation": "Dùng cú pháp []."
+    },
+    "goDeferInLoop": {
+      "title": "defer trong vòng lặp",
+      "description": "Các lời gọi defer tích luỹ đến khi hàm trả về.",
+      "recommendation": "Chuyển defer ra ngoài vòng lặp."
+    },
+    "goSliceOutOfRange": {
+      "title": "Nguy cơ panic index slice",
+      "description": "Index slice bằng giá trị tính toán có thể panic.",
+      "recommendation": "Kiểm tra biên trước khi index."
+    },
+    "offByOne": {
+      "title": "Nguy cơ off-by-one",
+      "description": "Biên <= .length hoặc < .length - 1 đáng nghi.",
+      "recommendation": "Xem lại điều kiện biên."
+    },
+    "assignmentInCondition": {
+      "title": "Gán trong điều kiện",
+      "description": "if (x = y) gán thay vì so sánh.",
+      "recommendation": "Dùng == hoặc === trong điều kiện."
+    },
+    "switchFallthrough": {
+      "title": "Switch case rơi xuống",
+      "description": "Case không có break/return.",
+      "recommendation": "Thêm break/return cho mỗi case."
+    },
+    "emptyCatchMulti": {
+      "title": "Catch rỗng",
+      "description": "Lỗi bị nuốt mà không xử lý.",
+      "recommendation": "Log hoặc ném lại lỗi."
+    },
+    "unusedPromise": {
+      "title": "Promise không dùng",
+      "description": "Promise được gán nhưng không await/return.",
+      "recommendation": "Await nó hoặc thêm .catch()."
+    },
+    "resourceNotClosed": {
+      "title": "Tài nguyên có thể không đóng",
+      "description": "File/stream được mở mà không thấy đóng.",
+      "recommendation": "Đóng tài nguyên trong finally hoặc dùng with/try."
+    },
+    "infiniteRecursion": {
+      "title": "Nguy cơ đệ quy vô hạn",
+      "description": "Hàm gọi chính nó mà không có điều kiện dừng.",
+      "recommendation": "Thêm base case hoặc giới hạn đệ quy."
+    },
+    "sqlNoWhere": {
+      "title": "Câu lệnh phá huỷ không có WHERE",
+      "description": "DELETE/TRUNCATE không WHERE sẽ xoá toàn bộ.",
+      "recommendation": "Thêm WHERE hoặc cơ chế bảo vệ transaction."
+    },
+    "goIgnoredError": {
+      "title": "Bỏ qua lỗi trả về",
+      "description": "err từ lời gọi bị bỏ qua.",
+      "recommendation": "Kiểm tra lỗi một cách tường minh."
+    },
+    "staleClosure": {
+      "title": "Closure cũ trong effect",
+      "description": "useEffect giữ giá trị đã lỗi thời.",
+      "recommendation": "Thêm dependency hoặc dùng ref."
+    },
+    "keyIndexInList": {
+      "title": "Dùng index làm key",
+      "description": "Dùng index làm key phá reconciliation khi sắp xếp lại.",
+      "recommendation": "Dùng id duy nhất ổn định."
+    },
+    "dangerousSetState": {
+      "title": "setState trong luồng render",
+      "description": "setState(this.state) có thể lặp vô hạn.",
+      "recommendation": "Tính giá trị ngoài render."
+    },
+    "onClickInvoke": {
+      "title": "Handler gọi ngay",
+      "description": "onClick={fn()} gọi fn lúc render.",
+      "recommendation": "Truyền tham chiếu hàm: onClick={fn}."
+    },
+    "mutatingProps": {
+      "title": "Thay đổi props",
+      "description": "Gán cho props là anti-pattern.",
+      "recommendation": "Dùng state hoặc bản sao."
+    },
+    "getDerivedState": {
+      "title": "Cập nhật state lúc render",
+      "description": "setState lúc render có thể gây vòng lặp.",
+      "recommendation": "Tính giá trị hoặc chuyển sang useEffect."
+    },
+    "promiseAllMissing": {
+      "title": "async trong map tuần tự",
+      "description": ".map(async ...) không Promise.all chạy tuần tự.",
+      "recommendation": "Dùng Promise.all(...)."
+    },
+    "awaitInMap": {
+      "title": "await trong callback map",
+      "description": "await trong map chạy tuần tự và mất thứ tự.",
+      "recommendation": "Dùng Promise.all với .map."
+    },
+    "subscriptionNoCleanup": {
+      "title": "Subscription không dọn dẹp",
+      "description": "Subscription rò rỉ qua các lần unmount.",
+      "recommendation": "Unsubscribe trong cleanup của useEffect."
+    },
+    "setTimeoutNoClear": {
+      "title": "setTimeout không clear",
+      "description": "Timer có thể chạy sau khi unmount.",
+      "recommendation": "Clear timer trong cleanup."
+    },
+    "consoleInProd": {
+      "title": "console.log trong production",
+      "description": "Log gỡ lỗi còn sót trong production.",
+      "recommendation": "Xoá hoặc dùng logger."
+    },
+    "hardcodedLocale": {
+      "title": "Locale nhúng cứng",
+      "description": "Locale cố định bỏ qua cấu hình i18n.",
+      "recommendation": "Dùng locale của app hoặc helper t()."
+    },
+    "goMapNoCommaOk": {
+      "title": "Tra cứu map không dùng comma-ok",
+      "description": "Index map không dùng comma-ok có thể trả giá trị zero.",
+      "recommendation": "Dùng v, ok := m[k] và kiểm tra ok."
+    },
+    "pyReturnNoneAttr": {
+      "title": "Trả về thuộc tính có thể None",
+      "description": "Truy cập tiếp trên thuộc tính trả về có thể None.",
+      "recommendation": "Kiểm tra None một cách tường minh."
+    },
+    "javaBoxedUnbox": {
+      "title": "So sánh == với kiểu boxed",
+      "description": "So sánh Integer/Long boxed bằng == so sánh tham chiếu.",
+      "recommendation": "Dùng .equals() hoặc unbox sang primitive."
+    },
+    "floatingPromise": {
+      "title": "Promise thả nổi",
+      "description": "Lời gọi async không await/return — lỗi không được xử lý.",
+      "recommendation": "Await hoặc return promise."
+    },
+    "setIntervalCallbackSync": {
+      "title": "setInterval không dọn dẹp",
+      "description": "Timer lặp có thể rò rỉ và chạy mãi.",
+      "recommendation": "Lưu id và clear khi xong."
+    },
+    "nonAwaitAsyncCall": {
+      "title": "Gọi async không await",
+      "description": "Handler async được gọi mà không await promise.",
+      "recommendation": "Await lời gọi hoặc xử lý promise."
+    },
+    "cUncheckedBuffer": {
+      "title": "Bộ đệm tĩnh cố định",
+      "description": "Mảng char cố định có thể tràn với input lớn.",
+      "recommendation": "Dùng cấp phát động hoặc ghi có giới hạn."
+    },
+    "cIntOverflow": {
+      "title": "Nguy cơ tràn số nguyên",
+      "description": "Phép tính int có thể tràn với giá trị lớn.",
+      "recommendation": "Dùng kiểu lớn hơn hoặc kiểm tra biên."
+    },
+    "pyExceptOnException": {
+      "title": "Bắt Exception quá rộng",
+      "description": "Bắt Exception chung che giấu lỗi thật.",
+      "recommendation": "Bắt các loại ngoại lệ cụ thể."
+    },
+    "pyGlobalMutation": {
+      "title": "Thay đổi biến global",
+      "description": "Từ khoá global thay đổi state module một cách ẩn.",
+      "recommendation": "Truyền giá trị qua tham số/return."
+    },
+    "phpComparisonLoose": {
+      "title": "So sánh giá trị lỏng",
+      "description": "== ép kiểu và có thể khớp sai.",
+      "recommendation": "Dùng === để so sánh chặt."
+    },
+    "goStringCompareBytes": {
+      "title": "So sánh bytes với string",
+      "description": "So sánh []byte và string lẫn kiểu — hãy chuyển rõ ràng.",
+      "recommendation": "Chuyển kiểu tường minh trước khi so sánh."
+    },
+    "divideByZero": {
+      "title": "Nguy cơ chia cho 0",
+      "description": "Biểu thức có thể chia cho giá trị 0.",
+      "recommendation": "Kiểm tra số chia trước khi chia."
+    },
+    "duplicateCase": {
+      "title": "Case trùng lặp",
+      "description": "Hai case khớp cùng một giá trị.",
+      "recommendation": "Gộp hoặc đổi tên case trùng."
+    },
+    "infiniteWhile": {
+      "title": "Vòng lặp while(true)",
+      "description": "Vòng lặp không có điều kiện thoát sẽ treo mãi.",
+      "recommendation": "Thêm break/return hoặc giới hạn số lần lặp."
+    },
+    "missingBreak": {
+      "title": "Thiếu break trong switch",
+      "description": "Case switch có thể rơi xuống mà không break.",
+      "recommendation": "Thêm break/return cho mọi case."
+    },
+    "stringConcatPitfall": {
+      "title": "Lỗi nối chuỗi/số",
+      "description": "Trộn chuỗi và số với + ép kiểu ngầm.",
+      "recommendation": "Dùng template literal hoặc chuyển kiểu tường minh."
+    },
+    "comparingThis": {
+      "title": "So sánh this với giá trị khác",
+      "description": "this không bao giờ bằng giá trị tuỳ ý.",
+      "recommendation": "Bỏ so sánh; nó luôn trả về false."
     }
   },
   "performance": {
@@ -358,6 +1088,196 @@
       "title": "DOM query in render",
       "description": "document.querySelector trong render chậm và breaks SSR. Dùng useRef.",
       "recommendation": "Dùng useRef để access DOM nodes."
+    },
+    "oN2IndexOf": {
+      "title": "indexOf trong vòng lặp (O(n²))",
+      "description": "indexOf trong vòng lặp là bậc hai.",
+      "recommendation": "Dùng Set hoặc Map để tra cứu."
+    },
+    "oN2Includes": {
+      "title": "includes trong vòng lặp (O(n²))",
+      "description": "includes trong vòng lặp là bậc hai.",
+      "recommendation": "Dùng Set hoặc Map để tra cứu."
+    },
+    "nestedLoop": {
+      "title": "Vòng lặp lồng nhau",
+      "description": "Vòng lặp lồng nhau có thể là O(n²).",
+      "recommendation": "Dùng index/map hoặc làm phẳng vòng lặp."
+    },
+    "deepCloneJson": {
+      "title": "Deep clone bằng JSON",
+      "description": "JSON.parse(JSON.stringify()) chậm và mất function/undefined.",
+      "recommendation": "Dùng structuredClone() hoặc thư viện."
+    },
+    "filterThenMap": {
+      "title": "filter rồi map",
+      "description": "Duyệt mảng hai lần.",
+      "recommendation": "Kết hợp flatMap hoặc một vòng lặp."
+    },
+    "regexInLoop": {
+      "title": "RegExp tạo trong vòng lặp",
+      "description": "Tạo RegExp mỗi lần lặp là lãng phí.",
+      "recommendation": "Đưa RegExp ra ngoài vòng lặp."
+    },
+    "concatInLoop": {
+      "title": "Nối chuỗi trong vòng lặp",
+      "description": "+= trong vòng lặp là O(n²).",
+      "recommendation": "Gom vào mảng rồi join()."
+    },
+    "arrayCopyInLoop": {
+      "title": "Thao tác mảng trong vòng lặp",
+      "description": "push/unshift/splice trong vòng lặp dựng lại mảng.",
+      "recommendation": "Cấp phát trước hoặc duyệt một lần."
+    },
+    "requestsNoTimeout": {
+      "title": "HTTP request không timeout",
+      "description": "requests.get không timeout có thể treo vô hạn.",
+      "recommendation": "Thêm timeout=... vào mọi request."
+    },
+    "fetchNoTimeout": {
+      "title": "fetch không timeout",
+      "description": "fetch không AbortController có thể treo.",
+      "recommendation": "Dùng AbortController hoặc timeout."
+    },
+    "fetchNoRevalidate": {
+      "title": "fetch không revalidate",
+      "description": "fetch server không cache mặc định.",
+      "recommendation": "Đặt tuỳ chọn revalidate/cache."
+    },
+    "sleepInHandler": {
+      "title": "time.sleep trong handler",
+      "description": "Sleep chặn request/worker.",
+      "recommendation": "Dùng lập lịch async hoặc queue."
+    },
+    "sequentialAsync": {
+      "title": "Await tuần tự",
+      "description": "Các await chạy lần lượt.",
+      "recommendation": "Chạy song song bằng Promise.all."
+    },
+    "callbackInLoop": {
+      "title": "Callback async trong vòng lặp",
+      "description": "Callback async trong forEach chồng nhau.",
+      "recommendation": "Dùng for...of với await hoặc Promise.all."
+    },
+    "importD3": {
+      "title": "Import toàn bộ d3",
+      "description": "Bundle toàn bộ d3 rất nặng.",
+      "recommendation": "Chỉ import module cần (d3-selection...)."
+    },
+    "importThree": {
+      "title": "Import toàn bộ three.js",
+      "description": "three.js là dependency lớn.",
+      "recommendation": "Dùng import cắt cây hoặc dynamic import."
+    },
+    "importChartJs": {
+      "title": "Import toàn bộ chart.js",
+      "description": "chart.js tăng đáng kể dung lượng.",
+      "recommendation": "Chỉ import loại chart dùng hoặc lib nhẹ hơn."
+    },
+    "importJquery": {
+      "title": "Import jQuery",
+      "description": "jQuery nặng và ít cần thiết trong JS hiện đại.",
+      "recommendation": "Dùng DOM API gốc hoặc lib nhỏ."
+    },
+    "importBootstrap": {
+      "title": "Import Bootstrap",
+      "description": "Bootstrap gửi bundle CSS/JS lớn.",
+      "recommendation": "Chỉ import component dùng hoặc dùng CSS variable."
+    },
+    "importAxios": {
+      "title": "Phụ thuộc axios",
+      "description": "axios thêm chi phí so với fetch gốc.",
+      "recommendation": "Dùng fetch API có sẵn."
+    },
+    "inlineFunctionRender": {
+      "title": "Hàm inline trong render",
+      "description": "Handler inline tạo lại hàm mỗi lần render.",
+      "recommendation": "Dùng useCallback hoặc đưa hàm ra ngoài."
+    },
+    "objectLiteralProp": {
+      "title": "Object literal prop",
+      "description": "Object prop inline phá memoization.",
+      "recommendation": "Memoize hoặc đưa object ra ngoài."
+    },
+    "nPlusOneForLoop": {
+      "title": "Truy vấn N+1 trong vòng lặp",
+      "description": "Truy vấn DB mỗi lần lặp.",
+      "recommendation": "Gom bằng IN / include / Promise.all."
+    },
+    "selectStar": {
+      "title": "SELECT * được dùng",
+      "description": "SELECT * lấy cả cột không cần.",
+      "recommendation": "Chỉ liệt kê cột cần thiết."
+    },
+    "findAllNoPagination": {
+      "title": "findAll không phân trang",
+      "description": "findAll() tải toàn bộ bảng.",
+      "recommendation": "Thêm limit/offset."
+    },
+    "dbQueryInLoop": {
+      "title": "Truy vấn DB trong vòng lặp",
+      "description": "Truy vấn chạy lặp đi lặp lại.",
+      "recommendation": "Gom truy vấn hoặc dùng JOIN."
+    },
+    "reactiveQueryNoCache": {
+      "title": "Query không staleTime",
+      "description": "useQuery không staleTime refetch quá nhiều.",
+      "recommendation": "Đặt staleTime để giảm refetch."
+    },
+    "globalVariableAccumulate": {
+      "title": "Mảng global tích luỹ",
+      "description": "Mảng cấp module tăng không giới hạn.",
+      "recommendation": "Dùng cache có giới hạn hoặc dọn dẹp."
+    },
+    "setIntervalNoCleanup": {
+      "title": "setInterval không dọn dẹp",
+      "description": "Timer tiếp tục chạy sau khi unmount.",
+      "recommendation": "Clear interval trong cleanup của useEffect."
+    },
+    "domQueryInLoop": {
+      "title": "Truy vấn DOM trong vòng lặp",
+      "description": "document.querySelector trong vòng lặp chậm.",
+      "recommendation": "Truy vấn một lần ngoài vòng lặp."
+    },
+    "layoutThrashInLoop": {
+      "title": "Layout thrash trong vòng lặp",
+      "description": "Đọc layout trong vòng lặp gây reflow.",
+      "recommendation": "Đọc giá trị layout trước, rồi thay đổi."
+    },
+    "imageNoLazy": {
+      "title": "Ảnh không lazy loading",
+      "description": "<img> không loading=lazy tải ngay.",
+      "recommendation": "Thêm loading='lazy' hoặc dùng next/image."
+    },
+    "fontBlocking": {
+      "title": "Font tải chặn render",
+      "description": "@font-face không display:swap chặn render chữ.",
+      "recommendation": "Thêm font-display: swap."
+    },
+    "largeArrayLiteral": {
+      "title": "Mảng literal lớn",
+      "description": "Literal mảng lớn làm tăng bundle.",
+      "recommendation": "Chuyển sang module lazy riêng."
+    },
+    "unboundedCache": {
+      "title": "Cache tăng không giới hạn",
+      "description": "Cache Map/object không bao giờ đào thải.",
+      "recommendation": "Thêm eviction (LRU) hoặc giới hạn kích thước."
+    },
+    "syncXhr": {
+      "title": "XHR đồng bộ",
+      "description": "Request đồng bộ chặn luồng UI.",
+      "recommendation": "Dùng fetch async với await."
+    },
+    "heavyImportDynamic": {
+      "title": "Import nặng không dynamic",
+      "description": "Module lớn được import tĩnh.",
+      "recommendation": "Dùng dynamic import() để cắt code."
+    },
+    "localStorageInRender": {
+      "title": "Truy cập localStorage lúc render",
+      "description": "localStorage đồng bộ và chậm trong render.",
+      "recommendation": "Chuyển sang useEffect hoặc state store."
     }
   },
   "positiveFindings": {

@@ -80,7 +80,7 @@
     "deep": "🧠 Deep AI Analysis ({count}-pass)",
     "static": "⚡ Static Analysis Only",
     "deepDesc": "Uses AI for executive summary, security review, architecture, performance + best practices audit",
-    "staticDesc": "Faster — 66 static rules only, no AI tokens used"
+    "staticDesc": "Faster — 250 static rules only, no AI tokens used"
   },
   "repositoryFallback": "repository",
   "logOk": "OK",

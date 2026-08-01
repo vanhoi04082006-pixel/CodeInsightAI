@@ -1,6 +1,6 @@
 // CodeInsight AI — Optional AI-enhanced analysis summary
 //
-// After static analysis (66 rules) is done, this module calls the LLM to:
+// After static analysis (250 rules) is done, this module calls the LLM to:
 // - Generate a natural language executive summary (replaces the template)
 // - Prioritize issues by business impact
 // - Suggest 3 refactoring patterns

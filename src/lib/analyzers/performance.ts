@@ -3,11 +3,38 @@
 import type { Issue } from "../types";
 import { translateIssue } from "../issues-i18n";
 
+/** A table-driven extra rule. `re` is matched against whole file content. */
+interface ExtraRule {
+  key: string;
+  sev: Issue["severity"];
+  cat: string;
+  eff: Issue["effort"];
+  re: RegExp;
+  /** If this matches the content, the rule is skipped. */
+  neg?: RegExp;
+  /** If present, the file path must match for the rule to apply. */
+  file?: RegExp;
+}
+
 export function analyzePerformance(files: { path: string; content: string }[], language: string = "en"): Issue[] {
   const issues: Issue[] = [];
   const t = (key: string, vars?: Record<string, string | number>) => translateIssue(language, key, vars);
   for (const { path: fpath, content } of files) {
     const lines = content.split("\n");
+    for (const r of PERFORMANCE_EXTRA_RULES) {
+      if (r.file && !r.file.test(fpath)) continue;
+      if (r.neg && r.neg.test(content)) continue;
+      if (!r.re.test(content)) continue;
+      const ln = fl(lines, r.re.source);
+      issues.push(mk(
+        r.cat,
+        t(`performance.${r.key}.title`),
+        t(`performance.${r.key}.description`, { file: fpath }),
+        fpath, ln,
+        t(`performance.${r.key}.recommendation`),
+        r.sev, r.eff,
+      ));
+    }
 
     // ── BUNDLE ISSUES ──
     // 1. Entire lodash import
@@ -324,6 +351,53 @@ export function getPositiveFindings(files: { path: string; content: string }[], 
 
   return findings;
 }
+
+/** Additional multi-language performance rules (38 → performance total 80). */
+export const PERFORMANCE_EXTRA_RULES: ExtraRule[] = [
+  // ── Loop / algorithm complexity ──
+  { key: "oN2IndexOf", sev: "medium", cat: "render", eff: "small", re: /(?:for|forEach)\s*\([^)]*\)[\s\S]{0,120}\.indexOf\s*\(/, neg: /\.indexOf\s*\([^)]*,\s*\w+/ },
+  { key: "oN2Includes", sev: "medium", cat: "render", eff: "small", re: /(?:for|forEach)\s*\([^)]*\)[\s\S]{0,120}\.includes\s*\(/, neg: /\.includes\s*\([^)]*,\s*\w+/ },
+  { key: "nestedLoop", sev: "medium", cat: "render", eff: "small", re: /(?:for|forEach)\s*\([^)]*\)[\s\S]{0,120}(?:for|forEach)\s*\(/ },
+  { key: "deepCloneJson", sev: "high", cat: "render", eff: "small", re: /JSON\.parse\s*\(\s*JSON\.stringify\s*\(/ },
+  { key: "filterThenMap", sev: "low", cat: "render", eff: "trivial", re: /\.filter\s*\([^)]*\)\s*\.map\s*\(/ },
+  { key: "regexInLoop", sev: "medium", cat: "render", eff: "small", re: /(?:for|forEach|while)\s*\([^)]*\)[\s\S]{0,120}new\s+RegExp\s*\(/ },
+  { key: "concatInLoop", sev: "medium", cat: "render", eff: "small", re: /(?:for|forEach|while)\s*\([^)]*\)[\s\S]{0,120}\+=\s*["']/ },
+  { key: "arrayCopyInLoop", sev: "medium", cat: "memory", eff: "small", re: /(?:for|forEach)\s*\([^)]*\)[\s\S]{0,120}(?:\.push|\.unshift|\.splice)\s*\(/ },
+  // ── Async / network ──
+  { key: "requestsNoTimeout", sev: "high", cat: "blocking", eff: "small", re: /requests\.(?:get|post|put)\s*\(/, file: /\.py$/, neg: /timeout/ },
+  { key: "fetchNoTimeout", sev: "medium", cat: "blocking", eff: "small", re: /\bfetch\s*\(/, file: /\.(js|ts|mjs|tsx)$/, neg: /AbortController|signal:|timeout/ },
+  { key: "fetchNoRevalidate", sev: "medium", cat: "query", eff: "small", re: /\bfetch\s*\([^)]*\)/, file: /\.(tsx|ts)$/, neg: /revalidate|cache:|no-store|unstable_cache/ },
+  { key: "sleepInHandler", sev: "high", cat: "blocking", eff: "small", re: /time\.sleep\s*\(/, file: /\.py$/, neg: /test|mock/ },
+  { key: "sequentialAsync", sev: "medium", cat: "async", eff: "medium", re: /await\s+\w+\([^)]*\);\s*\n[^\n]*await\s+\w+\(/, neg: /Promise\.all|for\s*\(/ },
+  { key: "callbackInLoop", sev: "medium", cat: "async", eff: "small", re: /\.forEach\s*\(\s*async\s+/, neg: /Promise\.all/ },
+  // ── Bundle / render ──
+  { key: "importD3", sev: "high", cat: "bundle", eff: "medium", re: /from\s*["']d3["']|require\s*\(\s*["']d3["']/, neg: /d3-|subpath/ },
+  { key: "importThree", sev: "high", cat: "bundle", eff: "medium", re: /from\s*["']three["']|require\s*\(\s*["']three["']/ },
+  { key: "importChartJs", sev: "high", cat: "bundle", eff: "medium", re: /from\s*["']chart\.js["']|require\s*\(\s*["']chart\.js["']/ },
+  { key: "importJquery", sev: "medium", cat: "bundle", eff: "small", re: /from\s*["']jquery["']|require\s*\(\s*["']jquery["']/ },
+  { key: "importBootstrap", sev: "medium", cat: "bundle", eff: "small", re: /from\s*["']bootstrap["']|require\s*\(\s*["']bootstrap["']/ },
+  { key: "importAxios", sev: "low", cat: "bundle", eff: "trivial", re: /from\s*["']axios["']/, neg: /\.get|\.post/ },
+  { key: "inlineFunctionRender", sev: "medium", cat: "render", eff: "trivial", re: /(?:onClick|onChange|onSubmit|onKeyDown)\s*=\s*\{[^}]*=>/, file: /\.(tsx|jsx)$/, neg: /useCallback/ },
+  { key: "objectLiteralProp", sev: "medium", cat: "render", eff: "small", re: /=\s*\{\{[^}]*\}\}/, file: /\.(tsx|jsx)$/ },
+  // ── Query / DB ──
+  { key: "nPlusOneForLoop", sev: "medium", cat: "query", eff: "medium", re: /for\s*\([^)]*\)[\s\S]{0,160}(?:db\.|prisma\.|pool\.|query\(|\.findMany\s*\()/, neg: /Promise\.all|include:|select:/ },
+  { key: "selectStar", sev: "medium", cat: "query", eff: "small", re: /SELECT\s+\*/ , neg: /COUNT\(/ },
+  { key: "findAllNoPagination", sev: "medium", cat: "query", eff: "small", re: /findAll\s*\(\s*\)/, file: /\.(js|ts|jsx|tsx)$/ },
+  { key: "dbQueryInLoop", sev: "high", cat: "query", eff: "medium", re: /(?:\.query|\.findMany|\.findOne)\s*\([^)]*\)\s*;/, file: /\.(ts|js)$/, neg: /Promise\.all/ },
+  { key: "reactiveQueryNoCache", sev: "medium", cat: "query", eff: "small", re: /useQuery\s*\(/, neg: /staleTime|cacheTime|placeholderData/ },
+  // ── Memory / layout ──
+  { key: "globalVariableAccumulate", sev: "medium", cat: "memory", eff: "small", re: /(?:let|var)\s+\w+\s*=\s*\[\][\s\S]{0,120}\.push\s*\(/, neg: /for\s*\([^)]*\)/ },
+  { key: "setIntervalNoCleanup", sev: "high", cat: "memory", eff: "small", re: /setInterval\s*\(/, file: /\.(tsx|jsx)$/, neg: /clearInterval|useEffect/ },
+  { key: "domQueryInLoop", sev: "high", cat: "render", eff: "small", re: /(?:for|forEach|while)\s*\([^)]*\)[\s\S]{0,120}document\.(?:querySelector|getElementById)\s*\(/ },
+  { key: "layoutThrashInLoop", sev: "high", cat: "render", eff: "small", re: /(?:for|forEach|while)\s*\([^)]*\)[\s\S]{0,120}(?:offsetWidth|offsetHeight|getBoundingClientRect)\s*\(/ },
+  { key: "imageNoLazy", sev: "medium", cat: "render", eff: "trivial", re: /<img\s+src=/, file: /\.(tsx|jsx|vue|html)$/, neg: /loading\s*=\s*["']lazy|next\/image|next\.image/ },
+  { key: "fontBlocking", sev: "low", cat: "render", eff: "small", re: /@font-face/, file: /\.css$/, neg: /display\s*:\s*swap/ },
+  { key: "largeArrayLiteral", sev: "medium", cat: "bundle", eff: "small", re: /\[\s*["'`][^"'`]+["'`][\s,]+["'`][^"'`]+["'`][\s,]+["'`][^"'`]+["'`]/ },
+  { key: "unboundedCache", sev: "medium", cat: "memory", eff: "small", re: /new\s+Map\s*\(\s*\)[\s\S]{0,120}\.set\s*\(/, neg: /delete\s*\(|clear\s*\(|LRU/ },
+  { key: "syncXhr", sev: "high", cat: "blocking", eff: "small", re: /XMLHttpRequest[\s\S]{0,80}false\s*\)|open\s*\(\s*["']GET["']\s*,\s*[^,]+,\s*false/ },
+  { key: "heavyImportDynamic", sev: "medium", cat: "bundle", eff: "small", re: /import\s+\{?\s*(?:Chart|Editor|Three|Map|Player|Pdf|Excel)\w*\s*\}?\s+from/, neg: /dynamic\s*\(|next\/dynamic/ },
+  { key: "localStorageInRender", sev: "low", cat: "render", eff: "small", re: /localStorage\.(?:getItem|setItem)\s*\(/, file: /\.(tsx|jsx)$/, neg: /useEffect|useState/ },
+];
 
 function fl(lines:string[],pat:string):number{const r=new RegExp(pat,"i");for(let i=0;i<lines.length;i++)if(r.test(lines[i]))return i+1;return 1;}
 function mk(c:string,t:string,d:string,f:string,l:number,r:string,s:Issue["severity"],e:Issue["effort"]):Issue{return{id:`perf_${Math.random().toString(36).slice(2,9)}`,severity:s,category:c,title:t,description:d,file:f,line:l,recommendation:r,effort:e};}

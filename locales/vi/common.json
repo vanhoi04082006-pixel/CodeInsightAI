@@ -147,7 +147,7 @@
     "scopeAnd": "và",
     "scopeSuffix": "scopes (để chúng tôi có thể phân tích kho lưu trữ riêng tư của bạn). Bạn có thể thu hồi quyền truy cập bất cứ lúc nào từ cài đặt GitHub.",
     "feature1": "Phân tích bất kỳ kho GitHub nào với 9 AI agents",
-    "feature2": "66 quy tắc phân tích tĩnh (bảo mật, lỗi, hiệu năng)",
+    "feature2": "250 quy tắc phân tích tĩnh (bảo mật, lỗi, hiệu năng)",
     "feature3": "Mang theo API key của riêng bạn — hoặc dùng Platform AI (Pro)",
     "backToLanding": "← Về trang chủ",
     "privacyNote": "Khóa API của bạn được mã hóa AES-256-GCM trên máy chủ và không bao giờ tiết lộ cho frontend.",
