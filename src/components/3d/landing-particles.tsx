@@ -14,9 +14,10 @@ const LandingScene = dynamic(() => import("./landing-scene").then((m) => m.Landi
   loading: () => null,
 });
 
-const PARTICLE_COUNTS: Record<SceneQuality, number> = {
+const PARTICLE_COUNTS: Record<SceneQuality | "performance", number> = {
   ultra: 80_000,
   balanced: 40_000,
+  performance: 12_000,
 };
 
 const emptySubscribe = () => () => {};
@@ -51,10 +52,13 @@ export function LandingParticles({ morph }: { morph: MotionValue<number> }) {
   const [webgl] = useState(supportsWebGL);
 
   if (!mounted || !webgl) return null;
-  // Performance mode / reduced motion → fall back to the 2D canvas background.
-  if (animation === "performance" || reducedMotion) return null;
+  // Reduced motion is an explicit accessibility choice — respect it.
+  if (reducedMotion) return null;
 
+  // Performance mode still gets the 3D scene, just a lightweight version
+  // (fewer particles, no bloom) instead of nothing.
   const quality: SceneQuality = animation === "ultra" ? "ultra" : "balanced";
+  const count = animation === "performance" ? PARTICLE_COUNTS.performance : PARTICLE_COUNTS[quality];
   const palette = ACCENT_PALETTES[accentId];
 
   return (
@@ -64,7 +68,7 @@ export function LandingParticles({ morph }: { morph: MotionValue<number> }) {
         colorA={palette.primary}
         colorB={palette.accent}
         quality={quality}
-        count={PARTICLE_COUNTS[quality]}
+        count={count}
       />
     </div>
   );
