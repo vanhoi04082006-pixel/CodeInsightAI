@@ -32,6 +32,7 @@ import { UserMenu } from "@/components/shared/user-menu";
 import { OnboardingOverlay } from "@/components/shared/onboarding-overlay";
 import { HydrationGuard } from "@/components/shared/hydration-guard";
 import { KeyboardShortcutsHelp } from "@/components/shared/keyboard-shortcuts-help";
+import { AiPassProgress } from "@/components/shared/ai-pass-progress";
 import { Heart, Sparkles, Github } from "lucide-react";
 
 export default function Home() {
@@ -325,6 +326,7 @@ export default function Home() {
       <OnboardingOverlay />
       <KeyboardShortcutsHelp />
       <CustomCursor />
+      <AiPassProgress />
     </div>
     </HydrationGuard>
   );

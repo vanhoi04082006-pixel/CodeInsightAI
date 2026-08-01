@@ -261,5 +261,20 @@
     "hint": "The static analysis above is still accurate. Try re-analyzing with a different AI model or higher max tokens.",
     "pending": "AI Analysis Running",
     "pendingDesc": "AI deep review for {pass} is still processing. Check back in a moment."
+  },
+  "aiProgress": {
+    "title": "AI Deep Analysis",
+    "pass": "AI Pass {current}/{total}",
+    "percent": "{percent}%",
+    "viewReport": "View Report",
+    "collapse": "Collapse",
+    "status": {
+      "pending": "Pending",
+      "running": "Running",
+      "completed": "Done",
+      "failed": "Failed",
+      "skipped": "Skipped",
+      "not_applicable": "N/A"
+    }
   }
 }

@@ -261,5 +261,20 @@
     "hint": "Phân tích tĩnh ở trên vẫn chính xác. Thử phân tích lại với model AI khác hoặc max tokens cao hơn.",
     "pending": "AI đang phân tích",
     "pendingDesc": "Phân tích AI chuyên sâu cho {pass} đang xử lý. Vui lòng chờ."
+  },
+  "aiProgress": {
+    "title": "AI Phân tích sâu",
+    "pass": "AI Pass {current}/{total}",
+    "percent": "{percent}%",
+    "viewReport": "Xem báo cáo",
+    "collapse": "Thu gọn",
+    "status": {
+      "pending": "Chờ",
+      "running": "Đang chạy",
+      "completed": "Xong",
+      "failed": "Thất bại",
+      "skipped": "Bỏ qua",
+      "not_applicable": "N/A"
+    }
   }
 }

@@ -128,7 +128,6 @@ export function AnalyzeView() {
 
   // AI status: "idle" | "pending" | "done" | "failed"
   const [aiStatus, setAiStatus] = useState<"idle" | "pending" | "done" | "failed">("idle");
-  const [aiPassProgress, setAiPassProgress] = useState<{ current: number; total: number; passName: string } | null>(null);
 
   // Run AI passes one by one (each pass = 1 API call, <60s, Hobby-compatible)
   const runAIPasses = useCallback(async (analysisId: string, language: string, aiBody: Record<string, any>) => {
@@ -166,7 +165,12 @@ export function AnalyzeView() {
     let completedCount = 0;
 
     for (const pass of passes) {
-      setAiPassProgress({ current: completedCount + 1, total: passes.length, passName: pass.name });
+      useAppStore.getState().setAiPassProgress({
+        current: completedCount + 1,
+        total: passes.length,
+        passName: pass.name,
+        passType: pass.type,
+      });
 
       // Check if this pass has a specific feature routing (Custom mode)
       const featureKey = PASS_TO_FEATURE[pass.type];
@@ -227,7 +231,7 @@ export function AnalyzeView() {
           // If all done, mark complete
           if (data.allDone) {
             setAiStatus("done");
-            setAiPassProgress(null);
+            useAppStore.getState().setAiPassProgress(null);
             useAppStore.getState().setAiPending(false);
             toast.success(tAnalysis("analysis", "toast.aiDeepComplete"), {
               description: tAnalysis("analysis", "toast.aiDeepCompleteDesc", { count: ANALYSIS_PASSES.length }),
@@ -257,7 +261,7 @@ export function AnalyzeView() {
 
     // All passes attempted
     setAiStatus("done");
-    setAiPassProgress(null);
+    useAppStore.getState().setAiPassProgress(null);
     useAppStore.getState().setAiPending(false);
 
     // Final check — reload report from DB
@@ -680,32 +684,6 @@ export function AnalyzeView() {
             </motion.div>
           </div>
         </GlassCard>
-
-        {/* AI pass progress (shows when AI passes are running) */}
-        {aiPassProgress && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="relative z-10 mt-4"
-          >
-            <GlassCard className="border-violet-400/20 bg-violet-500/[0.04] p-4">
-              <div className="flex items-center gap-2">
-                <Loader2 className="h-4 w-4 animate-spin text-violet-300" />
-                <span className="text-sm font-semibold text-violet-300">
-                  {t("analysis", "aiPassLabel", { current: aiPassProgress.current, total: aiPassProgress.total })}
-                </span>
-                <span className="text-xs text-muted-foreground">— {aiPassProgress.passName}</span>
-              </div>
-              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/5">
-                <motion.div
-                  className="h-full rounded-full bg-gradient-to-r from-violet-500 to-cyan-500"
-                  animate={{ width: `${(aiPassProgress.current / aiPassProgress.total) * 100}%` }}
-                  transition={{ duration: 0.5 }}
-                />
-              </div>
-            </GlassCard>
-          </motion.div>
-        )}
       </div>
     );
   }

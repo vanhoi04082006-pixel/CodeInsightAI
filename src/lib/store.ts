@@ -3,6 +3,13 @@
 import { create } from "zustand";
 import type { AnalysisReport, ChatMessage, View } from "@/lib/types";
 
+export interface AiPassProgress {
+  current: number;
+  total: number;
+  passName: string;
+  passType: string;
+}
+
 interface AppState {
   // Navigation
   view: View;
@@ -40,6 +47,10 @@ interface AppState {
   // AI analysis status (for hybrid mode — shows banner in ProjectView)
   aiPending: boolean;
   setAiPending: (v: boolean) => void;
+
+  // Live AI pass progress (global — shows panel on any view while running)
+  aiPassProgress: AiPassProgress | null;
+  setAiPassProgress: (p: AiPassProgress | null) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -76,4 +87,7 @@ export const useAppStore = create<AppState>((set) => ({
 
   aiPending: false,
   setAiPending: (v) => set({ aiPending: v }),
+
+  aiPassProgress: null,
+  setAiPassProgress: (p) => set({ aiPassProgress: p }),
 }));

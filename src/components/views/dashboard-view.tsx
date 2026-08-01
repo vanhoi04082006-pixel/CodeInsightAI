@@ -524,11 +524,17 @@ function EmptyDashboard() {
               // analysis, don't start a second loop (double-spend + clobber).
               if (!acquireAnalysisRunGuard(id)) {
                 console.warn("[ai-pass] resume skipped — analysis already running");
-                useAppStore.getState().setAiPending(false);
                 return;
               }
               try {
                 for (const passType of remainingPasses) {
+                  const def = ANALYSIS_PASSES.find(p => p.type === passType);
+                  useAppStore.getState().setAiPassProgress({
+                    current: ANALYSIS_PASSES.findIndex(p => p.type === passType) + 1,
+                    total: ANALYSIS_PASSES.length,
+                    passName: def ? useI18nStore.getState().t("analysis", def.labelKey) : passType,
+                    passType,
+                  });
                   try {
                     const res = await fetch("/api/analyze/ai-pass", {
                       method: "POST",
@@ -542,6 +548,7 @@ function EmptyDashboard() {
                   } catch {}
                   await new Promise(r => setTimeout(r, 500));
                 }
+                useAppStore.getState().setAiPassProgress(null);
                 useAppStore.getState().setAiPending(false);
                 toast.success(t("dashboard", "toast.aiDeepComplete"));
               } finally {
