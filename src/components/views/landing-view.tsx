@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, useScroll, useTransform } from "framer-motion";
+import { motion, useScroll, useTransform, useSpring, useMotionValue } from "framer-motion";
 import {
   ArrowRight,
   Bot,
@@ -33,7 +33,7 @@ import {
 import { GlassCard, SectionTitle, GradientText, NeonDivider, AnimatedCounter } from "@/components/shared/ui";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
+import { useRef, useState, type MouseEvent as ReactMouseEvent, type ReactNode } from "react";
 import { useAppStore } from "@/lib/store";
 import { useT } from "@/lib/i18n";
 import { parseRepoUrl } from "@/lib/repo-utils";
@@ -49,6 +49,7 @@ import {
   AVG_ANALYSIS_SECONDS,
 } from "@/lib/static-analysis-stats";
 import { LandingFAQ } from "@/components/shared/landing-faq";
+import { LandingParticles } from "@/components/3d/landing-particles";
 import { useUpgrade } from "@/hooks/use-upgrade";
 import { signIn } from "next-auth/react";
 import { Loader2 } from "lucide-react";
@@ -110,6 +111,43 @@ const PLANS = [
   { id: "team", price: "$29", period: "/month", color: "#34d399", highlight: false, contact: true },
 ] as const;
 
+/**
+ * 3D tilt wrapper - tracks the pointer over a card and pitches it subtly so
+ * feature / pricing cards feel like they belong to the 3D scene behind them.
+ */
+function TiltCard({ children, className }: { children: ReactNode; className?: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const rx = useSpring(useMotionValue(0), { stiffness: 220, damping: 22 });
+  const ry = useSpring(useMotionValue(0), { stiffness: 220, damping: 22 });
+
+  const onMove = (e: ReactMouseEvent<HTMLDivElement>) => {
+    const el = ref.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const px = (e.clientX - rect.left) / rect.width - 0.5;
+    const py = (e.clientY - rect.top) / rect.height - 0.5;
+    ry.set(px * 10);
+    rx.set(-py * 10);
+  };
+
+  const onLeave = () => {
+    rx.set(0);
+    ry.set(0);
+  };
+
+  return (
+    <motion.div
+      ref={ref}
+      onMouseMove={onMove}
+      onMouseLeave={onLeave}
+      style={{ rotateX: rx, rotateY: ry, transformStyle: "preserve-3d", perspective: 1000 }}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
 export function LandingView() {
   const setView = useAppStore((s) => s.setView);
   const { t } = useT();
@@ -118,6 +156,7 @@ export function LandingView() {
   const [error, setError] = useState("");
   const { scrollYProgress } = useScroll();
   const heroY = useTransform(scrollYProgress, [0, 0.3], [0, -80]);
+  const morph = useTransform(scrollYProgress, [0.08, 0.92], [0, 2]);
 
   const startAnalysis = () => {
     const parsed = parseRepoUrl(url);
@@ -131,11 +170,13 @@ export function LandingView() {
 
   return (
     <div className="relative">
+      {/* 3D particle morph background (galaxy -> sphere -> grid) */}
+      <LandingParticles morph={morph} />
+
       {/* ============ HERO ============ */}
       <section className="relative flex min-h-[calc(100vh-4rem)] flex-col items-center justify-center px-4 py-16">
-        <div className="pointer-events-none absolute inset-0 -z-0 flex items-center justify-center">
-          {/* 3D AI Core removed */}
-        </div>
+        {/* soft vignette so hero copy stays readable over the bright particles */}
+        <div className="pointer-events-none absolute inset-0 -z-0 bg-[radial-gradient(ellipse_at_center,transparent_15%,rgba(0,0,0,0.38)_100%)]" />
 
         <motion.div
           style={{ y: heroY }}
@@ -358,20 +399,22 @@ export function LandingView() {
                   viewport={{ once: true, margin: "-80px" }}
                   transition={{ duration: 0.5, delay: i * 0.06 }}
                 >
-                  <GlassCard hover className="group h-full p-6">
-                    <div
-                      className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl"
-                      style={{ background: `${f.color}1a`, border: `1px solid ${f.color}33` }}
-                    >
-                      <Icon className="h-6 w-6" style={{ color: f.color }} />
-                    </div>
-                    <h3 className="text-lg font-semibold">{t("landing", f.titleKey)}</h3>
-                    <p className="mt-2 text-sm text-muted-foreground">{t("landing", f.descKey)}</p>
-                    <div
-                      className="mt-4 h-px w-full opacity-0 transition-opacity group-hover:opacity-100"
-                      style={{ background: `linear-gradient(90deg, ${f.color}, transparent)` }}
-                    />
-                  </GlassCard>
+                  <TiltCard className="h-full">
+                    <GlassCard hover className="group h-full p-6">
+                      <div
+                        className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl"
+                        style={{ background: `${f.color}1a`, border: `1px solid ${f.color}33` }}
+                      >
+                        <Icon className="h-6 w-6" style={{ color: f.color }} />
+                      </div>
+                      <h3 className="text-lg font-semibold">{t("landing", f.titleKey)}</h3>
+                      <p className="mt-2 text-sm text-muted-foreground">{t("landing", f.descKey)}</p>
+                      <div
+                        className="mt-4 h-px w-full opacity-0 transition-opacity group-hover:opacity-100"
+                        style={{ background: `linear-gradient(90deg, ${f.color}, transparent)` }}
+                      />
+                    </GlassCard>
+                  </TiltCard>
                 </motion.div>
               );
             })}
@@ -542,58 +585,60 @@ export function LandingView() {
                 viewport={{ once: true, margin: "-80px" }}
                 transition={{ duration: 0.5, delay: i * 0.08 }}
               >
-                <GlassCard
-                  className={`relative h-full p-6 ${plan.highlight ? "border-violet-400/40" : ""}`}
-                  glow={plan.highlight ? "violet" : "none"}
-                >
-                  {plan.highlight && (
-                    <span
-                      className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full px-3 py-0.5 text-[10px] font-bold uppercase tracking-wider"
-                      style={{ background: plan.color, color: "#050507" }}
-                    >
-                      {t("landing", "pricing.recommended")}
-                    </span>
-                  )}
-                  <h3 className="text-lg font-bold" style={{ color: plan.color }}>{planName}</h3>
-                  <div className="mt-1 flex items-baseline gap-1">
-                    <span className="text-3xl font-bold">{plan.price}</span>
-                    {"period" in plan && plan.period && <span className="text-sm text-muted-foreground">{plan.period}</span>}
-                  </div>
-                  <p className="mt-1 text-xs text-muted-foreground">{planDesc}</p>
-                  <div className="mt-4 space-y-2">
-                    {planFeatures.map((f) => (
-                      <div key={f} className="flex items-center gap-2 text-sm">
-                        <Check className="h-3.5 w-3.5 shrink-0" style={{ color: plan.color }} />
-                        <span className="text-muted-foreground">{f}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <Button
-                    onClick={() => {
-                      if (plan.highlight) {
-                        // Pro plan → direct Stripe checkout
-                        upgrade("pro");
-                      } else if (plan.contact) {
-                        // Team → email contact (admin-managed plan)
-                        window.location.href = "mailto:vanhoi04082006@gmail.com?subject=CodeInsight%20AI%20Team%20Plan&body=Hi,%20I'm%20interested%20in%20the%20Team%20plan%20for%20CodeInsight%20AI.";
-                      } else {
-                        // Free plan → GitHub sign-in
-                        signIn("github");
-                      }
-                    }}
-                    disabled={plan.highlight && upgrading}
-                    variant="outline"
-                    className={`mt-6 w-full ${plan.highlight ? "border-violet-400/40 text-violet-300 hover:bg-violet-400/10" : plan.contact ? "border-emerald-400/40 text-emerald-300 hover:bg-emerald-400/10" : ""}`}
+                <TiltCard className="h-full">
+                  <GlassCard
+                    className={`relative h-full p-6 ${plan.highlight ? "border-violet-400/40" : ""}`}
+                    glow={plan.highlight ? "violet" : "none"}
                   >
-                    {plan.highlight && upgrading ? (
-                      <>
-                        <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> {t("landing", "pricing.redirecting")}
-                      </>
-                    ) : (
-                      planCta
+                    {plan.highlight && (
+                      <span
+                        className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full px-3 py-0.5 text-[10px] font-bold uppercase tracking-wider"
+                        style={{ background: plan.color, color: "#050507" }}
+                      >
+                        {t("landing", "pricing.recommended")}
+                      </span>
                     )}
-                  </Button>
-                </GlassCard>
+                    <h3 className="text-lg font-bold" style={{ color: plan.color }}>{planName}</h3>
+                    <div className="mt-1 flex items-baseline gap-1">
+                      <span className="text-3xl font-bold">{plan.price}</span>
+                      {"period" in plan && plan.period && <span className="text-sm text-muted-foreground">{plan.period}</span>}
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">{planDesc}</p>
+                    <div className="mt-4 space-y-2">
+                      {planFeatures.map((f) => (
+                        <div key={f} className="flex items-center gap-2 text-sm">
+                          <Check className="h-3.5 w-3.5 shrink-0" style={{ color: plan.color }} />
+                          <span className="text-muted-foreground">{f}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <Button
+                      onClick={() => {
+                        if (plan.highlight) {
+                          // Pro plan → direct Stripe checkout
+                          upgrade("pro");
+                        } else if (plan.contact) {
+                          // Team → email contact (admin-managed plan)
+                          window.location.href = "mailto:vanhoi04082006@gmail.com?subject=CodeInsight%20AI%20Team%20Plan&body=Hi,%20I'm%20interested%20in%20the%20Team%20plan%20for%20CodeInsight%20AI.";
+                        } else {
+                          // Free plan → GitHub sign-in
+                          signIn("github");
+                        }
+                      }}
+                      disabled={plan.highlight && upgrading}
+                      variant="outline"
+                      className={`mt-6 w-full ${plan.highlight ? "border-violet-400/40 text-violet-300 hover:bg-violet-400/10" : plan.contact ? "border-emerald-400/40 text-emerald-300 hover:bg-emerald-400/10" : ""}`}
+                    >
+                      {plan.highlight && upgrading ? (
+                        <>
+                          <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> {t("landing", "pricing.redirecting")}
+                        </>
+                      ) : (
+                        planCta
+                      )}
+                    </Button>
+                  </GlassCard>
+                </TiltCard>
               </motion.div>
               );
             })}
