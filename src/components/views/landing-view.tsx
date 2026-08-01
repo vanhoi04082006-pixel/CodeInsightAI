@@ -156,7 +156,7 @@ export function LandingView() {
   const [error, setError] = useState("");
   const { scrollYProgress } = useScroll();
   const heroY = useTransform(scrollYProgress, [0, 0.3], [0, -80]);
-  const morph = useTransform(scrollYProgress, [0.08, 0.92], [0, 2]);
+  const morph = useTransform(scrollYProgress, [0, 0.28, 0.62, 1], [0, 1, 1, 2]);
 
   const startAnalysis = () => {
     const parsed = parseRepoUrl(url);

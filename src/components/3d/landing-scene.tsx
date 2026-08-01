@@ -64,12 +64,36 @@ function MorphPoints({ morph, colorA, colorB, count }: {
   }, [colorA, colorB, uniforms]);
 
   const currentMorph = useRef(0);
+  const idlePhase = useRef(0);
+  const lastScroll = useRef(0);
+  const scrollActivity = useRef(0);
 
   useFrame((state, delta) => {
     const elapsed = state.clock.elapsedTime;
 
-    // Smoothly chase the scroll-driven target.
-    const target = THREE.MathUtils.clamp(morph.get(), 0, 2);
+    // The scroll-driven target (0 = galaxy, 1 = sphere, 2 = grid).
+    const scrollTarget = THREE.MathUtils.clamp(morph.get(), 0, 2);
+
+    // Detect active scrolling so the idle auto-morph yields to the user.
+    if (Math.abs(scrollTarget - lastScroll.current) > 1e-4) {
+      scrollActivity.current = 2;
+    }
+    lastScroll.current = scrollTarget;
+    scrollActivity.current = Math.max(0, scrollActivity.current - delta);
+
+    // While idle, slowly cycle galaxy -> sphere -> grid -> galaxy so all three
+    // shapes stay visible even without scrolling. The loop resumes smoothly
+    // from wherever the last scroll position left off.
+    let target: number;
+    if (scrollActivity.current > 0) {
+      idlePhase.current = currentMorph.current;
+      target = scrollTarget;
+    } else {
+      idlePhase.current = (idlePhase.current + delta * 0.08) % 2;
+      target = idlePhase.current;
+    }
+
+    // Smoothly chase the target.
     currentMorph.current += (target - currentMorph.current) * Math.min(1, delta * 1.6);
     const m = currentMorph.current;
 

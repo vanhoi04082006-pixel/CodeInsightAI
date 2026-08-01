@@ -17,7 +17,7 @@ const LandingScene = dynamic(() => import("./landing-scene").then((m) => m.Landi
 const PARTICLE_COUNTS: Record<SceneQuality | "performance", number> = {
   ultra: 80_000,
   balanced: 40_000,
-  performance: 12_000,
+  performance: 24_000,
 };
 
 const emptySubscribe = () => () => {};

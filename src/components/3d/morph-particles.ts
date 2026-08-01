@@ -15,11 +15,12 @@ export function generateGalaxy(count: number): Float32Array {
   const positions = new Float32Array(count * 3);
   const arms = 4;
   const radius = 6;
-  const spin = 1.6;
+  const spin = 2.4;
 
   for (let i = 0; i < count; i++) {
     const i3 = i * 3;
-    const r = Math.pow(Math.random(), 0.7) * radius;
+    // Bias toward the core so the vortex reads as a bright center with arms.
+    const r = Math.pow(Math.random(), 0.5) * radius;
     const branchAngle = ((i % arms) / arms) * Math.PI * 2;
     const spinAngle = r * spin;
 
@@ -44,11 +45,15 @@ export function generateSphere(count: number): Float32Array {
     const i3 = i * 3;
     const phi = Math.acos(1 - (2 * (i + 0.5)) / count);
     const theta = Math.PI * (1 + Math.sqrt(5)) * i;
-    const r = Math.random() < 0.6 ? radius : radius * Math.cbrt(Math.random());
+    const r = Math.random() < 0.6
+      ? radius * (1 + (Math.random() - 0.5) * 0.08)
+      : radius * Math.cbrt(Math.random());
 
-    positions[i3] = r * Math.sin(phi) * Math.cos(theta);
-    positions[i3 + 1] = r * Math.sin(phi) * Math.sin(theta);
-    positions[i3 + 2] = r * Math.cos(phi);
+    // Small random jitter so the surface doesn't read as clean Fibonacci rings.
+    const jitter = 0.07;
+    positions[i3] = r * Math.sin(phi) * Math.cos(theta) + (Math.random() - 0.5) * jitter;
+    positions[i3 + 1] = r * Math.sin(phi) * Math.sin(theta) + (Math.random() - 0.5) * jitter;
+    positions[i3 + 2] = r * Math.cos(phi) + (Math.random() - 0.5) * jitter;
   }
   return positions;
 }
@@ -106,7 +111,15 @@ export const PARTICLE_VERTEX = /* glsl */ `
   varying float vSeed;
 
   void main() {
-    vec3 pos = aGalaxy * uMorph.x + aSphere * uMorph.y + aGrid * uMorph.z;
+    // Galaxy spins differentially (inner arms wind faster) so the vortex is
+    // visibly alive while the shape morphs.
+    float gRadius = length(aGalaxy.xz);
+    float gAngle = uTime * 0.2 * (1.0 - gRadius / 6.0);
+    vec2 gxz = mat2(cos(gAngle), -sin(gAngle), sin(gAngle), cos(gAngle)) * aGalaxy.xz;
+
+    vec3 pos = vec3(gxz.x, aGalaxy.y, gxz.y) * uMorph.x
+             + aSphere * uMorph.y
+             + aGrid * uMorph.z;
 
     // Gentle per-particle drift (idle life)
     float t = uTime * 0.25;

@@ -72,3 +72,5 @@ skills/
 # Temporary headless-browser profiles (testing only)
 .tmp-chrome/
 .tmp-chrome2/
+.tmp-chrome3/
+.tmp-chrome4/
