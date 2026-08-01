@@ -5,5 +5,6 @@
   "regions": ["sin1"],
   "github": {
     "silent": true
-  }
+  },
+  "ignoreCommand": "case \"$VERCEL_GIT_COMMIT_REF\" in dependabot/*) echo 'skip dependabot preview build'; exit 0;; *) exit 1;; esac"
 }
