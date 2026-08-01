@@ -173,10 +173,13 @@ export function LandingView() {
       {/* 3D particle morph background (galaxy -> sphere -> grid) */}
       <LandingParticles morph={morph} />
 
+      {/* All landing content sits above the fixed 3D backdrop (own stacking
+          context so plain text/sections can never fall behind it). */}
+      <div className="relative z-10">
       {/* ============ HERO ============ */}
       <section className="relative flex min-h-[calc(100vh-4rem)] flex-col items-center justify-center px-4 py-16">
         {/* soft vignette so hero copy stays readable over the bright particles */}
-        <div className="pointer-events-none absolute inset-0 -z-0 bg-[radial-gradient(ellipse_at_center,transparent_15%,rgba(0,0,0,0.38)_100%)]" />
+        <div className="pointer-events-none absolute inset-0 z-0 bg-[radial-gradient(ellipse_at_center,transparent_15%,rgba(0,0,0,0.38)_100%)]" />
 
         <motion.div
           style={{ y: heroY }}
@@ -845,6 +848,7 @@ export function LandingView() {
           </motion.div>
         </div>
       </section>
+      </div>
     </div>
   );
 }

@@ -336,7 +336,7 @@ function Footer() {
   const setView = useAppStore((s) => s.setView);
   const { t } = useT();
   return (
-    <footer className="mt-auto border-t border-white/5 bg-background/40 backdrop-blur-md">
+    <footer className="relative z-10 mt-auto border-t border-white/5 bg-background/40 backdrop-blur-md">
       <div className="mx-auto max-w-7xl px-4 py-6 md:px-6">
         <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">

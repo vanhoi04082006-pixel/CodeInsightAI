@@ -58,7 +58,7 @@ export function LandingParticles({ morph }: { morph: MotionValue<number> }) {
   const palette = ACCENT_PALETTES[accentId];
 
   return (
-    <div className="pointer-events-none fixed inset-0 -z-10" aria-hidden>
+    <div className="pointer-events-none fixed inset-0 z-0" aria-hidden>
       <LandingScene
         morph={morph}
         colorA={palette.primary}

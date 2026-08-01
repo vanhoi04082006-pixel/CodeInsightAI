@@ -68,3 +68,7 @@ coverage/
 worklog.md
 skills/
 .env.local-backup
+
+# Temporary headless-browser profiles (testing only)
+.tmp-chrome/
+.tmp-chrome2/
