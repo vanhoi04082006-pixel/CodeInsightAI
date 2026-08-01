@@ -1,10 +1,18 @@
 "use client";
 
-import { useMemo, useRef } from "react";
+import { useMemo, useRef, useEffect } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { EffectComposer, Bloom } from "@react-three/postprocessing";
 import * as THREE from "three";
 import type { MotionValue } from "framer-motion";
-import { generateGalaxy, generateSphere, generateGrid } from "./morph-particles";
+import {
+  generateGalaxy,
+  generateSphere,
+  generateGrid,
+  generateSeeds,
+  PARTICLE_VERTEX,
+  PARTICLE_FRAGMENT,
+} from "./morph-particles";
 
 export type SceneQuality = "ultra" | "balanced";
 
@@ -16,7 +24,6 @@ interface LandingSceneProps {
   count: number;
 }
 
-/** Simple morphing particle field — no custom shader, uses PointsMaterial. */
 function MorphPoints({ morph, colorA, colorB, count }: {
   morph: MotionValue<number>;
   colorA: string;
@@ -25,85 +32,58 @@ function MorphPoints({ morph, colorA, colorB, count }: {
 }) {
   const points = useRef<THREE.Points>(null);
   const group = useRef<THREE.Group>(null);
+  const material = useRef<THREE.ShaderMaterial>(null);
   const { viewport } = useThree();
 
-  // Pre-generate the 3 shape position sets once.
-  const shapes = useMemo(() => {
-    return {
-      galaxy: generateGalaxy(count),
-      sphere: generateSphere(count),
-      grid: generateGrid(count),
-    };
-  }, [count]);
-
-  // Build a geometry with a single 'position' attribute that we'll update
-  // each frame to interpolate between the 3 shapes.
-  const geometry = useMemo(() => {
+  const [geometry, uniforms] = useMemo(() => {
     const geo = new THREE.BufferGeometry();
-    // Start with galaxy positions
-    geo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(shapes.galaxy), 3));
-    // Per-vertex color (mix between colorA and colorB based on index)
-    const colors = new Float32Array(count * 3);
-    const cA = new THREE.Color(colorA);
-    const cB = new THREE.Color(colorB);
-    for (let i = 0; i < count; i++) {
-      const t = i / count;
-      const c = cA.clone().lerp(cB, t);
-      colors[i * 3] = c.r;
-      colors[i * 3 + 1] = c.g;
-      colors[i * 3 + 2] = c.b;
-    }
-    geo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
-    return geo;
-  }, [shapes, count, colorA, colorB]);
+    geo.setAttribute("aGalaxy", new THREE.BufferAttribute(generateGalaxy(count), 3));
+    geo.setAttribute("aSphere", new THREE.BufferAttribute(generateSphere(count), 3));
+    geo.setAttribute("aGrid", new THREE.BufferAttribute(generateGrid(count), 3));
+    geo.setAttribute("aSeed", new THREE.BufferAttribute(generateSeeds(count), 1));
 
-  // Material — simple PointsMaterial with vertexColors + additive blending
-  const material = useMemo(() => {
-    return new THREE.PointsMaterial({
-      size: 0.08,
-      sizeAttenuation: true,
-      vertexColors: true,
-      transparent: true,
-      opacity: 0.85,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-    });
-  }, []);
+    const uniforms = {
+      uTime: { value: 0 },
+      uMorph: { value: new THREE.Vector3(1, 0, 0) },
+      uPixelRatio: { value: Math.min(window.devicePixelRatio || 1, 2) },
+      uSize: { value: 0.14 },
+      uColorA: { value: new THREE.Color(colorA) },
+      uColorB: { value: new THREE.Color(colorB) },
+    };
 
-  // Update colors when accent changes
-  useMemo(() => {
-    const colors = geometry.getAttribute("color") as THREE.BufferAttribute;
-    if (!colors) return;
-    const cA = new THREE.Color(colorA);
-    const cB = new THREE.Color(colorB);
-    for (let i = 0; i < count; i++) {
-      const t = i / count;
-      const c = cA.clone().lerp(cB, t);
-      colors.setXYZ(i, c.r, c.g, c.b);
-    }
-    colors.needsUpdate = true;
-  }, [colorA, colorB, count, geometry]);
+    return [geo, uniforms] as const;
+  }, [count, colorA, colorB]);
+
+  // Keep particle colors in sync if the accent palette changes at runtime.
+  useEffect(() => {
+    // Mutating the shader uniform values is the standard three.js pattern;
+    // the uniforms object is deliberately held by useMemo.
+    // eslint-disable-next-line react-hooks/immutability
+    uniforms.uColorA.value = new THREE.Color(colorA);
+    uniforms.uColorB.value = new THREE.Color(colorB);
+  }, [colorA, colorB, uniforms]);
 
   const currentMorph = useRef(0);
   const idlePhase = useRef(0);
   const lastScroll = useRef(0);
   const scrollActivity = useRef(0);
-  const tmpA = useRef(new THREE.Vector3());
-  const tmpB = useRef(new THREE.Vector3());
-  const tmpC = useRef(new THREE.Vector3());
 
   useFrame((state, delta) => {
     const elapsed = state.clock.elapsedTime;
+
+    // The scroll-driven target (0 = galaxy, 1 = sphere, 2 = grid).
     const scrollTarget = THREE.MathUtils.clamp(morph.get(), 0, 2);
 
-    // Detect active scrolling
+    // Detect active scrolling so the idle auto-morph yields to the user.
     if (Math.abs(scrollTarget - lastScroll.current) > 1e-4) {
       scrollActivity.current = 2;
     }
     lastScroll.current = scrollTarget;
     scrollActivity.current = Math.max(0, scrollActivity.current - delta);
 
-    // Idle auto-morph
+    // While idle, slowly cycle galaxy -> sphere -> grid -> galaxy so all three
+    // shapes stay visible even without scrolling. The loop resumes smoothly
+    // from wherever the last scroll position left off.
     let target: number;
     if (scrollActivity.current > 0) {
       idlePhase.current = currentMorph.current;
@@ -113,10 +93,13 @@ function MorphPoints({ morph, colorA, colorB, count }: {
       target = idlePhase.current;
     }
 
+    // Smoothly chase the target.
     currentMorph.current += (target - currentMorph.current) * Math.min(1, delta * 1.6);
     const m = currentMorph.current;
 
-    let w0: number, w1: number, w2: number;
+    let w0: number;
+    let w1: number;
+    let w2: number;
     if (m <= 1) {
       w0 = 1 - m;
       w1 = m;
@@ -127,38 +110,21 @@ function MorphPoints({ morph, colorA, colorB, count }: {
       w2 = m - 1;
     }
 
-    // Update positions — interpolate between galaxy/sphere/grid
-    const posAttr = geometry.getAttribute("position") as THREE.BufferAttribute;
-    if (posAttr) {
-      const arr = posAttr.array as Float32Array;
-      const galaxy = shapes.galaxy;
-      const sphere = shapes.sphere;
-      const grid = shapes.grid;
-      for (let i = 0; i < count; i++) {
-        const i3 = i * 3;
-        // Galaxy spin
-        const gx = galaxy[i3], gy = galaxy[i3 + 1], gz = galaxy[i3 + 2];
-        const gRadius = Math.sqrt(gx * gx + gz * gz);
-        const gAngle = elapsed * 0.15 * (1 - gRadius / 6);
-        const cosA = Math.cos(gAngle), sinA = Math.sin(gAngle);
-        const sgx = gx * cosA - gz * sinA;
-        const sgz = gx * sinA + gz * cosA;
+    // Mutating the shader uniform values each frame is the standard
+    // ShaderMaterial pattern; the uniforms object is held by useMemo.
+    // eslint-disable-next-line react-hooks/immutability
+    uniforms.uTime.value = elapsed;
+    (uniforms.uMorph.value as THREE.Vector3).set(w0, w1, w2);
 
-        arr[i3]     = sgx * w0 + sphere[i3]     * w1 + grid[i3]     * w2;
-        arr[i3 + 1] = gy  * w0 + sphere[i3 + 1] * w1 + grid[i3 + 1] * w2;
-        arr[i3 + 2] = sgz * w0 + sphere[i3 + 2] * w1 + grid[i3 + 2] * w2;
-      }
-      posAttr.needsUpdate = true;
-    }
-
-    // Gentle rotation
+    // Gentle idle rotation.
     if (group.current) {
       group.current.rotation.y += delta * 0.06;
       group.current.rotation.x = Math.sin(elapsed * 0.15) * 0.12;
+      // Scale with viewport so the shape roughly fills the screen.
       group.current.scale.setScalar(Math.max(1, viewport.width / 8));
     }
 
-    // Pointer parallax
+    // Camera parallax toward the pointer.
     if (points.current) {
       points.current.rotation.y = THREE.MathUtils.lerp(
         points.current.rotation.y,
@@ -175,7 +141,17 @@ function MorphPoints({ morph, colorA, colorB, count }: {
 
   return (
     <group ref={group}>
-      <points ref={points} geometry={geometry} material={material} />
+      <points ref={points} geometry={geometry}>
+        <shaderMaterial
+          ref={material}
+          vertexShader={PARTICLE_VERTEX}
+          fragmentShader={PARTICLE_FRAGMENT}
+          uniforms={uniforms}
+          transparent
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+        />
+      </points>
     </group>
   );
 }
@@ -184,11 +160,16 @@ export function LandingScene({ morph, colorA, colorB, quality, count }: LandingS
   return (
     <Canvas
       dpr={[1, 1.75]}
-      gl={{ alpha: true, antialias: false, powerPreference: "high-performance", preserveDrawingBuffer: true }}
+      gl={{ alpha: true, antialias: false, powerPreference: "high-performance" }}
       camera={{ position: [0, 0, 7], fov: 60 }}
       style={{ position: "absolute", inset: 0 }}
     >
       <MorphPoints morph={morph} colorA={colorA} colorB={colorB} count={count} />
+      {quality === "ultra" && (
+        <EffectComposer>
+          <Bloom intensity={1.1} luminanceThreshold={0.08} luminanceSmoothing={0.9} mipmapBlur />
+        </EffectComposer>
+      )}
     </Canvas>
   );
 }

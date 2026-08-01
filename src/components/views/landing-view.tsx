@@ -49,7 +49,7 @@ import {
   AVG_ANALYSIS_SECONDS,
 } from "@/lib/static-analysis-stats";
 import { LandingFAQ } from "@/components/shared/landing-faq";
-import { LandingParticles } from "@/components/3d/landing-particles";
+import { ConstellationBackground } from "@/components/3d/constellation-background";
 import { useUpgrade } from "@/hooks/use-upgrade";
 import { signIn } from "next-auth/react";
 import { Loader2 } from "lucide-react";
@@ -156,7 +156,6 @@ export function LandingView() {
   const [error, setError] = useState("");
   const { scrollYProgress } = useScroll();
   const heroY = useTransform(scrollYProgress, [0, 0.3], [0, -80]);
-  const morph = useTransform(scrollYProgress, [0, 0.28, 0.62, 1], [0, 1, 1, 2]);
 
   const startAnalysis = () => {
     const parsed = parseRepoUrl(url);
@@ -170,8 +169,8 @@ export function LandingView() {
 
   return (
     <div className="relative">
-      {/* 3D particle morph background (galaxy -> sphere -> grid) */}
-      <LandingParticles morph={morph} />
+      {/* Constellation network background (connected nodes like a dependency graph) */}
+      <ConstellationBackground />
 
       {/* All landing content sits above the fixed 3D backdrop (own stacking
           context so plain text/sections can never fall behind it). */}
