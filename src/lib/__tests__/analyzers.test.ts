@@ -14,7 +14,7 @@ describe("Rule count consistency", () => {
     expect(stats.STATIC_RULES_SECURITY).toBe(13 + security.SECURITY_EXTRA_RULES.length);
     expect(stats.STATIC_RULES_BUGS).toBe(11 + bugs.BUGS_EXTRA_RULES.length);
     expect(stats.STATIC_RULES_PERFORMANCE).toBe(42 + performance.PERFORMANCE_EXTRA_RULES.length);
-    expect(stats.STATIC_RULES_TOTAL).toBe(250);
+    expect(stats.STATIC_RULES_TOTAL).toBe(237);
   });
 });
 
@@ -237,11 +237,12 @@ describe("Performance Analyzer", () => {
   });
 
   it("should detect missing await on async", async () => {
-    const { analyzePerformance } = await import("@/lib/analyzers/performance");
+    // Rule moved from performance.ts to bugs.ts (C11 cross-analyzer dedup)
+    const { analyzeBugs } = await import("@/lib/analyzers/bugs");
     const files = [
       { path: "async.ts", content: 'async function foo() {\n  const result = fetchData();\n  return result;\n}' },
     ];
-    const issues = analyzePerformance(files);
+    const issues = analyzeBugs(files);
     expect(issues.length).toBeGreaterThan(0);
   });
 

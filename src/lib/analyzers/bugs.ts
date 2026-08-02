@@ -183,7 +183,7 @@ export const BUGS_EXTRA_RULES: ExtraRule[] = [
   { key: "jsMaybeUndefined", sev: "medium", cat: "null-ref", eff: "small", re: /\.find\s*\([^)]*\)\s*\.\w+/, neg: /\?\.|\?\?|undefined|if\s*\(|&&|\|\|/ },
   // ── Async / concurrency ──
   { key: "promiseNoCatch", sev: "high", cat: "promise", eff: "small", re: /\.then\s*\([^)]*\)\s*;/, neg: /\.catch|await|async\s/ },
-  { key: "asyncFuncNoAwait", sev: "low", cat: "async", eff: "trivial", re: /async\s+function\s+\w+\s*\([^)]*\)\s*\{[^}]*\}/, neg: /await|Promise|\.then|async/ },
+  { key: "asyncFuncNoAwait", sev: "low", cat: "async", eff: "trivial", re: /async\s+function\s+\w+\s*\([^)]*\)\s*\{[^}]*\}/, neg: /await|Promise|\.then/ },
   { key: "callbackErrIgnored", sev: "medium", cat: "exception", eff: "small", re: /function\s*\([^)]*err[^)]*\)\s*\{\s*\}/, file: /\.js$/ },
   { key: "pyBareExcept", sev: "high", cat: "exception", eff: "small", re: /except\s*:/, file: /\.py$/ },
   { key: "phpErrorSuppression", sev: "medium", cat: "exception", eff: "trivial", re: /@\s*(?:file_get_contents|fopen|mysql_query|include|require)/, file: /\.php$/ },

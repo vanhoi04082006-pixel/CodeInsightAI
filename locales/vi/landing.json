@@ -29,7 +29,7 @@
   "principleSecure": "Bảo mật cấp doanh nghiệp",
   "principleSecureDesc": "API key được mã hóa AES-256-GCM phía máy chủ. Khóa BYOK không bao giờ lộ ra frontend. Cô lập multi-tenant với hạn ngạch mỗi người dùng.",
   "principleFast": "Nhanh & mở rộng",
-  "principleFastDesc": "250 quy tắc phân tích tĩnh chạy tức thì. Phân tích AI chuyên sâu {count} bước hoàn thành dưới 60 giây. CodeGraph đánh chỉ mục trước codebase để AI điều hướng tức thì.",
+  "principleFastDesc": "237 quy tắc phân tích tĩnh chạy tức thì. Phân tích AI chuyên sâu {count} bước hoàn thành dưới 60 giây. CodeGraph đánh chỉ mục trước codebase để AI điều hướng tức thì.",
   "featuresEyebrow": "Khả năng",
   "featuresTitle": "Mọi thứ mà Kỹ sư Cấp cao sẽ nói cho bạn",
   "featuresDesc": "CodeInsight không tóm tắt README. Nó đọc mã, hiểu kiến trúc và báo cáo như kỹ sư cấp cao đang xem xét chuyên sâu.",
@@ -224,7 +224,7 @@
       "name": "Free",
       "desc": "Mang khóa của riêng bạn",
       "features": {
-        "f1": "250 quy tắc phân tích tĩnh",
+        "f1": "237 quy tắc phân tích tĩnh",
         "f2": "5 phân tích / tháng",
         "f3": "50 tin nhắn chat / tháng",
         "f4": "15 AI provider (BYOK)",
