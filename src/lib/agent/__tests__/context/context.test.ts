@@ -5,7 +5,7 @@ import { TokenBudgetManager } from "@/lib/agent/context/token-budget";
 import { ContextRanker } from "@/lib/agent/context/context-ranker";
 import { ContextCompressor } from "@/lib/agent/context/context-compressor";
 import { ContextBuilderImpl } from "@/lib/agent/context/context-builder";
-import type { ContextNeed, TokenBudget } from "@/lib/agent/contracts";
+import type { ContextNeed, TokenBudget, TokenAllocation } from "@/lib/agent/contracts";
 
 // ─── TokenBudgetManager Tests ───
 
@@ -83,12 +83,12 @@ describe("TokenBudgetManager", () => {
 
   describe("canFit", () => {
     it("should return true when allocation fits in remaining", () => {
-      const alloc = { need: { type: "file", ref: "test", priority: "critical" as const }, estimatedTokens: 50, actualTokens: 50, included: true };
+      const alloc: TokenAllocation = { need: { type: "file", ref: "test", priority: "critical" }, estimatedTokens: 50, actualTokens: 50, included: true };
       expect(manager.canFit(alloc, 100)).toBe(true);
     });
 
     it("should return false when allocation exceeds remaining", () => {
-      const alloc = { need: { type: "file", ref: "test", priority: "critical" as const }, estimatedTokens: 150, actualTokens: 150, included: true };
+      const alloc: TokenAllocation = { need: { type: "file", ref: "test", priority: "critical" }, estimatedTokens: 150, actualTokens: 150, included: true };
       expect(manager.canFit(alloc, 100)).toBe(false);
     });
   });
