@@ -320,28 +320,28 @@ export function ProjectView({ isShared = false }: { isShared?: boolean }) {
             <ArchitectureTab report={report} />
           </TabsContent>
           <TabsContent value="bugs" className="mt-4">
-            <IssuesTab id="bugs" issues={report.issues.bugs} title={t("reports", "project.bugDetection")} color="#fbbf24" report={report} />
+            <IssuesTab id="bugs" issues={report.issues.bugs} title={t("reports", "project.bugDetection")} color="#fbbf24" report={report} isShared={isShared} />
           </TabsContent>
           <TabsContent value="security" className="mt-4">
-            <IssuesTab id="security" issues={report.issues.security} title={t("reports", "project.securityAudit")} color="#f472b6" report={report} />
+            <IssuesTab id="security" issues={report.issues.security} title={t("reports", "project.securityAudit")} color="#f472b6" report={report} isShared={isShared} />
           </TabsContent>
           <TabsContent value="performance" className="mt-4">
-            <IssuesTab id="performance" issues={report.issues.performance} title={t("reports", "project.performanceAnalysis")} color="#34d399" report={report} />
+            <IssuesTab id="performance" issues={report.issues.performance} title={t("reports", "project.performanceAnalysis")} color="#34d399" report={report} isShared={isShared} />
           </TabsContent>
           <TabsContent value="codegraph" className="mt-4">
-            <UnifiedCodeGraph analysisId={activeAnalysisId} report={report} />
+            <UnifiedCodeGraph analysisId={activeAnalysisId} report={report} isShared={isShared} />
           </TabsContent>
           <TabsContent value="code" className="mt-4">
-            <CodeTab report={report} />
+            <CodeTab report={report} isShared={isShared} />
           </TabsContent>
           <TabsContent value="docs" className="mt-4">
-            <DocsTab report={report} />
+            <DocsTab report={report} isShared={isShared} />
           </TabsContent>
           <TabsContent value="roadmap" className="mt-4">
             <RoadmapTab report={report} />
           </TabsContent>
           <TabsContent value="timeline" className="mt-4">
-            <TimelineTab report={report} />
+            <TimelineTab report={report} isShared={isShared} />
           </TabsContent>
         </Tabs>
       </div>
@@ -902,7 +902,7 @@ function MetricCard({ label, value, hint, tone }: { label: string; value: string
 }
 
 /* ---------- Issues (shared for bugs/security/performance) ---------- */
-function IssuesTab({ issues, title, color, report, id }: { issues: Issue[]; title: string; color: string; report: AnalysisReport; id: "bugs" | "security" | "performance" }) {
+function IssuesTab({ issues, title, color, report, id, isShared = false }: { issues: Issue[]; title: string; color: string; report: AnalysisReport; id: "bugs" | "security" | "performance"; isShared?: boolean }) {
   const { t } = useT();
   const [expanded, setExpanded] = useState<string | null>(issues[0]?.id ?? null);
   const deep = (report as any).deepAnalysis as any;
@@ -1173,7 +1173,9 @@ function IssuesTab({ issues, title, color, report, id }: { issues: Issue[]; titl
                         </div>
 
                         {/* Action buttons — invoke agents to fix / test / refactor this issue.
-                            Wrapped in AlertDialog for confirmation before running. */}
+                            Wrapped in AlertDialog for confirmation before running.
+                            Hidden in shared (read-only) mode — viewer cannot trigger agents. */}
+                        {!isShared && (
                         <div className="mt-3 flex flex-wrap gap-2">
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
@@ -1253,7 +1255,8 @@ function IssuesTab({ issues, title, color, report, id }: { issues: Issue[]; titl
                             </AlertDialogContent>
                           </AlertDialog>
 
-                          {/* Ask AI about this issue — on-demand per-issue AI analysis */}
+                          {/* Ask AI about this issue — on-demand per-issue AI analysis (hidden in shared mode) */}
+                          {!isShared && (
                           <Button
                             size="sm"
                             variant="outline"
@@ -1264,7 +1267,9 @@ function IssuesTab({ issues, title, color, report, id }: { issues: Issue[]; titl
                             {issueAiLoading === iss.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
                             {issueAiLoading === iss.id ? t("reports", "action.aiAnalyzing") : t("reports", "action.askAI")}
                           </Button>
+                          )}
                         </div>
+                        )}
 
                         {/* AI response for this issue (persisted per issue) */}
                         {(issueAiMap[iss.id] || issueAiLoading === iss.id) && (
@@ -1298,7 +1303,7 @@ function IssuesTab({ issues, title, color, report, id }: { issues: Issue[]; titl
 }
 
 /* ---------- Code ---------- */
-function CodeTab({ report }: { report: AnalysisReport }) {
+function CodeTab({ report, isShared = false }: { report: AnalysisReport; isShared?: boolean }) {
   const { t } = useT();
   const activeAnalysisId = useAppStore((s) => s.activeAnalysisId);
 
@@ -1433,9 +1438,9 @@ function CodeTab({ report }: { report: AnalysisReport }) {
         snippets={report.snippets}
         files={report.files}
         issues={allIssues}
-        onAskAI={askAI}
-        onRegenerate={regenerateAI}
-        aiLoading={explainLoading}
+        onAskAI={isShared ? undefined : askAI}
+        onRegenerate={isShared ? undefined : regenerateAI}
+        aiLoading={isShared ? false : explainLoading}
         aiResponse={aiExplain ?? null}
         activeAiMode={activeAiMode}
         activeAiFile={activeAiFile}
@@ -1445,7 +1450,7 @@ function CodeTab({ report }: { report: AnalysisReport }) {
 }
 
 /* ---------- Docs ---------- */
-function DocsTab({ report }: { report: AnalysisReport }) {
+function DocsTab({ report, isShared = false }: { report: AnalysisReport; isShared?: boolean }) {
   const { t, locale } = useT();
   const activeAnalysisId = useAppStore((s) => s.activeAnalysisId);
   const [copied, setCopied] = useState<string | null>(null);
@@ -1732,9 +1737,9 @@ function DocsTab({ report }: { report: AnalysisReport }) {
                 )}
               </span>
               <div className="flex items-center gap-1.5">
-                {/* AI-enhance controls — hidden when there's no active analysis
-                    (e.g. shared views). Lazy: only fires on click. */}
-                {activeAnalysisId && !activeAiContent && (
+                {/* AI-enhance controls — hidden in shared mode AND when there's
+                    no active analysis. Lazy: only fires on click. */}
+                {!isShared && activeAnalysisId && !activeAiContent && (
                   <Button
                     size="sm"
                     variant="outline"
@@ -2396,7 +2401,7 @@ interface AISummary {
   recommendation?: string;
 }
 
-function TimelineTab({ report }: { report: AnalysisReport }) {
+function TimelineTab({ report, isShared = false }: { report: AnalysisReport; isShared?: boolean }) {
   const { t } = useT();
   const [timeline, setTimeline] = useState<TimelineEntry[]>([]);
   const [fromId, setFromId] = useState<string>("");
@@ -2740,7 +2745,9 @@ function TimelineTab({ report }: { report: AnalysisReport }) {
               </div>
             )}
 
-            {/* P2.5 — AI Explain Changes button (lazy: only fires on click) */}
+            {/* P2.5 — AI Explain Changes button (lazy: only fires on click).
+                Hidden in shared mode — viewer cannot trigger AI calls. */}
+            {!isShared && (
             <div className="pt-1">
               <Button
                 type="button"
@@ -2761,6 +2768,7 @@ function TimelineTab({ report }: { report: AnalysisReport }) {
                 )}
               </Button>
             </div>
+            )}
           </div>
         )}
       </GlassCard>

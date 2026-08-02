@@ -94,9 +94,11 @@ const LABEL_FONT_SIZE_LARGE = 8;
 export function UnifiedCodeGraph({
   analysisId,
   report,
+  isShared = false,
 }: {
   analysisId: string | null;
   report: AnalysisReport;
+  isShared?: boolean;
 }) {
   const { t } = useT();
   const svgRef = useRef<SVGSVGElement>(null);
@@ -487,7 +489,9 @@ export function UnifiedCodeGraph({
       {/* Graph type selector — 6 buttons */}
       <GraphTypeSelector graphType={graphType} onChange={setGraphType} />
 
-      {/* AI Analysis card — lazy on click, persisted per-type in sessionStorage */}
+      {/* AI Analysis card — lazy on click, persisted per-type in sessionStorage.
+          Hidden in shared (read-only) mode — viewer cannot trigger AI calls. */}
+      {!isShared && (
       <GlassCard className="overflow-hidden border-violet-400/20 bg-gradient-to-br from-violet-500/[0.04] to-cyan-500/[0.04] p-4">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
@@ -541,6 +545,7 @@ export function UnifiedCodeGraph({
           </motion.div>
         )}
       </GlassCard>
+      )}
 
       {/* Canvas + Inspector */}
       <div className="grid gap-4 lg:grid-cols-[1fr_300px]">
