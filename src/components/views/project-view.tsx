@@ -178,7 +178,8 @@ export function ProjectView({ isShared = false }: { isShared?: boolean }) {
     try {
       toast.info(t("reports", "project.generatingPDF"));
       const { generateAnalysisPDF } = await import("@/lib/export/pdf-generator");
-      const blob = generateAnalysisPDF(report);
+      const locale = useI18nStore.getState().locale;
+      const blob = await generateAnalysisPDF(report, locale);
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;

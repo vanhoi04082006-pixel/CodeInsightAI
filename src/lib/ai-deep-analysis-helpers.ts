@@ -50,10 +50,13 @@ Scores — Overall: ${report.scores.overall}, Security: ${report.scores.security
   const topBySeverity = (issues: any[], max: number) =>
     [...issues].sort((a, b) => (severityOrder[a.severity as keyof typeof severityOrder] ?? 9) - (severityOrder[b.severity as keyof typeof severityOrder] ?? 9)).slice(0, max);
 
+  // Increased from 5 → 8 per category to handle the expanded 250-rule analysis
+  // (repos now generate 50-150 issues; top 5 missed important findings).
+  // Total: 24 issues sent to AI (was 15). Still within token budget for all models.
   const topIssues = [
-    ...topBySeverity(report.issues.security, 5),
-    ...topBySeverity(report.issues.bugs, 5),
-    ...topBySeverity(report.issues.performance, 5),
+    ...topBySeverity(report.issues.security, 8),
+    ...topBySeverity(report.issues.bugs, 8),
+    ...topBySeverity(report.issues.performance, 8),
   ].map((i) => `- [${i.severity}] ${i.title} (${i.file}): ${i.recommendation?.slice(0, 100) ?? ""}`).join("\n");
 
   switch (passType) {

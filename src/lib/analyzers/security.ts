@@ -41,7 +41,7 @@ export function analyzeSecurity(files: { path: string; content: string }[], lang
       { re: /ghp_[a-zA-Z0-9]{36}/g, key: "hardcodedGitHubPat", s: "critical" },
       { re: /AIza[a-zA-Z0-9_-]{35}/g, key: "hardcodedGoogleKey", s: "critical" },
       { re: /AKIA[A-Z0-9]{16}/g, key: "hardcodedAWSKey", s: "critical" },
-      { re: /-----BEGIN (?:RSA |EC )?PRIVATE KEY-----/g, key: "embeddedPrivateKey", s: "critical" },
+      { re: /-----BEGIN (?:RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----/g, key: "embeddedPrivateKey", s: "critical" },
     ];
     for (const { re, key, s } of secretPats) {
       let m; while ((m = re.exec(content)) !== null) {
@@ -68,17 +68,44 @@ export function analyzeSecurity(files: { path: string; content: string }[], lang
           "high", "trivial",
         ));
     }
-    // 3. JWT issues
+    // 3. JWT issues — merged: hardcodedSecret + weakSecret + noExpiry → single prioritized report
     if (content.includes("jwt")||content.includes("jsonwebtoken")) {
-      if (content.match(/jwt\.sign\s*\([^,]+,\s*["'][^"']+["']/))
+      // Check for hardcoded secret (string literal as 2nd arg)
+      const jwtSecretMatch = content.match(/jwt\.sign\s*\([^,]+,\s*["']([^"']+)["']/);
+      if (jwtSecretMatch) {
+        const secretLen = jwtSecretMatch[1].length;
+        if (secretLen <= 10) {
+          // Weak secret (≤10 chars) → critical, subsumes hardcodedSecret
+          issues.push(mk(
+            "jwt",
+            t("security.jwtWeakSecret.title"),
+            t("security.jwtWeakSecret.description"),
+            fpath, fl(lines,"jwt.sign"),
+            t("security.jwtWeakSecret.recommendation"),
+            "critical", "small",
+          ));
+        } else {
+          // Hardcoded secret (>10 chars) → high
+          issues.push(mk(
+            "jwt",
+            t("security.jwtHardcodedSecret.title"),
+            t("security.jwtHardcodedSecret.description"),
+            fpath, fl(lines,"jwt.sign"),
+            t("security.jwtHardcodedSecret.recommendation"),
+            "high", "small",
+          ));
+        }
+      } else if (content.match(/\bjwt\.sign\s*\(/) && !content.match(/expiresIn|exp\s*:/)) {
+        // No hardcoded secret BUT no expiry either → medium
         issues.push(mk(
           "jwt",
-          t("security.jwtHardcodedSecret.title"),
-          t("security.jwtHardcodedSecret.description"),
+          t("security.jwtNoExpiry.title"),
+          t("security.jwtNoExpiry.description"),
           fpath, fl(lines,"jwt.sign"),
-          t("security.jwtHardcodedSecret.recommendation"),
-          "high", "small",
+          t("security.jwtNoExpiry.recommendation"),
+          "medium", "trivial",
         ));
+      }
       if (content.match(/algorith(?:m|ms)\s*:\s*["']none["']/i))
         issues.push(mk(
           "jwt",
@@ -231,7 +258,6 @@ export const SECURITY_EXTRA_RULES: ExtraRule[] = [
   { key: "hardcodedIv", sev: "medium", cat: "hashing", eff: "small", re: /\biv\s*=\s*["'][^"']{4,}/ },
   { key: "weakRandomForSecret", sev: "high", cat: "hashing", eff: "small", re: /(?:token|password|secret|apiKey|otp)[^;]{0,40}Math\.random|Math\.random[^;]{0,40}(?:token|password|secret|otp)/ },
   { key: "pythonWeakRandomForSecret", sev: "high", cat: "hashing", eff: "small", re: /(?:token|password|secret|otp)[^;\n]{0,40}random\.(?:randint|choice|random)\s*\(/, file: /\.py$/ },
-  { key: "jwtWeakSecret", sev: "critical", cat: "jwt", eff: "small", re: /jwt\.sign\s*\([^)]*["'][^"']{1,10}["']/ },
   { key: "cookieNoHttpOnly", sev: "high", cat: "auth", eff: "trivial", re: /httpOnly\s*:\s*false|HttpOnly\s*=\s*false/ },
   { key: "cookieNoSecure", sev: "high", cat: "auth", eff: "trivial", re: /secure\s*:\s*false/ },
   { key: "cookieSameSiteNone", sev: "medium", cat: "auth", eff: "trivial", re: /sameSite\s*:\s*["']none["']/ },
@@ -254,15 +280,13 @@ export const SECURITY_EXTRA_RULES: ExtraRule[] = [
   { key: "uploadNoSizeLimit", sev: "high", cat: "upload", eff: "medium", re: /upload\.single\s*\(|upload\.array\s*\(/, file: /\.(js|ts|mjs|tsx)$/, neg: /limits|fileSize|maxSize|MAX_FILE_SIZE/ },
   // ── Misc unsafe patterns ──
   { key: "newFunctionEval", sev: "high", cat: "eval", eff: "small", re: /new\s+Function\s*\(/ },
-  { key: "curlInsecure", sev: "high", cat: "tls", eff: "trivial", re: /curl_setopt\s*\([^)]*CURLOPT_SSL_VERIFYPEER\s*,\s*false|curl\s+[^|\n]*\s-k\b/ },
+  { key: "curlInsecure", sev: "high", cat: "tls", eff: "trivial", re: /curl\s+[^|\n]*\s-k\b/, file: /\.(sh|bash|zsh|yml|yaml)$/ },
   { key: "secretInLogs", sev: "high", cat: "secrets", eff: "trivial", re: /console\.(?:log|info|debug)\s*\([^)]*(?:token|password|secret|apiKey|authorization)/ },
   { key: "hardcodedAdminCreds", sev: "high", cat: "secrets", eff: "trivial", re: /admin\s*[:=]\s*["'](?:admin|password)["']/ },
   { key: "dockerPrivileged", sev: "high", cat: "misc", eff: "small", re: /--privileged|privileged:\s*true/, file: /\.(yml|yaml|sh|dockerfile)$/i },
   { key: "chmod777", sev: "medium", cat: "misc", eff: "trivial", re: /chmod\s+777|0o777/, file: /\.(sh|py|js|ts)$/ },
   { key: "oldTlsProtocol", sev: "medium", cat: "tls", eff: "small", re: /TLSv1[01]|SSLv3|PROTOCOL_TLSv1[,)]/ },
-  { key: "sshPrivateKey", sev: "critical", cat: "secrets", eff: "trivial", re: /-----BEGIN OPENSSH PRIVATE KEY-----/ },
   { key: "mongoNoSQLInjection", sev: "critical", cat: "sqli", eff: "medium", re: /\$where\s*:|\$regex\s*:/, file: /\.(js|ts|mjs|tsx)$/ },
-  { key: "jwtNoExpiry", sev: "medium", cat: "jwt", eff: "trivial", re: /\bjwt\.sign\s*\(/, neg: /expiresIn|exp\s*:/ },
   { key: "headerInjection", sev: "critical", cat: "cmdi", eff: "medium", re: /(?:setHeader|writeHead)\s*\([^)]*(?:\\r|\\n)/ },
   { key: "phpFileInclusion", sev: "critical", cat: "traversal", eff: "medium", re: /(?:include|include_once|require|require_once)\s*\(\s*\$_(?:GET|POST|REQUEST)/, file: /\.php$/ },
   { key: "execSyncTemplate", sev: "critical", cat: "cmdi", eff: "small", re: /execSync\s*\(\s*`[^`]*\$\{/ },

@@ -137,18 +137,8 @@ export function analyzePerformance(files: { path: string; content: string }[], l
         t("performance.sequentialAwait.title"), t("performance.sequentialAwait.description"),
         fpath, fl(lines,"await"),
         t("performance.sequentialAwait.recommendation"), "medium","medium"));
-    // 16. async function without await
-    if (content.match(/async\s+function\s+\w+/) && !content.includes("await") && !content.includes(".then("))
-      issues.push(mk("async",
-        t("performance.asyncWithoutAwait.title"), t("performance.asyncWithoutAwait.description"),
-        fpath, fl(lines,"async function"),
-        t("performance.asyncWithoutAwait.recommendation"), "low","trivial"));
-    // 17. console.log in production
-    if (content.match(/console\.(log|debug)\s*\(/) && !fpath.includes(".test.") && !fpath.includes(".spec."))
-      issues.push(mk("debug",
-        t("performance.consoleLogPerf.title"), t("performance.consoleLogPerf.description"),
-        fpath, fl(lines,"console"),
-        t("performance.consoleLogPerf.recommendation"), "low","trivial"));
+    // 16. async function without await — REMOVED: duplicate of bugs.asyncFuncNoAwait (logic error, not perf)
+    // 17. console.log — REMOVED: duplicate of bugs.consoleLog (code quality, not performance)
     // 18. eval / new Function
     if (content.match(/\beval\s*\(/) || content.match(/new\s+Function\s*\(/))
       issues.push(mk("security",
@@ -238,12 +228,7 @@ export function analyzePerformance(files: { path: string; content: string }[], l
         t("performance.subscriptionNoUnsubscribe.recommendation"), "high","medium"));
 
     // ── REACT PATTERNS (advanced) ──
-    // 29. dangerouslySetInnerHTML (perf: bypasses reconciliation + security risk)
-    if (content.includes("dangerouslySetInnerHTML"))
-      issues.push(mk("render",
-        t("performance.dangerouslySetInnerHTMLPerf.title"), t("performance.dangerouslySetInnerHTMLPerf.description"),
-        fpath, fl(lines,"dangerouslySetInnerHTML"),
-        t("performance.dangerouslySetInnerHTMLPerf.recommendation"), "medium","small"));
+    // 29. dangerouslySetInnerHTML — REMOVED: duplicate of security.xssDangerouslySetInnerHTML (security concern, not perf)
     // 30. Missing Suspense boundary around React.lazy
     if (content.includes("React.lazy") || content.match(/lazy\s*\(\s*\(/))
       if (!content.includes("<Suspense") && !content.includes("Suspense"))
