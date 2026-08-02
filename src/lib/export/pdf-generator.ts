@@ -257,7 +257,7 @@ export async function generateAnalysisPDF(report: AnalysisReport, locale: Locale
   }
 
   // ---------- Issues tables (all, no 20-row limit) ----------
-  const issueTable = (title: string, issues: any[], headColor: number[]) => {
+  const issueTable = (title: string, issues: any[], headColor: [number, number, number]) => {
     if (issues.length === 0) return;
     if (y > pageHeight - 80) { doc.addPage(); y = 40; }
     doc.setFontSize(12);
