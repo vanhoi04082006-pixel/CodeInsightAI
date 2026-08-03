@@ -9,7 +9,6 @@ import type {
   AgentError,
 } from "../contracts";
 import * as fileOps from "@/lib/repo-editor/file-operations";
-import { computeDiff, formatDiffAsUnified, applyDiff } from "@/lib/repo-editor/diff-engine";
 
 export class RepoServiceImpl implements IRepoService {
   private changeLog: ChangeRecord[] = [];

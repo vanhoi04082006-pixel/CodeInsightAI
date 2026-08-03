@@ -20,3 +20,4 @@ export { createToolRegistry, createCapabilityRegistry, createRegistries } from "
 // Export individual tools for testing
 export { readOnlyTools } from "./definitions/read-only-tools";
 export { writeTools } from "./definitions/write-tools";
+export { additionalTools } from "./definitions/additional-tools";

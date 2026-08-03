@@ -4,7 +4,6 @@
 import type { Tool, Result, AgentContext } from "../../contracts";
 import { readOnlyManifest } from "../manifest";
 
-function ok<T>(value: T): Result<T> { return { ok: true, value }; }
 function err(code: string, message: string): Result<never> {
   return { ok: false, error: { code, message, recoverable: false } };
 }

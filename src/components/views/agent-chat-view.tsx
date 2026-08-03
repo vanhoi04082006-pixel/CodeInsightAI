@@ -55,6 +55,7 @@ export function AgentChatView() {
   const [pendingPermission, setPendingPermission] = useState<PendingPermissionLocal | null>(null);
   const [workingMemory, setWorkingMemory] = useState<any>({});
   const [progress, setProgress] = useState({ completed: 0, total: 0 });
+  const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   const addMessage = useCallback((role: ChatMessage["role"], content: string) => {
@@ -66,7 +67,12 @@ export function AgentChatView() {
     }]);
   }, []);
 
-  const handleEvent = useCallback((event: AgentEvent) => {
+  const handleEvent = useCallback((event: any) => {
+    // Store taskId when received
+    if (event.taskId) {
+      setActiveTaskId(event.taskId);
+    }
+
     switch (event.type) {
       case "plan.generated":
         setPlan(event.plan);
@@ -161,6 +167,7 @@ export function AgentChatView() {
     setToolCalls([]);
     setPlan(null);
     setProgress({ completed: 0, total: 0 });
+    setActiveTaskId(null);
 
     abortRef.current = new AbortController();
 
@@ -242,6 +249,7 @@ export function AgentChatView() {
         body: JSON.stringify({
           nodeId: pendingPermission.nodeId,
           granted,
+          taskId: activeTaskId,
         }),
       });
     } catch {}

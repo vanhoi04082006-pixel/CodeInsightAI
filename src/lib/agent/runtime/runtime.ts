@@ -9,8 +9,6 @@ import type {
   AgentEvent,
   Checkpoint,
   Tool,
-  Result,
-  AgentError,
 } from "../contracts";
 import { EventBusImpl, createEventBus, makeEvent } from "./event-bus";
 import { PermissionGateImpl } from "./permission-gate";
@@ -26,6 +24,9 @@ export class AgentRuntimeImpl implements IAgentRuntime {
 
   private activeEngines = new Map<string, ExecutionEngine>();
   private toolRegistry: { get: (name: string) => Tool | null };
+
+  // Store context for resume
+  private contextStore = new Map<string, AgentContext>();
 
   constructor(toolRegistry: { get: (name: string) => Tool | null }) {
     this.eventBus = createEventBus();
@@ -53,11 +54,13 @@ export class AgentRuntimeImpl implements IAgentRuntime {
     });
 
     this.activeEngines.set(taskId, engine);
+    this.contextStore.set(taskId, context);
 
     try {
       yield* engine.execute(plan, context);
     } finally {
       this.activeEngines.delete(taskId);
+      this.contextStore.delete(taskId);
     }
   }
 
@@ -92,6 +95,20 @@ export class AgentRuntimeImpl implements IAgentRuntime {
       return;
     }
 
+    // Retrieve stored context
+    const context = this.contextStore.get(taskId);
+    if (!context) {
+      yield makeEvent({
+        type: "task.failed",
+        error: {
+          code: "RUNTIME_CHECKPOINT_FAILED",
+          message: `No context found for task: ${taskId}. Context must be provided when creating the runtime.`,
+          recoverable: false,
+        },
+      });
+      return;
+    }
+
     // Mark completed nodes as done in the plan
     const updatedPlan = CheckpointManager.markCompleted(
       checkpoint.plan,
@@ -112,16 +129,7 @@ export class AgentRuntimeImpl implements IAgentRuntime {
     yield makeEvent({ type: "task.resumed", nodeId: checkpoint.currentNodeId ?? "" });
 
     try {
-      // Need context — in production this would be stored in checkpoint
-      // For now, we can't fully resume without context
-      yield makeEvent({
-        type: "task.failed",
-        error: {
-          code: "RUNTIME_CHECKPOINT_FAILED",
-          message: "Resume requires stored context (Phase 9 Memory)",
-          recoverable: false,
-        },
-      });
+      yield* engine.execute(updatedPlan, context);
     } finally {
       this.activeEngines.delete(taskId);
     }

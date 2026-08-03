@@ -10,7 +10,6 @@ import type {
   Result,
   AgentError,
 } from "../contracts";
-import { buildIndexes } from "../indexes";
 
 export class GraphServiceImpl implements IGraphService {
   private cachedGraphData: GraphData | null = null;

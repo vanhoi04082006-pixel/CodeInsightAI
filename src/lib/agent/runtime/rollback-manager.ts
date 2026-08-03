@@ -1,10 +1,27 @@
 // CodeInsight AI — Rollback Manager (Layer 7)
 // Tracks file changes during plan execution and supports rollback on failure.
+// Uses RepoService async methods for real file operations.
 
 import type { ChangeRecord, Result, AgentError } from "../contracts";
 
 export class RollbackManager {
   private changes: ChangeRecord[] = [];
+  private fileOps: {
+    deleteFile: (p: string) => Promise<void>;
+    writeFile: (p: string, c: string) => Promise<void>;
+    createFile: (p: string, c: string) => Promise<void>;
+    fileExists: (p: string) => Promise<boolean>;
+  } | null = null;
+
+  /** Set the file operations backend (called by Runtime setup) */
+  setFileOps(ops: {
+    deleteFile: (p: string) => Promise<void>;
+    writeFile: (p: string, c: string) => Promise<void>;
+    createFile: (p: string, c: string) => Promise<void>;
+    fileExists: (p: string) => Promise<boolean>;
+  }): void {
+    this.fileOps = ops;
+  }
 
   /** Track a file change for potential rollback */
   track(change: ChangeRecord): void {
@@ -28,32 +45,35 @@ export class RollbackManager {
    * For "delete" → recreate with old content.
    */
   async rollback(): Promise<Result<void>> {
+    if (!this.fileOps) {
+      // No file ops backend — can't rollback files, just clear log
+      this.changes = [];
+      return ok(undefined);
+    }
+
     try {
-      // Reverse order: undo last change first
       const reversed = [...this.changes].reverse();
 
       for (const change of reversed) {
         switch (change.type) {
           case "create":
-            // Delete the created file
-            // In production: await fileOps.deleteFile(change.file)
+            if (await this.fileOps.fileExists(change.file)) {
+              await this.fileOps.deleteFile(change.file);
+            }
             break;
           case "update":
-            // Restore old content
             if (change.oldContent !== undefined) {
-              // In production: await fileOps.writeFile(change.file, change.oldContent)
+              await this.fileOps.writeFile(change.file, change.oldContent);
             }
             break;
           case "delete":
-            // Recreate with old content
             if (change.oldContent !== undefined) {
-              // In production: await fileOps.createFile(change.file, change.oldContent)
+              await this.fileOps.createFile(change.file, change.oldContent);
             }
             break;
         }
       }
 
-      // Clear after successful rollback
       this.changes = [];
       return ok(undefined);
     } catch (e) {

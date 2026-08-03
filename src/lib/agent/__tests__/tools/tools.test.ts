@@ -8,8 +8,8 @@ import type { Tool, ToolManifest } from "@/lib/agent/contracts";
 describe("ToolRegistry", () => {
   const { toolRegistry } = createRegistries();
 
-  it("should register all 20 tools", () => {
-    expect((toolRegistry as ToolRegistryImpl).count()).toBe(20);
+  it("should register all 26 tools", () => {
+    expect((toolRegistry as ToolRegistryImpl).count()).toBe(26);
   });
 
   it("should get tool by name", () => {
@@ -54,7 +54,7 @@ describe("ToolRegistry", () => {
 
   it("should list all tool names", () => {
     const all = (toolRegistry as ToolRegistryImpl).listAll();
-    expect(all).toHaveLength(20);
+    expect(all).toHaveLength(26);
     expect(all).toContain("find-symbol");
     expect(all).toContain("generate-patch");
     expect(all).toContain("git-commit");

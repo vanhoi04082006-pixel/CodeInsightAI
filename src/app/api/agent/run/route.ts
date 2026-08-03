@@ -1,9 +1,23 @@
 // CodeInsight AI — Agent Run API (Layer 9)
 // POST /api/agent/run — Streams AgentEvent via SSE
+//
+// SINGLE EVENT CHANNEL: events flow only through the async generator
+// from runtime.run(). The EventBus is used internally by the Runtime
+// for logging/metrics but NOT for SSE streaming — preventing double-emit.
 
 import { NextRequest, NextResponse } from "next/server";
 import { requireUserId } from "@/lib/auth";
 import { db } from "@/lib/db";
+
+// Global registry for cross-route communication (permission signaling).
+// Uses globalThis to share state between /api/agent/run and /api/agent/permission.
+// In Vercel serverless, this works within the same serverless function instance.
+// For multi-instance production, use Redis pub/sub or DB polling.
+const globalAny = globalThis as any;
+if (!globalAny.__agentActiveRuntimes) {
+  globalAny.__agentActiveRuntimes = new Map();
+}
+const activeRuntimes: Map<string, { permissionGate: { respond: (nodeId: string, granted: boolean, reason?: string) => void } }> = globalAny.__agentActiveRuntimes;
 
 export async function POST(req: NextRequest) {
   const userId = await requireUserId();
@@ -12,7 +26,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { query, analysisId } = body;
+  const { query, analysisId, locale } = body;
 
   if (!query || typeof query !== "string") {
     return NextResponse.json({ error: "Missing 'query' field" }, { status: 400 });
@@ -32,6 +46,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Analysis not found" }, { status: 404 });
   }
 
+  const userLocale = locale === "vi" ? "vi" : "en";
+
   // SSE streaming response
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
@@ -41,7 +57,7 @@ export async function POST(req: NextRequest) {
       };
 
       try {
-        // Build agent pipeline
+        // ── Phase 1: Build agent pipeline ──
         send({ type: "node.started", nodeId: "setup", tool: "spm-builder", timestamp: Date.now() });
 
         const { buildSPM } = await import("@/lib/agent/spm/builder");
@@ -52,7 +68,6 @@ export async function POST(req: NextRequest) {
         const { createPlanner } = await import("@/lib/agent/planner/planner");
         const { createRuntime } = await import("@/lib/agent/runtime/runtime");
         const { createAgentMemory } = await import("@/lib/agent/memory/agent-memory");
-        const { defaultPolicy } = await import("@/lib/agent/planner/execution-policy");
 
         const report = analysis.report as any;
         const spmResult = buildSPM(report, analysisId);
@@ -75,47 +90,54 @@ export async function POST(req: NextRequest) {
           query: queryService,
           memory,
           analysisId,
-          locale: "en" as const,
+          locale: userLocale as "en" | "vi",
         };
 
         send({ type: "node.completed", nodeId: "setup", result: "SPM + indexes ready", timestamp: Date.now() });
 
-        // Match skill
+        // ── Phase 2: Match skill ──
         const skill = skillRegistry.match(query);
         if (skill) {
           send({ type: "memory.updated", working: { currentStep: `Skill: ${skill.name}` }, timestamp: Date.now() });
         }
 
-        // Generate plan via Planner
-        // Use a simple inline plan for now (LLM planner requires API key)
-        const { ExecutionGraphBuilder, createNode } = await import("@/lib/agent/planner/execution-graph");
-        const builder = new ExecutionGraphBuilder();
+        // ── Phase 3: Generate plan via LLM Planner ──
+        send({ type: "node.started", nodeId: "planner", tool: "planner", timestamp: Date.now() });
 
-        // Build a basic plan: search → find issues → AI insight
-        builder.addNode(createNode("step-1", `Search code: ${query}`, "search-code", { query }, { parallelGroup: "discover" }));
-        builder.addNode(createNode("step-2", "Find issues", "find-issues", {}, { parallelGroup: "discover" }));
-        builder.addNode(createNode("step-3", "Get architecture", "find-architecture", {}, { dependsOn: ["step-1"] }));
-        builder.addNode(createNode("step-4", "Get metrics", "find-metrics", {}, { dependsOn: ["step-1"] }));
+        // Get all valid capabilities from the capability registry
+        const allCapabilities = (toolRegistry as any).listAllManifests?.()?.flatMap((m: any) => m.capabilities) || [];
+        const planner = createPlanner(allCapabilities);
+        const planResult = await planner.plan(query, context);
 
-        const graph = builder.build();
-        const policy = defaultPolicy();
-        const plan = { graph, policy, estimatedTokens: 2000, estimatedTimeMs: 30000 };
-
-        send({ type: "plan.generated", plan, timestamp: Date.now() });
-
-        // Execute plan
-        const runtime = createRuntime(toolRegistry);
-        const eventBus = runtime.eventBus;
-
-        const unsub = eventBus.subscribe((event) => {
-          send(event);
-        });
-
-        for await (const event of runtime.run(plan, context)) {
-          send(event);
+        if (!planResult.ok) {
+          send({ type: "task.failed", error: planResult.error, timestamp: Date.now() });
+          controller.close();
+          return;
         }
 
-        unsub();
+        send({ type: "node.completed", nodeId: "planner", result: "Plan generated", timestamp: Date.now() });
+        send({ type: "plan.generated", plan: planResult.value, timestamp: Date.now() });
+
+        // ── Phase 4: Execute plan via Runtime ──
+        // SINGLE EVENT CHANNEL: only iterate the async generator.
+        // Do NOT subscribe to EventBus — events come through the generator only.
+        const runtime = createRuntime(toolRegistry);
+        const taskId = `task-${Date.now()}`;
+
+        // Register runtime for permission signaling
+        activeRuntimes.set(taskId, {
+          permissionGate: runtime.permissionGate,
+        });
+
+        // Emit taskId to client (for permission responses)
+        send({ type: "task.started", taskId, timestamp: Date.now() } as any);
+
+        for await (const event of runtime.run(planResult.value, context)) {
+          // Enrich events with taskId for permission correlation
+          send({ ...event, taskId });
+        }
+
+        activeRuntimes.delete(taskId);
       } catch (e) {
         send({
           type: "task.failed",
@@ -140,3 +162,6 @@ export async function POST(req: NextRequest) {
     },
   });
 }
+
+// Export for type checking
+export { activeRuntimes as _activeRuntimes };

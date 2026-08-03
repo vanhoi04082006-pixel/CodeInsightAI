@@ -1,18 +1,20 @@
 // CodeInsight AI — Tool Registration (Layer 4)
-// Registers all 20 tools + their capabilities into the registries.
+// Registers all 26 tools (20 original + 6 additional) + their capabilities.
 
 import type { ToolRegistry as IToolRegistry, CapabilityRegistry as ICapabilityRegistry } from "../contracts";
 import { ToolRegistryImpl } from "./tool-registry";
 import { CapabilityRegistryImpl } from "./capability-registry";
 import { readOnlyTools } from "./definitions/read-only-tools";
 import { writeTools } from "./definitions/write-tools";
+import { additionalTools } from "./definitions/additional-tools";
 
 /**
- * Create and populate a ToolRegistry with all 20 tools.
+ * Create and populate a ToolRegistry with all 26 tools.
  */
 export function createToolRegistry(): IToolRegistry {
   const registry = new ToolRegistryImpl();
-  for (const tool of [...readOnlyTools, ...writeTools]) {
+  const allTools = [...readOnlyTools, ...writeTools, ...additionalTools];
+  for (const tool of allTools) {
     registry.register(tool);
   }
   return registry;
@@ -20,19 +22,17 @@ export function createToolRegistry(): IToolRegistry {
 
 /**
  * Create and populate a CapabilityRegistry with all capability→tool mappings.
- * Initial mapping is 1:1 (each capability maps to exactly 1 tool).
  */
 export function createCapabilityRegistry(
   toolRegistry: IToolRegistry,
 ): ICapabilityRegistry {
   const capRegistry = new CapabilityRegistryImpl();
 
-  // For each tool, register its capabilities
   for (const toolName of (toolRegistry as ToolRegistryImpl).listAll()) {
     const manifest = toolRegistry.getManifest(toolName);
     if (!manifest) continue;
     for (const capability of manifest.capabilities) {
-      capRegistry.register(capability, toolName, 1); // priority 1 (only tool for this capability)
+      capRegistry.register(capability, toolName, 1);
     }
   }
 
