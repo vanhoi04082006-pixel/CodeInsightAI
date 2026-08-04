@@ -16,6 +16,7 @@ import {
   Brain,
   Bot,
   Shield,
+  Monitor,
 } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { useProvidersStore } from "@/lib/providers-store";
@@ -38,6 +39,7 @@ const NAV: { id: View; labelKey: string; icon: typeof LayoutDashboard; disabled?
   { id: "analyze", labelKey: "nav.analyze", icon: ScanSearch },
   { id: "project", labelKey: "nav.project", icon: FolderGit2 },
   { id: "agent", labelKey: "nav.agent", icon: Brain },
+  { id: "workspace", labelKey: "nav.workspace", icon: Monitor },
   { id: "chat", labelKey: "nav.chat", icon: MessagesSquare },
   { id: "history", labelKey: "nav.history", icon: History },
   { id: "providers", labelKey: "nav.providers", icon: Plug },
@@ -184,6 +186,7 @@ export function AppTopbar() {
     analyze: "actions.newAnalysis",
     project: "nav.project",
     agent: "nav.agent",
+    workspace: "nav.workspace",
     chat: "nav.chat",
     history: "nav.history",
     settings: "nav.settings",
