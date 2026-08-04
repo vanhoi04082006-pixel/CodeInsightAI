@@ -190,6 +190,49 @@ export function useAgent() {
         setState((prev) => ({ ...prev, isRunning: false }));
         addTerminalLine("info", "═══ Task cancelled ═══");
         break;
+
+      // ── v2.2 fix: handle remaining 7 event types ──
+
+      case "node.tool-output":
+        // Streaming tool output (partial chunks) — append to terminal
+        if (ev.chunk) addTerminalLine("stdout", String(ev.chunk));
+        break;
+
+      case "patch.generated":
+        // Agent generated a patch — update activeFile with diff
+        setState((prev) => ({
+          ...prev,
+          activeFile: prev.activeFile
+            ? { ...prev.activeFile, diff: ev.diff }
+            : { path: ev.file, content: "", diff: ev.diff },
+        }));
+        addMessage("assistant", `📝 Patch generated for ${ev.file}`);
+        break;
+
+      case "patch.applied":
+        // Patch was applied — update terminal
+        addTerminalLine("info", `→ patch applied to ${ev.file}`);
+        break;
+
+      case "patch.rolledback":
+        // Patch was rolled back
+        addTerminalLine("info", `→ patch rolled back for ${ev.file || "files"}`);
+        addMessage("assistant", `↩️ Changes rolled back`);
+        break;
+
+      case "checkpoint.saved":
+        // Checkpoint saved — no UI action needed, but track for debugging
+        break;
+
+      case "task.paused":
+        setState((prev) => ({ ...prev, isRunning: false }));
+        addMessage("system", `⏸ Task paused at ${ev.nodeId || "current step"}`);
+        break;
+
+      case "task.resumed":
+        setState((prev) => ({ ...prev, isRunning: true }));
+        addMessage("system", `▶ Task resumed from ${ev.nodeId || "last checkpoint"}`);
+        break;
     }
   }, [addMessage, addTerminalLine]);
 

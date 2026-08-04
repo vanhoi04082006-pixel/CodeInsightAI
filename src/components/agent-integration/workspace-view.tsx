@@ -4,7 +4,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Loader2, Send, Brain, Code2, Eye, X, Terminal as TerminalIcon,
-  ChevronRight, Circle, CheckCircle2, XCircle, AlertTriangle,
+  ChevronRight,
 } from "lucide-react";
 import { GlassCard, GradientText } from "@/components/shared/ui";
 import { Button } from "@/components/ui/button";
@@ -237,10 +237,36 @@ function RightPanel({
   const [terminalCollapsed, setTerminalCollapsed] = useState(false);
   const { state } = agent;
 
-  // Get active file content from SPM
-  const activeFileContent = state.activeFile?.content
-    || (state.activeFile ? (report as any)?.files?.find?.((f: any) => f.path === state.activeFile?.path)?.snippet || "" : "")
-    || "";
+  // v2.2 fix (S3-1): fetch full file content from /api/agent/file
+  // instead of relying on FileInsight.snippet (which is only a short excerpt)
+  const activeAnalysisId = useAppStore((s) => s.activeAnalysisId);
+  const [fileContent, setFileContent] = useState("");
+  const [fileLoading, setFileLoading] = useState(false);
+
+  useEffect(() => {
+    if (!state.activeFile?.path || !activeAnalysisId) return;
+    let cancelled = false;
+    (async () => {
+      setFileLoading(true);
+      try {
+        const res = await fetch(`/api/agent/file?analysisId=${activeAnalysisId}&path=${encodeURIComponent(state.activeFile!.path)}`);
+        if (cancelled) return;
+        if (res.ok) {
+          const data = await res.json();
+          setFileContent(data.content || "");
+        } else {
+          setFileContent("");
+        }
+      } catch {
+        if (!cancelled) setFileContent("");
+      } finally {
+        if (!cancelled) setFileLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [state.activeFile?.path, activeAnalysisId]);
+
+  const activeFileContent = state.activeFile?.content || fileContent;
 
   return (
     <div className="flex h-full flex-col">
