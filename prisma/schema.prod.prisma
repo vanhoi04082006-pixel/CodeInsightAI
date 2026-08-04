@@ -421,3 +421,22 @@ model Policy {
 
   @@index([type, enabled])
 }
+
+// v2.0 — Agent Knowledge Memory (Layer 5). Persistent, cross-session learning.
+// Stores learned patterns, past fixes, and user conventions for the agent.
+// KEEP IN SYNC with prisma/schema.prisma.
+model AgentKnowledge {
+  id          String   @id @default(cuid())
+  userId      String
+  category    String   // "pattern" | "fix" | "convention"
+  pattern     String   // the pattern/rule/issue (e.g. "N+1 query in loop")
+  solution    String   // known fix approach
+  confidence  Float    @default(0.5)
+  occurrences Int      @default(1)
+  success     Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId, category])
+  @@index([category, confidence])
+}
