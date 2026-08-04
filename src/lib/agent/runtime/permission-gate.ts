@@ -1,20 +1,37 @@
 // CodeInsight AI — Permission Gate (Layer 7)
 // Controls tool execution permissions: allow / prompt / deny.
-// For "prompt" tools, emits permission.requested event and waits for UI response.
+// For "prompt" tools, the ExecutionEngine yields permission.requested via the
+// async generator, then calls permissionGate.request() which awaits the UI
+// response (via respond()) OR a timeout — preventing infinite hangs.
+//
+// v2.0: The gate NO LONGER emits permission.* events via eventBus. The
+// ExecutionEngine owns event emission (yielded through the single SSE channel).
+// The gate's only job is to resolve a Promise when respond() is called or
+// when the timeout elapses.
 
 import type {
   PermissionLevel,
   PermissionGate as IPermissionGate,
-  AgentEvent,
   ToolManifest,
 } from "../contracts";
 import type { EventBusImpl } from "./event-bus";
-import { makeEvent } from "./event-bus";
+
+/** Default timeout for permission requests (ms). Prevents infinite hang. */
+const DEFAULT_PERMISSION_TIMEOUT_MS = 60_000;
 
 export class PermissionGateImpl implements IPermissionGate {
-  private pendingRequests = new Map<string, (granted: boolean, reason?: string) => void>();
+  private pendingRequests = new Map<
+    string,
+    { resolve: (granted: boolean, reason?: string) => void; timer: ReturnType<typeof setTimeout> }
+  >();
+  private timeoutMs: number = DEFAULT_PERMISSION_TIMEOUT_MS;
 
   constructor(private readonly eventBus: EventBusImpl) {}
+
+  /** Set the permission request timeout (ms). */
+  setTimeoutMs(ms: number): void {
+    this.timeoutMs = ms > 0 ? ms : DEFAULT_PERMISSION_TIMEOUT_MS;
+  }
 
   /** Check permission level for a tool (from manifest) */
   check(toolName: string, _params: unknown, manifest?: ToolManifest): PermissionLevel {
@@ -24,51 +41,51 @@ export class PermissionGateImpl implements IPermissionGate {
 
   /**
    * Request permission for a tool execution.
-   * If "allow" → resolves immediately.
-   * If "prompt" → emits permission.requested event, waits for respond().
+   * If "allow" → resolves true immediately.
+   * If "prompt" → awaits respond() OR timeout. On timeout, resolves false
+   *   (auto-deny) so the runtime can continue instead of hanging forever.
    * If "deny" → resolves false immediately.
+   *
+   * NOTE: This method does NOT emit permission.* events. The ExecutionEngine
+   * yields permission.requested before calling this, and permission.granted/
+   * denied after this resolves.
    */
   async request(
     nodeId: string,
-    toolName: string,
-    params: unknown,
+    _toolName: string,
+    _params: unknown,
     manifest?: ToolManifest,
-    diff?: string,
+    _diff?: string,
   ): Promise<boolean> {
-    const level = this.check(toolName, params, manifest);
+    const level = this.check(_toolName, _params, manifest);
 
     if (level === "allow") return true;
     if (level === "deny") return false;
 
-    // "prompt" — emit event and wait for response
+    // "prompt" — wait for respond() or timeout
     return new Promise<boolean>((resolve) => {
-      this.pendingRequests.set(nodeId, (granted, reason) => {
-        if (granted) {
-          this.eventBus.emit(makeEvent({ type: "permission.granted", nodeId }));
-        } else {
-          this.eventBus.emit(makeEvent({ type: "permission.denied", nodeId, reason: reason || "Denied by user" }));
-        }
-        resolve(granted);
-      });
+      const timer = setTimeout(() => {
+        // Auto-deny on timeout — prevents infinite hang.
+        this.pendingRequests.delete(nodeId);
+        resolve(false);
+      }, this.timeoutMs);
 
-      this.eventBus.emit(
-        makeEvent({
-          type: "permission.requested",
-          nodeId,
-          tool: toolName,
-          params,
-          diff,
-        }),
-      );
+      this.pendingRequests.set(nodeId, {
+        resolve: (granted, _reason) => {
+          resolve(granted);
+        },
+        timer,
+      });
     });
   }
 
-  /** Respond to a permission request (called by UI) */
+  /** Respond to a permission request (called by UI via /api/agent/permission) */
   respond(nodeId: string, granted: boolean, reason?: string): void {
-    const resolver = this.pendingRequests.get(nodeId);
-    if (resolver) {
+    const entry = this.pendingRequests.get(nodeId);
+    if (entry) {
+      clearTimeout(entry.timer);
       this.pendingRequests.delete(nodeId);
-      resolver(granted, reason);
+      entry.resolve(granted, reason);
     }
   }
 
@@ -77,11 +94,17 @@ export class PermissionGateImpl implements IPermissionGate {
     return this.pendingRequests.has(nodeId);
   }
 
-  /** Cancel all pending requests (for task cancellation) */
+  /** List all node IDs currently awaiting permission (for debugging/UI) */
+  pendingNodeIds(): string[] {
+    return [...this.pendingRequests.keys()];
+  }
+
+  /** Cancel all pending requests (for task cancellation) — resolves all as denied */
   cancelAll(): void {
-    for (const [nodeId, resolver] of this.pendingRequests) {
-      resolver(false, "Task cancelled");
-      this.pendingRequests.delete(nodeId);
+    for (const [, entry] of this.pendingRequests) {
+      clearTimeout(entry.timer);
+      entry.resolve(false, "Task cancelled");
     }
+    this.pendingRequests.clear();
   }
 }

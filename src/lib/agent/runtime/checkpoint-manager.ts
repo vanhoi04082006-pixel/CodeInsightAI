@@ -17,12 +17,15 @@ export class CheckpointManager {
     workingMemory: any,
   ): Checkpoint {
     this.saveCounter++;
+    // Deep-clone BOTH plan and working memory so the checkpoint is an
+    // immutable snapshot. v1 stored `memory: workingMemory` (live reference)
+    // which meant resume-after-pause saw the now-cleared working memory.
     const checkpoint: Checkpoint = {
       taskId,
       plan: JSON.parse(JSON.stringify(plan)), // deep clone
       completedNodeIds: [...completedNodeIds],
       currentNodeId,
-      memory: workingMemory,
+      memory: workingMemory ? JSON.parse(JSON.stringify(workingMemory)) : null,
       timestamp: Date.now(),
     };
 

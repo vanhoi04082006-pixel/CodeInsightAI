@@ -60,7 +60,13 @@ export class AIInsightServiceImpl implements IAIInsightService {
   ): Promise<Result<SemanticInsight>> {
     try {
       const { callAI } = await import("@/lib/ai-client");
+      const { getPlatformAIConfig } = await import("@/lib/platform-ai");
       const { spm } = context;
+
+      const provider = await getPlatformAIConfig();
+      if (!provider) {
+        return err("TOOL_EXECUTION_FAILED", "No AI provider configured. Set PLATFORM_AI_API_KEY env var or configure a platform AI provider.");
+      }
 
       // Build prompt based on insight type
       const prompt = this.buildPrompt(type, spm);
@@ -68,10 +74,10 @@ export class AIInsightServiceImpl implements IAIInsightService {
 
       const result = await callAI(
         {
-          providerId: "shopaikey",
-          apiKey: "", // Resolved by platform-ai config at call time
-          baseUrl: "",
-          model: "gpt-4.1-mini",
+          providerId: provider.providerId,
+          apiKey: provider.apiKey,
+          baseUrl: provider.baseUrl,
+          model: provider.model,
           temperature: 0.7,
           maxTokens: 4000,
           timeout: 45,

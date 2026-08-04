@@ -198,74 +198,70 @@ describe("SearchService", () => {
 describe("GitService", () => {
   const git = new GitServiceImpl();
 
-  it("should return diff result", () => {
+  // v2.0: Sync methods now return errors (stubs removed). Callers must use *Async.
+  it("should return error for sync diff (use diffAsync)", () => {
     const result = git.diff();
-    expect(result.ok).toBe(true);
+    expect(result.ok).toBe(false);
   });
 
-  it("should return diff for specific file", () => {
+  it("should return error for sync diff(file) (use diffAsync)", () => {
     const result = git.diff("src/app.ts");
-    expect(result.ok).toBe(true);
+    expect(result.ok).toBe(false);
   });
 
-  it("should return commit result", () => {
+  it("should return error for sync commit (use commitAsync)", () => {
     const result = git.commit("test message");
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    expect(typeof result.value).toBe("string");
+    expect(result.ok).toBe(false);
   });
 
-  it("should return push result", () => {
+  it("should return error for sync push (use pushAsync)", () => {
     const result = git.push();
-    expect(result.ok).toBe(true);
+    expect(result.ok).toBe(false);
   });
 
-  it("should return history result", () => {
+  it("should return error for sync history (use historyAsync)", () => {
     const result = git.history("src/app.ts");
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    expect(Array.isArray(result.value)).toBe(true);
+    expect(result.ok).toBe(false);
   });
 
-  it("should return revert result", () => {
+  it("should return error for sync revert (use revertAsync)", () => {
     const result = git.revert("abc123");
-    expect(result.ok).toBe(true);
+    expect(result.ok).toBe(false);
   });
 });
 
 describe("RepoService", () => {
   const repo = new RepoServiceImpl();
 
-  it("should return readFile result", () => {
+  // v2.0: Sync methods now return errors (stubs removed). Callers must use *Async.
+  it("should return error for sync readFile (use readFileAsync)", () => {
     const result = repo.readFile("src/app.ts");
-    expect(result.ok).toBe(true);
+    expect(result.ok).toBe(false);
   });
 
-  it("should return writeFile result", () => {
+  it("should return error for sync writeFile (use writeFileAsync)", () => {
     const result = repo.writeFile("src/app.ts", "content");
-    expect(result.ok).toBe(true);
+    expect(result.ok).toBe(false);
   });
 
-  it("should return deleteFile result", () => {
+  it("should return error for sync deleteFile (use deleteFileAsync)", () => {
     const result = repo.deleteFile("src/app.ts");
-    expect(result.ok).toBe(true);
+    expect(result.ok).toBe(false);
   });
 
-  it("should return moveFile result", () => {
+  it("should return error for sync moveFile (use moveFileAsync)", () => {
     const result = repo.moveFile("src/old.ts", "src/new.ts");
-    expect(result.ok).toBe(true);
+    expect(result.ok).toBe(false);
   });
 
-  it("should return applyPatch result", () => {
+  it("should return error for sync applyPatch (use writeFileAsync)", () => {
     const result = repo.applyPatch("--- a/src/app.ts\n+++ b/src/app.ts\n");
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    expect(Array.isArray(result.value)).toBe(true);
+    expect(result.ok).toBe(false);
   });
 
-  it("should return rollback result", () => {
+  it("should return error for sync rollback (use RollbackManager.rollback)", () => {
     const result = repo.rollback([]);
-    expect(result.ok).toBe(true);
+    expect(result.ok).toBe(false);
   });
 
   it("should track changes in changeLog", () => {

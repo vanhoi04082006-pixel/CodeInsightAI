@@ -17,7 +17,10 @@ const globalAny = globalThis as any;
 if (!globalAny.__agentActiveRuntimes) {
   globalAny.__agentActiveRuntimes = new Map();
 }
-const activeRuntimes: Map<string, { permissionGate: { respond: (nodeId: string, granted: boolean, reason?: string) => void } }> = globalAny.__agentActiveRuntimes;
+const activeRuntimes: Map<string, {
+  permissionGate: { respond: (nodeId: string, granted: boolean, reason?: string) => void; cancelAll?: () => void };
+  cancel?: (taskId: string) => void;
+}> = globalAny.__agentActiveRuntimes;
 
 export async function POST(req: NextRequest) {
   const userId = await requireUserId();
@@ -80,10 +83,15 @@ export async function POST(req: NextRequest) {
         const spm = spmResult.value;
         const indexes = buildIndexes(spm);
         const queryService = createQueryService(spm, indexes);
-        const { toolRegistry, capabilityRegistry } = createRegistries();
+        const { toolRegistry } = createRegistries();
         const skillRegistry = createSkillRegistry();
         const memory = createAgentMemory();
         memory.initializeProject(spm, indexes);
+
+        // v2.0: Wire Knowledge Memory to the user and load persisted knowledge.
+        // v1 left KnowledgeMemory as a stub (dead code). Now it's backed by DB.
+        memory.setUserId(userId);
+        await memory.load();
 
         const context = {
           spm,
@@ -101,22 +109,48 @@ export async function POST(req: NextRequest) {
           send({ type: "memory.updated", working: { currentStep: `Skill: ${skill.name}` }, timestamp: Date.now() });
         }
 
+        // v2.0: Track the user's message in session memory (was dead code in v1).
+        memory.session.addMessage({
+          id: `msg-${Date.now()}`,
+          role: "user",
+          content: query,
+          timestamp: Date.now(),
+        });
+
         // ── Phase 3: Generate plan via LLM Planner ──
         send({ type: "node.started", nodeId: "planner", tool: "planner", timestamp: Date.now() });
 
-        // Get all valid capabilities from the capability registry
-        const allCapabilities = (toolRegistry as any).listAllManifests?.()?.flatMap((m: any) => m.capabilities) || [];
-        const planner = createPlanner(allCapabilities);
+        // Get all valid capabilities + tool inventory from the registries
+        const manifests = (toolRegistry as any).listAllManifests?.() || [];
+        const allCapabilities = manifests.flatMap((m: any) => m.capabilities) as any[];
+        const toolInventory = manifests.map((m: any) => ({
+          name: m.name,
+          capabilities: m.capabilities,
+          cost: m.cost,
+          permission: m.permission,
+        }));
+
+        // v2.0: Wire the ContextBuilder into the Planner so the LLM receives
+        // token-budgeted dynamic context (architecture, issues, graph, key files).
+        // v1 bypassed ContextBuilder entirely (it was dead code).
+        const { createContextBuilder } = await import("@/lib/agent/context");
+        const contextBuilder = createContextBuilder();
+        const planner = createPlanner(allCapabilities, toolInventory, contextBuilder);
         const planResult = await planner.plan(query, context);
 
         if (!planResult.ok) {
+          // v2.0: Planner failure is a real failure — no silent fallback.
+          // Surface the error to the user with actionable message.
+          send({ type: "node.failed", nodeId: "planner", error: planResult.error, timestamp: Date.now() });
           send({ type: "task.failed", error: planResult.error, timestamp: Date.now() });
           controller.close();
           return;
         }
 
         send({ type: "node.completed", nodeId: "planner", result: "Plan generated", timestamp: Date.now() });
-        send({ type: "plan.generated", plan: planResult.value, timestamp: Date.now() });
+        // Note: plan.generated is also yielded by the runtime's execution engine.
+        // To avoid double-emit, we DO NOT send it here — the runtime yields it.
+        // (v1 double-emit fix)
 
         // ── Phase 4: Execute plan via Runtime ──
         // SINGLE EVENT CHANNEL: only iterate the async generator.
@@ -124,17 +158,38 @@ export async function POST(req: NextRequest) {
         const runtime = createRuntime(toolRegistry);
         const taskId = `task-${Date.now()}`;
 
-        // Register runtime for permission signaling
+        // Register runtime for permission signaling AND cancellation.
+        // Both /api/agent/permission and /api/agent/cancel access this registry.
         activeRuntimes.set(taskId, {
           permissionGate: runtime.permissionGate,
+          cancel: (tid: string) => runtime.cancel(tid),
         });
 
-        // Emit taskId to client (for permission responses)
+        // Emit task.started with taskId so the client can correlate permission
+        // responses and cancel requests.
         send({ type: "task.started", taskId, timestamp: Date.now() } as any);
 
-        for await (const event of runtime.run(planResult.value, context)) {
+        for await (const event of runtime.run(planResult.value, context, taskId)) {
           // Enrich events with taskId for permission correlation
           send({ ...event, taskId });
+
+          // v2.0: Track assistant messages in session memory and save knowledge
+          // on task completion.
+          if (event.type === "task.completed" || event.type === "task.failed" || event.type === "task.cancelled") {
+            const content = event.type === "task.completed"
+              ? (event as any).summary
+              : event.type === "task.failed"
+                ? `Failed: ${(event as any).error?.message || "unknown"}`
+                : `Cancelled: ${(event as any).reason || "user"}`;
+            memory.session.addMessage({
+              id: `msg-${Date.now()}-assistant`,
+              role: "assistant",
+              content,
+              timestamp: Date.now(),
+            });
+            // Persist knowledge memory (best-effort, never blocks).
+            memory.save().catch(() => {});
+          }
         }
 
         activeRuntimes.delete(taskId);

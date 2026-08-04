@@ -25,8 +25,13 @@ export class AgentRuntimeImpl implements IAgentRuntime {
   private activeEngines = new Map<string, ExecutionEngine>();
   private toolRegistry: { get: (name: string) => Tool | null };
 
-  // Store context for resume
+  // Store context for resume — keyed by taskId.
+  // v2.0 fix: the run() finally block previously deleted the context BEFORE
+  // resume() could read it (because pause() causes execute() to return,
+  // triggering finally). Now we only delete on non-paused exits, and pause()
+  // marks the task as paused so resume() can find the context.
   private contextStore = new Map<string, AgentContext>();
+  private pausedTasks = new Set<string>();
 
   constructor(toolRegistry: { get: (name: string) => Tool | null }) {
     this.eventBus = createEventBus();
@@ -39,13 +44,19 @@ export class AgentRuntimeImpl implements IAgentRuntime {
   /**
    * Run an ExecutionPlan.
    * Yields AgentEvent as they occur — UI subscribes to render progress.
+   *
+   * v2.2 fix (C5): accepts an optional taskId parameter so the API route
+   * can pass its own taskId (used for cancel/permission correlation).
+   * v2.0 generated a separate internal taskId, causing cancel() to never
+   * find the engine.
    */
   async *run(
     plan: ExecutionPlan,
     context: AgentContext,
+    taskId?: string,
   ): AsyncGenerator<AgentEvent> {
-    const taskId = `task-${Date.now()}`;
-    const engine = new ExecutionEngine(taskId, {
+    const tid = taskId || `task-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const engine = new ExecutionEngine(tid, {
       eventBus: this.eventBus,
       permissionGate: this.permissionGate,
       checkpointManager: this.checkpointManager,
@@ -53,29 +64,35 @@ export class AgentRuntimeImpl implements IAgentRuntime {
       toolRegistry: this.toolRegistry,
     });
 
-    this.activeEngines.set(taskId, engine);
-    this.contextStore.set(taskId, context);
+    this.activeEngines.set(tid, engine);
+    this.contextStore.set(tid, context);
 
     try {
       yield* engine.execute(plan, context);
     } finally {
-      this.activeEngines.delete(taskId);
-      this.contextStore.delete(taskId);
+      this.activeEngines.delete(tid);
+      // Only delete context if not paused — paused tasks keep context for resume().
+      if (!this.pausedTasks.has(tid)) {
+        this.contextStore.delete(tid);
+      }
     }
   }
 
   /** Cancel a running task */
   cancel(taskId: string): void {
+    this.pausedTasks.delete(taskId);
     const engine = this.activeEngines.get(taskId);
     if (engine) {
       engine.cancel();
     }
+    this.contextStore.delete(taskId);
   }
 
   /** Pause a running task */
   pause(taskId: string): void {
     const engine = this.activeEngines.get(taskId);
     if (engine) {
+      this.pausedTasks.add(taskId);
       engine.pause();
     }
   }
@@ -95,18 +112,33 @@ export class AgentRuntimeImpl implements IAgentRuntime {
       return;
     }
 
-    // Retrieve stored context
+    // Retrieve stored context (kept alive by pause() not deleting it)
     const context = this.contextStore.get(taskId);
     if (!context) {
       yield makeEvent({
         type: "task.failed",
         error: {
           code: "RUNTIME_CHECKPOINT_FAILED",
-          message: `No context found for task: ${taskId}. Context must be provided when creating the runtime.`,
+          message: `No context found for task: ${taskId}. The task may have completed or been cancelled.`,
           recoverable: false,
         },
       });
       return;
+    }
+
+    // Restore working memory from checkpoint snapshot (deep-cloned at save time)
+    if (checkpoint.memory && context.memory?.working) {
+      const m = checkpoint.memory as any;
+      context.memory.working.update({
+        currentHypothesis: m.currentHypothesis ?? null,
+        currentFile: m.currentFile ?? null,
+        currentFunction: m.currentFunction ?? null,
+        currentSymbol: m.currentSymbol ?? null,
+        currentStep: m.currentStep ?? null,
+        currentBug: m.currentBug ?? null,
+        scratchpad: Array.isArray(m.scratchpad) ? [...m.scratchpad] : [],
+        pendingChoices: Array.isArray(m.pendingChoices) ? [...m.pendingChoices] : [],
+      });
     }
 
     // Mark completed nodes as done in the plan
@@ -125,6 +157,7 @@ export class AgentRuntimeImpl implements IAgentRuntime {
     });
 
     this.activeEngines.set(taskId, engine);
+    this.pausedTasks.delete(taskId);
 
     yield makeEvent({ type: "task.resumed", nodeId: checkpoint.currentNodeId ?? "" });
 
@@ -132,6 +165,7 @@ export class AgentRuntimeImpl implements IAgentRuntime {
       yield* engine.execute(updatedPlan, context);
     } finally {
       this.activeEngines.delete(taskId);
+      this.contextStore.delete(taskId);
     }
   }
 

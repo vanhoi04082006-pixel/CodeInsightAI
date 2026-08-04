@@ -84,6 +84,8 @@ export const gitRevertTool: Tool = {
 };
 
 // ─── run-script ───
+// v2.2 security fix (C4): route through commandRunner (enforces allowlist/denylist).
+// v2.0 used execSync directly, bypassing the terminal permission-system.
 export const runScriptTool: Tool = {
   manifest: writeManifest("run-script", "Run a shell script or command", ["run-script"], {
     cost: "medium",
@@ -97,19 +99,25 @@ export const runScriptTool: Tool = {
     if (!command) return err("TOOL_INVALID_PARAMS", "Missing required param: command");
 
     try {
-      const { execSync } = await import("child_process");
-      const output = execSync(command, {
-        encoding: "utf-8",
-        timeout: 25000,
-        maxBuffer: 1024 * 1024,
+      // v2.2: Use commandRunner which enforces the terminal permission-system
+      // (allowlist/denylist). Commands on the denylist (e.g. "rm -rf /") are
+      // blocked. Commands not on either list trigger onPrompt.
+      const { commandRunner } = await import("@/lib/terminal/command-runner");
+      const result = await commandRunner.runCommand(command, {
         cwd: process.cwd(),
+        timeout: 25000,
+        recordHistory: true,
+        onPrompt: async () => true, // the agent-level permission gate already approved
       });
-      return ok({ exitCode: 0, output: output.slice(0, 2000) });
+
+      if (result.exitCode !== 0) {
+        const output = (result.stdout || "") + (result.stderr || "");
+        return err("TOOL_EXECUTION_FAILED", `Command exited with code ${result.exitCode}: ${output.slice(0, 1000)}`);
+      }
+      return ok({ exitCode: 0, output: (result.stdout || "").slice(0, 2000) });
     } catch (e: any) {
-      // execSync throws on non-zero exit code
-      const exitCode = e.status ?? 1;
-      const output = (e.stdout || "") + (e.stderr || "");
-      return ok({ exitCode, output: output.slice(0, 2000) });
+      // commandRunner throws if the command is denied by the denylist
+      return err("TOOL_EXECUTION_FAILED", `Command execution denied or failed: ${e instanceof Error ? e.message : String(e)}`);
     }
   },
 };
@@ -163,6 +171,12 @@ export const aiChatTool: Tool = {
 
     try {
       const { callAI } = await import("@/lib/ai-client");
+      const { getPlatformAIConfig } = await import("@/lib/platform-ai");
+
+      const provider = await getPlatformAIConfig();
+      if (!provider) {
+        return err("TOOL_EXECUTION_FAILED", "No AI provider configured. Set PLATFORM_AI_API_KEY env var or configure a platform AI provider.");
+      }
 
       // Build context from SPM
       const contextStr = `Project: ${ctx.spm.repoOwner}/${ctx.spm.repoName}
@@ -173,10 +187,10 @@ Top issues: ${ctx.spm.issues.slice(0, 5).map(i => `- [${i.severity}] ${i.title} 
 
       const result = await callAI(
         {
-          providerId: "shopaikey",
-          apiKey: "",
-          baseUrl: "",
-          model: "gpt-4.1-mini",
+          providerId: provider.providerId,
+          apiKey: provider.apiKey,
+          baseUrl: provider.baseUrl,
+          model: provider.model,
           temperature: 0.7,
           maxTokens: 2000,
           timeout: 25,

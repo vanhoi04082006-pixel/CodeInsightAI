@@ -1,7 +1,61 @@
-# CodeInsight AI — Agent Architecture v1 Final Audit
+# CodeInsight AI — Agent Architecture Audit (v1 → v2.0)
 **Date:** 2026-08-03
 **Scope:** Phase 0 → Phase 11 (all source code in `src/lib/agent/` + UI + API)
-**Method:** Read-only audit — no code modified. All findings based on actual source.
+**Method:** v1 was read-only audit. v2.0 Sprint fixed all 6 Critical issues + P1 dead code + P2 integration tests.
+
+---
+
+# 📊 V2.0 PRODUCTION RECOVERY — STATUS UPDATE
+
+**v2.0 Production Readiness Score: 3.5/10 → 8.0/10**
+
+## All 6 Critical Issues FIXED in v2.0
+
+1. ✅ **Planner LLM** — resolves config via `getPlatformAIConfig()` (env→DB). No silent fallback — returns explicit `err()` on failure.
+2. ✅ **Single event channel** — ExecutionEngine refactored to async-generator (`executeNodeGen`). ALL events (node.*/permission.*) yield via the single async generator → SSE.
+3. ✅ **Permission pipeline** — 60s timeout (auto-deny, no infinite hang). Engine yields permission.requested → SSE → UI → /api/agent/permission → respond(). Added /api/agent/cancel endpoint.
+4. ✅ **RollbackManager wired** — engine wires real file ops, tracks changes from apply-patch results. shared-state.ts registry lets rollback-changes tool access runtime's manager.
+5. ✅ **ContextBuilder wired to Planner** — planner accepts optional ContextBuilder; route wires it. buildPrompt() uses token-budgeted dynamic context (was dead code).
+6. ✅ **Memory real** — KnowledgeMemoryImpl (DB-backed via AgentKnowledge table). WorkingMemory updated in engine. TaskMemory logs every node. SessionMemory tracks chat. Checkpoint deep-clones.
+
+## P1 — Dead Code Removed
+- RepoService/GitService sync stubs (11 methods) → return `err()` (was false-success)
+- GitService historyAsync/revertAsync → real implementations (`git log --follow`, `git revert`)
+- run-script tool false-success → returns `err()` on non-zero exit
+- SkillRegistry keywordIndex dead field → removed
+- Route capabilityRegistry unused destructure → removed
+
+## P2 — 15 Integration Tests Added
+- Planner→Runtime event flow (node.started/completed/failed)
+- Runtime→Permission (granted/denied/timeout)
+- Pause→Resume checkpoint
+- Context→Planner
+- Rollback (create/update/delete — real fs)
+- Write tools change records
+- Agent Chat E2E event sequence
+
+## Test Results
+- **359 tests pass** (344 unit + 15 integration), 0 TS errors, 0 ESLint errors
+- E2E harness confirms planner correctly errors when no AI provider configured (was silent fallback in v1)
+- Stress test: 300k symbols indexed in 2.8s, sub-10ms queries
+
+## Remaining Gaps (v2.1+)
+- apply-patch writes full content (not unified diff) — 4h
+- Multi-file patches — 8h
+- Autonomous mode (autoApproveReadTools) — 4h
+- Streaming LLM response (node.tool-output) — 4h
+- Build/lint/test verification after writes — 4h
+- IDE integration — 40h
+- Schema validation (ajv) — 4h
+- Manifest timeout/retries/cache consulted — 8h
+- Cache implementation — 4h
+- Streaming tools (generate-patch/ai-chat stream()) — 4h
+
+**See VALIDATION_REPORT.md for full v2.0 details.**
+
+---
+
+# v1 ORIGINAL AUDIT (below — for historical reference)
 
 ---
 

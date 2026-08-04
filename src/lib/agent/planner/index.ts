@@ -12,6 +12,7 @@ export type {
 } from "../contracts";
 
 export { PlannerImpl, createPlanner } from "./planner";
+export type { PlannerToolInfo } from "./planner";
 export { ExecutionGraphBuilder, createNode } from "./execution-graph";
 export { defaultPolicy, conservativePolicy, aggressivePolicy, mergePolicy } from "./execution-policy";
 export { PlanValidator } from "./plan-validator";

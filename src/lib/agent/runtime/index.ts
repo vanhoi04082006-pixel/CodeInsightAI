@@ -14,3 +14,8 @@ export { PermissionGateImpl } from "./permission-gate";
 export { CheckpointManager } from "./checkpoint-manager";
 export { RollbackManager } from "./rollback-manager";
 export { ExecutionEngine } from "./execution-engine";
+export {
+  registerRollbackManager,
+  unregisterRollbackManager,
+  getSharedRollbackManager,
+} from "./shared-state";

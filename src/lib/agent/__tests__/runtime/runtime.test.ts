@@ -154,18 +154,14 @@ describe("PermissionGate", () => {
       outputSchema: { type: "object", properties: {}, required: [] },
     };
 
-    // Listen for permission.requested event
-    let requestedEvent: any = null;
-    bus.subscribeType("permission.requested", (e) => {
-      requestedEvent = e;
-      // Simulate UI granting permission
-      setTimeout(() => gate.respond("node-1", true), 10);
-    });
+    // v2.0: PermissionGate no longer emits permission.requested via eventBus
+    // (the ExecutionEngine owns that, via the async generator yield). The gate
+    // just awaits respond(). Simulate the UI granting permission:
+    setTimeout(() => gate.respond("node-1", true), 10);
 
     const result = await gate.request("node-1", "apply-patch", { patch: "diff" }, manifest);
     expect(result).toBe(true);
-    expect(requestedEvent).not.toBeNull();
-    expect(requestedEvent.tool).toBe("apply-patch");
+    expect(gate.isPending("node-1")).toBe(false);
   });
 
   it("should handle denied permission", async () => {
@@ -179,12 +175,36 @@ describe("PermissionGate", () => {
       outputSchema: { type: "object", properties: {}, required: [] },
     };
 
-    bus.subscribeType("permission.requested", () => {
-      setTimeout(() => gate.respond("node-1", false, "User rejected"), 10);
-    });
+    // v2.0: Simulate UI denying permission via respond()
+    setTimeout(() => gate.respond("node-1", false, "User rejected"), 10);
 
     const result = await gate.request("node-1", "test", {}, manifest);
     expect(result).toBe(false);
+  });
+
+  it("should auto-deny on timeout (no infinite hang)", async () => {
+    const manifest: ToolManifest = {
+      name: "test", description: "", capabilities: [],
+      cost: "medium", estimatedTimeMs: 1000, permission: "prompt",
+      timeout: 30000, parallel: false, parallelSafe: false,
+      cacheable: false, cacheTtl: 0, streamable: false,
+      confidence: 0.9, maxRetries: 1,
+      inputSchema: { type: "object", properties: {}, required: [] },
+      outputSchema: { type: "object", properties: {}, required: [] },
+    };
+
+    // Short timeout for the test
+    gate.setTimeoutMs(50);
+
+    // No respond() call — should auto-deny after 50ms instead of hanging
+    const t0 = Date.now();
+    const result = await gate.request("node-timeout", "test", {}, manifest);
+    const elapsed = Date.now() - t0;
+
+    expect(result).toBe(false);
+    expect(elapsed).toBeGreaterThanOrEqual(40);
+    expect(elapsed).toBeLessThan(500);
+    expect(gate.isPending("node-timeout")).toBe(false);
   });
 
   it("should track pending requests", async () => {

@@ -38,12 +38,17 @@ export const generatePatchTool: Tool = {
 
     try {
       const { callAI } = await import("@/lib/ai-client");
+      const { getPlatformAIConfig } = await import("@/lib/platform-ai");
+      const provider = await getPlatformAIConfig();
+      if (!provider) {
+        return err("TOOL_EXECUTION_FAILED", "No AI provider configured. Set PLATFORM_AI_API_KEY env var or configure a platform AI provider.");
+      }
       const result = await callAI(
         {
-          providerId: "shopaikey",
-          apiKey: "",
-          baseUrl: "",
-          model: "gpt-4.1-mini",
+          providerId: provider.providerId,
+          apiKey: provider.apiKey,
+          baseUrl: provider.baseUrl,
+          model: provider.model,
           temperature: 0.3,
           maxTokens: 4000,
           timeout: 40,
@@ -63,7 +68,9 @@ export const generatePatchTool: Tool = {
 
 // ─── apply-patch ───
 // Applies file content changes via RepoService.writeFileAsync.
-// Parses the patch to determine which files to update.
+// Returns the ChangeRecord[] so the ExecutionEngine can track them in the
+// runtime's RollbackManager (the tool itself is stateless — it does NOT own
+// the rollback manager; the engine does).
 export const applyPatchTool: Tool = {
   manifest: writeManifest("apply-patch", "Apply a patch to modify files", ["apply-patch"], {
     cost: "medium",
@@ -83,12 +90,14 @@ export const applyPatchTool: Tool = {
       const result = await repo.writeFileAsync(file, content);
       if (!result.ok) return result;
 
-      // Track change for rollback
+      // Return the change log so the engine can track it for rollback.
       const changes = repo.getChangeLog();
       for (const change of changes) {
         ctx.memory?.working?.pushScratch?.(`File modified: ${change.file} (${change.type})`);
       }
 
+      // Emit patch.applied via scratchpad (engine reads the returned changes
+      // and tracks them in the runtime's RollbackManager).
       return ok({ modifiedFiles: [file], changes });
     } catch (e) {
       return err("TOOL_EXECUTION_FAILED", `Apply patch failed: ${e instanceof Error ? e.message : String(e)}`);
@@ -97,7 +106,10 @@ export const applyPatchTool: Tool = {
 };
 
 // ─── rollback-changes ───
-// Rolls back tracked file changes using RollbackManager.
+// Rolls back tracked file changes using the SHARED RollbackManager from the
+// runtime (passed via context). v2.0: the tool no longer creates a fresh
+// RollbackManager — it uses the one owned by the runtime, which has the
+// actual tracked changes from apply-patch executions.
 export const rollbackChangesTool: Tool = {
   manifest: writeManifest("rollback-changes", "Rollback file changes", ["rollback-changes"], {
     cost: "medium",
@@ -105,24 +117,22 @@ export const rollbackChangesTool: Tool = {
     timeout: 10000,
     inputSchema: { type: "object", properties: {}, required: [] },
   }),
-  async execute(_params, _ctx: AgentContext) {
+  async execute(_params, ctx: AgentContext) {
     try {
-      const { RollbackManager } = await import("../../runtime/rollback-manager");
-      const rollback = new RollbackManager();
+      // Access the runtime's RollbackManager via a shared registry.
+      // The execution engine registers its rollback manager per-analysisId
+      // so tools can access it without changing the AgentContext contract.
+      const { getSharedRollbackManager } = await import("../../runtime/shared-state");
+      const rollback = getSharedRollbackManager(ctx.analysisId);
+      if (!rollback) {
+        return ok({ rolledBack: true, changesReverted: 0, note: "No rollback manager registered for this analysis" });
+      }
 
-      // Set file ops backend
-      const fileOps = await import("@/lib/repo-editor/file-operations");
-      rollback.setFileOps({
-        deleteFile: fileOps.deleteFile,
-        writeFile: fileOps.writeFile,
-        createFile: fileOps.createFile,
-        fileExists: fileOps.fileExists,
-      });
-
+      const changeCount = rollback.count();
       const result = await rollback.rollback();
       if (!result.ok) return result;
 
-      return ok({ rolledBack: true, changesReverted: rollback.count() });
+      return ok({ rolledBack: true, changesReverted: changeCount });
     } catch (e) {
       return err("TOOL_EXECUTION_FAILED", `Rollback failed: ${e instanceof Error ? e.message : String(e)}`);
     }

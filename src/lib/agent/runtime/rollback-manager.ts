@@ -43,6 +43,10 @@ export class RollbackManager {
    * For "create" → delete the file.
    * For "update" → restore old content.
    * For "delete" → recreate with old content.
+   *
+   * v2.2 fix (C7): on partial failure, remove successfully-rolled-back entries
+   * from this.changes (instead of leaving all entries). v2.0 left all entries,
+   * causing a second rollback() to re-attempt already-rolled-back files.
    */
   async rollback(): Promise<Result<void>> {
     if (!this.fileOps) {
@@ -51,9 +55,10 @@ export class RollbackManager {
       return ok(undefined);
     }
 
-    try {
-      const reversed = [...this.changes].reverse();
+    const reversed = [...this.changes].reverse();
+    const completed: ChangeRecord[] = [];
 
+    try {
       for (const change of reversed) {
         switch (change.type) {
           case "create":
@@ -72,11 +77,16 @@ export class RollbackManager {
             }
             break;
         }
+        completed.push(change); // mark as successfully rolled back
       }
 
       this.changes = [];
       return ok(undefined);
     } catch (e) {
+      // v2.2 fix: remove successfully-rolled-back entries, keep the rest
+      // so the caller knows what still needs rollback.
+      const completedSet = new Set(completed);
+      this.changes = this.changes.filter((c) => !completedSet.has(c));
       return err(
         "RUNTIME_ROLLBACK_FAILED",
         `Rollback failed: ${e instanceof Error ? e.message : String(e)}`,

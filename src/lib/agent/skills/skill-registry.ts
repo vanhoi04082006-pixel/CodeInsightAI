@@ -5,15 +5,9 @@ import type { Skill, SkillRegistry as ISkillRegistry } from "../contracts";
 
 export class SkillRegistryImpl implements ISkillRegistry {
   private readonly skills = new Map<string, Skill>();
-  private readonly keywordIndex = new Map<string, string>(); // keyword → skill name
 
   register(skill: Skill): void {
     this.skills.set(skill.name, skill);
-
-    // Index trigger keywords (lowercase for case-insensitive matching)
-    for (const keyword of skill.triggerKeywords) {
-      this.keywordIndex.set(keyword.toLowerCase(), skill.name);
-    }
   }
 
   get(name: string): Skill | null {
@@ -22,15 +16,12 @@ export class SkillRegistryImpl implements ISkillRegistry {
 
   /**
    * Auto-route a user query to the best matching skill.
-   * Matching strategy:
-   * 1. Check if any trigger keyword appears in the query (case-insensitive)
-   * 2. Return the first match (skills registered first have priority)
-   * 3. If no match, return null (Planner will use default)
+   * Matching strategy: score each skill by how many trigger keywords appear
+   * in the query (case-insensitive). Return the highest-scoring skill, or null.
    */
   match(query: string): Skill | null {
     const lowerQuery = query.toLowerCase();
 
-    // Score each skill by how many keywords match
     let bestSkill: Skill | null = null;
     let bestScore = 0;
 
@@ -67,6 +58,5 @@ export class SkillRegistryImpl implements ISkillRegistry {
   /** Clear all skills (for testing) */
   clear(): void {
     this.skills.clear();
-    this.keywordIndex.clear();
   }
 }

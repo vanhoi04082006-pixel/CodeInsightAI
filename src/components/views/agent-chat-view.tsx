@@ -153,14 +153,15 @@ export function AgentChatView() {
     }
   }, [addMessage]);
 
-  const submitQuery = async () => {
-    if (!input.trim() || isRunning) return;
+  const submitQuery = async (overrideQuery?: string) => {
+    const queryText = (overrideQuery ?? input).trim();
+    if (!queryText || isRunning) return;
     if (!activeReport) {
       addMessage("system", "Please analyze a repository first.");
       return;
     }
 
-    const query = input.trim();
+    const query = queryText;
     setInput("");
     addMessage("user", query);
     setIsRunning(true);
@@ -236,8 +237,22 @@ export function AgentChatView() {
     }
   };
 
-  const cancelTask = () => {
+  const cancelTask = async () => {
+    // Abort the client-side fetch first (immediate UI feedback).
     abortRef.current?.abort();
+    // Also signal the server runtime to cancel (so it stops executing nodes
+    // and resolves any pending permission requests).
+    if (activeTaskId) {
+      try {
+        await fetch("/api/agent/cancel", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ taskId: activeTaskId }),
+        });
+      } catch {
+        // best-effort — the abort already stopped the stream
+      }
+    }
   };
 
   const respondPermission = async (granted: boolean) => {
@@ -368,7 +383,7 @@ export function AgentChatView() {
               className="bg-white/[0.03]"
             />
             <Button
-              onClick={submitQuery}
+              onClick={() => submitQuery()}
               disabled={isRunning || !input.trim()}
               className="bg-gradient-to-r from-cyan-500 to-violet-500 text-white"
             >
@@ -395,7 +410,7 @@ export function AgentChatView() {
               ].map((action) => (
                 <button
                   key={action.label}
-                  onClick={() => !isRunning && (setInput(action.query), setTimeout(submitQuery, 100))}
+                  onClick={() => !isRunning && submitQuery(action.query)}
                   disabled={isRunning}
                   className="flex w-full items-center gap-2 rounded-lg border border-white/5 bg-white/[0.02] px-3 py-2 text-xs text-muted-foreground transition hover:border-violet-400/20 hover:bg-violet-500/[0.04] hover:text-violet-200 disabled:opacity-50"
                 >
