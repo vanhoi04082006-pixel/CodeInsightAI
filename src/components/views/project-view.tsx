@@ -667,6 +667,16 @@ function OverviewTab({ report, onJumpToTimeline }: { report: AnalysisReport; onJ
           ))}
         </div>
       </GlassCard>
+
+      {/* Stage 2.4: Inline Agent — project overview analysis */}
+      {activeAnalysisId && (
+        <AgentPanel
+          context={tabContext("overview", "summarize", `${report.repoOwner}/${report.repoName}`, activeAnalysisId, report, `Files: ${report.totalFiles}, Languages: ${report.languages?.length || 0}, Issues: ${(report.issues?.bugs?.length||0)+(report.issues?.security?.length||0)+(report.issues?.performance?.length||0)}`)}
+          actions={["summarize", "explain", "impact"]}
+          title="Agent — Project Overview"
+          defaultCollapsed={true}
+        />
+      )}
     </div>
   );
 }
@@ -2386,6 +2396,16 @@ function RoadmapTab({ report }: { report: AnalysisReport }) {
           </GlassCard>
         </div>
       </div>
+
+      {/* Stage 2.4: Inline Agent — roadmap planning */}
+      {activeAnalysisId && (
+        <AgentPanel
+          context={tabContext("roadmap", "summarize", `${report.repoOwner}/${report.repoName} roadmap`, activeAnalysisId, report, `Technical debt score: ${report.technicalDebt?.score || 0}/100. Issues: ${(report.issues?.bugs?.length||0)+(report.issues?.security?.length||0)+(report.issues?.performance?.length||0)}`)}
+          actions={["summarize", "explain", "impact"]}
+          title="Agent — Roadmap Planning"
+          defaultCollapsed={true}
+        />
+      )}
     </div>
   );
 }
