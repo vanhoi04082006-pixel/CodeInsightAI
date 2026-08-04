@@ -1,25 +1,20 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  Loader2, Send, X, Brain, ChevronDown, ChevronRight,
-  Circle, CheckCircle2, XCircle, AlertTriangle, Zap, Terminal,
-} from "lucide-react";
+import { Loader2, Send, X, Brain, ChevronRight } from "lucide-react";
 import { GlassCard, GradientText } from "@/components/shared/ui";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/lib/store";
-import { useT } from "@/lib/i18n";
 import { PlanVisualizer } from "@/components/views/plan-visualizer";
 import { ToolCallCard } from "@/components/views/tool-call-card";
 import { PermissionDialog, type PendingPermission } from "@/components/views/permission-dialog";
 import { WorkingMemoryPanel } from "@/components/views/working-memory-panel";
-import type { AgentItemContext } from "@/lib/agent-integration/context-adapter";
+import type { AgentItemContext, AgentAction } from "@/lib/agent-integration/context-adapter";
 import { contextToQuery } from "@/lib/agent-integration/context-adapter";
 import { ActionRow } from "./action-button";
-import type { AgentAction } from "@/lib/agent-integration/context-adapter";
 
 interface ChatMessage {
   id: string;
@@ -62,7 +57,6 @@ export function AgentPanel({
   onClose,
   className,
 }: AgentPanelProps) {
-  const { t } = useT();
   const activeAnalysisId = useAppStore((s) => s.activeAnalysisId);
 
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
@@ -359,6 +353,11 @@ export function AgentPanel({
                     ))}
                   </AnimatePresence>
                 </div>
+              )}
+
+              {/* Working memory (compact) */}
+              {isRunning && Object.keys(workingMemory).length > 0 && (
+                <WorkingMemoryPanel memory={workingMemory} />
               )}
 
               {/* Custom input */}

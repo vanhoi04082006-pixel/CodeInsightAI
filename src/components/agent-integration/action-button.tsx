@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Loader2, Zap, Shield, Bug, FileText, Wrench, GitBranch, Search, Brain } from "lucide-react";
+import { Loader2, Zap, Bug, FileText, Wrench, GitBranch, Search, Brain } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { AgentAction } from "@/lib/agent-integration/context-adapter";
 
