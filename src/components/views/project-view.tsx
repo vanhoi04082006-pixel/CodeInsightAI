@@ -32,8 +32,11 @@ import {
   GitFork,
   AlertTriangle,
   GitCompare,
+  Brain,
 } from "lucide-react";
 import { GlassCard, ScoreGauge, GradientText, NeonDivider, SeverityBadge } from "@/components/shared/ui";
+import { AgentPanel, issueContext } from "@/components/agent-integration";
+import type { AgentTabId } from "@/components/agent-integration";
 import { CodeViewer } from "@/components/shared/code-viewer";
 import { UnifiedCodeGraph } from "@/components/shared/unified-codegraph";
 import { DiagramRenderer } from "@/lib/diagram/diagram-renderer";
@@ -904,6 +907,8 @@ function MetricCard({ label, value, hint, tone }: { label: string; value: string
 /* ---------- Issues (shared for bugs/security/performance) ---------- */
 function IssuesTab({ issues, title, color, report, id, isShared = false }: { issues: Issue[]; title: string; color: string; report: AnalysisReport; id: "bugs" | "security" | "performance"; isShared?: boolean }) {
   const { t } = useT();
+  const activeAnalysisId = useAppStore((s) => s.activeAnalysisId);
+  const [agentIssueId, setAgentIssueId] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<string | null>(issues[0]?.id ?? null);
   const deep = (report as any).deepAnalysis as any;
   // Pick the matching AI deep review list based on the tab id.
@@ -1286,6 +1291,32 @@ function IssuesTab({ issues, title, color, report, id, isShared = false }: { iss
                               </div>
                             ) : (
                               <pre className="max-h-[400px] overflow-y-auto whitespace-pre-wrap rounded-lg bg-black/30 p-2 font-mono text-[11px] leading-relaxed text-foreground/85 scrollbar-thin">{issueAiMap[iss.id]}</pre>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Stage 2.2: Inline Agent — "Fix with Agent" / "Explain" / "Root Cause" / "Impact"
+                            Full Agent runtime embedded in the issue card. */}
+                        {!isShared && activeAnalysisId && (
+                          <div className="mt-3">
+                            {agentIssueId === iss.id ? (
+                              <AgentPanel
+                                context={issueContext(id as AgentTabId, "fix", iss, activeAnalysisId, report)}
+                                actions={["explain", "fix", "test", "rootCause", "impact"]}
+                                title={`Agent — ${iss.title.slice(0, 50)}`}
+                                onClose={() => setAgentIssueId(null)}
+                                defaultCollapsed={false}
+                              />
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setAgentIssueId(iss.id)}
+                                className="border-violet-400/30 bg-violet-500/10 text-violet-300 hover:bg-violet-500/20"
+                              >
+                                <Brain className="mr-1.5 h-3.5 w-3.5" />
+                                Fix with Agent
+                              </Button>
                             )}
                           </div>
                         )}
