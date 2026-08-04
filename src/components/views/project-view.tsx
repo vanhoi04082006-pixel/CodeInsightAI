@@ -1848,6 +1848,16 @@ function DocsTab({ report, isShared = false }: { report: AnalysisReport; isShare
           </div>
         )}
       </GlassCard>
+
+      {/* Stage 2.5: Inline Agent — docs generation */}
+      {activeAnalysisId && !isShared && (
+        <AgentPanel
+          context={tabContext("docs", "document", `${report.repoOwner}/${report.repoName} documentation`, activeAnalysisId, report, `Pattern: ${report.architecture?.pattern || "unknown"}. Languages: ${report.languages?.map(l=>l.name).join(",") || "n/a"}`)}
+          actions={["document", "explain", "summarize"]}
+          title="Agent — Documentation Generator"
+          defaultCollapsed={true}
+        />
+      )}
     </div>
   );
 }
@@ -2481,6 +2491,7 @@ interface AISummary {
 
 function TimelineTab({ report, isShared = false }: { report: AnalysisReport; isShared?: boolean }) {
   const { t } = useT();
+  const activeAnalysisId = useAppStore((s) => s.activeAnalysisId);
   const [timeline, setTimeline] = useState<TimelineEntry[]>([]);
   const [fromId, setFromId] = useState<string>("");
   const [toId, setToId] = useState<string>("");
@@ -2942,6 +2953,16 @@ function TimelineTab({ report, isShared = false }: { report: AnalysisReport; isS
             </div>
           )}
         </GlassCard>
+      )}
+
+      {/* Stage 2.5: Inline Agent — timeline/changelog summary */}
+      {activeAnalysisId && !isShared && (
+        <AgentPanel
+          context={tabContext("timeline", "summarize", `${report.repoOwner}/${report.repoName} timeline`, activeAnalysisId, report, `Timeline entries: ${timeline.length}. Comparing ${fromId || "—"} → ${toId || "—"}`)}
+          actions={["summarize", "document", "explain"]}
+          title="Agent — Timeline & Changelog"
+          defaultCollapsed={true}
+        />
       )}
     </div>
   );
