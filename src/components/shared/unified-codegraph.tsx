@@ -44,6 +44,7 @@ import { useAnalysisManifest } from "@/hooks/use-analysis-manifest";
 import { ALL_GRAPH_TYPES } from "@/lib/graph/providers";
 import type { GraphType, GraphNode, GraphEdge, GraphStats, InspectorData, GraphAIConfig } from "@/lib/graph/types";
 import type { AnalysisReport } from "@/lib/types";
+import { AgentPanel, symbolContext } from "@/components/agent-integration";
 
 /* ───────────────────────── Rendering constants ───────────────────────── */
 
@@ -918,6 +919,16 @@ export function UnifiedCodeGraph({
                     {inspector.outgoing.length === 0 && <p className="text-[10px] text-muted-foreground">{t("codegraph", "none")}</p>}
                   </div>
                 </div>
+
+                {/* Stage 2.3: Inline Agent for graph node analysis */}
+                {analysisId && !isShared && (
+                  <AgentPanel
+                    context={symbolContext("codegraph", "explain", inspector.node.label, inspector.node.filePath || undefined, analysisId, report)}
+                    actions={["explain", "impact", "refactor", "document"]}
+                    title={`Agent — ${inspector.node.label.slice(0, 30)}`}
+                    defaultCollapsed={true}
+                  />
+                )}
               </div>
             ) : (
               <p className="mt-3 text-xs text-muted-foreground">{t("codegraph", "clickToInspect")}</p>

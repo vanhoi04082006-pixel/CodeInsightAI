@@ -35,7 +35,7 @@ import {
   Brain,
 } from "lucide-react";
 import { GlassCard, ScoreGauge, GradientText, NeonDivider, SeverityBadge } from "@/components/shared/ui";
-import { AgentPanel, issueContext } from "@/components/agent-integration";
+import { AgentPanel, issueContext, tabContext } from "@/components/agent-integration";
 import type { AgentTabId } from "@/components/agent-integration";
 import { CodeViewer } from "@/components/shared/code-viewer";
 import { UnifiedCodeGraph } from "@/components/shared/unified-codegraph";
@@ -674,6 +674,8 @@ function OverviewTab({ report, onJumpToTimeline }: { report: AnalysisReport; onJ
 /* ---------- Architecture ---------- */
 function ArchitectureTab({ report }: { report: AnalysisReport }) {
   const { t } = useT();
+  const activeAnalysisId = useAppStore((s) => s.activeAnalysisId);
+  const [showAgent, setShowAgent] = useState(false);
   const a = report.architecture;
   const deep = (report as any).deepAnalysis as any;
   const archReview = deep?.architectureReview;
@@ -886,6 +888,31 @@ function ArchitectureTab({ report }: { report: AnalysisReport }) {
             </div>
           )}
         </GlassCard>
+      )}
+
+      {/* Stage 2.3: Inline Agent — architecture analysis */}
+      {activeAnalysisId && (
+        <div>
+          {showAgent ? (
+            <AgentPanel
+              context={tabContext("architecture", "explain", `${report.repoOwner}/${report.repoName} architecture`, activeAnalysisId, report, `Pattern: ${a.pattern}. Layers: ${a.layers.map(l=>l.name).join(", ")}. Weaknesses: ${a.weaknesses.join("; ")}`)}
+              actions={["explain", "impact", "refactor", "document"]}
+              title="Agent — Architecture Analysis"
+              onClose={() => setShowAgent(false)}
+              defaultCollapsed={false}
+            />
+          ) : (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setShowAgent(true)}
+              className="border-violet-400/30 bg-violet-500/10 text-violet-300 hover:bg-violet-500/20"
+            >
+              <Brain className="mr-1.5 h-3.5 w-3.5" />
+              Analyze with Agent
+            </Button>
+          )}
+        </div>
       )}
     </div>
   );
