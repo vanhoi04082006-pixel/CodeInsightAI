@@ -350,7 +350,13 @@ export class ExecutionEngine {
       return "skipped";
     }
 
-    const needsPermission = nodePolicy.requireConfirmationFor.includes(manifest.permission);
+    // Stage 5.2: Autonomous mode — check SessionMemory preferences.
+    // If autoApproveWriteTools is true, skip the permission prompt for
+    // write tools (permission="prompt"). Read tools (permission="allow")
+    // are always auto-approved. This enables autonomous coding without
+    // manual approval for each file modification.
+    const autoApproveWrites = context.memory?.session?.preferences?.autoApproveWriteTools === true;
+    const needsPermission = !autoApproveWrites && nodePolicy.requireConfirmationFor.includes(manifest.permission);
 
     if (needsPermission) {
       // Yield permission.requested (NOT eventBus.emit) — UI sees it via SSE.

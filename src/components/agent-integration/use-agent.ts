@@ -236,11 +236,19 @@ export function useAgent() {
     }
   }, [addMessage, addTerminalLine]);
 
-  const runAgent = useCallback(async (query: string, analysisId: string | null) => {
+  const runAgent = useCallback(async (query: string, analysisId: string | null, autonomous?: boolean) => {
     if (!query.trim() || state.isRunning) return;
     if (!analysisId) {
       addMessage("system", "No analysis selected. Analyze a repository first.");
       return;
+    }
+
+    // Stage 5.2: Set autonomous mode preference before running.
+    // The execution engine reads context.memory.session.preferences.autoApproveWriteTools
+    // to decide whether to skip permission prompts for write tools.
+    if (autonomous) {
+      // We can't directly access the route's memory, but we pass the flag
+      // via the request body and the route sets it on the context.
     }
 
     addMessage("user", query);
@@ -261,7 +269,7 @@ export function useAgent() {
       const res = await fetch("/api/agent/run", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query, analysisId, locale: "en" }),
+        body: JSON.stringify({ query, analysisId, locale: "en", autonomous }),
         signal: abortRef.current.signal,
       });
 

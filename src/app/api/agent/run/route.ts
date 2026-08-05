@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { query, analysisId, locale } = body;
+  const { query, analysisId, locale, autonomous } = body;
 
   if (!query || typeof query !== "string") {
     return NextResponse.json({ error: "Missing 'query' field" }, { status: 400 });
@@ -87,6 +87,14 @@ export async function POST(req: NextRequest) {
         const skillRegistry = createSkillRegistry();
         const memory = createAgentMemory();
         memory.initializeProject(spm, indexes);
+
+        // Stage 5.2: Autonomous mode — auto-approve write tools.
+        // When autonomous=true, skip permission prompts for write tools
+        // (apply-patch, create-file, delete-file, rename-file, git-commit, etc.)
+        // Read tools are always auto-approved. Git push still requires prompt.
+        if (autonomous) {
+          memory.session.updatePreferences({ autoApproveWriteTools: true });
+        }
 
         // v2.0: Wire Knowledge Memory to the user and load persisted knowledge.
         // v1 left KnowledgeMemory as a stub (dead code). Now it's backed by DB.

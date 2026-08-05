@@ -4,7 +4,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Loader2, Send, Brain, Code2, Eye, X, Terminal as TerminalIcon,
-  ChevronRight,
+  ChevronRight, Zap,
 } from "lucide-react";
 import { GlassCard, GradientText } from "@/components/shared/ui";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,18 @@ export function WorkspaceView() {
   const setView = useAppStore((s) => s.setView);
 
   const agent = useAgent();
+
+  // Stage 5.2: Autonomous mode — auto-approve write tools
+  const [autonomousMode, setAutonomousMode] = useState(false);
+
+  // Sync autonomousMode to SessionMemory preferences (engine reads this)
+  useEffect(() => {
+    if (agent.state) {
+      // The engine reads context.memory.session.preferences.autoApproveWriteTools
+      // We need to set it before running. Since useAgent doesn't expose memory,
+      // we pass autonomousMode to runAgent which sets it before execution.
+    }
+  }, [autonomousMode, agent.state]);
 
   // Resizable splitter state
   const [splitPercent, setSplitPercent] = useState(38); // left panel width %
@@ -85,9 +97,11 @@ export function WorkspaceView() {
         <ChatPanel
           messages={agent.state.messages}
           isRunning={agent.state.isRunning}
-          onSend={(text) => agent.runAgent(text, activeAnalysisId)}
+          onSend={(text) => agent.runAgent(text, activeAnalysisId, autonomousMode)}
           onCancel={agent.cancelTask}
           progress={agent.state.progress}
+          autonomousMode={autonomousMode}
+          onToggleAutonomous={() => setAutonomousMode(!autonomousMode)}
         />
       </div>
 
@@ -124,12 +138,16 @@ function ChatPanel({
   onSend,
   onCancel,
   progress,
+  autonomousMode,
+  onToggleAutonomous,
 }: {
   messages: ChatMessage[];
   isRunning: boolean;
   onSend: (text: string) => void;
   onCancel: () => void;
   progress: { completed: number; total: number };
+  autonomousMode: boolean;
+  onToggleAutonomous: () => void;
 }) {
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -156,14 +174,31 @@ function ChatPanel({
             <GradientText>Agent Chat</GradientText>
           </span>
         </div>
-        {isRunning && (
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] text-muted-foreground">{progress.completed}/{progress.total}</span>
-            <Button onClick={onCancel} size="sm" variant="outline" className="h-6 px-2 text-[10px]">
-              Cancel
-            </Button>
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          {/* Stage 5.2: Autonomous mode toggle */}
+          <button
+            onClick={onToggleAutonomous}
+            disabled={isRunning}
+            className={cn(
+              "flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[10px] font-medium transition-all disabled:opacity-40",
+              autonomousMode
+                ? "border-amber-400/40 bg-amber-500/15 text-amber-300"
+                : "border-white/10 bg-white/[0.03] text-muted-foreground hover:text-foreground",
+            )}
+            title={autonomousMode ? "Autonomous mode ON — write tools auto-approved" : "Autonomous mode OFF — write tools require approval"}
+          >
+            <Zap className="h-3 w-3" />
+            {autonomousMode ? "Auto" : "Manual"}
+          </button>
+          {isRunning && (
+            <>
+              <span className="text-[10px] text-muted-foreground">{progress.completed}/{progress.total}</span>
+              <Button onClick={onCancel} size="sm" variant="outline" className="h-6 px-2 text-[10px]">
+                Cancel
+              </Button>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Messages */}
