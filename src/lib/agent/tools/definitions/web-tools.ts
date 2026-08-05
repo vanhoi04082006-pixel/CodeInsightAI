@@ -64,21 +64,47 @@ async function doReadPage(url: string): Promise<Result<{ title: string; content:
       return err("TOOL_EXECUTION_FAILED", "Page reader returned no data");
     }
 
-    // Extract text content from HTML (strip tags)
+    // Extract text content from HTML (improved stripping — preserves code blocks)
     const html: string = data.html || "";
     const title: string = data.title || "";
-    // Simple HTML-to-text: remove tags, decode entities, collapse whitespace
+    // Improved HTML-to-text:
+    // - Remove script/style/noscript/template tags + content
+    // - Remove HTML comments
+    // - Preserve <pre> and <code> content with newlines (formatting matters for docs)
+    // - Convert <br>, </p>, </div>, </li> to newlines
+    // - Convert <li> to bullet "• "
+    // - Strip remaining tags
+    // - Decode common HTML entities
+    // - Collapse excessive whitespace (but preserve newlines in code blocks)
     const textContent = html
       .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
       .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
-      .replace(/<[^>]+>/g, " ")
+      .replace(/<noscript[^>]*>[\s\S]*?<\/noscript>/gi, "")
+      .replace(/<template[^>]*>[\s\S]*?<\/template>/gi, "")
+      .replace(/<!--[\s\S]*?-->/g, "")
+      // Preserve code blocks: mark <pre>/<code> content with markers
+      .replace(/<pre[^>]*>([\s\S]*?)<\/pre>/gi, (_m: string, c: string) => "\n```\n" + c.replace(/<[^>]+>/g, "") + "\n```\n")
+      .replace(/<code[^>]*>([\s\S]*?)<\/code>/gi, (_m: string, c: string) => "`" + c.replace(/<[^>]+>/g, "") + "`")
+      // Convert block-level closers to newlines
+      .replace(/<\/(p|div|li|h[1-6]|tr|blockquote)>/gi, "\n")
+      .replace(/<br\s*\/?>/gi, "\n")
+      .replace(/<li[^>]*>/gi, "• ")
+      // Strip all remaining tags
+      .replace(/<[^>]+>/g, "")
+      // Decode HTML entities
       .replace(/&nbsp;/g, " ")
       .replace(/&amp;/g, "&")
       .replace(/&lt;/g, "<")
       .replace(/&gt;/g, ">")
       .replace(/&quot;/g, '"')
       .replace(/&#39;/g, "'")
-      .replace(/\s+/g, " ")
+      .replace(/&hellip;/g, "…")
+      .replace(/&mdash;/g, "—")
+      .replace(/&ndash;/g, "–")
+      // Collapse 3+ newlines to 2, trim trailing spaces per line
+      .replace(/[ \t]+$/gm, "")
+      .replace(/\n{3,}/g, "\n\n")
+      .replace(/[ \t]{2,}/g, " ")
       .trim();
 
     // Cap content to ~5000 chars (roughly 1250 tokens) to avoid context overflow

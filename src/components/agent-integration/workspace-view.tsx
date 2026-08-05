@@ -452,6 +452,7 @@ function LivePreviewPanel() {
           src="/"
           className="h-full w-full border-0"
           title="Live Preview"
+          sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
         />
       </div>
     </div>
