@@ -153,13 +153,19 @@ function ChatPanel({
   onToggleAutonomous: () => void;
 }) {
   const [input, setInput] = useState("");
+  const [showWarning, setShowWarning] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Stage 5.5: Smooth auto-scroll with requestAnimationFrame
   useEffect(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      requestAnimationFrame(() => {
+        if (scrollRef.current) {
+          scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+        }
+      });
     }
-  }, [messages]);
+  }, [messages, isRunning]);
 
   const submit = () => {
     if (!input.trim() || isRunning) return;
@@ -167,8 +173,77 @@ function ChatPanel({
     setInput("");
   };
 
+  // Stage 5.5: Show warning dialog first time user enables Auto mode
+  const handleToggleAuto = () => {
+    if (!autonomousMode && !showWarning) {
+      setShowWarning(true);
+    } else {
+      onToggleAutonomous();
+      setShowWarning(false);
+    }
+  };
+
+  // Stage 5.5: Quick action presets for autonomous mode
+  const quickActions = autonomousMode ? [
+    { label: "Implement Feature", icon: Code2, query: "Implement the requested feature. Search the codebase, analyze architecture, create the code, run lint and tests, and fix any errors." },
+    { label: "Fix All Bugs", icon: Zap, query: "Find and fix all bugs in this repository. Search for issues, generate patches, apply them, run lint and tests, and fix any errors." },
+    { label: "Add Tests", icon: Brain, query: "Generate comprehensive tests for the main modules. Search the code, create test files, run tests, and fix any failures." },
+    { label: "Security Audit", icon: Zap, query: "Audit security vulnerabilities. Search for CVEs, find security issues, generate fixes, apply them, and verify with tests." },
+  ] : [];
+
   return (
     <>
+      {/* Stage 5.5: Autonomous mode warning dialog */}
+      <AnimatePresence>
+        {showWarning && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+            onClick={() => setShowWarning(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="max-w-sm rounded-xl border border-amber-400/30 bg-zinc-900 p-5 shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center gap-2 mb-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/15">
+                  <Zap className="h-4 w-4 text-amber-300" />
+                </div>
+                <h3 className="text-sm font-bold text-amber-300">Autonomous Mode</h3>
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed mb-4">
+                Agent will <span className="text-amber-300 font-medium">auto-approve all write operations</span> (create/edit/delete files, git commit) without asking for confirmation.
+                <br/><br/>
+                It will also <span className="text-amber-300 font-medium">automatically fix lint/test errors</span> up to 3 iterations.
+                <br/><br/>
+                <span className="text-rose-300/80">⚠️ Git push still requires approval.</span>
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => { onToggleAutonomous(); setShowWarning(false); }}
+                  className="bg-amber-500/20 text-amber-300 hover:bg-amber-500/30"
+                  size="sm"
+                >
+                  <Zap className="mr-1.5 h-3.5 w-3.5" /> Enable Auto
+                </Button>
+                <Button
+                  onClick={() => setShowWarning(false)}
+                  variant="outline"
+                  size="sm"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Chat header */}
       <div className="flex items-center justify-between border-b border-white/5 px-4 py-2">
         <div className="flex items-center gap-2">
@@ -180,7 +255,7 @@ function ChatPanel({
         <div className="flex items-center gap-2">
           {/* Stage 5.2: Autonomous mode toggle */}
           <button
-            onClick={onToggleAutonomous}
+            onClick={handleToggleAuto}
             disabled={isRunning}
             className={cn(
               "flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[10px] font-medium transition-all disabled:opacity-40",
@@ -246,12 +321,28 @@ function ChatPanel({
 
       {/* Input */}
       <div className="border-t border-white/5 p-3">
+        {/* Stage 5.5: Quick actions for autonomous mode */}
+        {quickActions.length > 0 && !isRunning && (
+          <div className="mb-2 flex flex-wrap gap-1.5">
+            {quickActions.map((action) => (
+              <button
+                key={action.label}
+                onClick={() => onSend(action.query)}
+                disabled={isRunning}
+                className="flex items-center gap-1 rounded-lg border border-amber-400/20 bg-amber-500/[0.06] px-2 py-1 text-[10px] font-medium text-amber-300/80 transition-all hover:border-amber-400/40 hover:bg-amber-500/10 hover:text-amber-300 disabled:opacity-40"
+              >
+                <action.icon className="h-2.5 w-2.5" />
+                {action.label}
+              </button>
+            ))}
+          </div>
+        )}
         <div className="flex gap-2">
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), submit())}
-            placeholder="Ask the Agent..."
+            placeholder={autonomousMode ? "Describe what to implement..." : "Ask the Agent..."}
             disabled={isRunning}
             className="bg-white/[0.03]"
           />
