@@ -472,10 +472,112 @@ export function useAgent() {
     }
   }, [state.isRunning, addMessage, handleEvent]);
 
+  // Stage 6: Multi-Agent — calls /api/agent/multi
+  const runMultiAgent = useCallback(async (query: string, analysisId: string | null, agentIds?: string[]) => {
+    if (!query.trim() || state.isRunning) return;
+    if (!analysisId) {
+      addMessage("system", "No analysis selected. Analyze a repository first.");
+      return;
+    }
+
+    addMessage("user", `🌐 ${query}`);
+    setState((prev) => ({
+      ...prev,
+      isRunning: true,
+      toolCalls: [],
+      plan: null,
+      progress: { completed: 0, total: 0 },
+      activeTaskId: null,
+      activeFile: null,
+      terminalLines: [],
+    }));
+
+    abortRef.current = new AbortController();
+
+    try {
+      const res = await fetch("/api/agent/multi", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query, analysisId, agentIds }),
+        signal: abortRef.current.signal,
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ error: "Request failed" }));
+        addMessage("assistant", `Error: ${data.error || res.statusText}`);
+        setState((prev) => ({ ...prev, isRunning: false }));
+        return;
+      }
+
+      const reader = res.body?.getReader();
+      if (!reader) { addMessage("assistant", "Error: No stream"); setState((prev) => ({ ...prev, isRunning: false })); return; }
+
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            try {
+              const event = JSON.parse(line.slice(6));
+              handleMultiEvent(event);
+            } catch {}
+          }
+        }
+      }
+    } catch (e: any) {
+      if (e.name === "AbortError") addMessage("assistant", "⚠️ Multi-agent cancelled.");
+      else addMessage("assistant", `Error: ${e.message}`);
+    } finally {
+      setState((prev) => ({ ...prev, isRunning: false }));
+    }
+  }, [state.isRunning, addMessage]);
+
+  // Handle multi-agent events
+  const handleMultiEvent = useCallback((event: any) => {
+    const ev = event as any;
+    switch (ev.type) {
+      case "multi.started":
+        addMessage("system", `🌐 Multi-Agent started — ${ev.agents?.length || 0} agents`);
+        addTerminalLine("info", `═══ Multi-Agent: ${ev.agents?.join(", ") || "all"} ═══`);
+        break;
+      case "agent.started":
+        addMessage("system", `${ev.icon || "🤖"} ${ev.agentName} started...`);
+        addTerminalLine("info", `── ${ev.agentName} ──`);
+        break;
+      case "agent.completed":
+        addMessage("assistant", `${ev.agentName}: ${ev.summary?.slice(0, 200) || "done"} (${ev.durationMs}ms)`);
+        break;
+      case "agent.failed":
+        addMessage("assistant", `❌ ${ev.agentName}: ${ev.error?.message || "failed"}`);
+        break;
+      case "coordinator.started":
+        addMessage("system", "🧠 Coordinator summarizing...");
+        break;
+      case "coordinator.completed":
+        addMessage("assistant", `📋 Coordinator Report:\n${ev.summary || ""}`);
+        addTerminalLine("info", "═══ Coordinator Report ═══");
+        break;
+      case "multi.completed":
+        addMessage("system", `✅ Multi-Agent done — ${ev.completed}/${ev.totalAgents} agents completed`);
+        break;
+      // Pass through standard agent events (plan.generated, node.*, task.*)
+      default:
+        handleEvent(event);
+        break;
+    }
+  }, [addMessage, addTerminalLine, handleEvent]);
+
   return {
     state,
     runAgent,
     runAutonomous,
+    runMultiAgent,
     cancelTask,
     respondPermission,
     reset,

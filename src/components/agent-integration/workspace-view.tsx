@@ -4,7 +4,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Loader2, Send, Brain, Code2, Eye, X, Terminal as TerminalIcon,
-  ChevronRight, Zap,
+  ChevronRight, Zap, Network,
 } from "lucide-react";
 import { GlassCard, GradientText } from "@/components/shared/ui";
 import { Button } from "@/components/ui/button";
@@ -101,6 +101,7 @@ export function WorkspaceView() {
             ? agent.runAutonomous(text, activeAnalysisId, 3)
             : agent.runAgent(text, activeAnalysisId, false)
           }
+          onMultiAgent={(query) => agent.runMultiAgent(query, activeAnalysisId)}
           onCancel={agent.cancelTask}
           progress={agent.state.progress}
           autonomousMode={autonomousMode}
@@ -139,6 +140,7 @@ function ChatPanel({
   messages,
   isRunning,
   onSend,
+  onMultiAgent,
   onCancel,
   progress,
   autonomousMode,
@@ -147,6 +149,7 @@ function ChatPanel({
   messages: ChatMessage[];
   isRunning: boolean;
   onSend: (text: string) => void;
+  onMultiAgent: (query: string) => void;
   onCancel: () => void;
   progress: { completed: number; total: number };
   autonomousMode: boolean;
@@ -190,6 +193,9 @@ function ChatPanel({
     { label: "Add Tests", icon: Brain, query: "Generate comprehensive tests for the main modules. Search the code, create test files, run tests, and fix any failures." },
     { label: "Security Audit", icon: Zap, query: "Audit security vulnerabilities. Search for CVEs, find security issues, generate fixes, apply them, and verify with tests." },
   ] : [];
+
+  // Stage 6: Multi-Agent quick action
+  const multiAgentAction = { label: "Full Audit", icon: Network, query: "Audit this project comprehensively — architecture, security, performance, code quality, and test coverage." };
 
   return (
     <>
@@ -335,6 +341,28 @@ function ChatPanel({
                 {action.label}
               </button>
             ))}
+            {/* Stage 6: Multi-Agent Full Audit button */}
+            <button
+              onClick={() => onMultiAgent(multiAgentAction.query)}
+              disabled={isRunning}
+              className="flex items-center gap-1 rounded-lg border border-violet-400/20 bg-violet-500/[0.06] px-2 py-1 text-[10px] font-medium text-violet-300/80 transition-all hover:border-violet-400/40 hover:bg-violet-500/10 hover:text-violet-300 disabled:opacity-40"
+            >
+              <multiAgentAction.icon className="h-2.5 w-2.5" />
+              {multiAgentAction.label}
+            </button>
+          </div>
+        )}
+        {/* Stage 6: Multi-Agent button also in Manual mode */}
+        {quickActions.length === 0 && !isRunning && (
+          <div className="mb-2 flex flex-wrap gap-1.5">
+            <button
+              onClick={() => onMultiAgent(multiAgentAction.query)}
+              disabled={isRunning}
+              className="flex items-center gap-1 rounded-lg border border-violet-400/20 bg-violet-500/[0.06] px-2 py-1 text-[10px] font-medium text-violet-300/80 transition-all hover:border-violet-400/40 hover:bg-violet-500/10 hover:text-violet-300 disabled:opacity-40"
+            >
+              <Network className="h-2.5 w-2.5" />
+              Multi-Agent Audit
+            </button>
           </div>
         )}
         <div className="flex gap-2">
