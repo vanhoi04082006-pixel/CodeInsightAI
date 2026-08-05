@@ -328,7 +328,17 @@ export type Capability =
   | "git-history"
   | "git-revert"
   | "ai-insight"
-  | "ai-chat";
+  | "ai-chat"
+  // Stage 4 — Web Agent capabilities (internet research)
+  | "web-search"
+  | "github-search"
+  | "stackoverflow-search"
+  | "npm-search"
+  | "crate-search"
+  | "nuget-search"
+  | "pypi-search"
+  | "read-docs"
+  | "cve-search";
 
 export interface CapabilityRegistry {
   // Register: capability → list of tools that can fulfill it

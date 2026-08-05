@@ -176,6 +176,10 @@ Rules:
 - For "fix bug" tasks: search-code → find-issues → generate-patch → apply-patch → run-lint → run-tests
 - For "refactor" tasks: find-symbol → find-references → find-impact → generate-patch → apply-patch → run-tests
 - For "find issues" tasks: search-code → find-issues → find-circular-deps → ai-insight
+- For "research" tasks: web-search → read-docs → ai-chat
+- For "security audit" tasks: search-code → cve-search → find-issues → read-docs → ai-chat
+- For "find package" tasks: npm-search (or pypi-search/crate-search/nuget-search) → read-docs → ai-chat
+- For "find CVE" tasks: cve-search → read-docs → ai-chat
 
 Available tools:
 ${toolList}
