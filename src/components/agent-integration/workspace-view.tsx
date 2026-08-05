@@ -343,9 +343,37 @@ function RightPanel({
         {/* Progress indicator */}
         {state.isRunning && (
           <div className="flex items-center gap-2 px-2">
+            {/* Stage 5.4: Autonomous iteration indicator */}
+            {state.autonomous.active && (
+              <div className="flex items-center gap-1.5 rounded-full border border-amber-400/30 bg-amber-500/10 px-2 py-0.5">
+                <Zap className="h-2.5 w-2.5 text-amber-300" />
+                <span className="text-[9px] font-medium text-amber-300">
+                  Iter {state.autonomous.iteration}/{state.autonomous.maxIterations}
+                </span>
+                {state.autonomous.lastStatus && state.autonomous.lastStatus !== "starting" && state.autonomous.lastStatus !== "completed" && (
+                  <span className="text-[8px] text-amber-300/60">· {state.autonomous.lastStatus}</span>
+                )}
+              </div>
+            )}
             <Loader2 className="h-3 w-3 animate-spin text-violet-300" />
             <span className="text-[10px] text-muted-foreground">
               {state.progress.completed}/{state.progress.total} steps
+            </span>
+          </div>
+        )}
+
+        {/* Stage 5.4: Autonomous completed badge */}
+        {!state.isRunning && state.autonomous.lastStatus === "completed" && (
+          <div className="flex items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-2 py-0.5">
+            <span className="text-[9px] font-medium text-emerald-300">
+              ✅ Completed in {state.autonomous.totalIterations} iterations
+            </span>
+          </div>
+        )}
+        {!state.isRunning && state.autonomous.lastStatus === "exhausted" && (
+          <div className="flex items-center gap-1.5 rounded-full border border-rose-400/30 bg-rose-500/10 px-2 py-0.5">
+            <span className="text-[9px] font-medium text-rose-300">
+              ⚠️ Failed after {state.autonomous.maxIterations} iterations
             </span>
           </div>
         )}

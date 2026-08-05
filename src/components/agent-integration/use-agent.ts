@@ -42,6 +42,14 @@ export interface AgentState {
   activeFile: { path: string; content: string; diff?: string } | null;
   /** Terminal output lines (accumulated from tool executions). */
   terminalLines: { type: "cmd" | "stdout" | "stderr" | "info"; text: string; ts: number }[];
+  /** Stage 5.4: Autonomous loop state */
+  autonomous: {
+    active: boolean;
+    iteration: number;
+    maxIterations: number;
+    lastStatus: string;  // e.g. "Lint: fail, Tests: pass"
+    totalIterations: number;
+  };
 }
 
 const initialState: AgentState = {
@@ -55,6 +63,7 @@ const initialState: AgentState = {
   activeTaskId: null,
   activeFile: null,
   terminalLines: [],
+  autonomous: { active: false, iteration: 0, maxIterations: 3, lastStatus: "", totalIterations: 0 },
 };
 
 // ─── Hook ─────────────────────────────────────────────────────────────
@@ -196,19 +205,25 @@ export function useAgent() {
       // Stage 5.3: Autonomous loop events
       case "autonomous.started":
         addMessage("system", `🚀 Autonomous mode started — max ${ev.maxIterations || 3} iterations`);
+        setState((prev) => ({ ...prev, autonomous: { ...prev.autonomous, active: true, iteration: 0, maxIterations: ev.maxIterations || 3, totalIterations: 0, lastStatus: "starting" } }));
         break;
 
       case "autonomous.iteration":
         addMessage("system", `📋 Iteration ${ev.iteration}/${ev.max}: ${ev.query?.slice(0, 100) || "working..."}`);
+        setState((prev) => ({ ...prev, autonomous: { ...prev.autonomous, active: true, iteration: ev.iteration, maxIterations: ev.max, totalIterations: ev.iteration, lastStatus: prev.autonomous.lastStatus } }));
+        // Reset progress for new iteration
+        setState((prev) => ({ ...prev, progress: { completed: 0, total: 0 }, toolCalls: [] }));
         break;
 
       case "autonomous.replan":
         addMessage("system", `🔄 Re-planning — ${ev.reason}. Generating fix plan...`);
         addTerminalLine("info", `── Iteration ${ev.iteration} replan: ${ev.reason} ──`);
+        setState((prev) => ({ ...prev, autonomous: { ...prev.autonomous, lastStatus: ev.reason, totalIterations: ev.iteration } }));
         break;
 
       case "autonomous.completed":
         addMessage("assistant", `✅ ${ev.message || "All checks passed!"} (${ev.iterations} iterations)`);
+        setState((prev) => ({ ...prev, autonomous: { ...prev.autonomous, active: false, lastStatus: "completed", totalIterations: ev.iterations } }));
         break;
 
       case "autonomous.suggest":
@@ -217,6 +232,7 @@ export function useAgent() {
 
       case "autonomous.exhausted":
         addMessage("assistant", `⚠️ ${ev.message || "Max iterations reached."}`);
+        setState((prev) => ({ ...prev, autonomous: { ...prev.autonomous, active: false, lastStatus: "exhausted" } }));
         break;
 
       case "node.tool-output":
