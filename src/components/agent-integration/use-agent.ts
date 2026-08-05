@@ -193,6 +193,32 @@ export function useAgent() {
 
       // ── v2.2 fix: handle remaining 7 event types ──
 
+      // Stage 5.3: Autonomous loop events
+      case "autonomous.started":
+        addMessage("system", `🚀 Autonomous mode started — max ${ev.maxIterations || 3} iterations`);
+        break;
+
+      case "autonomous.iteration":
+        addMessage("system", `📋 Iteration ${ev.iteration}/${ev.max}: ${ev.query?.slice(0, 100) || "working..."}`);
+        break;
+
+      case "autonomous.replan":
+        addMessage("system", `🔄 Re-planning — ${ev.reason}. Generating fix plan...`);
+        addTerminalLine("info", `── Iteration ${ev.iteration} replan: ${ev.reason} ──`);
+        break;
+
+      case "autonomous.completed":
+        addMessage("assistant", `✅ ${ev.message || "All checks passed!"} (${ev.iterations} iterations)`);
+        break;
+
+      case "autonomous.suggest":
+        addMessage("assistant", `💡 ${ev.message || "Suggested action: " + ev.action}`);
+        break;
+
+      case "autonomous.exhausted":
+        addMessage("assistant", `⚠️ ${ev.message || "Max iterations reached."}`);
+        break;
+
       case "node.tool-output":
         // Streaming tool output (partial chunks) — append to terminal
         if (ev.chunk) addTerminalLine("stdout", String(ev.chunk));
@@ -350,9 +376,90 @@ export function useAgent() {
     setState(initialState);
   }, []);
 
+  // Stage 5.3: Autonomous loop — calls /api/agent/autonomous
+  // which re-plans automatically when lint/test fails.
+  const runAutonomous = useCallback(async (query: string, analysisId: string | null, maxIterations: number = 3) => {
+    if (!query.trim() || state.isRunning) return;
+    if (!analysisId) {
+      addMessage("system", "No analysis selected. Analyze a repository first.");
+      return;
+    }
+
+    addMessage("user", `🚀 ${query}`);
+    setState((prev) => ({
+      ...prev,
+      isRunning: true,
+      toolCalls: [],
+      plan: null,
+      progress: { completed: 0, total: 0 },
+      activeTaskId: null,
+      activeFile: null,
+      terminalLines: [],
+    }));
+
+    abortRef.current = new AbortController();
+
+    try {
+      const res = await fetch("/api/agent/autonomous", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query, analysisId, maxIterations }),
+        signal: abortRef.current.signal,
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ error: "Request failed" }));
+        addMessage("assistant", `Error: ${data.error || res.statusText}`);
+        setState((prev) => ({ ...prev, isRunning: false }));
+        return;
+      }
+
+      const reader = res.body?.getReader();
+      if (!reader) {
+        addMessage("assistant", "Error: No response stream");
+        setState((prev) => ({ ...prev, isRunning: false }));
+        return;
+      }
+
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            try {
+              const event = JSON.parse(line.slice(6));
+              handleEvent(event);
+            } catch {}
+          }
+        }
+      }
+      if (buffer.startsWith("data: ")) {
+        try {
+          const event = JSON.parse(buffer.slice(6));
+          handleEvent(event);
+        } catch {}
+      }
+    } catch (e: any) {
+      if (e.name === "AbortError") {
+        addMessage("assistant", "⚠️ Autonomous task cancelled.");
+      } else {
+        addMessage("assistant", `Error: ${e.message}`);
+      }
+    } finally {
+      setState((prev) => ({ ...prev, isRunning: false }));
+    }
+  }, [state.isRunning, addMessage, handleEvent]);
+
   return {
     state,
     runAgent,
+    runAutonomous,
     cancelTask,
     respondPermission,
     reset,

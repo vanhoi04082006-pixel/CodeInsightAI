@@ -97,7 +97,10 @@ export function WorkspaceView() {
         <ChatPanel
           messages={agent.state.messages}
           isRunning={agent.state.isRunning}
-          onSend={(text) => agent.runAgent(text, activeAnalysisId, autonomousMode)}
+          onSend={(text) => autonomousMode
+            ? agent.runAutonomous(text, activeAnalysisId, 3)
+            : agent.runAgent(text, activeAnalysisId, false)
+          }
           onCancel={agent.cancelTask}
           progress={agent.state.progress}
           autonomousMode={autonomousMode}
@@ -207,7 +210,14 @@ function ChatPanel({
           {messages.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center text-center text-muted-foreground">
               <Brain className="mb-3 h-8 w-8 text-violet-300/50" />
-              <p className="text-xs">Ask the Agent to fix bugs, generate tests, refactor code, or analyze security.</p>
+              {autonomousMode ? (
+                <p className="text-xs">
+                  ⚡ Autonomous mode ON — Agent will automatically fix lint/test errors (max 3 iterations).<br/>
+                  Ask it to implement features, fix bugs, or refactor code.
+                </p>
+              ) : (
+                <p className="text-xs">Ask the Agent to fix bugs, generate tests, refactor code, or analyze security.</p>
+              )}
             </div>
           ) : (
             <AnimatePresence>
