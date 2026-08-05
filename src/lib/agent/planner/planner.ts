@@ -180,6 +180,9 @@ Rules:
 - For "security audit" tasks: search-code → cve-search → find-issues → read-docs → ai-chat
 - For "find package" tasks: npm-search (or pypi-search/crate-search/nuget-search) → read-docs → ai-chat
 - For "find CVE" tasks: cve-search → read-docs → ai-chat
+- For "implement feature" tasks: search-code → find-architecture → web-search (research best practices) → generate-patch → apply-patch → run-lint → run-tests → git-commit
+- For "create file" tasks: create-file → update-imports → run-lint → run-tests
+- For "rename/move" tasks: find-symbol → find-references → find-impact → create-file (new) → apply-patch (old → removed) → update-imports → run-lint → run-tests
 
 Available tools:
 ${toolList}

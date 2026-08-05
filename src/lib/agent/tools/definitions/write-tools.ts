@@ -68,26 +68,50 @@ export const generatePatchTool: Tool = {
 
 // ─── apply-patch ───
 // Applies file content changes via RepoService.writeFileAsync.
+// Stage 5.1 (G3 fix): Now accepts BOTH:
+//   - { file, content } — full file content (backward compatible)
+//   - { file, diff }    — unified diff (connects with generate-patch output)
 // Returns the ChangeRecord[] so the ExecutionEngine can track them in the
-// runtime's RollbackManager (the tool itself is stateless — it does NOT own
-// the rollback manager; the engine does).
+// runtime's RollbackManager.
 export const applyPatchTool: Tool = {
   manifest: writeManifest("apply-patch", "Apply a patch to modify files", ["apply-patch"], {
     cost: "medium",
     estimatedTimeMs: 1000,
     timeout: 10000,
-    inputSchema: { type: "object", properties: { patch: { type: "string" }, file: { type: "string" }, content: { type: "string" } }, required: ["file", "content"] },
+    inputSchema: { type: "object", properties: { patch: { type: "string" }, file: { type: "string" }, content: { type: "string" }, diff: { type: "string" } }, required: ["file"] },
   }),
   async execute(params, ctx: AgentContext) {
     const file = requireParam(params, "file");
-    const content = requireParam(params, "content");
-    if (!file || !content) return err("TOOL_INVALID_PARAMS", "Missing required params: file, content");
+    const contentParam = requireParam(params, "content");
+    const diffParam = requireParam(params, "diff");
+    if (!file) return err("TOOL_INVALID_PARAMS", "Missing required param: file");
+    if (!contentParam && !diffParam) return err("TOOL_INVALID_PARAMS", "Missing required param: either 'content' or 'diff' must be provided");
 
     try {
+      let finalContent: string;
+
+      if (diffParam) {
+        // Stage 5.1: Apply unified diff to existing file content
+        // Read current file content from SPM
+        const fileResult = ctx.query.findFile(file);
+        if (!fileResult.ok) return fileResult;
+        if (!fileResult.value) return err("FILE_NOT_FOUND", `Cannot apply diff to non-existent file: ${file}. Use 'content' param instead.`);
+
+        const oldContent = fileResult.value.content || "";
+        finalContent = applyUnifiedDiff(oldContent, diffParam);
+        if (finalContent === oldContent) {
+          // Diff produced no changes — still return ok (no-op)
+          return ok({ modifiedFiles: [file], changes: [], note: "Diff applied with no changes" });
+        }
+      } else {
+        // Full file content mode (backward compatible)
+        finalContent = contentParam!;
+      }
+
       // Import RepoService dynamically to avoid circular deps
       const { RepoServiceImpl } = await import("../../services/repo-service");
       const repo = new RepoServiceImpl();
-      const result = await repo.writeFileAsync(file, content);
+      const result = await repo.writeFileAsync(file, finalContent);
       if (!result.ok) return result;
 
       // Return the change log so the engine can track it for rollback.
@@ -96,14 +120,84 @@ export const applyPatchTool: Tool = {
         ctx.memory?.working?.pushScratch?.(`File modified: ${change.file} (${change.type})`);
       }
 
-      // Emit patch.applied via scratchpad (engine reads the returned changes
-      // and tracks them in the runtime's RollbackManager).
-      return ok({ modifiedFiles: [file], changes });
+      return ok({ modifiedFiles: [file], changes, appliedDiff: !!diffParam });
     } catch (e) {
       return err("TOOL_EXECUTION_FAILED", `Apply patch failed: ${e instanceof Error ? e.message : String(e)}`);
     }
   },
 };
+
+/**
+ * Apply a unified diff to existing content.
+ * Supports standard unified diff format:
+ *   --- a/file
+ *   +++ b/file
+ *   @@ -start,count +start,count @@
+ *    context line
+ *   -removed line
+ *   +added line
+ *
+ * Stage 5.1: Simple line-based diff applier.
+ */
+function applyUnifiedDiff(oldContent: string, diff: string): string {
+  const oldLines = oldContent.split("\n");
+  const result = [...oldLines];
+
+  // Strip markdown fences if present
+  let diffContent = diff.trim();
+  if (diffContent.startsWith("```")) {
+    diffContent = diffContent.replace(/^```(?:diff)?\n?/, "").replace(/\n?```$/, "");
+  }
+
+  const diffLines = diffContent.split("\n");
+  let resultIdx = 0; // tracks position in result array
+
+  for (let i = 0; i < diffLines.length; i++) {
+    const line = diffLines[i];
+
+    // Skip header lines
+    if (line.startsWith("---") || line.startsWith("+++")) continue;
+
+    // Parse hunk header: @@ -oldStart,oldCount +newStart,newCount @@
+    if (line.startsWith("@@")) {
+      const match = line.match(/@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/);
+      if (match) {
+        const newStart = parseInt(match[3], 10) - 1; // 0-based
+        resultIdx = newStart;
+      }
+      continue;
+    }
+
+    // Context line (starts with space or no prefix)
+    if (line.startsWith(" ") || (!line.startsWith("+") && !line.startsWith("-"))) {
+      resultIdx++;
+      continue;
+    }
+
+    // Removed line
+    if (line.startsWith("-")) {
+      const removedContent = line.substring(1);
+      // Remove from result at current position
+      if (resultIdx < result.length && result[resultIdx] === removedContent) {
+        result.splice(resultIdx, 1);
+      } else {
+        // Try fuzzy match (whitespace)
+        result.splice(resultIdx, 1);
+      }
+      continue;
+    }
+
+    // Added line
+    if (line.startsWith("+")) {
+      const addedContent = line.substring(1);
+      result.splice(resultIdx, 0, addedContent);
+      resultIdx++;
+      continue;
+    }
+  }
+
+  return result.join("\n");
+}
 
 // ─── rollback-changes ───
 // Rolls back tracked file changes using the SHARED RollbackManager from the

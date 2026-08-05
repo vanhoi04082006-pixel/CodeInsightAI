@@ -338,7 +338,12 @@ export type Capability =
   | "nuget-search"
   | "pypi-search"
   | "read-docs"
-  | "cve-search";
+  | "cve-search"
+  // Stage 5 — Autonomous Coding capabilities
+  | "create-file"
+  | "update-imports"
+  | "delete-file"
+  | "rename-file";
 
 export interface CapabilityRegistry {
   // Register: capability → list of tools that can fulfill it

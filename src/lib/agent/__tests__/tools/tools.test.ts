@@ -9,7 +9,7 @@ describe("ToolRegistry", () => {
   const { toolRegistry } = createRegistries();
 
   it("should register all 35 tools", () => {
-    expect((toolRegistry as ToolRegistryImpl).count()).toBe(35);
+    expect((toolRegistry as ToolRegistryImpl).count()).toBe(39);
   });
 
   it("should get tool by name", () => {
@@ -54,7 +54,7 @@ describe("ToolRegistry", () => {
 
   it("should list all tool names", () => {
     const all = (toolRegistry as ToolRegistryImpl).listAll();
-    expect(all).toHaveLength(35);
+    expect(all).toHaveLength(39);
     expect(all).toContain("find-symbol");
     expect(all).toContain("generate-patch");
     expect(all).toContain("git-commit");

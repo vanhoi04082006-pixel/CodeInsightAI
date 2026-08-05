@@ -32,8 +32,8 @@ describe("Stage 4 — Web Tools Registration", () => {
     expect(toolRegistry.get("cve-search")).toBeDefined();
   });
 
-  it("total tools should be 35 (26 + 9 web)", () => {
-    expect((toolRegistry as ToolRegistryImpl).count()).toBe(35);
+  it("total tools should be 39 (26 + 9 web + 4 autonomous)", () => {
+    expect((toolRegistry as ToolRegistryImpl).count()).toBe(39);
   });
 
   it("all web tools should have permission 'allow' (read-only)", () => {
