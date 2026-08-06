@@ -473,3 +473,102 @@ model Plugin {
   @@index([userId, enabled])
   @@index([pluginId])
 }
+
+// Stage 7.2 — Team Collaboration
+model Team {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  ownerId     String
+  description String   @default("")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members     TeamMember[]
+
+  @@index([ownerId])
+}
+
+model TeamMember {
+  id        String   @id @default(cuid())
+  teamId    String
+  userId    String
+  role      String   @default("member") // "owner" | "admin" | "member"
+  invitedAt DateTime @default(now())
+  joinedAt  DateTime?
+  status    String   @default("pending") // "pending" | "active" | "removed"
+
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+  @@index([userId, status])
+}
+
+model TeamAnalysis {
+  id          String   @id @default(cuid())
+  teamId      String
+  analysisId  String
+  sharedBy    String
+  createdAt   DateTime @default(now())
+
+  @@index([teamId])
+  @@index([analysisId])
+}
+
+// Stage 7.3 — AI Project Manager
+model Sprint {
+  id          String   @id @default(cuid())
+  teamId      String?
+  userId      String
+  name        String
+  goal        String   @default("")
+  status      String   @default("planning") // "planning" | "active" | "completed" | "cancelled"
+  startDate   DateTime?
+  endDate     DateTime?
+  analysisId  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tasks       PmTask[]
+
+  @@index([userId, status])
+  @@index([teamId])
+}
+
+model PmTask {
+  id          String   @id @default(cuid())
+  sprintId    String
+  title       String
+  description String   @default("")
+  status      String   @default("todo") // "todo" | "in-progress" | "done" | "blocked"
+  priority    String   @default("medium") // "critical" | "high" | "medium" | "low"
+  assigneeId  String?
+  effort      String   @default("medium") // "trivial" | "small" | "medium" | "large"
+  estimate    Int      @default(0) // hours
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  sprint      Sprint   @relation(fields: [sprintId], references: [id], onDelete: Cascade)
+
+  @@index([sprintId, status])
+  @@index([assigneeId])
+}
+
+// Stage 7.4 — CI/CD Integration
+model Webhook {
+  id          String   @id @default(cuid())
+  userId      String
+  repoOwner   String
+  repoName    String
+  analysisId  String
+  events      String   @default("[]") // JSON: ["push", "pull_request"]
+  secret      String   @default("")
+  active      Boolean  @default(true)
+  lastTriggered DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId, active])
+  @@index([repoOwner, repoName])
+}

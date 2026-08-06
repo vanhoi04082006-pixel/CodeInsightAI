@@ -12,7 +12,10 @@ export type View =
   | "providers"
   | "personalities"
   | "admin"
-  | "agent";
+  | "agent"
+  | "team"
+  | "sprints"
+  | "plugins";
 
 /* ---------- AI Providers (BYOK + Platform AI, server-side encrypted) ---------- */
 export type ProviderId =

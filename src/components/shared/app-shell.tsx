@@ -17,6 +17,9 @@ import {
   Bot,
   Shield,
   Monitor,
+  Users,
+  Rocket,
+  Puzzle,
 } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { useProvidersStore } from "@/lib/providers-store";
@@ -40,6 +43,9 @@ const NAV: { id: View; labelKey: string; icon: typeof LayoutDashboard; disabled?
   { id: "project", labelKey: "nav.project", icon: FolderGit2 },
   { id: "agent", labelKey: "nav.agent", icon: Brain },
   { id: "chat", labelKey: "nav.chat", icon: MessagesSquare },
+  { id: "sprints", labelKey: "nav.sprints", icon: Rocket },
+  { id: "team", labelKey: "nav.team", icon: Users },
+  { id: "plugins", labelKey: "nav.plugins", icon: Puzzle },
   { id: "history", labelKey: "nav.history", icon: History },
   { id: "providers", labelKey: "nav.providers", icon: Plug },
   { id: "personalities", labelKey: "nav.personalities", icon: Bot },
@@ -186,6 +192,9 @@ export function AppTopbar() {
     project: "nav.project",
     agent: "nav.agent",
     chat: "nav.chat",
+    sprints: "nav.sprints",
+    team: "nav.team",
+    plugins: "nav.plugins",
     history: "nav.history",
     settings: "nav.settings",
     providers: "nav.providers",

@@ -26,6 +26,9 @@ const ProvidersView = dynamic(() => import("@/components/views/providers-view").
 const PersonalitiesView = dynamic(() => import("@/components/views/personalities-view").then(m => ({ default: m.PersonalitiesView })), { ssr: false });
 const AdminView = dynamic(() => import("@/components/views/admin-view").then(m => ({ default: m.AdminView })), { ssr: false });
 const WorkspaceView = dynamic(() => import("@/components/agent-integration/workspace-view").then(m => ({ default: m.WorkspaceView })), { ssr: false });
+const TeamView = dynamic(() => import("@/components/views/team-view").then(m => ({ default: m.TeamView })), { ssr: false });
+const SprintsView = dynamic(() => import("@/components/views/sprints-view").then(m => ({ default: m.SprintsView })), { ssr: false });
+const PluginsView = dynamic(() => import("@/components/views/plugins-view").then(m => ({ default: m.PluginsView })), { ssr: false });
 import { CommandPalette } from "@/components/shared/command-palette";
 import { LanguageSwitcher } from "@/components/shared/language-switcher";
 import { ThemeSwitcher } from "@/components/shared/theme-switcher";
@@ -315,6 +318,9 @@ export default function Home() {
                   {view === "personalities" && <PersonalitiesView />}
                   {view === "admin" && <AdminView />}
                   {view === "agent" && <WorkspaceView />}
+                  {view === "team" && <TeamView />}
+                  {view === "sprints" && <SprintsView />}
+                  {view === "plugins" && <PluginsView />}
                 </motion.div>
               </AnimatePresence>
             </main>
