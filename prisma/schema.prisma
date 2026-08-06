@@ -452,3 +452,24 @@ model AgentKnowledge {
   @@index([userId, category])
   @@index([category, confidence])
 }
+
+// Stage 7.1 — Plugin Marketplace
+model Plugin {
+  id          String   @id @default(cuid())
+  pluginId    String   @unique  // unique plugin identifier (e.g. "code-smell-detector")
+  userId      String             // user who installed
+  name        String
+  version     String
+  author      String
+  type        String   // "tool" | "skill" | "agent-profile" | "composite"
+  description String   @default("")
+  icon        String   @default("🧩")
+  verified    Boolean  @default(false)
+  definition  String   @default("{}")  // JSON: PluginDefinition
+  enabled     Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId, enabled])
+  @@index([pluginId])
+}
