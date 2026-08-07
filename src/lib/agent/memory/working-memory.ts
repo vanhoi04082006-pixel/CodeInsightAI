@@ -26,7 +26,12 @@ export class WorkingMemoryImpl implements IWorkingMemory {
   }
 
   pushScratch(note: string): void {
-    this.scratchpad.push(`[${new Date().toISOString()}] ${note}`);
+    // Audit fix F7: Cap scratchpad at 100 entries (FIFO)
+    const entry = `[${new Date().toISOString()}] ${note}`;
+    this.scratchpad.push(entry);
+    if (this.scratchpad.length > 100) {
+      this.scratchpad = this.scratchpad.slice(-100); // keep last 100
+    }
   }
 
   clear(): void {

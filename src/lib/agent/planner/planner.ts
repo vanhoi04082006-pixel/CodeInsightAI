@@ -60,6 +60,15 @@ export class PlannerImpl implements IPlanner {
    * NO silent fallback. The caller (route/runtime) decides fallback strategy.
    */
   async plan(query: string, context: AgentContext): Promise<Result<ExecutionPlan>> {
+    // Audit fix F5: Prompt injection sanitization
+    // Cap query length + strip control characters that could manipulate LLM
+    const sanitized = query
+      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "") // strip control chars
+      .slice(0, 2000); // cap at 2000 chars
+    if (!sanitized.trim()) {
+      return err("PLAN_GENERATION_FAILED", "Query is empty after sanitization");
+    }
+
     const maxRetries = 2;
     let lastError: AgentError | null = null;
 
@@ -77,7 +86,7 @@ export class PlannerImpl implements IPlanner {
         }
 
         // 2. Build prompt
-        const prompt = this.buildPrompt(query, context, attempt, lastError);
+        const prompt = this.buildPrompt(sanitized, context, attempt, lastError);
 
         // 3. Call AI
         const { callAI } = await import("@/lib/ai-client");

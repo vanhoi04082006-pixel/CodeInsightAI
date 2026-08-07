@@ -31,7 +31,10 @@ export class AgentRuntimeImpl implements IAgentRuntime {
   // triggering finally). Now we only delete on non-paused exits, and pause()
   // marks the task as paused so resume() can find the context.
   private contextStore = new Map<string, AgentContext>();
+  // Audit fix F4: pausedTasks now has TTL — abandoned paused tasks are evicted.
   private pausedTasks = new Set<string>();
+  private pausedAt = new Map<string, number>(); // taskId → timestamp
+  private readonly PAUSED_TTL_MS = 30 * 60 * 1000; // 30 minutes
 
   constructor(toolRegistry: { get: (name: string) => Tool | null }) {
     this.eventBus = createEventBus();
@@ -80,7 +83,9 @@ export class AgentRuntimeImpl implements IAgentRuntime {
 
   /** Cancel a running task */
   cancel(taskId: string): void {
+    this.evictExpiredPaused(); // F4: cleanup before processing
     this.pausedTasks.delete(taskId);
+    this.pausedAt.delete(taskId);
     const engine = this.activeEngines.get(taskId);
     if (engine) {
       engine.cancel();
@@ -93,7 +98,20 @@ export class AgentRuntimeImpl implements IAgentRuntime {
     const engine = this.activeEngines.get(taskId);
     if (engine) {
       this.pausedTasks.add(taskId);
+      this.pausedAt.set(taskId, Date.now());
       engine.pause();
+    }
+  }
+
+  /** Audit fix F4: Evict paused tasks older than TTL */
+  private evictExpiredPaused(): void {
+    const now = Date.now();
+    for (const [taskId, timestamp] of this.pausedAt) {
+      if (now - timestamp > this.PAUSED_TTL_MS) {
+        this.pausedTasks.delete(taskId);
+        this.pausedAt.delete(taskId);
+        this.contextStore.delete(taskId);
+      }
     }
   }
 
