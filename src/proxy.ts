@@ -44,6 +44,33 @@ export function proxy(req: NextRequest) {
   if (!path.startsWith("/api/")) return NextResponse.next();
   if (path === "/api/health") return NextResponse.next();
 
+  // Audit fix F1: CSRF protection — check Origin header on state-changing requests
+  if (req.method === "POST" || req.method === "PUT" || req.method === "PATCH" || req.method === "DELETE") {
+    // Skip webhook (uses own signature) and auth routes
+    if (!path.startsWith("/api/webhook/") && !path.startsWith("/api/billing/webhook") && !path.startsWith("/api/auth/")) {
+      const origin = req.headers.get("origin");
+      const host = req.headers.get("host");
+      if (origin && host) {
+        try {
+          const originHost = new URL(origin).host;
+          if (originHost !== host) {
+            return NextResponse.json({ error: "CSRF check failed: Origin mismatch" }, { status: 403 });
+          }
+        } catch {
+          return NextResponse.json({ error: "Invalid Origin header" }, { status: 403 });
+        }
+      } else {
+        // No Origin header — check for session cookie (same-origin fetch)
+        const sessionCookie =
+          req.cookies.get("__Secure-next-auth.session-token") ||
+          req.cookies.get("next-auth.session-token");
+        if (!sessionCookie) {
+          return NextResponse.json({ error: "CSRF check failed: missing Origin or session" }, { status: 403 });
+        }
+      }
+    }
+  }
+
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
     || req.headers.get("x-real-ip") || "unknown";
 
