@@ -237,6 +237,17 @@ export interface AnalysisReport {
   };
   files: FileInsight[];
   snippets: CodeSnippet[];
+  /**
+   * Full source content of every fetched file, keyed by path.
+   * Used by the Agent Code View (`/api/agent/file`) and the file-tree browser
+   * in WorkspaceView so users can browse ALL analyzed files — not just the
+   * top-5 most-complex files in `snippets`.
+   *
+   * Each value is capped at 100KB by the analyzer; total map is capped at 5MB
+   * to stay within Vercel Hobby's DB row budget. Files beyond the cap are
+   * silently dropped (they remain in `files` for metadata, just not viewable).
+   */
+  fileContents?: Record<string, string>;
   diagrams: DiagramSet;
   deadCode: { path: string; lines: number; reason: string }[];
   duplicates: { group: number; files: string[]; lines: number }[];

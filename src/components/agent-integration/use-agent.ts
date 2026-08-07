@@ -573,6 +573,21 @@ export function useAgent() {
     }
   }, [addMessage, addTerminalLine, handleEvent]);
 
+  // Manual file selection (Stage 3 fix: file tree browser)
+  // Lets the user click any file in the analyzed repo and view its content,
+  // independent of which file the Agent's tools have touched. When the user
+  // picks a file, we set activeFile with empty content — the RightPanel's
+  // useEffect will fetch the full content from /api/agent/file.
+  const setActiveFile = useCallback((path: string) => {
+    setState((prev) => ({
+      ...prev,
+      activeFile: {
+        path,
+        content: "", // RightPanel will fetch via /api/agent/file
+      },
+    }));
+  }, []);
+
   return {
     state,
     runAgent,
@@ -582,5 +597,6 @@ export function useAgent() {
     respondPermission,
     reset,
     addMessage,
+    setActiveFile,
   };
 }

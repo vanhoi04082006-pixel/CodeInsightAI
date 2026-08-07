@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Loader2, Send, Brain, Code2, Eye, X, Terminal as TerminalIcon,
-  ChevronRight, Zap, Network,
+  ChevronRight, Zap, Network, FileCode, Search, Folder, FolderOpen,
 } from "lucide-react";
 import { GlassCard, GradientText } from "@/components/shared/ui";
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,9 @@ export function WorkspaceView() {
 
   // Stage 5.2: Autonomous mode — auto-approve write tools
   const [autonomousMode, setAutonomousMode] = useState(false);
+
+  // File Browser modal state — opened from RightPanel toolbar
+  const [fileBrowserOpen, setFileBrowserOpen] = useState(false);
 
   // Sync autonomousMode to SessionMemory preferences (engine reads this)
   useEffect(() => {
@@ -122,8 +125,24 @@ export function WorkspaceView() {
         <RightPanel
           agent={agent}
           report={activeReport}
+          onOpenBrowser={() => setFileBrowserOpen(true)}
         />
       </div>
+
+      {/* File Browser Modal (overlay) — opens when user clicks "Browse Files".
+          Conditionally rendered (not just hidden) so internal search state
+          resets each time the modal opens. */}
+      {fileBrowserOpen && (
+        <FileBrowserModal
+          onClose={() => setFileBrowserOpen(false)}
+          report={activeReport}
+          activePath={agent.state.activeFile?.path}
+          onSelect={(path) => {
+            agent.setActiveFile(path);
+            setFileBrowserOpen(false);
+          }}
+        />
+      )}
 
       {/* Permission Dialog (overlay) */}
       <PermissionDialog
@@ -393,9 +412,11 @@ function ChatPanel({
 function RightPanel({
   agent,
   report,
+  onOpenBrowser,
 }: {
   agent: ReturnType<typeof useAgent>;
   report: AnalysisReport;
+  onOpenBrowser: () => void;
 }) {
   const [mode, setMode] = useState<"code" | "live">("code");
   const [terminalCollapsed, setTerminalCollapsed] = useState(false);
@@ -434,7 +455,7 @@ function RightPanel({
 
   return (
     <div className="flex h-full flex-col">
-      {/* Tab bar: Code View / Live Preview */}
+      {/* Tab bar: Code View / Live Preview + Browse Files */}
       <div className="flex items-center justify-between border-b border-white/5 px-2 py-1">
         <div className="flex gap-1">
           <button
@@ -457,6 +478,25 @@ function RightPanel({
             <Eye className="h-3.5 w-3.5" />
             Live Preview
           </button>
+
+          {/* Browse Files button — opens the file tree browser modal.
+              Lets the user pick ANY file in the analyzed repo to view its
+              source, independent of which files the Agent has touched. */}
+          {mode === "code" && (
+            <button
+              onClick={onOpenBrowser}
+              className="ml-1 flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.02] px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-all hover:border-violet-400/30 hover:bg-violet-500/10 hover:text-violet-200"
+              title="Browse all files in the analyzed repository"
+            >
+              <Search className="h-3.5 w-3.5" />
+              Browse Files
+              {report?.files?.length > 0 && (
+                <span className="ml-0.5 rounded-full bg-violet-500/15 px-1.5 text-[9px] font-semibold text-violet-300">
+                  {report.files.length}
+                </span>
+              )}
+            </button>
+          )}
         </div>
 
         {/* Progress indicator */}
@@ -515,11 +555,25 @@ function RightPanel({
                   <PlanVisualizer plan={state.plan} toolCalls={state.toolCalls as any[]} />
                 </div>
               ) : (
-                <EmptyState
-                  icon={Code2}
-                  title="Code View"
-                  description="The Agent will display source code here when it reads or edits files."
-                />
+                <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
+                  <Code2 className="h-10 w-10 text-violet-300/50" />
+                  <div>
+                    <h4 className="text-sm font-semibold text-foreground/80">Code View</h4>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Browse the analyzed repository&apos;s source code, or ask the Agent to read/edit a file.
+                    </p>
+                  </div>
+                  {report?.files?.length > 0 && (
+                    <Button
+                      onClick={onOpenBrowser}
+                      size="sm"
+                      className="bg-gradient-to-r from-violet-500 to-cyan-500 text-white hover:opacity-90"
+                    >
+                      <Search className="mr-1.5 h-3.5 w-3.5" />
+                      Browse {report.files.length} Files
+                    </Button>
+                  )}
+                </div>
               )}
             </div>
 
@@ -660,5 +714,337 @@ function EmptyState({ icon: Icon, title, description }: { icon: typeof Code2; ti
       <p className="text-sm font-medium">{title}</p>
       <p className="mt-1 text-xs opacity-70">{description}</p>
     </div>
+  );
+}
+
+// ─── File Browser Modal (Stage 3 fix) ────────────────────────────────
+// Lets the user browse ALL files in the analyzed repo (not just the ones
+// the Agent has touched). Clicking a file calls onSelect(path) which sets
+// it as activeFile — the RightPanel's useEffect fetches full content from
+// /api/agent/file (which now reads from report.fileContents, populated for
+// EVERY fetched file by analysis-engine-v2).
+
+interface FileTreeNode {
+  name: string;
+  path: string;
+  isDir: boolean;
+  children?: FileTreeNode[];
+  file?: { path: string; language: string; lines: number; complexity: number };
+}
+
+function buildFileTree(files: { path: string; language: string; lines: number; complexity: number }[]): FileTreeNode[] {
+  const root: FileTreeNode = { name: "", path: "", isDir: true, children: [] };
+
+  for (const file of files) {
+    const parts = file.path.split("/");
+    let current = root;
+    let accumulatedPath = "";
+
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i];
+      const isLast = i === parts.length - 1;
+      accumulatedPath = accumulatedPath ? `${accumulatedPath}/${part}` : part;
+
+      if (isLast) {
+        // File node
+        current.children = current.children || [];
+        current.children.push({
+          name: part,
+          path: file.path,
+          isDir: false,
+          file,
+        });
+      } else {
+        // Directory node — find or create
+        current.children = current.children || [];
+        let dir = current.children.find((c) => c.isDir && c.name === part);
+        if (!dir) {
+          dir = {
+            name: part,
+            path: accumulatedPath,
+            isDir: true,
+            children: [],
+          };
+          current.children.push(dir);
+        }
+        current = dir;
+      }
+    }
+  }
+
+  // Sort: directories first (alphabetical), then files (alphabetical)
+  const sortRecursive = (node: FileTreeNode) => {
+    if (!node.children) return;
+    node.children.sort((a, b) => {
+      if (a.isDir !== b.isDir) return a.isDir ? -1 : 1;
+      return a.name.localeCompare(b.name);
+    });
+    node.children.forEach(sortRecursive);
+  };
+  sortRecursive(root);
+
+  return root.children || [];
+}
+
+function FileBrowserModal({
+  onClose,
+  report,
+  activePath,
+  onSelect,
+}: {
+  onClose: () => void;
+  report: AnalysisReport | null;
+  activePath?: string;
+  onSelect: (path: string) => void;
+}) {
+  const [search, setSearch] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Focus input on mount (modal is conditionally rendered, so this runs once
+  // per open — no need to track previous `open` state).
+  useEffect(() => {
+    const timer = setTimeout(() => inputRef.current?.focus(), 50);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // ESC to close
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  const files = useMemo(() => {
+    if (!report?.files) return [];
+    return report.files.map((f) => ({
+      path: f.path,
+      language: f.language,
+      lines: f.lines,
+      complexity: f.complexity,
+    }));
+  }, [report]);
+
+  // Filtered flat list for search mode (faster than tree traversal)
+  const filteredFiles = useMemo(() => {
+    if (!search.trim()) return null;
+    const q = search.toLowerCase();
+    return files.filter((f) => f.path.toLowerCase().includes(q)).slice(0, 50);
+  }, [files, search]);
+
+  const tree = useMemo(() => (search.trim() ? [] : buildFileTree(files)), [files, search]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ opacity: 0, y: -8, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: -8, scale: 0.98 }}
+        transition={{ duration: 0.15 }}
+        onClick={(e) => e.stopPropagation()}
+        className="mt-[12vh] flex h-[68vh] w-[90vw] max-w-2xl flex-col overflow-hidden rounded-xl border border-violet-500/20 bg-zinc-950/95 shadow-2xl"
+      >
+        {/* Header with search */}
+        <div className="border-b border-white/5 p-3">
+          <div className="mb-2 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <FolderOpen className="h-4 w-4 text-violet-300" />
+              <span className="text-sm font-semibold text-foreground">
+                Browse Files
+              </span>
+              {report && (
+                <span className="text-[11px] text-muted-foreground">
+                  {report.repoOwner}/{report.repoName} · {files.length} files
+                </span>
+              )}
+            </div>
+            <button
+              onClick={onClose}
+              className="text-muted-foreground transition-colors hover:text-foreground"
+              aria-label="Close"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              ref={inputRef}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search files by path... (e.g. auth.ts, src/lib/)"
+              className="h-8 border-white/10 bg-black/40 pl-8 text-xs"
+            />
+          </div>
+        </div>
+
+        {/* File list / tree */}
+        <div className="flex-1 overflow-y-auto scrollbar-thin">
+          {files.length === 0 ? (
+            <div className="flex h-full items-center justify-center p-6 text-center text-xs text-muted-foreground">
+              No files in this analysis report. Re-analyze the repo to populate file contents.
+            </div>
+          ) : filteredFiles ? (
+            // Search mode — flat list of matches
+            <ul className="py-1">
+              {filteredFiles.length === 0 ? (
+                <li className="px-4 py-6 text-center text-xs text-muted-foreground">
+                  No files match &quot;{search}&quot;
+                </li>
+              ) : (
+                filteredFiles.map((f) => (
+                  <FileListRow
+                    key={f.path}
+                    file={f}
+                    active={f.path === activePath}
+                    onSelect={onSelect}
+                  />
+                ))
+              )}
+            </ul>
+          ) : (
+            // Tree mode — directory tree
+            <ul className="py-1">
+              {tree.map((node) => (
+                <FileTreeRow
+                  key={node.path}
+                  node={node}
+                  depth={0}
+                  activePath={activePath}
+                  onSelect={onSelect}
+                />
+              ))}
+            </ul>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="border-t border-white/5 px-3 py-2 text-[10px] text-muted-foreground">
+          <kbd className="rounded bg-white/5 px-1.5 py-0.5">↵</kbd> open ·{" "}
+          <kbd className="rounded bg-white/5 px-1.5 py-0.5">esc</kbd> close
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+function FileListRow({
+  file,
+  active,
+  onSelect,
+}: {
+  file: { path: string; language: string; lines: number; complexity: number };
+  active: boolean;
+  onSelect: (path: string) => void;
+}) {
+  const fileName = file.path.split("/").pop() || file.path;
+  const dir = file.path.includes("/") ? file.path.slice(0, file.path.lastIndexOf("/")) : "";
+  return (
+    <li>
+      <button
+        onClick={() => onSelect(file.path)}
+        className={cn(
+          "flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs transition-colors",
+          active
+            ? "bg-violet-500/15 text-violet-200"
+            : "text-foreground/80 hover:bg-white/5",
+        )}
+      >
+        <FileCode className="h-3.5 w-3.5 shrink-0 text-cyan-300/70" />
+        <span className="shrink-0 font-medium">{fileName}</span>
+        {dir && <span className="truncate text-muted-foreground/60">— {dir}</span>}
+        <span className="ml-auto shrink-0 text-[9px] text-muted-foreground/60">
+          {file.lines}L
+          {file.complexity > 15 && (
+            <span className="ml-1 rounded-full bg-amber-500/15 px-1 text-amber-300">★{file.complexity}</span>
+          )}
+        </span>
+      </button>
+    </li>
+  );
+}
+
+function FileTreeRow({
+  node,
+  depth,
+  activePath,
+  onSelect,
+}: {
+  node: FileTreeNode;
+  depth: number;
+  activePath?: string;
+  onSelect: (path: string) => void;
+}) {
+  const [expanded, setExpanded] = useState(depth < 1);
+
+  if (node.isDir) {
+    return (
+      <li>
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="flex w-full items-center gap-1.5 px-3 py-1 text-left text-xs text-foreground/70 transition-colors hover:bg-white/5"
+          style={{ paddingLeft: `${12 + depth * 12}px` }}
+        >
+          <ChevronRight
+            className={cn("h-3 w-3 shrink-0 transition-transform", expanded && "rotate-90")}
+          />
+          {expanded ? (
+            <FolderOpen className="h-3.5 w-3.5 shrink-0 text-amber-300/80" />
+          ) : (
+            <Folder className="h-3.5 w-3.5 shrink-0 text-amber-300/60" />
+          )}
+          <span className="truncate font-medium">{node.name}</span>
+          {node.children && (
+            <span className="ml-auto text-[9px] text-muted-foreground/50">
+              {node.children.length}
+            </span>
+          )}
+        </button>
+        {expanded && node.children && (
+          <ul>
+            {node.children.map((child) => (
+              <FileTreeRow
+                key={child.path}
+                node={child}
+                depth={depth + 1}
+                activePath={activePath}
+                onSelect={onSelect}
+              />
+            ))}
+          </ul>
+        )}
+      </li>
+    );
+  }
+
+  // File leaf
+  return (
+    <li>
+      <button
+        onClick={() => onSelect(node.path)}
+        className={cn(
+          "flex w-full items-center gap-1.5 px-3 py-1 text-left text-xs transition-colors",
+          node.path === activePath
+            ? "bg-violet-500/15 text-violet-200"
+            : "text-foreground/80 hover:bg-white/5",
+        )}
+        style={{ paddingLeft: `${12 + depth * 12 + 16}px` }}
+      >
+        <FileCode className="h-3.5 w-3.5 shrink-0 text-cyan-300/70" />
+        <span className="truncate">{node.name}</span>
+        {node.file && (
+          <span className="ml-auto shrink-0 text-[9px] text-muted-foreground/60">
+            {node.file.lines}L
+            {node.file.complexity > 15 && (
+              <span className="ml-1 rounded-full bg-amber-500/15 px-1 text-amber-300">★{node.file.complexity}</span>
+            )}
+          </span>
+        )}
+      </button>
+    </li>
   );
 }

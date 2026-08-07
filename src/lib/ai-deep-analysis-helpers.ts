@@ -166,11 +166,15 @@ Respond as JSON:
 Frameworks: ${parsed.frameworks?.map((f: any) => `${f.name} ${f.version}`).join(", ") || "None detected"}
 Primary language: ${parsed.languages?.[0]?.name ?? "Unknown"}
 
-Audit this codebase against framework-specific best practices. For EACH failed practice, include evidence (file:line refs), confidence (0.0-1.0), and severity. Respond as JSON:
+Audit this codebase against framework-specific best practices. Return AT MOST 5 passed practices and AT MOST 5 failed practices (highest impact first). For EACH failed practice, include evidence (file:line refs), confidence (0.0-1.0), and severity. Keep recommendations to 1-2 sentences. Respond as JSON:
 {"framework": "string", "passed": ["string"], "failed": [{"practice": "string", "recommendation": "string", "evidence": ["file:line"], "confidence": 0.85, "severity": "medium"}], "score": number (0-100)}`;
 
     case "duplicates":
-      // Pre-filter: only send functions that share names or have similar complexity
+      // Pre-filter: only send functions that share names or have similar complexity.
+      // CAP at 20 duplicate clusters (was 50) — large lists overflow model
+      // context windows on small/cheap models (gpt-4o-mini, deepseek-chat) and
+      // cause the LLM to time out or return unparseable output. 20 clusters
+      // is enough signal for the AI to identify the most impactful duplicates.
       const allFuncs = (parsed.files || []).flatMap((f: any) =>
         (f.functions || []).map((fn: string) => ({ file: f.path, fn }))
       );
@@ -183,15 +187,15 @@ Audit this codebase against framework-specific best practices. For EACH failed p
         funcNameMap.set(f.fn, arr);
       });
 
-      // Also include functions from files with high complexity
+      // Also include functions from files with high complexity (cap 10 — was 20)
       const highComplexityFiles = (parsed.files || [])
         .filter((f: any) => f.complexity > 15)
-        .slice(0, 20)
+        .slice(0, 10)
         .map((f: any) => f.path);
 
       const potentialDupes = Array.from(funcNameMap.entries())
         .filter(([_, files]) => files.length > 1)
-        .slice(0, 50)
+        .slice(0, 20)
         .map(([fn, files]) => `- ${fn}: ${files.map(f => f.file).join(", ")}`)
         .join("\n");
 
@@ -203,13 +207,7 @@ ${potentialDupes || "None found by static analysis"}
 High-complexity files (may contain duplicated logic):
 ${highComplexityFiles.map(f => `- ${f}`).join("\n") || "None"}
 
-Analyze for REAL code duplication. Look for:
-1. Duplicate business logic (same algorithm, different function names)
-2. Structural duplication (similar code patterns)
-3. Copy-paste code with minor variations
-4. Redundant utility functions
-
-For EACH duplicate cluster, include evidence (file:line refs) and confidence (0.0-1.0). Respond as JSON:
+Analyze for REAL code duplication. Return AT MOST 5 duplicate clusters (highest impact first). For EACH cluster, include evidence (file:line refs) and confidence (0.0-1.0). Keep descriptions concise (1-2 sentences). Respond as JSON:
 {"duplicates": [{"files": ["string"], "type": "logic|structural|copy-paste|redundant", "description": "string", "recommendation": "string", "estimatedLinesSaved": number, "evidence": ["file:line"], "confidence": 0.85}]}`;
 
     default:

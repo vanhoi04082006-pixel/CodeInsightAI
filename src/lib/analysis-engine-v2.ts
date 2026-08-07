@@ -117,7 +117,6 @@ export function analyzeParsedRepository(
         return (issuesB * 10 + b.complexity) - (issuesA * 10 + a.complexity);
       })
       .slice(0, 5);
-
     for (const cf of complexFiles) {
       const raw = rawFiles.find(r => r.path === cf.path);
       if (!raw || !raw.content.trim()) continue;
@@ -176,6 +175,34 @@ export function analyzeParsedRepository(
     }
   }
 
+  // ── Build fileContents map: full source for every fetched file ──
+  // Used by the Agent Code View (`/api/agent/file`) and the file-tree
+  // browser in WorkspaceView. Previously only the top-5 most-complex
+  // files had `rawContent` saved (in `snippets[]`); every other file
+  // returned empty content — making the Code View useless for browsing.
+  //
+  // Caps:
+  //   - per-file: 100KB (already enforced by /api/analyze fetcher)
+  //   - total map: 5MB (well under Vercel Hobby's row-size limit; the
+  //     `analysis.report` JSON column typically stays <10MB total)
+  // Files beyond the cap are silently dropped — they remain in `files`
+  // for metadata, just not viewable in Code View.
+  const MAX_TOTAL_FILE_CONTENTS_BYTES = 5 * 1024 * 1024; // 5MB
+  const fileContents: Record<string, string> = {};
+  if (rawFiles && rawFiles.length > 0) {
+    let totalBytes = 0;
+    // Sort by path for deterministic ordering (so the cap drops the same
+    // files on re-analysis, not random ones based on fetch order).
+    const sorted = [...rawFiles].sort((a, b) => a.path.localeCompare(b.path));
+    for (const r of sorted) {
+      if (!r.content) continue;
+      const size = r.content.length;
+      if (totalBytes + size > MAX_TOTAL_FILE_CONTENTS_BYTES) break;
+      fileContents[r.path] = r.content;
+      totalBytes += size;
+    }
+  }
+
   return {
     repoUrl: parsed.url,
     repoOwner: parsed.owner,
@@ -212,6 +239,7 @@ export function analyzeParsedRepository(
     perfPositiveFindings,
     files: fileInsights,
     snippets: generatedSnippets,
+    fileContents,
     diagrams: buildDiagrams(parsed, arch), // Dynamic SVG from real data
     deadCode,
     duplicates,
